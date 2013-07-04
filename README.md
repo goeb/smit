@@ -1,0 +1,4 @@
+smit
+====
+
+Small Issue Tracker
