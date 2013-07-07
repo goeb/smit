@@ -97,6 +97,12 @@ std::list<std::list<ustring> > parseConfig(const unsigned char *buf, size_t len)
     for (i=0; i<len; i++) {
         unsigned char c = buf[i];
         switch (state) {
+        case P_IN_COMMENT:
+            if (c == '\n') {
+                if (line.size() > 0) { linesOftokens.push_back(line); line.clear(); }
+                state = P_READY;
+            }
+            break;
         case P_IN_BACKSLASH:
             if (c == '\n') { // new line escaped
                 // nothing particular here

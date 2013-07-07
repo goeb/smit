@@ -102,10 +102,10 @@ static void upload_handler(struct mg_connection *conn, const char *path) {
 
 int main(void) {
 
-    test_parseconfig("columns status select \"open\" \"closed\" \"deleted\"\n"
+    test_parseconfig("columns status select \"open\" \"closed\" #\"deleted\"\n"
                      "columns owner select user\n"
                      "columns target_version select \\\n"
-                     "   \"non renseigne\" \\\n"
+                     "   \"non #renseigne\" \\\n"
                      "v0.1\n"
                      "\n"
                      "columns tags select_multiple v4.0 v4.1 v5.0"
