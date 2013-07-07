@@ -1,0 +1,19 @@
+
+parent null
+id "MTN"
+ctime 1372955322
+mtime 1372955322
+author "John"
+title "install procedure on Linux"
+status open
+owner John
+target_version "v0.1"
+tags undefined
+message boundary ---------------------------101405097813327770601910689477
+
+This is the text of the message.
+Multi-line.
+
+ETC...
+
+---------------------------101405097813327770601910689477

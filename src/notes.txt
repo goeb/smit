@@ -1,0 +1,22 @@
+
+main.c
+
+    load projects from disk in memory db.c db.h
+    handlers
+        post/get
+        html rendering
+
+    start mg
+    
+
+db.c / h => maintain a in-memory database, and search/update functions
+db_file.c / h => (de)serialize data for file storage
+html_rendering.c / h => HTML rendering
+text_rendering.c / h => text rendering
+user.c / h => manage users, grant access
+
+common
+    logging.c / h
+    parser.c / h => parsing of the tokens
+    
+
