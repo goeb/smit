@@ -31,17 +31,17 @@ struct Issue {
     // of its entries. For a given key, the most recent value has priority.
 };
 
-enum FieldType { F_TEXT, F_SELECT, F_MULTISELECT};
-struct FieldSpec {
+enum FieldType { F_TEXT, F_SELECT, F_MULTISELECT, F_SELECT_USER};
+typedef struct FieldSpec {
     ustring name;
     enum FieldType type;
     std::list<ustring> selectOptions; // for F_SELECT and F_MULTISELECT only
-};
+} FieldSpec;
 
 // Project config
 struct ProjectConfig {
     ustring name; // name of the project
-    std::set<FieldSpec> fields;
+    std::map<ustring, FieldSpec> fields;
     std::map<ustring, ustring> customDisplays;
     ustring defaultDislpay; // one of customDisplays
     

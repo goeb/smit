@@ -1,9 +1,9 @@
 
 # command params ...
-
-addColumn status select "open" "closed" "deleted"
-addColumn owner select user
-addColumn target_version select \
+# reserved fields are: id, title, ctime, mtime, author
+addField status select "open" "closed" "deleted"
+addField owner selectUser
+addField target_version select \
     "non renseigne" \
     v0.1 \
     v0.2 \
@@ -11,10 +11,13 @@ addColumn target_version select \
     v0.4
 
 
-addColumn tags select_multiple v4.0 v4.1 v5.0
+addField tags multiselect v4.0 v4.1 v5.0
 
-default_display "colspec=mtime+title+status+owner+id"
 
-custom_display "Open issues" "filter=status:open&sort=mtime"
-custom_display "Deleted issues" "filter=status:deleted"
+addListDisplay "Open issues" "filter=status:open&sort=mtime"
+addListDisplay "Deleted issues" "filter=status:deleted"
+setDefaultColspec "id+title+mtime"
+setDefaultFilter "status:open"
+setDefaultSorting "sort=mtime"
+
 
