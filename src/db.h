@@ -6,7 +6,7 @@
 #include <list>
 #include <set>
 
-typedef std::basic_string<unsigned char> ustring;
+#include "ustring.h"
 
 // Data types
 
@@ -80,7 +80,5 @@ int get(const char *project, const char *issueId, Issue &issue, std::list<Entry>
 int deleteEntry(ustring entry);
 
 ustring bin2hex(const ustring & in);
-
-std::list<std::list<ustring> > parseConfig(const unsigned char *buf, size_t len);
 
 #endif

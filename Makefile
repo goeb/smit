@@ -2,7 +2,9 @@
 SRCS = mongoose/mongoose.c \
 		src/upload.c
 
-SRCS_CPP = src/db.cpp
+SRCS_CPP = src/db.cpp  \
+		   src/parseConfig.cpp
+
 
 OBJS = $(SRCS:%.c=obj/%.o) $(SRCS_CPP:%.cpp=obj/%.o)
 

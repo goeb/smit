@@ -48,24 +48,6 @@ std::string request2string(struct mg_connection *conn)
 
 }
 
-void test_parseconfig(const char *buf)
-{
-    const unsigned char *buf2 = (const unsigned char*)buf;
-    std::list<std::list<ustring> > tokens = parseConfig(buf2, strlen(buf));
-
-    std::list<std::list<ustring> >::iterator i;
-    for (i=tokens.begin(); i!=tokens.end(); i++) {
-        std::list<ustring> line = *i;
-        std::list<ustring>::iterator tok;
-        printf("line: ");
-        for (tok=line.begin(); tok!= line.end(); tok++) {
-            printf(" [%s] ", tok->c_str());
-        }
-        printf("\n");
-    }
-
-}
-
 static int begin_request_handler(struct mg_connection *conn) {
 
   if (!strcmp(mg_get_request_info(conn)->uri, "/handle_post_request")) {
@@ -101,15 +83,6 @@ static void upload_handler(struct mg_connection *conn, const char *path) {
 }
 
 int main(void) {
-
-    test_parseconfig("columns status select \"open\" \"closed\" #\"deleted\"\n"
-                     "columns owner select user\n"
-                     "columns target_version select \\\n"
-                     "   \"non #renseigne\" \\\n"
-                     "v0.1\n"
-                     "\n"
-                     "columns tags select_multiple v4.0 v4.1 v5.0"
-                     );
 
   struct mg_context *ctx;
   const char *options[] = {"listening_ports", "8080", NULL};
