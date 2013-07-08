@@ -13,9 +13,9 @@
 #include "db.h"
 #include "parseConfig.h"
 
-#define LOG_ERROR(...) { printf("ERROR "); printf(__VA_ARGS__); printf("\n"); }
-#define LOG_INFO(...)  { printf("INFO  "); printf(__VA_ARGS__); printf("\n"); }
-#define LOG_DEBUG(...) { printf("DEBUG "); printf(__VA_ARGS__); printf("\n"); }
+#define LOG_ERROR(...) { printf("ERROR %s:%d ", __FILE__, __LINE__); printf(__VA_ARGS__); printf("\n"); }
+#define LOG_INFO(...)  { printf("INFO  %s:%d ", __FILE__, __LINE__); printf(__VA_ARGS__); printf("\n"); }
+#define LOG_DEBUG(...) { printf("DEBUG %s:%d ", __FILE__, __LINE__); printf(__VA_ARGS__); printf("\n"); }
 
 #define PROJECT_FILE "project"
 #define ENTRIES "entries" // sub-directory of a project where the entries are stored
@@ -55,6 +55,7 @@ int init(const char * pathToRepository)
 
         while ((dp = readdir(dirp)) != NULL) {
             // Do not show current dir and hidden files
+            LOG_DEBUG("d_name=%s", dp->d_name);
             if (0 == strcmp(dp->d_name, ".")) continue;
             if (0 == strcmp(dp->d_name, "..")) continue;
             std::string pathToProject = pathToRepository;
@@ -70,7 +71,7 @@ int init(const char * pathToRepository)
 // @return 0 if success, -1 if failure
 int Project::load(const char *path)
 {
-    LOG_INFO("Loadingh project %s...", path);
+    LOG_INFO("Loading project %s...", path);
     Project *p = new Project;
 
     int r = p->loadConfig(path);
@@ -96,7 +97,7 @@ Entry *loadEntry(std::string dir, const char* basename)
     std::string path = dir + '/' + basename;
     FILE *f = fopen(path.c_str(), "r");
     if (NULL == f) {
-        printf("debug: could not open file '%s', %s", path.c_str(), strerror(errno));
+        LOG_DEBUG("Could not open file '%s', %s", path.c_str(), strerror(errno));
         return 0;
     }
     // else continue and parse the file
@@ -210,7 +211,7 @@ int Project::loadConfig(const char *path)
     pathToProjectFile += '/' + PROJECT_FILE;
     FILE *f = fopen(pathToProjectFile.c_str(), "r");
     if (NULL == f) {
-        printf("debug: could not open file %s, %s", pathToProjectFile.c_str(), strerror(errno));
+        LOG_DEBUG("Could not open file %s, %s", pathToProjectFile.c_str(), strerror(errno));
         return -1;
     }
     // else continue and parse the file

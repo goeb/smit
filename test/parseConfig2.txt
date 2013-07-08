@@ -1,0 +1,17 @@
+
+tags "v1.0" "v1.1" \<
+title "syntax error in xyz" "<"
+message < xxx
+#message-yy
+xxx
+message < boundary-xxxxxxxxxx
+
+    the message contains all following line 
+    until the boundary string is encountered.
+
+    the pattern marking the end in this example is
+    \nboundary-xxxxxxxxxx\n
+
+boundary-xxxxxxxxxx
+
+

@@ -3,15 +3,24 @@
 #define _utest_h
 
 #include <stdlib.h>
-
+#include <sstream>
 
 int nErrors = 0;
 int nCheckpoints = 0;
 
-#define ASSERT(_x)  { nCheckpoints++; if (!(_x)) { \
-                        fprintf(stderr, "%s:%d: ASSERT error\n", __FILE__, __LINE__); \
-                        nErrors++; \
-                    } }
+#define ASSERT(_x) utAssert(_x, __FILE__, __LINE__)
+
+void utAssert(bool condition, const char * file, int line)
+{
+    if (!condition) {
+        fprintf(stderr, "Error: %s:%d", file, line);
+        std::ostringstream s;
+        s << "sed -n '" << line << "p' " << file;
+        system(s.str().c_str());
+        nErrors++;
+    }
+    nCheckpoints++;
+}
 
 void utestEnd() {
     if (nErrors > 0) {

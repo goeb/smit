@@ -1,17 +1,29 @@
 
+
 #include "parseConfig.h"
 #include "ustring.h"
 
-std::list<std::list<ustring> > parseConfig(const unsigned char *buf, size_t len)
+
+std::list<std::list<ustring> > parseConfig(const uint8_t *buf, size_t len)
 {
     std::list<std::list<ustring> > linesOftokens;
     size_t i = 0;
-    enum State {P_READY, P_IN_DOUBLE_QUOTES, P_IN_BACKSLASH, P_IN_COMMENT, P_IN_BACKSLASH_IN_DOUBLE_QUOTES};
+    enum State {
+        P_READY,
+        P_IN_DOUBLE_QUOTES,
+        P_IN_BACKSLASH,
+        P_IN_COMMENT,
+        P_IN_BACKSLASH_IN_DOUBLE_QUOTES,
+        P_IN_BOUNDARY_HEADER,
+        P_IN_BOUNDARY
+    };
     enum State state = P_READY;
     ustring token; // current token
     std::list<ustring> line; // current line
+    ustring boundary;
+    ustring boundedText;
     for (i=0; i<len; i++) {
-        unsigned char c = buf[i];
+        uint8_t c = buf[i];
         switch (state) {
         case P_IN_COMMENT:
             if (c == '\n') {
@@ -39,6 +51,36 @@ std::list<std::list<ustring> > parseConfig(const unsigned char *buf, size_t len)
             token += c;
             state = P_IN_DOUBLE_QUOTES;
             break;
+        case P_IN_BOUNDARY_HEADER:
+            if (c == '\n') {
+                state = P_IN_BOUNDARY;
+                boundary.insert(0, (uint8_t*)"\n"); // add a \n at the beginning
+                boundedText.clear();
+            } else if (isblank(c)) continue; // ignore blanks
+            else {
+                boundary += c;
+            }
+            break;
+        case P_IN_BOUNDARY:
+            // check if boundary was reached
+            if (boundedText.size() >= boundary.size()) { // leading \n already added
+                size_t bsize = boundary.size();
+                size_t offset = boundedText.size() - bsize;
+                if (0 == boundedText.compare(offset, bsize, boundary)) {
+                    // boundary found
+                    // substract the boundary fro the text
+                    boundedText = boundedText.substr(0, offset);
+                    state = P_READY;
+                    line.push_back(boundedText);
+                    boundedText.clear();
+                    linesOftokens.push_back(line);
+                    line.clear();
+                }
+            }
+            // accumulate character if still in same state
+            if (state == P_IN_BOUNDARY) boundedText += c;
+
+            break;
         case P_READY:
         default:
             if (c == '\n') {
@@ -54,6 +96,9 @@ std::list<std::list<ustring> > parseConfig(const unsigned char *buf, size_t len)
                 state = P_IN_BACKSLASH;
             } else if (c == '"') {
                 state = P_IN_DOUBLE_QUOTES;
+            } else if (c == '<') {
+                state = P_IN_BOUNDARY_HEADER;
+                boundary.clear();
             } else {
                 token += c;
             }

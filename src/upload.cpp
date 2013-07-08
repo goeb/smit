@@ -84,6 +84,7 @@ static void upload_handler(struct mg_connection *conn, const char *path) {
 
 int main(void) {
 
+    init("src/repositories");
   struct mg_context *ctx;
   const char *options[] = {"listening_ports", "8080", NULL};
   struct mg_callbacks callbacks;

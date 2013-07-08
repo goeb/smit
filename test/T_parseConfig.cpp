@@ -19,9 +19,10 @@
 
 main()
 {
+    // step 1: parse "parseConfig1.txt"
     FILE* f = fopen("parseConfig1.txt", "r");
     ASSERT(f!=0);
-    unsigned char buffer[1000];
+    uint8_t buffer[1000];
     size_t n = fread(buffer, 1, 1000, f);
 
     std::list<std::list<ustring> > tokens = parseConfig(buffer, n);
@@ -59,7 +60,49 @@ main()
     ASSERT(line->size() == 8);
     std::list<ustring>::iterator tok = line->begin();
     tok++; tok++; tok++;
-    ASSERT(0 == tok->compare((unsigned char*)"d e \"f"));
+    ASSERT(0 == tok->compare((uint8_t*)"d e \"f"));
+
+    line++;
+    ASSERT(line->size() == 2);
+    fclose(f);
+
+    // step 2: parse "parseConfig2.txt"
+    f = fopen("parseConfig2.txt", "r");
+    ASSERT(f!=0);
+    n = fread(buffer, 1, 1000, f);
+
+    tokens = parseConfig(buffer, n);
+
+    for (i=tokens.begin(); i!=tokens.end(); i++) {
+        std::list<ustring> line = *i;
+        std::list<ustring>::iterator tok;
+        printf("line: ");
+        for (tok=line.begin(); tok!= line.end(); tok++) {
+            printf(" [%s] ", tok->c_str());
+        }
+        printf("\n");
+    }
+
+    // check result
+    ASSERT(tokens.size() == 4);
+    line = tokens.begin();
+    ASSERT(line->size() == 4);
+    tok = line->begin();
+    tok++; tok++; tok++;
+    ASSERT(0 == tok->compare((uint8_t*)"<"));
+
+    line++;
+    ASSERT(line->size() == 3);
+    tok = line->begin();
+    tok++; tok++;
+    ASSERT(0 == tok->compare((uint8_t*)"<"));
+
+    line++;
+    ASSERT(line->size() == 2);
+    tok = line->begin();
+    ASSERT(0 == tok->compare((uint8_t*)"message"));
+    tok++;
+    ASSERT(0 == tok->compare((uint8_t*)"#message-yy"));
 
     line++;
     ASSERT(line->size() == 2);

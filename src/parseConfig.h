@@ -2,11 +2,12 @@
 #ifndef _parseConfig_h
 #define _parseConfig_h
 
+#include <stdint.h>
 #include <string>
 #include <list>
 #include "ustring.h"
 
-std::list<std::list<ustring> > parseConfig(const unsigned char *buf, size_t len);
+std::list<std::list<ustring> > parseConfig(const uint8_t *buf, size_t len);
 
 
 #endif
