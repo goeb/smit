@@ -1,0 +1,22 @@
+
+Resources
+v1.0 /myp/config        GET/POST
+     /myp/users         GET/POST
+v1.0 /myp/issues        GET
+     /myp/issues/XYZ    GET
+v1.0 /myp/entries           POST
+     /myp/entries/XYZ   GET
+v1.0 /myp/any/otherfile GET
+v1.0 /signin            GET/POST
+     /admin             GET/POST
+v1.0 /users
+
+Files :
+/repo/
+/repo/users
+/repo/myp/config
+/repo/myp/entries/XYZ/XYZ
+/repo/myp/entries/XYZ/ABCEDFDFH
+/repo/myp/entries/XYZ/9E48GDSJ
+/repo/myp/entries/XYZ/HEAD
+

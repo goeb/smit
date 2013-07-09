@@ -130,8 +130,32 @@ Entry *loadEntry(std::string dir, const char* basename)
     Entry *e = new Entry;
     e->id = (uint8_t*)basename;
 
-
     std::list<std::list<ustring> > lines = parseConfig(buf, n);
+
+    std::list<std::list<ustring> >::iterator line;
+    int lineNum = 0;
+    for (line=lines.begin(); line != lines.end(); line++) {
+        lineNum++;
+        // each line should be a key / value pair
+        if (line->size() < 2) {
+            LOG_ERROR("Invalid line size %d (%s:%d)", line->size(), path.c_str(), lineNum);
+            continue; // ignore this line
+        }
+        ustring key = line->front();
+        ustring value = line->back();
+
+        if (0 == key.compare((uint8_t*)"ctime")) {
+            e->ctime = atoi((char*)value.c_str());
+        } else if (0 == key.compare((uint8_t*)"parent")) e->parent = value;
+        else if (0 == key.compare((uint8_t*)"author")) e->author = value;
+        else if (line->size() == 2) {
+            e->singleProperties[key] = value;
+        } else {
+            // multi properties
+            line->pop_front(); // remove key from tokens
+            e->multiProperties[key] = *line;
+        }
+    }
     return e;
 }
 

@@ -16,7 +16,9 @@ typedef struct Entry {
     ustring id; // unique id of this entry
     int ctime; // creation time
     ustring author;
-    std::map<ustring, ustring> properties;
+    std::map<ustring, ustring> singleProperties;
+    std::map<ustring, std::list<ustring> > multiProperties;
+
 } Entry;
 
 // Issue

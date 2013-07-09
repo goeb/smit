@@ -1,6 +1,6 @@
 
 SRCS = mongoose/mongoose.c \
-		src/upload.c
+		src/smit_httpd.c
 
 SRCS_CPP = src/db.cpp  \
 		   src/parseConfig.cpp

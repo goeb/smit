@@ -7,7 +7,8 @@ SOURCES += \
     ../../src/hello.c \
     ../../src/db.cpp \
     ../../src/upload.cpp \
-    ../../src/parseConfig.cpp
+    ../../src/parseConfig.cpp \
+    ../../src/smit_httpd.cpp
 
 HEADERS += \
     ../../mongoose/mongoose.h \
