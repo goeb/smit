@@ -6,7 +6,12 @@ SRCS_CPP = src/db.cpp  \
 		   src/parseConfig.cpp
 
 
+
+CC = gcc
+CPP = g++
+
 OBJS = $(SRCS:%.c=obj/%.o) $(SRCS_CPP:%.cpp=obj/%.o)
+DEPENDS = $(SRCS:%.c=obj/%.d) $(SRCS_CPP:%.cpp=obj/%.d)
 
 CFLAGS = -g
 CFLAGS += -I mongoose
@@ -23,11 +28,23 @@ print:
 
 obj/%.o: %.cpp
 	mkdir -p `dirname $@`
-	g++ $(CPPFLAGS) -c $< -o $@
+	$(CPP) $(CPPFLAGS) -c $< -o $@
 
 obj/%.o: %.c
 	mkdir -p `dirname $@`
-	gcc $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -c $< -o $@
+
+obj/%.d: %.c
+	@set -e; rm -f $@; \
+	$(CPP) -M $(CPPFLAGS) $< > $@.$$$$; \
+	sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $@.$$$$ > $@; \
+	rm -f $@.$$$$
+
+obj/%.d: %.cpp
+	@set -e; rm -f $@; \
+	$(CC) -M $(CFLAGS) $< > $@.$$$$; \
+	sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $@.$$$$ > $@; \
+	rm -f $@.$$$$
 
 smit: $(OBJS)
 	g++ -o $@ $^ $(LDFLAGS)
@@ -35,3 +52,5 @@ smit: $(OBJS)
 clean:
 	find . -name "*.o" -delete
 	rm smit
+
+include $(DEPENDS)

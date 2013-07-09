@@ -59,7 +59,8 @@ int init(const char * pathToRepository)
             if (0 == strcmp(dp->d_name, ".")) continue;
             if (0 == strcmp(dp->d_name, "..")) continue;
             std::string pathToProject = pathToRepository;
-            pathToProject += '/' + dp->d_name;
+            pathToProject += '/';
+            pathToProject += dp->d_name;
             int r = Project::load(pathToProject.c_str());
         }
     }
@@ -87,6 +88,8 @@ int Project::load(const char *path)
         delete p;
         return -1;
     }
+    LOG_INFO("Project %s loaded.", path);
+
     return 0;
 }
 
@@ -95,6 +98,7 @@ Entry *loadEntry(std::string dir, const char* basename)
 {
     // load a given entry
     std::string path = dir + '/' + basename;
+    LOG_DEBUG("Loading entry '%s'...", path.c_str());
     FILE *f = fopen(path.c_str(), "r");
     if (NULL == f) {
         LOG_DEBUG("Could not open file '%s', %s", path.c_str(), strerror(errno));
@@ -136,9 +140,9 @@ int Project::loadEntries(const char *path)
     // load files path/entries/*/*
     DIR *dirp;
     std::string pathToEntries = path;
-    pathToEntries += "/";
-    pathToEntries += ENTRIES;
+    pathToEntries = pathToEntries + '/' + ENTRIES;
     if ((dirp = opendir(pathToEntries.c_str())) == NULL) {
+        LOG_ERROR("Cannot open directory '%s'", pathToEntries.c_str());
         return -1;
 
     } else {
@@ -148,8 +152,8 @@ int Project::loadEntries(const char *path)
             // Do not show current dir and hidden files
             if (0 == strcmp(dp->d_name, ".")) continue;
             if (0 == strcmp(dp->d_name, "..")) continue;
-            std::string subPath = path;
-            subPath += '/' + dp->d_name;
+            std::string subPath = pathToEntries;
+            subPath = subPath + '/' + dp->d_name;
 
             // open this subdir and look for all files of this subdir
             DIR *subdirp;
@@ -157,6 +161,8 @@ int Project::loadEntries(const char *path)
             else {
                 struct dirent *subdp;
                 while ((subdp = readdir(subdirp)) != NULL) {
+                    if (0 == strcmp(subdp->d_name, ".")) continue;
+                    if (0 == strcmp(subdp->d_name, "..")) continue;
                     std::string filePath = subPath + '/' + subdp->d_name;
                     Entry *e = loadEntry(subPath, subdp->d_name);
                     if (e) entries[e->id] = e;
@@ -208,7 +214,7 @@ FieldSpec parseFieldSpec(std::list<ustring> & tokens)
 int Project::loadConfig(const char *path)
 {
     std::string pathToProjectFile = path;
-    pathToProjectFile += '/' + PROJECT_FILE;
+    pathToProjectFile = pathToProjectFile + '/' + PROJECT_FILE;
     FILE *f = fopen(pathToProjectFile.c_str(), "r");
     if (NULL == f) {
         LOG_DEBUG("Could not open file %s, %s", pathToProjectFile.c_str(), strerror(errno));
@@ -220,7 +226,7 @@ int Project::loadConfig(const char *path)
 
     int r = fseek(f, 0, SEEK_END); // go to the end of the file
     if (r != 0) {
-        LOG_ERROR("could not fseek(%s): %s", path, strerror(errno));
+        LOG_ERROR("could not fseek(%s): %s", pathToProjectFile.c_str(), strerror(errno));
         fclose(f);
         return -1;
     }
@@ -234,7 +240,7 @@ int Project::loadConfig(const char *path)
     unsigned char *buf = (unsigned char *)malloc(filesize);
     size_t n = fread(buf, 1, filesize, f);
     if (n != filesize) {
-        LOG_ERROR("fread(%s): short read. feof=%d, ferror=%d", path, feof(f), ferror(f));
+        LOG_ERROR("fread(%s): short read. feof=%d, ferror=%d", pathToProjectFile.c_str(), feof(f), ferror(f));
         fclose(f);
         return -1;
     }
@@ -250,12 +256,19 @@ int Project::loadConfig(const char *path)
             // else: parse error
         } else if (0 == token.compare((uint8_t*)"addListDisplay")) {
             // TODO
+            LOG_ERROR("addListDisplay not implemented");
         } else if (0 == token.compare((uint8_t*)"setDefaultColspec")) {
             // TODO
+            LOG_ERROR("setDefaultColspec not implemented");
         } else if (0 == token.compare((uint8_t*)"setDefaultFilter")) {
             // TODO
+            LOG_ERROR("setDefaultFilter not implemented");
          } else if (0 == token.compare((uint8_t*)"setDefaultSorting")) {
             // TODO
+            LOG_ERROR("setDefaultSorting not implemented");
+        } else {
+            LOG_ERROR("Unknown function '%s'", token.c_str());
+
         }
     }
 
