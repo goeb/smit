@@ -20,6 +20,7 @@ typedef __int64 int64_t;
 #include "mongoose.h"
 
 #include "db.h"
+#include "identifiers.h"
 
 std::string request2string(struct mg_connection *conn)
 {
@@ -90,6 +91,9 @@ static void upload_handler(struct mg_connection *conn, const char *path) {
 }
 
 int main(void) {
+
+    computeIdBase34((uint8_t*)"toto", 4);
+
 
     init("src/repositories");
     struct mg_context *ctx;

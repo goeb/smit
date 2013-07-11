@@ -12,10 +12,8 @@
 
 #include "db.h"
 #include "parseConfig.h"
+#include "logging.h"
 
-#define LOG_ERROR(...) { printf("ERROR %s:%d ", __FILE__, __LINE__); printf(__VA_ARGS__); printf("\n"); }
-#define LOG_INFO(...)  { printf("INFO  %s:%d ", __FILE__, __LINE__); printf(__VA_ARGS__); printf("\n"); }
-#define LOG_DEBUG(...) { printf("DEBUG %s:%d ", __FILE__, __LINE__); printf(__VA_ARGS__); printf("\n"); }
 
 #define PROJECT_FILE "project"
 #define ENTRIES "entries" // sub-directory of a project where the entries are stored
@@ -342,19 +340,3 @@ void setId(Entry &entry)
     entry.id.assign(md, SHA_DIGEST_LENGTH);
 }
 
-ustring bin2hex(const ustring & in)
-{
-    const char hexTable[] = { '0', '1', '2', '3',
-                                     '4', '5', '6', '7',
-                                     '8', '9', 'a', 'b',
-                                     'c', 'd', 'e', 'f' };
-    ustring hexResult;
-    size_t i;
-    size_t L = in.size();
-    for (i=0; i<L; i++) {
-        int c = in[i];
-        hexResult += hexTable[c >> 4];
-        hexResult += hexTable[c & 0x0f];
-    }
-    return hexResult;
-}
