@@ -9,7 +9,9 @@ SOURCES += \
     ../../src/upload.cpp \
     ../../src/parseConfig.cpp \
     ../../src/smit_httpd.cpp \
-    ../../src/identifiers.cpp
+    ../../src/identifiers.cpp \
+    ../../test/T_identifiers.cpp \
+    ../../test/T_parseConfig.cpp
 
 HEADERS += \
     ../../mongoose/mongoose.h \

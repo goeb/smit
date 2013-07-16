@@ -5,6 +5,7 @@
 #include "ustring.h"
 
 ustring computeIdBase34(uint8_t *buffer, size_t length);
+ustring convert2base34(const uint8_t *buffer, size_t length);
 
 
 #endif

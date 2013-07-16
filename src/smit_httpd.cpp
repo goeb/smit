@@ -20,6 +20,7 @@ typedef __int64 int64_t;
 #include "mongoose.h"
 
 #include "db.h"
+#include "logging.h"
 #include "identifiers.h"
 
 std::string request2string(struct mg_connection *conn)
@@ -52,14 +53,18 @@ std::string request2string(struct mg_connection *conn)
 static int begin_request_handler(struct mg_connection *conn) {
 
     const char *uri = mg_get_request_info(conn)->uri;
+    LOG_DEBUG("uri=%s", uri);
     if (0 == strcmp(uri, "/admin")) {
         mg_printf(conn, "%s", "HTTP/1.0 200 OK\r\n\r\n");
-        //mg_upload(conn, "/tmp");
-        //TODO
+        //mg_upload(conn, "/admin");
+        mg_printf(conn, "%s", "admin TODO");
     } else  if (0 == strcmp(uri, "/signin")) {
-        // TODO
+        mg_printf(conn, "%s", "HTTP/1.0 200 OK\r\n\r\n");
+        mg_printf(conn, "%s", "signin TODO");
     } else  if (0 == strcmp(uri, "/users")) {
-        // TODO
+        mg_printf(conn, "%s", "HTTP/1.0 200 OK\r\n\r\n");
+        mg_printf(conn, "%s", "users TODO xxx");
+        LOG_DEBUG("users TODO");
     } else {
         // project related URI
         // Show HTML form. Make sure it has enctype="multipart/form-data" attr.
