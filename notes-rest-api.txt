@@ -1,15 +1,17 @@
 
-Resources
-v1.0 /myp/config        GET/POST
-     /myp/users         GET/POST
-v1.0 /myp/issues        GET
-     /myp/issues/XYZ    GET
-v1.0 /myp/entries           POST
-     /myp/entries/XYZ   GET
-v1.0 /myp/any/otherfile GET
-v1.0 /signin            GET/POST
-     /admin             GET/POST
-v1.0 /users
+Resources               Methods    Acces Rights      Description
+-------------------------------------------------------------------------
+     /                  GET        user              list of projects
+v1.0 /myp/config        GET/POST   project-admin     configuration of the project
+     /myp/users         GET/POST   project-admin     local configuration of users of the project (names, access rights, etc.)
+v1.0 /myp/issues        GET        user              issues of the project
+     /myp/issues/XYZ    GET        user              a particular issue
+v1.0 /myp/entries           POST   user              new entry
+     /myp/entries/XYZ   GET        user              a particular entry
+v1.0 /myp/any/otherfile GET        user              any existing file
+v1.0 /signin            GET/POST   no                sign-in page
+     /admin             GET/POST   global-admin      management of projects (create, ...)
+v1.0 /users                        global-admin      management of users for all projects
 
 Files :
 /repo/

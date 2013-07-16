@@ -38,28 +38,8 @@ ustring computeIdBase34(uint8_t *buffer, size_t length)
     return sha1sum; // TODO not visible string
 }
 
-// vector that for each of 256^0, 256^1, 256^2, ... 256^19
+// vector that for each of 256^0, 256^1, 256^2, ... 256^20
 // gives the decomposition in base 34
-// Python code that returns this array:
-//def int2baseVector(x, base):
-//    if x==0: return [0]
-//    digits = []
-//    while x:
-//        digits.append(x % base)
-//        x /= base
-//    digits.reverse()
-//    return digits
-//
-//L = []
-//MAX_STRING_BASE_256 = 20
-//for i in range(MAX_STRING_BASE_256):
-//L.append(int2baseVector(pow(256, i), 34))
-//
-//maxSize = len(L[-1])+1 # +1 for the "retenue"
-//
-//for i in range(MAX_STRING_BASE_256):
-//    while len(L[i]) < maxSize:
-//        L[i].append(0);
 
 const int BASE_34_VECTOR_SIZE = 32;
 const int BASE_34 = 34;
@@ -124,8 +104,6 @@ ustring convert2base34(const uint8_t *buffer, size_t length, bool skip_io)
     for (i=0; i<length; i++) {
         multiply(BASE_256_TO_34_VECTOR[i], result, BASE_34_VECTOR_SIZE, buffer[i]);
     }
-    // for (i=0; i<BASE_34_VECTOR_SIZE; i++) printf("%u, ", result[i]);
-    // printf("\n");
 
     const uint8_t alphabet[BASE_34+2] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
                                           'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J',

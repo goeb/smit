@@ -50,39 +50,99 @@ std::string request2string(struct mg_connection *conn)
 
 }
 
+void sendHttpHeader200(struct mg_connection *conn)
+{
+    mg_printf(conn, "HTTP/1.0 200 OK\r\n");
+}
+int handleResourceAdmin(struct mg_connection *conn)
+{
+    sendHttpHeader200(conn);
+    LOG_ERROR("Resource 'admin' not implemented");
+    return 1;
+}
+int handleResourceSignin(struct mg_connection *conn)
+{
+    sendHttpHeader200(conn);
+    LOG_ERROR("Resource 'signin' not implemented");
+    return 1;
+}
+int handleResourceUsers(struct mg_connection *conn)
+{
+    sendHttpHeader200(conn);
+    LOG_ERROR("Resource 'users' not implemented");
+    return 1;
+}
+
+int handleResourceRoot(struct mg_connection *conn)
+{
+    sendHttpHeader200(conn);
+    LOG_ERROR("Resource '/' not implemented");
+    return 1;
+}
+
+int handleInvalidResource(struct mg_connection *conn)
+{
+    const char *uri = mg_get_request_info(conn)->uri;
+    LOG_INFO("Invalid resource: uri=%s", uri);
+    mg_printf(conn, "HTTP/1.0 400 Bad Request\r\n\r\n");
+
+    return 1;
+}
+
+int handleProjectResource(struct mg_connection *conn)
+{
+    const char *uri = mg_get_request_info(conn)->uri;
+    // project related URI
+    const int LOCAL_URI_SIZE = 256;
+    char uriLocal[LOCAL_URI_SIZE+1];
+    if (strlen(uri) > LOCAL_URI_SIZE) {
+        LOG_ERROR("URI too long: %d bytes / %s", strlen(uri), uri);
+        return 1;
+    }
+    memcpy(uriLocal, uri, strlen(uri));
+
+    char *context = 0;
+    const char *projectName = strtok_r(uriLocal, "/", &context);
+    if (!projectName) {
+        // root level resource
+        //TODO
+        LOG_ERROR("Root level resource access not implemented.");
+        sendHttpHeader200(conn);
+    } else {
+        const char *resourceKind = strtok_r(uriLocal, "/", &context);
+        if (!resourceKind) resourceKind = "issues"; // default
+        LOG_DEBUG("projectName=%s, resourceKind=%s", projectName, resourceKind);
+    }
+
+
+    // TODO remove below
+    // Show HTML form. Make sure it has enctype="multipart/form-data" attr.
+    static const char *html_form =
+            "<html><body>Upload example."
+            "<form method=\"POST\" action=\"/handle_post_request\" "
+            "  enctype=\"multipart/form-data\">"
+            "<input type=\"file\" name=\"file\" /> <br/>"
+            "<input type=\"submit\" value=\"Upload\" />"
+            "</form></body></html>";
+
+    std::string req = request2string(conn);
+
+    sendHttpHeader200(conn);
+    mg_printf(conn, "Content-Length: %d\r\n"
+              "Content-Type: text/html\r\n\r\n%s%s",
+              (int) strlen(html_form)+req.size(), html_form, req.c_str());
+
+}
+
 static int begin_request_handler(struct mg_connection *conn) {
 
     const char *uri = mg_get_request_info(conn)->uri;
     LOG_DEBUG("uri=%s", uri);
-    if (0 == strcmp(uri, "/admin")) {
-        mg_printf(conn, "%s", "HTTP/1.0 200 OK\r\n\r\n");
-        //mg_upload(conn, "/admin");
-        mg_printf(conn, "%s", "admin TODO");
-    } else  if (0 == strcmp(uri, "/signin")) {
-        mg_printf(conn, "%s", "HTTP/1.0 200 OK\r\n\r\n");
-        mg_printf(conn, "%s", "signin TODO");
-    } else  if (0 == strcmp(uri, "/users")) {
-        mg_printf(conn, "%s", "HTTP/1.0 200 OK\r\n\r\n");
-        mg_printf(conn, "%s", "users TODO xxx");
-        LOG_DEBUG("users TODO");
-    } else {
-        // project related URI
-        // Show HTML form. Make sure it has enctype="multipart/form-data" attr.
-        static const char *html_form =
-                "<html><body>Upload example."
-                "<form method=\"POST\" action=\"/handle_post_request\" "
-                "  enctype=\"multipart/form-data\">"
-                "<input type=\"file\" name=\"file\" /> <br/>"
-                "<input type=\"submit\" value=\"Upload\" />"
-                "</form></body></html>";
-
-        std::string req = request2string(conn);
-
-        mg_printf(conn, "HTTP/1.0 200 OK\r\n"
-                  "Content-Length: %d\r\n"
-                  "Content-Type: text/html\r\n\r\n%s%s",
-                  (int) strlen(html_form)+req.size(), html_form, req.c_str());
-    }
+    if (0 == strcmp(uri, "/admin")) return handleResourceAdmin(conn);
+    else  if (0 == strcmp(uri, "/signin")) return handleResourceSignin(conn);
+    else  if (0 == strcmp(uri, "/users")) return handleResourceUsers(conn);
+    else  if (0 == strcmp(uri, "/")) return handleResourceRoot(conn);
+    else return handleProjectResource(conn);
 
     // Mark request as processed
     return 1;
