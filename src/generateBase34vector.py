@@ -3,7 +3,7 @@ def int2baseVector(x, base):
     if x==0: return [0]
     digits = []
     while x:
-        digits.append(x % base)
+        digits.insert(0, x % base)
         x /= base
     digits.reverse()
     return digits
