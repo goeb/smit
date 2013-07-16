@@ -113,7 +113,7 @@ void multiply(const int* vector256, int *currentVector, int size, int factor)
     }
 }
 
-ustring convert2base34(const uint8_t *buffer, size_t length)
+ustring convert2base34(const uint8_t *buffer, size_t length, bool skip_io)
 {
     // length must be SHA_DIGEST_LENGTH
 
@@ -124,17 +124,14 @@ ustring convert2base34(const uint8_t *buffer, size_t length)
     for (i=0; i<length; i++) {
         multiply(BASE_256_TO_34_VECTOR[i], result, BASE_34_VECTOR_SIZE, buffer[i]);
     }
-    for (i=0; i<BASE_34_VECTOR_SIZE; i++) {
-        printf("%u, ", result[i]);
-    }
-    printf("\n");
+    // for (i=0; i<BASE_34_VECTOR_SIZE; i++) printf("%u, ", result[i]);
+    // printf("\n");
 
     const uint8_t alphabet[BASE_34+2] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
-                               'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J',
-                               'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T',
+                                          'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J',
+                                          'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T',
                                           'U', 'V', 'W', 'X', 'Y', 'Z'};
     ustring base34result;
-    bool skip_io = false; // for tests
     for (i=0; i<BASE_34_VECTOR_SIZE; i++) {
         uint8_t c = alphabet[result[i]];
         if (skip_io) {
@@ -143,7 +140,7 @@ ustring convert2base34(const uint8_t *buffer, size_t length)
             if (c >= 'I') c = alphabet[result[i]+1];
             if (c >= 'O') c = alphabet[result[i]+2];
         }
-        base34result.push_back(alphabet[result[i]]);
+        base34result.push_back(c);
     }
     return base34result;
 }

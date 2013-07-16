@@ -1,4 +1,5 @@
 
+all: T_parseConfig T_identifiers
 
 SRCS_T_parseConfig = T_parseConfig.cpp ../src/parseConfig.cpp
 SRCS_T_identifiers = T_identifiers.cpp ../src/identifiers.cpp
