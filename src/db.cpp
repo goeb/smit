@@ -17,12 +17,17 @@
 
 #define PROJECT_FILE "project"
 #define ENTRIES "entries" // sub-directory of a project where the entries are stored
+#define HEAD "_HEAD"
 
+#define K_PARENT "_parent"
+#define K_AUTHOR "_author"
+#define K_CTIME "_ctime"
 class Project {
 public:
     static int load(const char *path); // load a project
     int loadConfig(const char *path);
     int loadEntries(const char *path);
+    void consolidateIssues();
 private:
     ProjectConfig config;
     std::map<ustring, Issue*> issues;
@@ -32,12 +37,12 @@ private:
 class Database {
 public:
     static Database Db;
-    std::map<ustring, Project*> projects;
+    std::map<std::string, Project*> projects;
 };
 Database Database::Db;
 
 
-int init(const char * pathToRepository)
+int db_init(const char * pathToRepository)
 {
     // look for all files "pathToRepository/p/project"
     // and parse them
@@ -64,6 +69,17 @@ int init(const char * pathToRepository)
     }
     return Database::Db.projects.size();
 }
+void Issue::loadHead(const std::string &issuePath)
+{
+    std::string headPath = issuePath + '/' + HEAD;
+    uint8_t *buf = 0;
+    int n = loadFile(headPath.c_str(), &buf);
+
+    if (n <= 0) return; // error or empty file
+
+    head.assign(buf, n);
+    free(buf);
+}
 
 // load in memory the given project
 // re-load if it was previously loaded
@@ -88,6 +104,10 @@ int Project::load(const char *path)
     }
     LOG_INFO("Project %s loaded.", path);
 
+    p->consolidateIssues();
+
+    // store the project in memory
+    Database::Db.projects[path] = p;
     return 0;
 }
 
@@ -96,39 +116,16 @@ Entry *loadEntry(std::string dir, const char* basename)
 {
     // load a given entry
     std::string path = dir + '/' + basename;
-    LOG_DEBUG("Loading entry '%s'...", path.c_str());
-    FILE *f = fopen(path.c_str(), "r");
-    if (NULL == f) {
-        LOG_DEBUG("Could not open file '%s', %s", path.c_str(), strerror(errno));
-        return 0;
-    }
-    // else continue and parse the file
+    unsigned char *buf = 0;
+    int n = loadFile(path.c_str(), &buf);
 
-    int r = fseek(f, 0, SEEK_END); // go to the end of the file
-    if (r != 0) {
-        LOG_ERROR("could not fseek(%s): %s", path.c_str(), strerror(errno));
-        fclose(f);
-        return 0;
-    }
-    long filesize = ftell(f);
-    if (filesize > 4*1024*1024) { // max 1 MByte
-        LOG_ERROR("loadConfig: file %s over-sized (%ld bytes)", path.c_str(), filesize);
-        fclose(f);
-        return 0;
-    }
-    rewind(f);
-    unsigned char *buf = (unsigned char *)malloc(filesize);
-    size_t n = fread(buf, 1, filesize, f);
-    if (n != filesize) {
-        LOG_ERROR("fread(%s): short read. feof=%d, ferror=%d", path.c_str(), feof(f), ferror(f));
-        fclose(f);
-        return 0;
-    }
+    if (n <= 0) return 0; // error or empty file
 
     Entry *e = new Entry;
     e->id = (uint8_t*)basename;
 
     std::list<std::list<ustring> > lines = parseConfig(buf, n);
+    free(buf);
 
     std::list<std::list<ustring> >::iterator line;
     int lineNum = 0;
@@ -142,10 +139,10 @@ Entry *loadEntry(std::string dir, const char* basename)
         ustring key = line->front();
         ustring value = line->back();
 
-        if (0 == key.compare((uint8_t*)"ctime")) {
+        if (0 == key.compare((uint8_t*)K_CTIME)) {
             e->ctime = atoi((char*)value.c_str());
-        } else if (0 == key.compare((uint8_t*)"parent")) e->parent = value;
-        else if (0 == key.compare((uint8_t*)"author")) e->author = value;
+        } else if (0 == key.compare((uint8_t*)K_PARENT)) e->parent = value;
+        else if (0 == key.compare((uint8_t*)K_AUTHOR)) e->author = value;
         else if (line->size() == 2) {
             e->singleProperties[key] = value;
         } else {
@@ -157,36 +154,109 @@ Entry *loadEntry(std::string dir, const char* basename)
     return e;
 }
 
+// 1. Walk through all loaded issues and compute the head
+//    if it was not found earlier during the loadEntries.
+// 2. Once the head is found, walk through all the entries
+//    and fulfill the properties of the issue.
+void Project::consolidateIssues()
+{
+    LOG_DEBUG("consolidateIssues()...");
+    std::map<ustring, Issue*>::iterator i;
+    for (i = issues.begin(); i != issues.end(); i++) {
+        Issue *currentIssue = i->second;
+        LOG_DEBUG("consolidateIssues() issue %s...", (char*)currentIssue->id.c_str());
+
+        if (currentIssue->head.size() == 0) {
+            // repair the head
+            LOG_INFO("Missing head for issue '%s'. Repairing TODO...", currentIssue->id.c_str());
+        }
+        // now that the head is found, walk through all entries
+        // following the _parent properties.
+
+        ustring parentId = currentIssue->head;
+        LOG_DEBUG("parentId=%s", parentId.c_str());
+        while (0 != parentId.compare((uint8_t*)"null")) {
+            std::map<ustring, Entry*>::iterator e = entries.find(parentId);
+            if (e == entries.end()) {
+                LOG_ERROR("Broken chain of entries: missing reference '%s'",
+                          parentId.c_str());
+                break; // abort the loop
+            }
+            Entry *currentEntry = e->second;
+            // for each property of the parent,
+            // create the same property in the issue, if not already existing
+            // (in order to have only most recent properties)
+
+            // singleProperties
+            std::map<ustring, ustring>::iterator p;
+            for (p = currentEntry->singleProperties.begin(); p != currentEntry->singleProperties.end(); p++) {
+                if (currentIssue->singleProperties.count(p->first) == 0) {
+                    // not already existing. Create it.
+                    currentIssue->singleProperties[p->first] = p->second;
+                }
+            }
+
+            // multiProperties
+            std::map<ustring, std::list<ustring> >::iterator mp;
+            for (mp = currentEntry->multiProperties.begin(); mp != currentEntry->multiProperties.end(); mp++) {
+                if (currentIssue->multiProperties.count(mp->first) == 0) {
+                    // not already existing. Create it.
+                    currentIssue->multiProperties[mp->first] = mp->second;
+                }
+            }
+            parentId = currentEntry->parent;
+            LOG_DEBUG("Next parent: %s", parentId.c_str());
+        }
+    }
+    LOG_DEBUG("consolidateIssues() done.");
+}
 int Project::loadEntries(const char *path)
 {
     // load files path/entries/*/*
-    DIR *dirp;
+    // The tree of entries is as follows:
+    // myproject/entries/XXX/XXX (XXX is the issue id)
+    // myproject/entries/XXX/ABCDEF012345
+    // myproject/entries/XXX/123356AF
+    // myproject/entries/XXX/_HEAD
+    // myproject/entries/YYYYYY/YYYYYY (YYYYYY is another issue id)
+    // myproject/entries/YYYYYY/_HEAD
+    // etc.
     std::string pathToEntries = path;
     pathToEntries = pathToEntries + '/' + ENTRIES;
-    if ((dirp = opendir(pathToEntries.c_str())) == NULL) {
+    DIR *enriesDirHandle;
+    if ((enriesDirHandle = opendir(pathToEntries.c_str())) == NULL) {
         LOG_ERROR("Cannot open directory '%s'", pathToEntries.c_str());
         return -1;
 
     } else {
-        struct dirent *dp;
+        struct dirent *issueDir;
 
-        while ((dp = readdir(dirp)) != NULL) {
-            // Do not show current dir and hidden files
-            if (0 == strcmp(dp->d_name, ".")) continue;
-            if (0 == strcmp(dp->d_name, "..")) continue;
-            std::string subPath = pathToEntries;
-            subPath = subPath + '/' + dp->d_name;
+        while ((issueDir = readdir(enriesDirHandle)) != NULL) {
+            if (0 == strcmp(issueDir->d_name, ".")) continue;
+            if (0 == strcmp(issueDir->d_name, "..")) continue;
 
+            std::string issuePath = pathToEntries;
+            issuePath = issuePath + '/' + issueDir->d_name;
             // open this subdir and look for all files of this subdir
-            DIR *subdirp;
-            if ((subdirp = opendir(subPath.c_str())) == NULL) continue; // subdir not a directory
+            DIR *issueDirHandle;
+            if ((issueDirHandle = opendir(issuePath.c_str())) == NULL) continue; // not a directory
             else {
-                struct dirent *subdp;
-                while ((subdp = readdir(subdirp)) != NULL) {
-                    if (0 == strcmp(subdp->d_name, ".")) continue;
-                    if (0 == strcmp(subdp->d_name, "..")) continue;
-                    std::string filePath = subPath + '/' + subdp->d_name;
-                    Entry *e = loadEntry(subPath, subdp->d_name);
+                // we are in a issue directory
+                Issue *issue = new Issue();
+                issue->id.assign((uint8_t*)issueDir->d_name);
+                issues[issue->id] = issue;
+
+                struct dirent *entryFile;
+                while ((entryFile = readdir(issueDirHandle)) != NULL) {
+                    if (0 == strcmp(entryFile->d_name, ".")) continue;
+                    if (0 == strcmp(entryFile->d_name, "..")) continue;
+                    if (0 == strcmp(entryFile->d_name, HEAD)) {
+                        // this is the HEAD, ie: the lastest entry.
+                        issue->loadHead(issuePath);
+                        continue;
+                    }
+                    std::string filePath = issuePath + '/' + entryFile->d_name;
+                    Entry *e = loadEntry(issuePath, entryFile->d_name);
                     if (e) entries[e->id] = e;
                     else LOG_ERROR("Cannot load entry '%s'", filePath.c_str());
                 }

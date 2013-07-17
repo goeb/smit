@@ -8,10 +8,11 @@ SOURCES += \
     ../../src/db.cpp \
     ../../src/upload.cpp \
     ../../src/parseConfig.cpp \
-    ../../src/smit_httpd.cpp \
     ../../src/identifiers.cpp \
     ../../test/T_identifiers.cpp \
-    ../../test/T_parseConfig.cpp
+    ../../test/T_parseConfig.cpp \
+    ../../src/main.cpp \
+    ../../src/httpdHandlers.cpp
 
 HEADERS += \
     ../../mongoose/mongoose.h \
@@ -19,5 +20,6 @@ HEADERS += \
     ../../src/parseConfig.h \
     ../../src/ustring.h \
     ../../src/identifiers.h \
-    ../../src/logging.h
+    ../../src/logging.h \
+    ../../src/httpdHandlers.h
 

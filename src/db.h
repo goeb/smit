@@ -24,13 +24,16 @@ typedef struct Entry {
 // Issue
 // An issue is consolidated over all its entries
 struct Issue {
-    ustring firstEntry;
-    ustring lastEntry;
+    ustring id; // same as the first entry
+    ustring head; // the latest entry
     int ctime; // creation time (the one of the first entry)
     int mtime; // modification time (the one of the last entry)
-    std::map<ustring, ustring> properties; // properties of the issue
+    std::map<ustring, ustring> singleProperties; // properties of the issue
+    std::map<ustring, std::list<ustring> > multiProperties;
+
     // the properties of the issue is the consolidation of all the properties
     // of its entries. For a given key, the most recent value has priority.
+    void loadHead(const std::string &issuePath);
 };
 
 enum FieldType { F_TEXT, F_SELECT, F_MULTISELECT, F_SELECT_USER};
@@ -50,7 +53,7 @@ struct ProjectConfig {
 };
 
 // Functions
-int init(const char * pathToRepository); // initialize the given repository
+int db_init(const char * pathToRepository); // initialize the given repository
 
 // load in memory the given project
 // re-load if it was previously loaded

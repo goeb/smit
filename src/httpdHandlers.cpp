@@ -18,6 +18,7 @@ typedef __int64 int64_t;
 #include <string>
 #include <sstream>
 #include "mongoose.h"
+#include "httpdHandlers.h"
 
 #include "db.h"
 #include "logging.h"
@@ -134,7 +135,7 @@ int handleProjectResource(struct mg_connection *conn)
 
 }
 
-static int begin_request_handler(struct mg_connection *conn) {
+int begin_request_handler(struct mg_connection *conn) {
 
     const char *uri = mg_get_request_info(conn)->uri;
     LOG_DEBUG("uri=%s", uri);
@@ -148,32 +149,10 @@ static int begin_request_handler(struct mg_connection *conn) {
     return 1;
 }
 
-static void upload_handler(struct mg_connection *conn, const char *path) {
+void upload_handler(struct mg_connection *conn, const char *path) {
     mg_printf(conn, "Saved [%s]", path);
     std::string req = request2string(conn);
     mg_printf(conn, "%s", req.c_str());
 
 }
 
-int main(void) {
-
-    computeIdBase34((uint8_t*)"toto", 4);
-
-
-    init("src/repositories");
-    struct mg_context *ctx;
-    const char *options[] = {"listening_ports", "8080", NULL};
-    struct mg_callbacks callbacks;
-
-    ustring x = bin2hex(ustring((unsigned char*)"toto"));
-    printf("bin2hex(toto)=%s\n", x.c_str());
-
-    memset(&callbacks, 0, sizeof(callbacks));
-    callbacks.begin_request = begin_request_handler;
-    callbacks.upload = upload_handler;
-    ctx = mg_start(&callbacks, NULL, options);
-    getchar();  // Wait until user hits "enter"
-    mg_stop(ctx);
-
-    return 0;
-}

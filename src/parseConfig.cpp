@@ -1,7 +1,11 @@
 
+#include <errno.h>
+#include <string.h>
+#include <stdlib.h>
 
 #include "parseConfig.h"
 #include "ustring.h"
+#include "logging.h"
 
 
 std::list<std::list<ustring> > parseConfig(const uint8_t *buf, size_t len)
@@ -110,4 +114,51 @@ std::list<std::list<ustring> > parseConfig(const uint8_t *buf, size_t len)
     if (line.size() > 0) linesOftokens.push_back(line);
 
     return linesOftokens;
+}
+
+// Allocate a buffer (malloc) and load a file into this buffer.
+// @return the number of bytes read (that is also the size of the buffer)
+//         -1 in case of error
+// If the file is empty, 0 is returned and the buffer is not allocated.
+// It is up to the caller to free the buffer (if the return value is > 0).
+int loadFile(const char *filepath, unsigned char **data)
+{
+    LOG_DEBUG("Loading file '%s'...", filepath);
+    FILE *f = fopen(filepath, "rb");
+    if (NULL == f) {
+        LOG_DEBUG("Could not open file '%s', %s", filepath, strerror(errno));
+        return -1;
+    }
+    // else continue and parse the file
+
+    int r = fseek(f, 0, SEEK_END); // go to the end of the file
+    if (r != 0) {
+        LOG_ERROR("could not fseek(%s): %s", filepath, strerror(errno));
+        fclose(f);
+        return -1;
+    }
+    long filesize = ftell(f);
+    if (filesize > 4*1024*1024) { // max 4 MByte
+        LOG_ERROR("loadFile: file '%s'' over-sized (%ld bytes)", filepath, filesize);
+        fclose(f);
+        return -1;
+    }
+
+    if (0 == filesize) {
+        // the file is empty
+        fclose(f);
+        return 0;
+    }
+
+    rewind(f);
+    unsigned char *buffer = (unsigned char *)malloc(filesize);
+    size_t n = fread(buffer, 1, filesize, f);
+    if (n != filesize) {
+        LOG_ERROR("fread(%s): short read. feof=%d, ferror=%d", filepath, feof(f), ferror(f));
+        fclose(f);
+        free(buffer);
+        return -1;
+    }
+    *data = buffer;
+    return n;
 }
