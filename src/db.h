@@ -52,6 +52,28 @@ struct ProjectConfig {
     
 };
 
+
+class Project {
+public:
+    static int load(const char *path, char *name); // load a project
+    int loadConfig(const char *path);
+    int loadEntries(const char *path);
+    void consolidateIssues();
+private:
+    ProjectConfig config;
+    std::map<ustring, Issue*> issues;
+    std::map<ustring, Entry*> entries;
+};
+
+
+class Database {
+public:
+    static Database Db;
+    std::map<std::string, Project*> projects;
+    static bool hasProject(const char *projectName);
+};
+
+
 // Functions
 int db_init(const char * pathToRepository); // initialize the given repository
 

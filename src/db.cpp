@@ -22,23 +22,7 @@
 #define K_PARENT "_parent"
 #define K_AUTHOR "_author"
 #define K_CTIME "_ctime"
-class Project {
-public:
-    static int load(const char *path); // load a project
-    int loadConfig(const char *path);
-    int loadEntries(const char *path);
-    void consolidateIssues();
-private:
-    ProjectConfig config;
-    std::map<ustring, Issue*> issues;
-    std::map<ustring, Entry*> entries;
-};
 
-class Database {
-public:
-    static Database Db;
-    std::map<std::string, Project*> projects;
-};
 Database Database::Db;
 
 
@@ -64,7 +48,7 @@ int db_init(const char * pathToRepository)
             std::string pathToProject = pathToRepository;
             pathToProject += '/';
             pathToProject += dp->d_name;
-            int r = Project::load(pathToProject.c_str());
+            int r = Project::load(pathToProject.c_str(), dp->d_name);
         }
     }
     return Database::Db.projects.size();
@@ -84,7 +68,7 @@ void Issue::loadHead(const std::string &issuePath)
 // load in memory the given project
 // re-load if it was previously loaded
 // @return 0 if success, -1 if failure
-int Project::load(const char *path)
+int Project::load(const char *path, char *name)
 {
     LOG_INFO("Loading project %s...", path);
     Project *p = new Project;
@@ -107,7 +91,7 @@ int Project::load(const char *path)
     p->consolidateIssues();
 
     // store the project in memory
-    Database::Db.projects[path] = p;
+    Database::Db.projects[name] = p;
     return 0;
 }
 
@@ -410,3 +394,9 @@ void setId(Entry &entry)
     entry.id.assign(md, SHA_DIGEST_LENGTH);
 }
 
+bool Database::hasProject(const char *projectName)
+{
+    if (1 == Database::Db.projects.count(projectName)) {
+        return true;
+    } else return false;
+}

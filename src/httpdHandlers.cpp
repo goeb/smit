@@ -86,53 +86,56 @@ int handleInvalidResource(struct mg_connection *conn)
     const char *uri = mg_get_request_info(conn)->uri;
     LOG_INFO("Invalid resource: uri=%s", uri);
     mg_printf(conn, "HTTP/1.0 400 Bad Request\r\n\r\n");
+    mg_printf(conn, "400 Bad Request");
 
-    return 1;
+    return 1; // request processed
 }
 
+// @return
+//         1 if processed
+//         0 if error (another handler may try handling the request
 int handleProjectResource(struct mg_connection *conn)
 {
+    // uri should be: /project/resource
+
     const char *uri = mg_get_request_info(conn)->uri;
     // project related URI
     const int LOCAL_URI_SIZE = 256;
     char uriLocal[LOCAL_URI_SIZE+1];
     if (strlen(uri) > LOCAL_URI_SIZE) {
         LOG_ERROR("URI too long: %d bytes / %s", strlen(uri), uri);
-        return 1;
+        return handleInvalidResource(conn);
     }
     memcpy(uriLocal, uri, strlen(uri));
 
     char *context = 0;
     const char *projectName = strtok_r(uriLocal, "/", &context);
     if (!projectName) {
-        // root level resource
-        //TODO
-        LOG_ERROR("Root level resource access not implemented.");
-        sendHttpHeader200(conn);
-    } else {
-        const char *resourceKind = strtok_r(uriLocal, "/", &context);
-        if (!resourceKind) resourceKind = "issues"; // default
-        LOG_DEBUG("projectName=%s, resourceKind=%s", projectName, resourceKind);
+        // not a project resource. not processed here but in handleResourceRoot()
+        LOG_DEBUG("Empty project resource.");
+        return 0; // not processed
     }
 
+    // check if this project is loaded
+    if (!Database::hasProject(projectName)) {
+        // unkown project
+        LOG_DEBUG("No such project '%s'.", projectName);
+        return 0; // not process. Another handler may process it (eg: static file)
+    }
 
-    // TODO remove below
-    // Show HTML form. Make sure it has enctype="multipart/form-data" attr.
-    static const char *html_form =
-            "<html><body>Upload example."
-            "<form method=\"POST\" action=\"/handle_post_request\" "
-            "  enctype=\"multipart/form-data\">"
-            "<input type=\"file\" name=\"file\" /> <br/>"
-            "<input type=\"submit\" value=\"Upload\" />"
-            "</form></body></html>";
+    const char *resourceKind = strtok_r(0, "/", &context);
+    if (!resourceKind) resourceKind = "issues"; // default
+    LOG_DEBUG("projectName=%s, resourceKind=%s", projectName, resourceKind);
+
 
     std::string req = request2string(conn);
 
     sendHttpHeader200(conn);
-    mg_printf(conn, "Content-Length: %d\r\n"
-              "Content-Type: text/html\r\n\r\n%s%s",
-              (int) strlen(html_form)+req.size(), html_form, req.c_str());
 
+    mg_printf(conn, "Content-Type: text/html\r\n\r\n");
+    mg_printf(conn, "Request=%s\n", req.c_str());
+    mg_printf(conn, "projectName=%s, resourceKind=%s", projectName, resourceKind);
+    return 1;
 }
 
 int begin_request_handler(struct mg_connection *conn) {

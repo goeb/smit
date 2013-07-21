@@ -6,6 +6,7 @@
 
 #include "mongoose.h"
 #include "httpdHandlers.h"
+#include "logging.h"
 #include "db.h"
 
 
@@ -35,6 +36,8 @@ int main(int argc, const char **argv)
     memset(&callbacks, 0, sizeof(callbacks));
     callbacks.begin_request = begin_request_handler;
     callbacks.upload = upload_handler;
+
+    LOG_DEBUG("Starting httpd server on port %s", options[1]);
     ctx = mg_start(&callbacks, NULL, options);
     getchar();  // Wait until user hits "enter"
     mg_stop(ctx);

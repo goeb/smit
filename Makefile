@@ -56,4 +56,8 @@ clean:
 	find . -name "*.o" -delete
 	rm smit
 
+.PHONY: test
+test:
+	$(MAKE) -C test
+
 include $(DEPENDS)
