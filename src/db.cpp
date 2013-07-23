@@ -394,7 +394,7 @@ void setId(Entry &entry)
     entry.id.assign(md, SHA_DIGEST_LENGTH);
 }
 
-bool Database::hasProject(const char *projectName)
+bool Database::hasProject(const std::string & projectName)
 {
     if (1 == Database::Db.projects.count(projectName)) {
         return true;

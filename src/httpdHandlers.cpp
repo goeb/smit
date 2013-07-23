@@ -55,33 +55,8 @@ void sendHttpHeader200(struct mg_connection *conn)
 {
     mg_printf(conn, "HTTP/1.0 200 OK\r\n");
 }
-int handleResourceAdmin(struct mg_connection *conn)
-{
-    sendHttpHeader200(conn);
-    LOG_ERROR("Resource 'admin' not implemented");
-    return 1;
-}
-int handleResourceSignin(struct mg_connection *conn)
-{
-    sendHttpHeader200(conn);
-    LOG_ERROR("Resource 'signin' not implemented");
-    return 1;
-}
-int handleResourceUsers(struct mg_connection *conn)
-{
-    sendHttpHeader200(conn);
-    LOG_ERROR("Resource 'users' not implemented");
-    return 1;
-}
 
-int handleResourceRoot(struct mg_connection *conn)
-{
-    sendHttpHeader200(conn);
-    LOG_ERROR("Resource '/' not implemented");
-    return 1;
-}
-
-int handleInvalidResource(struct mg_connection *conn)
+int sendHttpHeaderInvalidResource(struct mg_connection *conn)
 {
     const char *uri = mg_get_request_info(conn)->uri;
     LOG_INFO("Invalid resource: uri=%s", uri);
@@ -91,65 +66,127 @@ int handleInvalidResource(struct mg_connection *conn)
     return 1; // request processed
 }
 
-// @return
-//         1 if processed
-//         0 if error (another handler may try handling the request
-int handleProjectResource(struct mg_connection *conn)
+//
+void trimLeft(std::string & s, char c)
 {
-    // uri should be: /project/resource
+    size_t i = 0;
+    while ( (s.size() > i) && (s[i] == c) ) i++;
 
-    const char *uri = mg_get_request_info(conn)->uri;
-    // project related URI
-    const int LOCAL_URI_SIZE = 256;
-    char uriLocal[LOCAL_URI_SIZE+1];
-    if (strlen(uri) > LOCAL_URI_SIZE) {
-        LOG_ERROR("URI too long: %d bytes / %s", strlen(uri), uri);
-        return handleInvalidResource(conn);
+    if (i >= s.size()) s = "";
+    else s = s.substr(i);
+}
+
+// take first token name out of uri
+// /a/b/c -> a and b/c
+// a/b/c -> a and b/c
+std::string popUriToken(std::string & uri)
+{
+    if (uri.empty()) return "";
+
+    size_t i = 0;
+    trimLeft(uri, '/');
+
+    size_t pos = uri.find_first_of("/", i); // skip the first leading / of the uri
+    std::string firstToken = uri.substr(i, pos-i);
+
+    if (pos == std::string::npos) uri = "";
+    else {
+        uri = uri.substr(pos);
+        trimLeft(uri, '/');
     }
-    memcpy(uriLocal, uri, strlen(uri));
 
-    char *context = 0;
-    const char *projectName = strtok_r(uriLocal, "/", &context);
-    if (!projectName) {
-        // not a project resource. not processed here but in handleResourceRoot()
-        LOG_DEBUG("Empty project resource.");
-        return 0; // not processed
-    }
-
-    // check if this project is loaded
-    if (!Database::hasProject(projectName)) {
-        // unkown project
-        LOG_DEBUG("No such project '%s'.", projectName);
-        return 0; // not process. Another handler may process it (eg: static file)
-    }
-
-    const char *resourceKind = strtok_r(0, "/", &context);
-    if (!resourceKind) resourceKind = "issues"; // default
-    LOG_DEBUG("projectName=%s, resourceKind=%s", projectName, resourceKind);
+    return firstToken;
+}
 
 
+void httpGetAdmin(struct mg_connection *conn) {
+}
+
+void httpPostAdmin(struct mg_connection *conn) {
+}
+
+void httpGetSignin(struct mg_connection *conn) {
+}
+
+void httpPostSignin(struct mg_connection *conn) {
+}
+
+void httGetUsers(struct mg_connection *conn) {
+}
+
+void httPostUsers(struct mg_connection *conn) {
+}
+
+void httpGetRoot(struct mg_connection *conn) {
     std::string req = request2string(conn);
 
     sendHttpHeader200(conn);
 
     mg_printf(conn, "Content-Type: text/html\r\n\r\n");
     mg_printf(conn, "Request=%s\n", req.c_str());
-    mg_printf(conn, "projectName=%s, resourceKind=%s", projectName, resourceKind);
-    return 1;
 }
+
+
+void httpGetListOfIssues(struct mg_connection *conn, const std::string & projectName) {
+}
+
+void httpPostNewIssue(struct mg_connection *conn, const std::string & projectName) {
+}
+
+void httpGetNewIssueForm(struct mg_connection *conn, const std::string & projectName) {
+}
+
+void httpGetIssue(struct mg_connection *conn, const std::string & projectName, const std::string & issueId) {
+}
+
+void httpPostEntry(struct mg_connection *conn, const std::string & projectName, const std::string & issueId) {
+}
+
+
+// begin_request_handler is the main entry point of an incoming HTTP request
+//
+// Resources              Methods    Acces Granted     Description
+//-------------------------------------------------------------------------
+//     /                  GET        user              list of projects
+//v1.0 /signin            GET/POST   all               sign-in page
+//     /admin             GET/POST   global-admin      management of projects (create, ...)
+//v1.0 /users                        global-admin      management of users for all projects
+//v1.0 /myp/config        GET/POST   project-admin     configuration of the project
+//     /myp/users         GET/POST   project-admin     local configuration of users of the project (names, access rights, etc.)
+//v1.0 /myp/issues        GET/POST   user              issues of the project / add new issue
+//v1.0 /myp/issues/new    GET        user              page with a form for submitting new issue
+//     /myp/issues/XYZ    GET/POST   user              a particular issue: get all entries or add a new entry
+//v1.0 /any/other/file    GET        user              any existing file (relatively to the repository)
 
 int begin_request_handler(struct mg_connection *conn) {
 
-    const char *uri = mg_get_request_info(conn)->uri;
-    LOG_DEBUG("uri=%s", uri);
-    if (0 == strcmp(uri, "/admin")) return handleResourceAdmin(conn);
-    else  if (0 == strcmp(uri, "/signin")) return handleResourceSignin(conn);
-    else  if (0 == strcmp(uri, "/users")) return handleResourceUsers(conn);
-    else  if (0 == strcmp(uri, "/")) return handleResourceRoot(conn);
-    else return handleProjectResource(conn);
-
-    // Mark request as processed
-    return 1;
+    bool handled = true;
+    std::string uri = mg_get_request_info(conn)->uri;
+    std::string method = mg_get_request_info(conn)->request_method;
+    LOG_DEBUG("uri=%s, method=%s", uri.c_str(), method.c_str());
+    if      ( (uri == "/admin") && (method == "GET") ) httpGetAdmin(conn);
+    else if ( (uri == "/admin") && (method == "POST") ) httpPostAdmin(conn);
+    else if ( (uri == "/signin") && (method == "GET") ) httpGetSignin(conn);
+    else if ( (uri == "/signin") && (method == "POST") ) httpPostSignin(conn);
+    else if ( (uri == "/users") && (method == "GET") ) httGetUsers(conn);
+    else if ( (uri == "/users") && (method == "POST") ) httPostUsers(conn);
+    else if ( (uri == "/") && (method == "GET") ) httpGetRoot(conn);
+    else {
+        // check if it is a valid project resource such as /myp/issues, /myp/users, /myp/config
+        std::string project = popUriToken(uri);
+        if (Database::Db.hasProject(project)) {
+            bool handled = true;
+            std::string resource = popUriToken(uri);
+            if      ( (resource == "issues") && (method == "GET") ) httpGetListOfIssues(conn, project);
+            else if ( (resource == "issues") && (method == "POST") ) httpPostNewIssue(conn, project);
+            else if ( (resource == "issues") && (uri == "/new") && (method == "GET") ) httpGetNewIssueForm(conn, project);
+            else if ( (resource == "issues") && (method == "GET") ) httpGetIssue(conn, project, uri);
+            else if ( (resource == "issues") && (method == "POST") ) httpPostEntry(conn, project, uri);
+            else handled = false;
+        }
+    }
+    if (handled) return 1;
+    else return 0; // let Mongoose handle static file
 }
 
 void upload_handler(struct mg_connection *conn, const char *path) {

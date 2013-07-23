@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
+#include <errno.h>
 
 #include "mongoose.h"
 #include "httpdHandlers.h"
@@ -23,11 +24,12 @@ int main(int argc, const char **argv)
 
     if (argc != 2) usage();
 
-
+    // argv[1] is the repository directory
+    const char *repo = argv[1];
     // Load all projects
-    db_init(argv[1]);
+    db_init(repo);
     struct mg_context *ctx;
-    const char *options[] = {"listening_ports", "8080", NULL};
+    const char *options[] = {"listening_ports", "8080", "document_root", repo, NULL};
     struct mg_callbacks callbacks;
 
     ustring x = bin2hex(ustring((unsigned char*)"toto"));

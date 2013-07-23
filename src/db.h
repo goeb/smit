@@ -70,7 +70,7 @@ class Database {
 public:
     static Database Db;
     std::map<std::string, Project*> projects;
-    static bool hasProject(const char *projectName);
+    static bool hasProject(const std::string &projectName);
 };
 
 
