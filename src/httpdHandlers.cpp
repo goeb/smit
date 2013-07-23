@@ -137,6 +137,12 @@ void httpGetNewIssueForm(struct mg_connection *conn, const std::string & project
 }
 
 void httpGetIssue(struct mg_connection *conn, const std::string & projectName, const std::string & issueId) {
+    LOG_DEBUG("httpGetIssue: project=%s, issue=%s\n", projectName.c_str(), issueId.c_str());
+
+    sendHttpHeader200(conn);
+    mg_printf(conn, "Content-Type: text/html\r\n\r\n");
+    mg_printf(conn, "httpGetIssue: project=%s, issue=%s\n", projectName.c_str(), issueId.c_str());
+
 }
 
 void httpPostEntry(struct mg_connection *conn, const std::string & projectName, const std::string & issueId) {
@@ -175,10 +181,9 @@ int begin_request_handler(struct mg_connection *conn) {
         // check if it is a valid project resource such as /myp/issues, /myp/users, /myp/config
         std::string project = popUriToken(uri);
         if (Database::Db.hasProject(project)) {
-            bool handled = true;
             std::string resource = popUriToken(uri);
-            if      ( (resource == "issues") && (method == "GET") ) httpGetListOfIssues(conn, project);
-            else if ( (resource == "issues") && (method == "POST") ) httpPostNewIssue(conn, project);
+            if      ( (resource == "issues") && (method == "GET") && uri.empty() ) httpGetListOfIssues(conn, project);
+            else if ( (resource == "issues") && (method == "POST") && uri.empty() ) httpPostNewIssue(conn, project);
             else if ( (resource == "issues") && (uri == "/new") && (method == "GET") ) httpGetNewIssueForm(conn, project);
             else if ( (resource == "issues") && (method == "GET") ) httpGetIssue(conn, project, uri);
             else if ( (resource == "issues") && (method == "POST") ) httpPostEntry(conn, project, uri);
