@@ -27,7 +27,7 @@ int main(int argc, const char **argv)
     // argv[1] is the repository directory
     const char *repo = argv[1];
     // Load all projects
-    db_init(repo);
+    dbInit(repo);
     struct mg_context *ctx;
     const char *options[] = {"listening_ports", "8080", "document_root", repo, NULL};
     struct mg_callbacks callbacks;

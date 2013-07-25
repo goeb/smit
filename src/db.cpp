@@ -26,7 +26,7 @@
 Database Database::Db;
 
 
-int db_init(const char * pathToRepository)
+int dbInit(const char * pathToRepository)
 {
     // look for all files "pathToRepository/p/project"
     // and parse them
@@ -399,4 +399,14 @@ bool Database::hasProject(const std::string & projectName)
     if (1 == Database::Db.projects.count(projectName)) {
         return true;
     } else return false;
+}
+
+std::list<std::string> getProjectList()
+{
+    std::list<std::string> pList;
+    std::map<std::string, Project*>::iterator p;
+    for (p = Database::Db.projects.begin(); p!=Database::Db.projects.end(); p++) {
+        pList.push_back(p->first);
+    }
+    return pList;
 }

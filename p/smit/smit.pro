@@ -12,7 +12,8 @@ SOURCES += \
     ../../test/T_identifiers.cpp \
     ../../test/T_parseConfig.cpp \
     ../../src/main.cpp \
-    ../../src/httpdHandlers.cpp
+    ../../src/httpdHandlers.cpp \
+    ../../src/renderingText.cpp
 
 HEADERS += \
     ../../mongoose/mongoose.h \
@@ -21,5 +22,6 @@ HEADERS += \
     ../../src/ustring.h \
     ../../src/identifiers.h \
     ../../src/logging.h \
-    ../../src/httpdHandlers.h
+    ../../src/httpdHandlers.h \
+    ../../src/renderingText.h
 

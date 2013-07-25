@@ -75,7 +75,7 @@ public:
 
 
 // Functions
-int db_init(const char * pathToRepository); // initialize the given repository
+int dbInit(const char * pathToRepository); // initialize the given repository
 
 // load in memory the given project
 // re-load if it was previously loaded
@@ -107,5 +107,7 @@ int get(const char *project, const char *issueId, Issue &issue, std::list<Entry>
 int deleteEntry(ustring entry);
 
 ustring bin2hex(const ustring & in);
+
+std::list<std::string> getProjectList();
 
 #endif

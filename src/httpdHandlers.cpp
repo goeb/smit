@@ -23,6 +23,7 @@ typedef __int64 int64_t;
 #include "db.h"
 #include "logging.h"
 #include "identifiers.h"
+#include "renderingText.h"
 
 std::string request2string(struct mg_connection *conn)
 {
@@ -79,27 +80,58 @@ void trimLeft(std::string & s, char c)
 // take first token name out of uri
 // /a/b/c -> a and b/c
 // a/b/c -> a and b/c
-std::string popUriToken(std::string & uri)
+std::string popToken(std::string & uri, char separator)
 {
     if (uri.empty()) return "";
 
     size_t i = 0;
-    trimLeft(uri, '/');
+    trimLeft(uri, separator);
 
-    size_t pos = uri.find_first_of("/", i); // skip the first leading / of the uri
+    char sepStr[2];
+    sepStr[0] = separator;
+    sepStr[1] = 0;
+    size_t pos = uri.find_first_of(sepStr, i); // skip the first leading / of the uri
     std::string firstToken = uri.substr(i, pos-i);
 
     if (pos == std::string::npos) uri = "";
     else {
         uri = uri.substr(pos);
-        trimLeft(uri, '/');
+        trimLeft(uri, separator);
     }
 
     return firstToken;
 }
 
+// if uri is "x=y&a=bcd" and param is "a"
+// then return "bcd"
+std::string getParamFromQueryString(const std::string & queryString, const char *param)
+{
+    std::string q = queryString;
+    std::string paramEqual = param;
+    paramEqual += "=";
+    std::string token;
+    while ((token = popToken(q, '&')) != "") {
+        if (0 == token.compare(0, paramEqual.size(), paramEqual.c_str())) {
+            popToken(token, '='); // remove the param= part
+            return token;
+        }
+    }
+    return "";
+}
 
 void httpGetAdmin(struct mg_connection *conn) {
+    // print list of available projects
+    std::list<std::string> pList = getProjectList();
+
+    const struct mg_request_info *req = mg_get_request_info(conn);
+    std::string q;
+    if (req->query_string) q = req->query_string;
+    std::string format = getParamFromQueryString(q, "format");
+
+    sendHttpHeader200(conn);
+
+    if (format == "text") RText::printProjectList(conn, pList);
+    else RText::printProjectList(conn, pList);
 }
 
 void httpPostAdmin(struct mg_connection *conn) {
@@ -179,9 +211,9 @@ int begin_request_handler(struct mg_connection *conn) {
     else if ( (uri == "/") && (method == "GET") ) httpGetRoot(conn);
     else {
         // check if it is a valid project resource such as /myp/issues, /myp/users, /myp/config
-        std::string project = popUriToken(uri);
+        std::string project = popToken(uri, '/');
         if (Database::Db.hasProject(project)) {
-            std::string resource = popUriToken(uri);
+            std::string resource = popToken(uri, '/');
             if      ( (resource == "issues") && (method == "GET") && uri.empty() ) httpGetListOfIssues(conn, project);
             else if ( (resource == "issues") && (method == "POST") && uri.empty() ) httpPostNewIssue(conn, project);
             else if ( (resource == "issues") && (uri == "/new") && (method == "GET") ) httpGetNewIssueForm(conn, project);
