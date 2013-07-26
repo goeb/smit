@@ -59,6 +59,7 @@ public:
     int loadConfig(const char *path);
     int loadEntries(const char *path);
     void consolidateIssues();
+    std::list<Issue*> search(const char *fulltext, const char *filterSpec, const char *sortingSpec);
 private:
     ProjectConfig config;
     std::map<ustring, Issue*> issues;
@@ -90,7 +91,7 @@ int loadProject(const char *path);
 // @return number of issues 
 //  When fulltext search is enabled (fulltext != 0) then the search is done
 //  through all entries.
-std::list<struct Issue> search(const char * project, const char *fulltext, const char *filterSpec, const char *sortingSpec);
+std::list<struct Issue*> search(const char * project, const char *fulltext, const char *filterSpec, const char *sortingSpec);
 
 
 // add an entry in the database

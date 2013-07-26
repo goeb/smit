@@ -119,7 +119,8 @@ std::string getParamFromQueryString(const std::string & queryString, const char 
     return "";
 }
 
-void httpGetAdmin(struct mg_connection *conn) {
+void httpGetAdmin(struct mg_connection *conn)
+{
     // print list of available projects
     std::list<std::string> pList = getProjectList();
 
@@ -134,22 +135,28 @@ void httpGetAdmin(struct mg_connection *conn) {
     else RText::printProjectList(conn, pList);
 }
 
-void httpPostAdmin(struct mg_connection *conn) {
+void httpPostAdmin(struct mg_connection *conn)
+{
 }
 
-void httpGetSignin(struct mg_connection *conn) {
+void httpGetSignin(struct mg_connection *conn)
+{
 }
 
-void httpPostSignin(struct mg_connection *conn) {
+void httpPostSignin(struct mg_connection *conn)
+{
 }
 
-void httGetUsers(struct mg_connection *conn) {
+void httGetUsers(struct mg_connection *conn)
+{
 }
 
-void httPostUsers(struct mg_connection *conn) {
+void httPostUsers(struct mg_connection *conn)
+{
 }
 
-void httpGetRoot(struct mg_connection *conn) {
+void httpGetRoot(struct mg_connection *conn)
+{
     std::string req = request2string(conn);
 
     sendHttpHeader200(conn);
@@ -159,7 +166,31 @@ void httpGetRoot(struct mg_connection *conn) {
 }
 
 
-void httpGetListOfIssues(struct mg_connection *conn, const std::string & projectName) {
+void httpGetListOfIssues(struct mg_connection *conn, const std::string & projectName)
+{
+    // get query string parameters:
+    //     colspec    which fields are to be displayed in the table, and their order
+    //     filter     select issues with fields of the given values
+    //     sort       indicate sorting
+
+    const struct mg_request_info *req = mg_get_request_info(conn);
+    std::string q;
+    if (req->query_string) q = req->query_string;
+
+    std::string filter = getParamFromQueryString(q, "filter");
+    std::string fulltextSearch = getParamFromQueryString(q, "search");
+    std::string sorting = getParamFromQueryString(q, "sort");
+
+    std::list<struct Issue*> issueList = search(projectName.c_str(), fulltextSearch.c_str(), filter.c_str(), sorting.c_str());
+
+
+    std::string colspec = getParamFromQueryString(q, "colspec");
+    std::string format = getParamFromQueryString(q, "format");
+
+    if (format == "text") RText::printIssueList(conn, issueList, colspec.c_str());
+    else RText::printIssueList(conn, issueList, colspec.c_str()); // TODO
+
+
 }
 
 void httpPostNewIssue(struct mg_connection *conn, const std::string & projectName) {

@@ -354,17 +354,41 @@ int Project::loadConfig(const char *path)
 
 
 // search
-//  project: name of project where the search should be conduected
-//  fulltext: text that is searched (optional: 0 for no fulltext search)
-//  filterSpec: "status:open+label:v1.0+xx:yy"
-//  sortingSpec: "id+title-owner" (+ for ascending, - for descending order)
-// @return number of issues 
-//  When fulltext search is enabled (fulltext != 0) then the search is done
-//  through all entries.
-std::list<struct Issue> search(const char * project, const char *fulltext, const char *filterSpec, const char *sortingSpec)
+//   project: name of project where the search should be conduected
+//   fulltext: text that is searched (optional: 0 for no fulltext search)
+//   filterSpec: "status:open+label:v1.0+xx:yy"
+//   sortingSpec: "id+title-owner" (+ for ascending, - for descending order)
+//
+// @return number of issues
+//
+//   When fulltext search is enabled (fulltext != 0) then the search is done
+//   through all entries.
+std::list<struct Issue*> search(const char * project, const char *fulltext, const char *filterSpec, const char *sortingSpec)
 {
-}
+    std::map<std::string, Project*>::iterator p = Database::Db.projects.find(project);
+    if (p == Database::Db.projects.end()) {
+        LOG_ERROR("Invald project: %s", project);
+        std::list<struct Issue*> result;
+        return result; // return empty list
+    } else {
+        if (!p->second) {
+            LOG_ERROR("Invalid null pointer for project '%s'", project);
+            return std::list<struct Issue*>(); // empty list
+        }
+        return p->second->search(fulltext, filterSpec, sortingSpec);
 
+
+    }
+}
+std::list<Issue*> Project::search(const char *fulltext, const char *filterSpec, const char *sortingSpec)
+{
+    std::list<struct Issue*> result;
+    std::map<ustring, Issue*>::iterator i;
+    for (i=issues.begin(); i!=issues.end(); i++) {
+        result.push_back(i->second);
+    }
+    return result;
+}
 
 // add an entry in the database
 int add(const char *project, const char *issueId, const Entry &entry)
