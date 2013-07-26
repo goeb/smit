@@ -72,6 +72,7 @@ public:
     static Database Db;
     std::map<std::string, Project*> projects;
     static bool hasProject(const std::string &projectName);
+    std::string pathToRepository;
 };
 
 

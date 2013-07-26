@@ -24,6 +24,7 @@ typedef __int64 int64_t;
 #include "logging.h"
 #include "identifiers.h"
 #include "renderingText.h"
+#include "renderingHtml.h"
 
 std::string request2string(struct mg_connection *conn)
 {
@@ -188,7 +189,7 @@ void httpGetListOfIssues(struct mg_connection *conn, const std::string & project
     std::string format = getParamFromQueryString(q, "format");
 
     if (format == "text") RText::printIssueList(conn, issueList, colspec.c_str());
-    else RText::printIssueList(conn, issueList, colspec.c_str()); // TODO
+    else RHtml::printIssueList(conn, projectName.c_str(), issueList, colspec.c_str()); // TODO
 
 
 }

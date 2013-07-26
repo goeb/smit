@@ -7,7 +7,8 @@ SRCS_CPP = src/db.cpp  \
 		   src/identifiers.cpp \
 		   src/main.cpp \
 		   src/httpdHandlers.cpp \
-		   src/renderingText.cpp
+		   src/renderingText.cpp \
+		   src/renderingHtml.cpp
 
 
 

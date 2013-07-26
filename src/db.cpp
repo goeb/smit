@@ -32,6 +32,7 @@ int dbInit(const char * pathToRepository)
     // and parse them
     // then, load all pathToRepository/p/entries/*/*
 
+    Database::Db.pathToRepository = pathToRepository;
     DIR *dirp;
 
     if ((dirp = opendir(pathToRepository)) == NULL) {

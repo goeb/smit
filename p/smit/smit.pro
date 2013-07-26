@@ -13,7 +13,8 @@ SOURCES += \
     ../../test/T_parseConfig.cpp \
     ../../src/main.cpp \
     ../../src/httpdHandlers.cpp \
-    ../../src/renderingText.cpp
+    ../../src/renderingText.cpp \
+    ../../src/renderingHtml.cpp
 
 HEADERS += \
     ../../mongoose/mongoose.h \
@@ -23,5 +24,6 @@ HEADERS += \
     ../../src/identifiers.h \
     ../../src/logging.h \
     ../../src/httpdHandlers.h \
-    ../../src/renderingText.h
+    ../../src/renderingText.h \
+    ../../src/renderingHtml.h
 
