@@ -25,6 +25,7 @@ typedef __int64 int64_t;
 #include "identifiers.h"
 #include "renderingText.h"
 #include "renderingHtml.h"
+#include "parseConfig.h"
 
 std::string request2string(struct mg_connection *conn)
 {
@@ -186,10 +187,13 @@ void httpGetListOfIssues(struct mg_connection *conn, const std::string & project
 
 
     std::string colspec = getParamFromQueryString(q, "colspec");
+    std::list<ustring> cols = parseColspec(colspec.c_str());
     std::string format = getParamFromQueryString(q, "format");
 
-    if (format == "text") RText::printIssueList(conn, issueList, colspec.c_str());
-    else RHtml::printIssueList(conn, projectName.c_str(), issueList, colspec.c_str()); // TODO
+    sendHttpHeader200(conn);
+
+    if (format == "text") RText::printIssueList(conn, issueList, cols);
+    else RHtml::printIssueList(conn, projectName.c_str(), issueList, cols); // TODO
 
 
 }

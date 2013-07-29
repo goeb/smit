@@ -1,3 +1,4 @@
+#include <stdlib.h>
 
 #include "renderingHtml.h"
 #include "db.h"
@@ -11,8 +12,10 @@ void RHtml::printHeader(struct mg_connection *conn, const char *project)
     path = Database::Db.pathToRepository + "/" + project + "/html/header.html";
     unsigned char *data;
     int r = loadFile(path.c_str(), &data);
-    if (r >= 0) mg_printf(conn, "%s", data);
-    else {
+    if (r >= 0) {
+        mg_printf(conn, "%s", data);
+        free(data);
+    } else {
         LOG_ERROR("Could not load header.html for project %s", project);
     }
 
@@ -23,8 +26,10 @@ void RHtml::printFooter(struct mg_connection *conn, const char *project)
     path = Database::Db.pathToRepository + "/" + project + "/html/footer.html";
     unsigned char *data;
     int r = loadFile(path.c_str(), &data);
-    if (r >= 0) mg_printf(conn, "%s", data);
-    else {
+    if (r >= 0) {
+        mg_printf(conn, "%s", data);
+        free(data);
+    } else {
         LOG_ERROR("Could not load footer.html for project %s", project);
     }
 }
@@ -42,7 +47,7 @@ void RHtml::printProjectList(struct mg_connection *conn, const std::list<std::st
 }
 
 
-void RHtml::printIssueList(struct mg_connection *conn, const char *project, std::list<struct Issue*> issueList, const char *colspec)
+void RHtml::printIssueList(struct mg_connection *conn, const char *project, std::list<struct Issue*> issueList, std::list<ustring> colspec)
 {
     mg_printf(conn, "Content-Type: text/html\r\n\r\n");
     printHeader(conn, project);
@@ -53,22 +58,39 @@ void RHtml::printIssueList(struct mg_connection *conn, const char *project, std:
 
     std::list<struct Issue*>::iterator i;
     for (i=issueList.begin(); i!=issueList.end(); i++) {
-        mg_printf(conn, "%s, ", (*i)->id.c_str());
-        mg_printf(conn, "%d, ", (*i)->ctime);
-        mg_printf(conn, "%d, ", (*i)->mtime);
 
-        std::map<ustring, ustring>::iterator p;
-        for (p=(*i)->singleProperties.begin(); p!=(*i)->singleProperties.end(); p++) {
-            mg_printf(conn, "%s, ", p->second.c_str());
-        }
-        std::map<ustring, std::list<ustring> >::iterator mp;
-        for (mp=(*i)->multiProperties.begin(); mp!=(*i)->multiProperties.end(); mp++) {
-            std::list<ustring> values = mp->second;
-            std::list<ustring>::iterator v;
-            for (v=values.begin(); v!=values.end(); v++) {
-                mg_printf(conn, "%s+", v->c_str());
+        std::list<ustring>::iterator c;
+        for (c = colspec.begin(); c != colspec.end(); c++) {
+            ustring column = *c;
+            if (column == (uint8_t*)"id") mg_printf(conn, "%s, ", (*i)->id.c_str());
+            else if (column == (uint8_t*)"ctime") mg_printf(conn, "%d, ", (*i)->ctime);
+            else if (column == (uint8_t*)"mtime") mg_printf(conn, "%d, ", (*i)->mtime);
+
+            else {
+                // look if it is a single property
+                std::map<ustring, ustring>::iterator p;
+                std::map<ustring, ustring> & singleProperties = (*i)->singleProperties;
+
+                p = singleProperties.find(column);
+                if (p != singleProperties.end()) mg_printf(conn, "%s, ", p->second.c_str());
+
+                else {
+                    // look if it is a multi property*
+                    std::map<ustring, std::list<ustring> >::iterator mp;
+                    std::map<ustring, std::list<ustring> > & multiProperties = (*i)->multiProperties;
+
+                    mp = multiProperties.find(column);
+                    if (mp != multiProperties.end()) {
+                        std::list<ustring> values = mp->second;
+                        std::list<ustring>::iterator v;
+                        for (v=values.begin(); v!=values.end(); v++) {
+                            mg_printf(conn, "%s+", v->c_str());
+                        }
+                        mg_printf(conn, ", ");
+                    }
+                }
+
             }
-            mg_printf(conn, ", ");
         }
         mg_printf(conn, "\n");
     }

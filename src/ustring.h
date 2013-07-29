@@ -5,5 +5,6 @@
 #include <string>
 
 typedef std::basic_string<unsigned char> ustring;
+typedef std::string sstring; // signed string
 
 #endif

@@ -15,7 +15,7 @@ void RText::printProjectList(struct mg_connection *conn, const std::list<std::st
 }
 
 
-void RText::printIssueList(struct mg_connection *conn, std::list<struct Issue*> issueList, const char *colspec)
+void RText::printIssueList(struct mg_connection *conn, std::list<struct Issue*> issueList, std::list<ustring> colspec)
 {
     mg_printf(conn, "Content-Type: text/plain\r\n\r\n");
 

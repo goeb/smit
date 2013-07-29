@@ -151,7 +151,7 @@ int loadFile(const char *filepath, unsigned char **data)
     }
 
     rewind(f);
-    unsigned char *buffer = (unsigned char *)malloc(filesize);
+    unsigned char *buffer = (unsigned char *)malloc(filesize+1); // allow +1 for terminating null char
     size_t n = fread(buffer, 1, filesize, f);
     if (n != filesize) {
         LOG_ERROR("fread(%s): short read. feof=%d, ferror=%d", filepath, feof(f), ferror(f));
@@ -159,6 +159,51 @@ int loadFile(const char *filepath, unsigned char **data)
         free(buffer);
         return -1;
     }
+    buffer[filesize] = 0;
     *data = buffer;
     return n;
 }
+
+
+// "aaa+bb+ccc"
+// @return aaa, bbb, ccc
+std::list<ustring> parseColspec(const char *colspec)
+{
+    std::list<ustring> result;
+    size_t i = 0;
+    size_t L = strlen(colspec);
+    ustring currentToken;
+    for (i=0; i<L; i++) {
+        uint8_t c = colspec[i];
+        if (c == '+') {
+            // push previous token if any
+            if (currentToken.size() > 0) result.push_back(currentToken);
+            currentToken.clear();
+        } else currentToken += c;
+    }
+    if (currentToken.size() > 0) result.push_back(currentToken);
+    return result;
+}
+
+// "aaa+bbb-ccc"
+// @return ('+', aaa), ('+', bbb), ('-', ccc)
+std::list<std::pair<char, std::string> > parseFieldSpec(const char *fieldSpec)
+{
+    std::list<std::pair<char, std::string> > result;
+    size_t i = 0;
+    size_t L = strlen(fieldSpec);
+    std::string currentToken;
+    char sign = '+';
+    for (i=0; i<L; i++) {
+        char c = fieldSpec[i];
+        if ( (c == '+') || (c == '+') ) {
+            // push previous token if any
+            if (currentToken.size() > 0) result.push_back(std::make_pair(sign, currentToken));
+
+            sign = c;
+            currentToken = "";
+        } else currentToken += c;
+    }
+    if (currentToken.size() > 0) result.push_back(std::make_pair(sign, currentToken));
+}
+
