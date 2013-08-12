@@ -20,8 +20,8 @@
 #define HEAD "_HEAD"
 
 #define K_PARENT "_parent"
-#define K_AUTHOR "_author"
-#define K_CTIME "_ctime"
+#define K_AUTHOR "author"
+#define K_CTIME "ctime"
 
 Database Database::Db;
 
@@ -51,6 +51,7 @@ int dbInit(const char * pathToRepository)
             pathToProject += dp->d_name;
             int r = Project::load(pathToProject.c_str(), dp->d_name);
         }
+        closedir(dirp);
     }
     return Database::Db.projects.size();
 }
@@ -65,6 +66,18 @@ void Issue::loadHead(const std::string &issuePath)
     head.assign(buf, n);
     free(buf);
 }
+
+std::list<ustring> Database::getDefautlColspec(const char *project) {
+    std::list<ustring> defaultColspec;
+    std::map<std::string, Project*>::iterator p = Db.projects.find(project);
+    if (p == Db.projects.end()) {
+        LOG_ERROR("Cannot access to project '%s'", project);
+    } else {
+        defaultColspec = p->second->getDefaultColspec();
+    }
+    return defaultColspec;
+}
+
 
 // load in memory the given project
 // re-load if it was previously loaded
@@ -145,11 +158,11 @@ Entry *loadEntry(std::string dir, const char* basename)
 //    and fulfill the properties of the issue.
 void Project::consolidateIssues()
 {
-    LOG_DEBUG("consolidateIssues()...");
+    //LOG_DEBUG("consolidateIssues()...");
     std::map<ustring, Issue*>::iterator i;
     for (i = issues.begin(); i != issues.end(); i++) {
         Issue *currentIssue = i->second;
-        LOG_DEBUG("consolidateIssues() issue %s...", (char*)currentIssue->id.c_str());
+        //LOG_DEBUG("consolidateIssues() issue %s...", (char*)currentIssue->id.c_str());
 
         if (currentIssue->head.size() == 0) {
             // repair the head
@@ -159,7 +172,7 @@ void Project::consolidateIssues()
         // following the _parent properties.
 
         ustring parentId = currentIssue->head;
-        LOG_DEBUG("parentId=%s", parentId.c_str());
+        //LOG_DEBUG("parentId=%s", parentId.c_str());
         while (0 != parentId.compare((uint8_t*)"null")) {
             std::map<ustring, Entry*>::iterator e = entries.find(parentId);
             if (e == entries.end()) {
@@ -190,7 +203,7 @@ void Project::consolidateIssues()
                 }
             }
             parentId = currentEntry->parent;
-            LOG_DEBUG("Next parent: %s", parentId.c_str());
+            //LOG_DEBUG("Next parent: %s", parentId.c_str());
         }
     }
     LOG_DEBUG("consolidateIssues() done.");
@@ -208,15 +221,15 @@ int Project::loadEntries(const char *path)
     // etc.
     std::string pathToEntries = path;
     pathToEntries = pathToEntries + '/' + ENTRIES;
-    DIR *enriesDirHandle;
-    if ((enriesDirHandle = opendir(pathToEntries.c_str())) == NULL) {
+    DIR *entriesDirHandle;
+    if ((entriesDirHandle = opendir(pathToEntries.c_str())) == NULL) {
         LOG_ERROR("Cannot open directory '%s'", pathToEntries.c_str());
         return -1;
 
     } else {
         struct dirent *issueDir;
 
-        while ((issueDir = readdir(enriesDirHandle)) != NULL) {
+        while ((issueDir = readdir(entriesDirHandle)) != NULL) {
             if (0 == strcmp(issueDir->d_name, ".")) continue;
             if (0 == strcmp(issueDir->d_name, "..")) continue;
 
@@ -245,9 +258,12 @@ int Project::loadEntries(const char *path)
                     if (e) entries[e->id] = e;
                     else LOG_ERROR("Cannot load entry '%s'", filePath.c_str());
                 }
+
+                closedir(issueDirHandle);
             }
 
         }
+        closedir(entriesDirHandle);
     }
 
 }
@@ -286,6 +302,7 @@ FieldSpec parseFieldSpec(std::list<ustring> & tokens)
         return field; // error, indicated to caller by empty name of field
     }
 }
+
 
 // @return 0 if OK, -1 on error
 int Project::loadConfig(const char *path)
@@ -335,8 +352,16 @@ int Project::loadConfig(const char *path)
             // TODO
             LOG_ERROR("addListDisplay not implemented");
         } else if (0 == token.compare((uint8_t*)"setDefaultColspec")) {
-            // TODO
-            LOG_ERROR("setDefaultColspec not implemented");
+            if (line->empty()) {
+                LOG_ERROR("Missing setDefaultColspec in '%s'", path);
+            } else {
+                ustring colspec = line->front();
+                if (colspec.size() > 0) {
+                    defaultColspec = parseColspec((char*)colspec.c_str());
+                } else {
+                    LOG_ERROR("Empty setDefaultColspec in '%s'", path);
+                }
+            }
         } else if (0 == token.compare((uint8_t*)"setDefaultFilter")) {
             // TODO
             LOG_ERROR("setDefaultFilter not implemented");

@@ -60,10 +60,12 @@ public:
     int loadEntries(const char *path);
     void consolidateIssues();
     std::list<Issue*> search(const char *fulltext, const char *filterSpec, const char *sortingSpec);
+    inline std::list<ustring> getDefaultColspec() { return defaultColspec; }
 private:
     ProjectConfig config;
     std::map<ustring, Issue*> issues;
     std::map<ustring, Entry*> entries;
+    std::list<ustring> defaultColspec;
 };
 
 
@@ -73,6 +75,9 @@ public:
     std::map<std::string, Project*> projects;
     static bool hasProject(const std::string &projectName);
     std::string pathToRepository;
+
+    static std::list<ustring> getDefautlColspec(const char *project);
+
 };
 
 

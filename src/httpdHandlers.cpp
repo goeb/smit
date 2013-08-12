@@ -187,7 +187,13 @@ void httpGetListOfIssues(struct mg_connection *conn, const std::string & project
 
 
     std::string colspec = getParamFromQueryString(q, "colspec");
-    std::list<ustring> cols = parseColspec(colspec.c_str());
+    std::list<ustring> cols;
+    if (colspec.size() > 0) {
+        cols = parseColspec(colspec.c_str());
+    } else {
+        // get default colspec
+        cols = Database::getDefautlColspec(projectName.c_str());
+    }
     std::string format = getParamFromQueryString(q, "format");
 
     sendHttpHeader200(conn);

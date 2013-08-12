@@ -123,7 +123,7 @@ std::list<std::list<ustring> > parseConfig(const uint8_t *buf, size_t len)
 // It is up to the caller to free the buffer (if the return value is > 0).
 int loadFile(const char *filepath, unsigned char **data)
 {
-    LOG_DEBUG("Loading file '%s'...", filepath);
+    //LOG_DEBUG("Loading file '%s'...", filepath);
     FILE *f = fopen(filepath, "rb");
     if (NULL == f) {
         LOG_DEBUG("Could not open file '%s', %s", filepath, strerror(errno));
@@ -161,6 +161,7 @@ int loadFile(const char *filepath, unsigned char **data)
     }
     buffer[filesize] = 0;
     *data = buffer;
+    fclose(f);
     return n;
 }
 
