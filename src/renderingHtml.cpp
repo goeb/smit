@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <sstream>
 
 #include "renderingHtml.h"
 #include "db.h"
@@ -54,26 +55,37 @@ void RHtml::printIssueList(struct mg_connection *conn, const char *project, std:
 
     // TODO use colspec
     // TODO sorting
-    mg_printf(conn, "<pre>");
+    mg_printf(conn, "<table class=\"table_issues\">\n");
+
+    // print header of the table
+    mg_printf(conn, "<tr class=\"tr_issues\">\n");
+    std::list<ustring>::iterator colname;
+    for (colname = colspec.begin(); colname != colspec.end(); colname++) {
+        mg_printf(conn, "<th class=\"th_issues\">%s</th>\n", (*colname).c_str());
+
+    }
+    mg_printf(conn, "</tr>\n");
 
     std::list<struct Issue*>::iterator i;
     for (i=issueList.begin(); i!=issueList.end(); i++) {
 
+        mg_printf(conn, "<tr class=\"tr_issues\">\n");
+
         std::list<ustring>::iterator c;
         for (c = colspec.begin(); c != colspec.end(); c++) {
+            std::ostringstream text;
             ustring column = *c;
-            if (column == (uint8_t*)"id") mg_printf(conn, "%s, ", (*i)->id.c_str());
-            else if (column == (uint8_t*)"ctime") mg_printf(conn, "%d, ", (*i)->ctime);
-            else if (column == (uint8_t*)"mtime") mg_printf(conn, "%d, ", (*i)->mtime);
 
+            if (column == (uint8_t*)"id") text << (*i)->id.c_str();
+            else if (column == (uint8_t*)"ctime") text << (*i)->ctime;
+            else if (column == (uint8_t*)"mtime") text << (*i)->mtime;
             else {
                 // look if it is a single property
                 std::map<ustring, ustring>::iterator p;
                 std::map<ustring, ustring> & singleProperties = (*i)->singleProperties;
 
                 p = singleProperties.find(column);
-                if (p != singleProperties.end()) mg_printf(conn, "%s, ", p->second.c_str());
-
+                if (p != singleProperties.end()) text << p->second.c_str();
                 else {
                     // look if it is a multi property*
                     std::map<ustring, std::list<ustring> >::iterator mp;
@@ -84,19 +96,30 @@ void RHtml::printIssueList(struct mg_connection *conn, const char *project, std:
                         std::list<ustring> values = mp->second;
                         std::list<ustring>::iterator v;
                         for (v=values.begin(); v!=values.end(); v++) {
-                            mg_printf(conn, "%s+", v->c_str());
+                            if (v != values.begin()) text << ", ";
+                            text << v->c_str();
                         }
-                        mg_printf(conn, ", ");
                     }
                 }
-
             }
-        }
-        mg_printf(conn, "\n");
-    }
+            // add href if column is 'id' or 'title'
+            std::string href_lhs = "";
+            std::string href_rhs = "";
+            if ( (column == (uint8_t*)"id") || (column == (uint8_t*)"title") ) {
+                href_lhs = "<a href=\"";
+                href_lhs = href_lhs + "/" + project + "/issues/";
+                href_lhs = href_lhs + (char*)(*i)->id.c_str() + "\">";
+                href_rhs = "</a>";
+            }
 
+            mg_printf(conn, "<td class=\"td_issues\">%s%s%s</td>\n", href_lhs.c_str(), text.str().c_str(), href_rhs.c_str());
+
+
+        }
+        mg_printf(conn, "</tr>\n");
+    }
+    mg_printf(conn, "</table>\n");
     mg_printf(conn, "%d issues\n", issueList.size());
-    mg_printf(conn, "</pre>");
     printFooter(conn, project);
 
 }
