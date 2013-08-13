@@ -5,6 +5,7 @@
 #include <map>
 #include <list>
 #include <set>
+#include <pthread.h>
 
 #include "ustring.h"
 
@@ -53,6 +54,42 @@ struct ProjectConfig {
 };
 
 
+
+class Locker {
+public:
+    Locker();
+    ~Locker();
+    void lockForWriting();
+    void unlockForWriting();
+    void lockForReading();
+    void unlockForReading();
+
+private:
+    pthread_mutex_t readOnlyMutex;
+    pthread_mutex_t readWriteMutex;
+    int nReaders; // number of concurrent readers
+};
+
+
+enum LockMode { LOCK_READ_ONLY, LOCK_READ_WRITE };
+
+class AutoLocker {
+public:
+    inline AutoLocker(Locker & L, enum LockMode m) : locker(L), mode(m) {
+        if (mode == LOCK_READ_ONLY) locker.lockForReading();
+        else locker.lockForWriting();
+    }
+    inline ~AutoLocker() {
+        if (mode == LOCK_READ_ONLY) locker.unlockForReading();
+        else locker.unlockForWriting();
+    }
+
+private:
+    Locker & locker;
+    enum LockMode mode;
+};
+
+
 class Project {
 public:
     static int load(const char *path, char *name); // load a project
@@ -61,11 +98,13 @@ public:
     void consolidateIssues();
     std::list<Issue*> search(const char *fulltext, const char *filterSpec, const char *sortingSpec);
     inline std::list<ustring> getDefaultColspec() { return defaultColspec; }
+
 private:
     ProjectConfig config;
     std::map<ustring, Issue*> issues;
     std::map<ustring, Entry*> entries;
     std::list<ustring> defaultColspec;
+    Locker locker;
 };
 
 
@@ -90,7 +129,7 @@ int loadProject(const char *path);
 
 
 // search
-//  project: name of project where the search should be conduected
+//  project: name of project where the search should be conducted
 //  fulltext: text that is searched (optional: 0 for no fulltext search)
 //  filterSpec: "status:open+label:v1.0+xx:yy"
 //  sortingSpec: "id+title-owner" (+ for ascending, - for descending order)

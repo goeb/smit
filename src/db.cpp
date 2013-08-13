@@ -85,7 +85,10 @@ std::list<ustring> Database::getDefautlColspec(const char *project) {
 int Project::load(const char *path, char *name)
 {
     LOG_INFO("Loading project %s...", path);
+
     Project *p = new Project;
+
+    AutoLocker scopeLocker(p->locker, LOCK_READ_WRITE);
 
     int r = p->loadConfig(path);
     if (r == -1) {
@@ -408,6 +411,14 @@ std::list<struct Issue*> search(const char * project, const char *fulltext, cons
 }
 std::list<Issue*> Project::search(const char *fulltext, const char *filterSpec, const char *sortingSpec)
 {
+    AutoLocker scopeLocker(locker, LOCK_READ_ONLY);
+
+    // General algorithm:
+    //     1. walk through all issues and keep those needed in <filterspec> (marked '+')
+    //     2. then, if fulltext is not null, walk through these issues and their
+    //        related messages and keep those that contain <fulltext>
+    //     3. then, remove the issues that are excluded by <filterSpec> (marked '-')
+    //     4. then, do the sorting according to <sortingSpec>
     std::list<struct Issue*> result;
     std::map<ustring, Issue*>::iterator i;
     for (i=issues.begin(); i!=issues.end(); i++) {
@@ -419,11 +430,13 @@ std::list<Issue*> Project::search(const char *fulltext, const char *filterSpec, 
 // add an entry in the database
 int add(const char *project, const char *issueId, const Entry &entry)
 {
+
 }
 
 // Get a given issue and all its entries
 int get(const char *project, const char *issueId, Issue &issue, std::list<Entry> &Entries)
 {
+
 }
 
 
@@ -433,6 +446,7 @@ int get(const char *project, const char *issueId, Issue &issue, std::list<Entry>
 // @return TODO
 int deleteEntry(ustring entry)
 {
+
 }
 
 
@@ -460,3 +474,54 @@ std::list<std::string> getProjectList()
     }
     return pList;
 }
+
+Locker::Locker()
+{
+    pthread_mutex_init(&readOnlyMutex, 0);
+    pthread_mutex_init(&readWriteMutex, 0);
+
+}
+
+Locker::~Locker()
+{
+    pthread_mutex_destroy(&readOnlyMutex);
+    pthread_mutex_destroy(&readWriteMutex);
+}
+
+void Locker::lockForWriting()
+{
+    pthread_mutex_lock(&readWriteMutex);
+}
+void Locker::unlockForWriting()
+{
+    pthread_mutex_unlock(&readWriteMutex);
+}
+
+void Locker::lockForReading()
+{
+    pthread_mutex_lock(&readOnlyMutex);
+    if (nReaders == 0) {
+        // first reader
+        lockForWriting();
+    }
+    nReaders++;
+    pthread_mutex_unlock(&readOnlyMutex);
+}
+
+void Locker::unlockForReading()
+{
+    pthread_mutex_lock(&readOnlyMutex);
+    if (nReaders <= 0) {
+        // error
+        LOG_ERROR("unlockForReading error: nReaders == %d", nReaders);
+    } else if (nReaders) {
+        nReaders--;
+    }
+
+    if (nReaders == 0) {
+        unlockForWriting();
+    }
+    pthread_mutex_unlock(&readOnlyMutex);
+
+}
+
