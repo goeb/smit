@@ -22,6 +22,7 @@
 #define K_PARENT "_parent"
 #define K_AUTHOR "author"
 #define K_CTIME "ctime"
+#define K_MESSAGE "message"
 
 Database Database::Db;
 
@@ -144,6 +145,7 @@ Entry *loadEntry(std::string dir, const char* basename)
             e->ctime = atoi((char*)value.c_str());
         } else if (0 == key.compare(K_PARENT)) e->parent = value;
         else if (0 == key.compare(K_AUTHOR)) e->author = value;
+        else if (0 == key.compare(K_MESSAGE)) e->message = value;
         else if (line->size() == 2) {
             e->singleProperties[key] = value;
         } else {
@@ -275,6 +277,26 @@ int Project::get(const char *issueId, Issue &issue, std::list<Entry*> &Entries)
 {
     std::map<std::string, Issue*>::iterator i;
     i = issues.find(issueId);
+    if (i == issues.end()) {
+        // issue not found
+        LOG_DEBUG("Issue not found: %s", issueId);
+        return -1;
+    } else {
+        issue = *(i->second);
+        // build list of entries
+        std::string currentEntryId = issue.head; // latest entry
+
+        while (0 != currentEntryId.compare("null")) {
+            std::map<std::string, Entry*>::iterator e = entries.find(currentEntryId);
+            if (e == entries.end()) {
+                LOG_ERROR("Broken chain of entries: missing reference '%s'", currentEntryId.c_str());
+                break; // abort the loop
+            }
+            Entry *currentEntry = e->second;
+            Entries.insert(Entries.begin(), currentEntry); // chronological order (latest last)
+            currentEntryId = currentEntry->parent;
+        }
+    }
 
     return 0;
 }

@@ -125,7 +125,37 @@ void RHtml::printIssueList(struct mg_connection *conn, const char *project, std:
 }
 
 
-void RHtml::printIssue(struct mg_connection *conn, const char *project, const Issue &issue, const std::list<Entry*> &Entries)
+void RHtml::printIssue(struct mg_connection *conn, const char *project, const Issue &issue, const std::list<Entry*> &entries)
 {
     LOG_DEBUG("printIssue...");
+
+    // print issue
+    mg_printf(conn, "Issue %s<br>\n", issue.id.c_str());
+    mg_printf(conn, "mtime: %d<br>\n", issue.mtime);
+
+    std::map<std::string, std::string>::const_iterator p;
+    for (p = issue.singleProperties.begin(); p != issue.singleProperties.end(); p++) {
+        mg_printf(conn, "%s: %s<br>\n", p->first.c_str(), p->second.c_str());
+    }
+    std::map<std::string, std::list<std::string> >::const_iterator mp;
+    for (mp = issue.multiProperties.begin(); mp != issue.multiProperties.end(); mp++) {
+        std::list<std::string>::iterator v;
+        std::list<std::string> values = mp->second;
+        std::ostringstream text;
+
+        for (v = values.begin(); v != values.end(); v++) {
+            if (v != values.begin()) text << ", ";
+            text << v->c_str();
+        }
+        mg_printf(conn, "%s: %s<br>\n", mp->first.c_str(), text.str().c_str());
+    }
+
+    // print entries
+    std::list<Entry*>::const_iterator e;
+    for (e = entries.begin(); e != entries.end(); e++) {
+        Entry ee = *(*e);
+        mg_printf(conn, "Author: %s / %d<br>\n", ee.author.c_str(), ee.ctime);
+        mg_printf(conn, "message: %s<br>\n", ee.message.c_str());
+        mg_printf(conn, "<hr>xxx\n", ee.message.c_str());
+    }
 }

@@ -204,14 +204,17 @@ void httpGetListOfIssues(struct mg_connection *conn, const std::string & project
 
 }
 
-void httpPostNewIssue(struct mg_connection *conn, const std::string & projectName) {
+void httpPostNewIssue(struct mg_connection *conn, const std::string & projectName)
+{
 }
 
-void httpGetNewIssueForm(struct mg_connection *conn, const std::string & projectName) {
+void httpGetNewIssueForm(struct mg_connection *conn, const std::string & projectName)
+{
 }
 
-void httpGetIssue(struct mg_connection *conn, const std::string & projectName, const std::string & issueId) {
-    LOG_DEBUG("httpGetIssue: project=%s, issue=%s\n", projectName.c_str(), issueId.c_str());
+void httpGetIssue(struct mg_connection *conn, const std::string & projectName, const std::string & issueId)
+{
+    LOG_DEBUG("httpGetIssue: project=%s, issue=%s", projectName.c_str(), issueId.c_str());
 
     const struct mg_request_info *req = mg_get_request_info(conn);
     std::string q;
@@ -221,7 +224,7 @@ void httpGetIssue(struct mg_connection *conn, const std::string & projectName, c
     std::list<Entry*> Entries;
     int r = get(projectName.c_str(), issueId.c_str(), issue, Entries);
     if (r < 0) {
-        // issue not found
+        // issue not found or other error
         sendHttpHeaderInvalidResource(conn);
     } else {
         std::string format = getParamFromQueryString(q, "format");
@@ -240,7 +243,8 @@ void httpGetIssue(struct mg_connection *conn, const std::string & projectName, c
 
 }
 
-void httpPostEntry(struct mg_connection *conn, const std::string & projectName, const std::string & issueId) {
+void httpPostEntry(struct mg_connection *conn, const std::string & projectName, const std::string & issueId)
+{
 }
 
 
