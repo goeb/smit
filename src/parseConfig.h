@@ -5,13 +5,12 @@
 #include <stdint.h>
 #include <string>
 #include <list>
-#include "ustring.h"
 
-std::list<std::list<ustring> > parseConfig(const uint8_t *buf, size_t len);
+std::list<std::list<std::string> > parseConfig(const char *buf, size_t len);
 
-int loadFile(const char *filepath, unsigned char **data);
+int loadFile(const char *filepath, char **data);
 
-std::list<ustring> parseColspec(const char *spec);
+std::list<std::string> parseColspec(const char *spec);
 std::list<std::pair<char, std::string> > parseFieldSpec(const char *fieldSpec);
 
 

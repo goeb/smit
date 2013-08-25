@@ -13,7 +13,7 @@
 #include "db.h"
 #include "parseConfig.h"
 #include "logging.h"
-
+#include "identifiers.h"
 
 #define PROJECT_FILE "project"
 #define ENTRIES "entries" // sub-directory of a project where the entries are stored
@@ -58,7 +58,7 @@ int dbInit(const char * pathToRepository)
 void Issue::loadHead(const std::string &issuePath)
 {
     std::string headPath = issuePath + '/' + HEAD;
-    uint8_t *buf = 0;
+    char *buf = 0;
     int n = loadFile(headPath.c_str(), &buf);
 
     if (n <= 0) return; // error or empty file
@@ -67,8 +67,8 @@ void Issue::loadHead(const std::string &issuePath)
     free(buf);
 }
 
-std::list<ustring> Database::getDefautlColspec(const char *project) {
-    std::list<ustring> defaultColspec;
+std::list<std::string> Database::getDefautlColspec(const char *project) {
+    std::list<std::string> defaultColspec;
     std::map<std::string, Project*>::iterator p = Db.projects.find(project);
     if (p == Db.projects.end()) {
         LOG_ERROR("Cannot access to project '%s'", project);
@@ -117,18 +117,18 @@ Entry *loadEntry(std::string dir, const char* basename)
 {
     // load a given entry
     std::string path = dir + '/' + basename;
-    unsigned char *buf = 0;
+    char *buf = 0;
     int n = loadFile(path.c_str(), &buf);
 
     if (n <= 0) return 0; // error or empty file
 
     Entry *e = new Entry;
-    e->id = (uint8_t*)basename;
+    e->id = basename;
 
-    std::list<std::list<ustring> > lines = parseConfig(buf, n);
+    std::list<std::list<std::string> > lines = parseConfig(buf, n);
     free(buf);
 
-    std::list<std::list<ustring> >::iterator line;
+    std::list<std::list<std::string> >::iterator line;
     int lineNum = 0;
     for (line=lines.begin(); line != lines.end(); line++) {
         lineNum++;
@@ -137,13 +137,13 @@ Entry *loadEntry(std::string dir, const char* basename)
             LOG_ERROR("Invalid line size %d (%s:%d)", line->size(), path.c_str(), lineNum);
             continue; // ignore this line
         }
-        ustring key = line->front();
-        ustring value = line->back();
+        std::string key = line->front();
+        std::string value = line->back();
 
-        if (0 == key.compare((uint8_t*)K_CTIME)) {
+        if (0 == key.compare(K_CTIME)) {
             e->ctime = atoi((char*)value.c_str());
-        } else if (0 == key.compare((uint8_t*)K_PARENT)) e->parent = value;
-        else if (0 == key.compare((uint8_t*)K_AUTHOR)) e->author = value;
+        } else if (0 == key.compare(K_PARENT)) e->parent = value;
+        else if (0 == key.compare(K_AUTHOR)) e->author = value;
         else if (line->size() == 2) {
             e->singleProperties[key] = value;
         } else {
@@ -162,7 +162,7 @@ Entry *loadEntry(std::string dir, const char* basename)
 void Project::consolidateIssues()
 {
     //LOG_DEBUG("consolidateIssues()...");
-    std::map<ustring, Issue*>::iterator i;
+    std::map<std::string, Issue*>::iterator i;
     for (i = issues.begin(); i != issues.end(); i++) {
         Issue *currentIssue = i->second;
         //LOG_DEBUG("consolidateIssues() issue %s...", (char*)currentIssue->id.c_str());
@@ -174,10 +174,10 @@ void Project::consolidateIssues()
         // now that the head is found, walk through all entries
         // following the _parent properties.
 
-        ustring parentId = currentIssue->head;
+        std::string parentId = currentIssue->head;
         //LOG_DEBUG("parentId=%s", parentId.c_str());
-        while (0 != parentId.compare((uint8_t*)"null")) {
-            std::map<ustring, Entry*>::iterator e = entries.find(parentId);
+        while (0 != parentId.compare("null")) {
+            std::map<std::string, Entry*>::iterator e = entries.find(parentId);
             if (e == entries.end()) {
                 LOG_ERROR("Broken chain of entries: missing reference '%s'",
                           parentId.c_str());
@@ -189,7 +189,7 @@ void Project::consolidateIssues()
             // (in order to have only most recent properties)
 
             // singleProperties
-            std::map<ustring, ustring>::iterator p;
+            std::map<std::string, std::string>::iterator p;
             for (p = currentEntry->singleProperties.begin(); p != currentEntry->singleProperties.end(); p++) {
                 if (currentIssue->singleProperties.count(p->first) == 0) {
                     // not already existing. Create it.
@@ -198,7 +198,7 @@ void Project::consolidateIssues()
             }
 
             // multiProperties
-            std::map<ustring, std::list<ustring> >::iterator mp;
+            std::map<std::string, std::list<std::string> >::iterator mp;
             for (mp = currentEntry->multiProperties.begin(); mp != currentEntry->multiProperties.end(); mp++) {
                 if (currentIssue->multiProperties.count(mp->first) == 0) {
                     // not already existing. Create it.
@@ -244,7 +244,7 @@ int Project::loadEntries(const char *path)
             else {
                 // we are in a issue directory
                 Issue *issue = new Issue();
-                issue->id.assign((uint8_t*)issueDir->d_name);
+                issue->id.assign(issueDir->d_name);
                 issues[issue->id] = issue;
 
                 struct dirent *entryFile;
@@ -273,13 +273,13 @@ int Project::loadEntries(const char *path)
 
 int Project::get(const char *issueId, Issue &issue, std::list<Entry*> &Entries)
 {
-    std::map<ustring, Issue*>::iterator i;
-    i = issues.find((uint8_t*)issueId);
+    std::map<std::string, Issue*>::iterator i;
+    i = issues.find(issueId);
 
     return 0;
 }
 
-FieldSpec parseFieldSpec(std::list<ustring> & tokens)
+FieldSpec parseFieldSpec(std::list<std::string> & tokens)
 {
     // Supported syntax:
     // name type params ...
@@ -288,12 +288,12 @@ FieldSpec parseFieldSpec(std::list<ustring> & tokens)
     if (tokens.size() >= 2) {
         field.name = tokens.front();
         tokens.pop_front();
-        ustring type = tokens.front();
+        std::string type = tokens.front();
         tokens.pop_front();
-        if (0 == type.compare((uint8_t*)"text")) field.type = F_TEXT;
-        else if (0 == type.compare((uint8_t*)"selectUser")) field.type = F_SELECT_USER;
-        else if (0 == type.compare((uint8_t*)"select")) field.type = F_SELECT;
-        else if (0 == type.compare((uint8_t*)"multiselect")) field.type = F_MULTISELECT;
+        if (0 == type.compare("text")) field.type = F_TEXT;
+        else if (0 == type.compare("selectUser")) field.type = F_SELECT_USER;
+        else if (0 == type.compare("select")) field.type = F_SELECT;
+        else if (0 == type.compare("multiselect")) field.type = F_MULTISELECT;
         else { // error, unknown type
             LOG_ERROR("Unkown field type '%s'", type.c_str());
             field.name.clear();
@@ -303,7 +303,7 @@ FieldSpec parseFieldSpec(std::list<ustring> & tokens)
         if (F_SELECT == field.type || F_MULTISELECT == field.type) {
             // populate the allowed values
             while (tokens.size() > 0) {
-                ustring value = tokens.front();
+                std::string value = tokens.front();
                 tokens.pop_front();
                 field.selectOptions.push_back(value);
             }
@@ -327,7 +327,7 @@ int Project::loadConfig(const char *path)
     }
     // else continue and parse the file
 
-    config.name = (unsigned char *)path; // name of the project
+    config.name = path; // name of the project
 
     int r = fseek(f, 0, SEEK_END); // go to the end of the file
     if (r != 0) {
@@ -342,41 +342,41 @@ int Project::loadConfig(const char *path)
         return -1;
     }
     rewind(f);
-    unsigned char *buf = (unsigned char *)malloc(filesize);
+    char *buf = (char *)malloc(filesize);
     size_t n = fread(buf, 1, filesize, f);
     if (n != filesize) {
         LOG_ERROR("fread(%s): short read. feof=%d, ferror=%d", pathToProjectFile.c_str(), feof(f), ferror(f));
         fclose(f);
         return -1;
     }
-    std::list<std::list<ustring> > lines = parseConfig(buf, n);
+    std::list<std::list<std::string> > lines = parseConfig(buf, n);
 
-    std::list<std::list<ustring> >::iterator line;
+    std::list<std::list<std::string> >::iterator line;
     for (line = lines.begin(); line != lines.end(); line++) {
-        ustring token = line->front();
+        std::string token = line->front();
         line->pop_front();
-        if (0 == token.compare((uint8_t*)"addField")) {
+        if (0 == token.compare("addField")) {
             FieldSpec field = parseFieldSpec(*line);
             if (field.name.size() > 0) config.fields[field.name] = field;
             // else: parse error
-        } else if (0 == token.compare((uint8_t*)"addListDisplay")) {
+        } else if (0 == token.compare("addListDisplay")) {
             // TODO
             LOG_ERROR("addListDisplay not implemented");
-        } else if (0 == token.compare((uint8_t*)"setDefaultColspec")) {
+        } else if (0 == token.compare("setDefaultColspec")) {
             if (line->empty()) {
                 LOG_ERROR("Missing setDefaultColspec in '%s'", path);
             } else {
-                ustring colspec = line->front();
+                std::string colspec = line->front();
                 if (colspec.size() > 0) {
                     defaultColspec = parseColspec((char*)colspec.c_str());
                 } else {
                     LOG_ERROR("Empty setDefaultColspec in '%s'", path);
                 }
             }
-        } else if (0 == token.compare((uint8_t*)"setDefaultFilter")) {
+        } else if (0 == token.compare("setDefaultFilter")) {
             // TODO
             LOG_ERROR("setDefaultFilter not implemented");
-         } else if (0 == token.compare((uint8_t*)"setDefaultSorting")) {
+         } else if (0 == token.compare("setDefaultSorting")) {
             // TODO
             LOG_ERROR("setDefaultSorting not implemented");
         } else {
@@ -435,7 +435,7 @@ std::list<Issue*> Project::search(const char *fulltext, const char *filterSpec, 
     //     3. then, remove the issues that are excluded by <filterSpec> (marked '-')
     //     4. then, do the sorting according to <sortingSpec>
     std::list<struct Issue*> result;
-    std::map<ustring, Issue*>::iterator i;
+    std::map<std::string, Issue*>::iterator i;
     for (i=issues.begin(); i!=issues.end(); i++) {
         result.push_back(i->second);
     }
@@ -472,7 +472,7 @@ int get(const char *project, const char *issueId, Issue &issue, std::list<Entry*
 //     - this entry is the HEAD (has no child)
 //     - the deleting happens less than 5 minutes after creation of the entry
 // @return TODO
-int deleteEntry(ustring entry)
+int deleteEntry(std::string entry)
 {
 
 }
@@ -483,7 +483,9 @@ void setId(Entry &entry)
     // set the id, which is the SAH1 sum of the structure
     unsigned char md[SHA_DIGEST_LENGTH];
     SHA1((unsigned char *)&entry, sizeof(entry), md);
-    entry.id.assign(md, SHA_DIGEST_LENGTH);
+    std::string idBase34 = convert2base34(md, SHA_DIGEST_LENGTH, true);
+
+    entry.id = idBase34;
 }
 
 bool Database::hasProject(const std::string & projectName)

@@ -32,9 +32,6 @@ int main(int argc, const char **argv)
     const char *options[] = {"listening_ports", "8080", "document_root", repo, NULL};
     struct mg_callbacks callbacks;
 
-    ustring x = bin2hex(ustring((unsigned char*)"toto"));
-    printf("bin2hex(toto)=%s\n", x.c_str());
-
     memset(&callbacks, 0, sizeof(callbacks));
     callbacks.begin_request = begin_request_handler;
     callbacks.upload = upload_handler;

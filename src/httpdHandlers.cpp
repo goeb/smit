@@ -187,7 +187,7 @@ void httpGetListOfIssues(struct mg_connection *conn, const std::string & project
 
 
     std::string colspec = getParamFromQueryString(q, "colspec");
-    std::list<ustring> cols;
+    std::list<std::string> cols;
     if (colspec.size() > 0) {
         cols = parseColspec(colspec.c_str());
     } else {

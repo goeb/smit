@@ -51,9 +51,9 @@ void test(const char *base16hex, const char* base34hexExpected)
     // least significant nibbles first
     uint8_t base16[SIZE];
     hex2bin(base16hex, base16, SIZE);
-    ustring result = convert2base34(base16, SIZE, false);
+    std::string result = convert2base34(base16, SIZE, false);
 
-    ASSERT(0 == result.compare(0, strlen(base34hexExpected), (uint8_t*)base34hexExpected));
+    ASSERT(0 == result.compare(0, strlen(base34hexExpected), base34hexExpected));
 }
 
 int main(int argc, char **argv)
@@ -103,7 +103,7 @@ int main(int argc, char **argv)
         uint8_t buffer[SIZE];
         hex2bin(hexa, buffer, SIZE);
 
-        ustring result = convert2base34(buffer, SIZE, skip_io);
+        std::string result = convert2base34(buffer, SIZE, skip_io);
         for (int i=0; i<result.size(); i++) printf("%c", result[i]);
         printf("\n");
     } else usage();

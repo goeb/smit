@@ -4,13 +4,12 @@
 #include <stdlib.h>
 
 #include "parseConfig.h"
-#include "ustring.h"
 #include "logging.h"
 
 
-std::list<std::list<ustring> > parseConfig(const uint8_t *buf, size_t len)
+std::list<std::list<std::string> > parseConfig(const char *buf, size_t len)
 {
-    std::list<std::list<ustring> > linesOftokens;
+    std::list<std::list<std::string> > linesOftokens;
     size_t i = 0;
     enum State {
         P_READY,
@@ -22,12 +21,12 @@ std::list<std::list<ustring> > parseConfig(const uint8_t *buf, size_t len)
         P_IN_BOUNDARY
     };
     enum State state = P_READY;
-    ustring token; // current token
-    std::list<ustring> line; // current line
-    ustring boundary;
-    ustring boundedText;
+    std::string token; // current token
+    std::list<std::string> line; // current line
+    std::string boundary;
+    std::string boundedText;
     for (i=0; i<len; i++) {
-        uint8_t c = buf[i];
+        char c = buf[i];
         switch (state) {
         case P_IN_COMMENT:
             if (c == '\n') {
@@ -58,7 +57,7 @@ std::list<std::list<ustring> > parseConfig(const uint8_t *buf, size_t len)
         case P_IN_BOUNDARY_HEADER:
             if (c == '\n') {
                 state = P_IN_BOUNDARY;
-                boundary.insert(0, (uint8_t*)"\n"); // add a \n at the beginning
+                boundary.insert(0, "\n"); // add a \n at the beginning
                 boundedText.clear();
             } else if (isblank(c)) continue; // ignore blanks
             else {
@@ -121,7 +120,7 @@ std::list<std::list<ustring> > parseConfig(const uint8_t *buf, size_t len)
 //         -1 in case of error
 // If the file is empty, 0 is returned and the buffer is not allocated.
 // It is up to the caller to free the buffer (if the return value is > 0).
-int loadFile(const char *filepath, unsigned char **data)
+int loadFile(const char *filepath, char **data)
 {
     //LOG_DEBUG("Loading file '%s'...", filepath);
     FILE *f = fopen(filepath, "rb");
@@ -151,7 +150,7 @@ int loadFile(const char *filepath, unsigned char **data)
     }
 
     rewind(f);
-    unsigned char *buffer = (unsigned char *)malloc(filesize+1); // allow +1 for terminating null char
+    char *buffer = (char *)malloc(filesize+1); // allow +1 for terminating null char
     size_t n = fread(buffer, 1, filesize, f);
     if (n != filesize) {
         LOG_ERROR("fread(%s): short read. feof=%d, ferror=%d", filepath, feof(f), ferror(f));
@@ -168,14 +167,14 @@ int loadFile(const char *filepath, unsigned char **data)
 
 // "aaa+bb+ccc"
 // @return aaa, bbb, ccc
-std::list<ustring> parseColspec(const char *colspec)
+std::list<std::string> parseColspec(const char *colspec)
 {
-    std::list<ustring> result;
+    std::list<std::string> result;
     size_t i = 0;
     size_t L = strlen(colspec);
-    ustring currentToken;
+    std::string currentToken;
     for (i=0; i<L; i++) {
-        uint8_t c = colspec[i];
+        char c = colspec[i];
         if (c == '+') {
             // push previous token if any
             if (currentToken.size() > 0) result.push_back(currentToken);

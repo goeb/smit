@@ -13,24 +13,24 @@
 
 // Entry
 typedef struct Entry {
-    ustring parent; // id of the parent entry, empty if top-level
-    ustring id; // unique id of this entry
+    std::string parent; // id of the parent entry, empty if top-level
+    std::string id; // unique id of this entry
     int ctime; // creation time
-    ustring author;
-    std::map<ustring, ustring> singleProperties;
-    std::map<ustring, std::list<ustring> > multiProperties;
+    std::string author;
+    std::map<std::string, std::string> singleProperties;
+    std::map<std::string, std::list<std::string> > multiProperties;
 
 } Entry;
 
 // Issue
 // An issue is consolidated over all its entries
 struct Issue {
-    ustring id; // same as the first entry
-    ustring head; // the latest entry
+    std::string id; // same as the first entry
+    std::string head; // the latest entry
     int ctime; // creation time (the one of the first entry)
     int mtime; // modification time (the one of the last entry)
-    std::map<ustring, ustring> singleProperties; // properties of the issue
-    std::map<ustring, std::list<ustring> > multiProperties;
+    std::map<std::string, std::string> singleProperties; // properties of the issue
+    std::map<std::string, std::list<std::string> > multiProperties;
 
     // the properties of the issue is the consolidation of all the properties
     // of its entries. For a given key, the most recent value has priority.
@@ -39,17 +39,17 @@ struct Issue {
 
 enum FieldType { F_TEXT, F_SELECT, F_MULTISELECT, F_SELECT_USER};
 typedef struct FieldSpec {
-    ustring name;
+    std::string name;
     enum FieldType type;
-    std::list<ustring> selectOptions; // for F_SELECT and F_MULTISELECT only
+    std::list<std::string> selectOptions; // for F_SELECT and F_MULTISELECT only
 } FieldSpec;
 
 // Project config
 struct ProjectConfig {
-    ustring name; // name of the project
-    std::map<ustring, FieldSpec> fields;
-    std::map<ustring, ustring> customDisplays;
-    ustring defaultDislpay; // one of customDisplays
+    std::string name; // name of the project
+    std::map<std::string, FieldSpec> fields;
+    std::map<std::string, std::string> customDisplays;
+    std::string defaultDislpay; // one of customDisplays
     
 };
 
@@ -97,14 +97,14 @@ public:
     int loadEntries(const char *path);
     void consolidateIssues();
     std::list<Issue*> search(const char *fulltext, const char *filterSpec, const char *sortingSpec);
-    inline std::list<ustring> getDefaultColspec() { return defaultColspec; }
+    inline std::list<std::string> getDefaultColspec() { return defaultColspec; }
     int get(const char *issueId, Issue &issue, std::list<Entry*> &Entries);
 
 private:
     ProjectConfig config;
-    std::map<ustring, Issue*> issues;
-    std::map<ustring, Entry*> entries;
-    std::list<ustring> defaultColspec;
+    std::map<std::string, Issue*> issues;
+    std::map<std::string, Entry*> entries;
+    std::list<std::string> defaultColspec;
     Locker locker;
 };
 
@@ -116,7 +116,7 @@ public:
     static bool hasProject(const std::string &projectName);
     std::string pathToRepository;
 
-    static std::list<ustring> getDefautlColspec(const char *project);
+    static std::list<std::string> getDefautlColspec(const char *project);
 
 };
 
@@ -151,9 +151,9 @@ int get(const char *project, const char *issueId, Issue &issue, std::list<Entry*
 //     - this entry is the HEAD (has no child)
 //     - the deleting happens less than 5 minutes after creation of the entry
 // @return TODO
-int deleteEntry(ustring entry);
+int deleteEntry(std::string entry);
 
-ustring bin2hex(const ustring & in);
+std::string bin2hex(const ustring & in);
 
 std::list<std::string> getProjectList();
 

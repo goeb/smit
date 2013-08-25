@@ -7,13 +7,13 @@
 #include "logging.h"
 
 
-ustring bin2hex(const ustring & in)
+std::string bin2hex(const ustring & in)
 {
     const char hexTable[] = { '0', '1', '2', '3',
                               '4', '5', '6', '7',
                               '8', '9', 'a', 'b',
                               'c', 'd', 'e', 'f' };
-    ustring hexResult;
+    std::string hexResult;
     size_t i;
     size_t L = in.size();
     for (i=0; i<L; i++) {
@@ -93,7 +93,7 @@ void multiply(const int* vector256, int *currentVector, int size, int factor)
     }
 }
 
-ustring convert2base34(const uint8_t *buffer, size_t length, bool skip_io)
+std::string convert2base34(const uint8_t *buffer, size_t length, bool skip_io)
 {
     // length must be SHA_DIGEST_LENGTH
 
@@ -109,7 +109,7 @@ ustring convert2base34(const uint8_t *buffer, size_t length, bool skip_io)
                                           'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J',
                                           'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T',
                                           'U', 'V', 'W', 'X', 'Y', 'Z'};
-    ustring base34result;
+    std::string base34result;
     for (i=0; i<BASE_34_VECTOR_SIZE; i++) {
         uint8_t c = alphabet[result[i]];
         if (skip_io) {

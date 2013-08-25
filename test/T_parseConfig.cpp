@@ -22,15 +22,15 @@ main()
     // step 1: parse "parseConfig1.txt"
     FILE* f = fopen("parseConfig1.txt", "r");
     ASSERT(f!=0);
-    uint8_t buffer[1000];
+    char buffer[1000];
     size_t n = fread(buffer, 1, 1000, f);
 
-    std::list<std::list<ustring> > tokens = parseConfig(buffer, n);
+    std::list<std::list<std::string> > tokens = parseConfig(buffer, n);
 
-    std::list<std::list<ustring> >::iterator i;
+    std::list<std::list<std::string> >::iterator i;
     for (i=tokens.begin(); i!=tokens.end(); i++) {
-        std::list<ustring> line = *i;
-        std::list<ustring>::iterator tok;
+        std::list<std::string> line = *i;
+        std::list<std::string>::iterator tok;
         printf("line: ");
         for (tok=line.begin(); tok!= line.end(); tok++) {
             printf(" [%s] ", tok->c_str());
@@ -40,7 +40,7 @@ main()
 
     // check result
     ASSERT(tokens.size() == 7);
-    std::list<std::list<ustring> >::iterator line;
+    std::list<std::list<std::string> >::iterator line;
     line = tokens.begin();
     ASSERT(line->size() == 1);
 
@@ -58,9 +58,9 @@ main()
 
     line++;
     ASSERT(line->size() == 8);
-    std::list<ustring>::iterator tok = line->begin();
+    std::list<std::string>::iterator tok = line->begin();
     tok++; tok++; tok++;
-    ASSERT(0 == tok->compare((uint8_t*)"d e \"f"));
+    ASSERT(0 == tok->compare("d e \"f"));
 
     line++;
     ASSERT(line->size() == 2);
@@ -74,8 +74,8 @@ main()
     tokens = parseConfig(buffer, n);
 
     for (i=tokens.begin(); i!=tokens.end(); i++) {
-        std::list<ustring> line = *i;
-        std::list<ustring>::iterator tok;
+        std::list<std::string> line = *i;
+        std::list<std::string>::iterator tok;
         printf("line: ");
         for (tok=line.begin(); tok!= line.end(); tok++) {
             printf(" [%s] ", tok->c_str());
@@ -89,20 +89,20 @@ main()
     ASSERT(line->size() == 4);
     tok = line->begin();
     tok++; tok++; tok++;
-    ASSERT(0 == tok->compare((uint8_t*)"<"));
+    ASSERT(0 == tok->compare("<"));
 
     line++;
     ASSERT(line->size() == 3);
     tok = line->begin();
     tok++; tok++;
-    ASSERT(0 == tok->compare((uint8_t*)"<"));
+    ASSERT(0 == tok->compare("<"));
 
     line++;
     ASSERT(line->size() == 2);
     tok = line->begin();
-    ASSERT(0 == tok->compare((uint8_t*)"message"));
+    ASSERT(0 == tok->compare("message"));
     tok++;
-    ASSERT(0 == tok->compare((uint8_t*)"#message-yy"));
+    ASSERT(0 == tok->compare("#message-yy"));
 
     line++;
     ASSERT(line->size() == 2);
