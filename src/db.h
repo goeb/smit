@@ -98,6 +98,7 @@ public:
     void consolidateIssues();
     std::list<Issue*> search(const char *fulltext, const char *filterSpec, const char *sortingSpec);
     inline std::list<ustring> getDefaultColspec() { return defaultColspec; }
+    int get(const char *issueId, Issue &issue, std::list<Entry*> &Entries);
 
 private:
     ProjectConfig config;
@@ -143,7 +144,7 @@ std::list<struct Issue*> search(const char * project, const char *fulltext, cons
 int add(const char *project, const char *issueId, const Entry &entry);
 
 // Get a given issue and all its entries
-int get(const char *project, const char *issueId, Issue &issue, std::list<Entry> &Entries);
+int get(const char *project, const char *issueId, Issue &issue, std::list<Entry*> &Entries);
 
 
 // Deleting an entry is only possible if:

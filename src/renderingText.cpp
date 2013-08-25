@@ -1,7 +1,7 @@
 
 #include "renderingText.h"
 #include "db.h"
-
+#include "logging.h"
 
 void RText::printProjectList(struct mg_connection *conn, const std::list<std::string> &pList)
 {
@@ -45,4 +45,9 @@ void RText::printIssueList(struct mg_connection *conn, std::list<struct Issue*> 
     }
 
     mg_printf(conn, "%d issues\n", issueList.size());
+}
+
+void RText::printIssue(struct mg_connection *conn, const Issue &issue, const std::list<Entry*> &Entries)
+{
+    LOG_DEBUG("RText::printIssue...");
 }

@@ -271,6 +271,14 @@ int Project::loadEntries(const char *path)
 
 }
 
+int Project::get(const char *issueId, Issue &issue, std::list<Entry*> &Entries)
+{
+    std::map<ustring, Issue*>::iterator i;
+    i = issues.find((uint8_t*)issueId);
+
+    return 0;
+}
+
 FieldSpec parseFieldSpec(std::list<ustring> & tokens)
 {
     // Supported syntax:
@@ -409,6 +417,13 @@ std::list<struct Issue*> search(const char * project, const char *fulltext, cons
 
     }
 }
+
+// filterSpec syntax:
+//     f1:aaa+f2:bbb-f3:ccc => issues with field f1 == aaa OR field f2 == bbb AND field f3 != ccc
+//     (fields '+' are ORed, and fields '-' are ANDed)
+//
+// sortingSpec syntax:
+//     f1+f2-f3 => sort issues by f1 ascending, then by f2 ascending, then by f3 descending
 std::list<Issue*> Project::search(const char *fulltext, const char *filterSpec, const char *sortingSpec)
 {
     AutoLocker scopeLocker(locker, LOCK_READ_ONLY);
@@ -434,9 +449,22 @@ int add(const char *project, const char *issueId, const Entry &entry)
 }
 
 // Get a given issue and all its entries
-int get(const char *project, const char *issueId, Issue &issue, std::list<Entry> &Entries)
+int get(const char *project, const char *issueId, Issue &issue, std::list<Entry*> &Entries)
 {
+    LOG_DEBUG("get issue: %s/%s", project, issueId);
 
+    std::map<std::string, Project*>::iterator p = Database::Db.projects.find(project);
+    if (p == Database::Db.projects.end()) {
+        LOG_ERROR("Invald project: %s", project);
+        return -1; // return error code
+    } else {
+        if (!p->second) {
+            LOG_ERROR("Invalid null pointer for project '%s'", project);
+            return -1; // return error code
+        }
+
+        return p->second->get(issueId, issue, Entries);
+    }
 }
 
 

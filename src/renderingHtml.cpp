@@ -123,3 +123,9 @@ void RHtml::printIssueList(struct mg_connection *conn, const char *project, std:
     printFooter(conn, project);
 
 }
+
+
+void RHtml::printIssue(struct mg_connection *conn, const char *project, const Issue &issue, const std::list<Entry*> &Entries)
+{
+    LOG_DEBUG("printIssue...");
+}

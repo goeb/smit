@@ -199,7 +199,7 @@ void httpGetListOfIssues(struct mg_connection *conn, const std::string & project
     sendHttpHeader200(conn);
 
     if (format == "text") RText::printIssueList(conn, issueList, cols);
-    else RHtml::printIssueList(conn, projectName.c_str(), issueList, cols); // TODO
+    else RHtml::printIssueList(conn, projectName.c_str(), issueList, cols);
 
 
 }
@@ -212,6 +212,27 @@ void httpGetNewIssueForm(struct mg_connection *conn, const std::string & project
 
 void httpGetIssue(struct mg_connection *conn, const std::string & projectName, const std::string & issueId) {
     LOG_DEBUG("httpGetIssue: project=%s, issue=%s\n", projectName.c_str(), issueId.c_str());
+
+    const struct mg_request_info *req = mg_get_request_info(conn);
+    std::string q;
+    if (req->query_string) q = req->query_string;
+
+    Issue issue;
+    std::list<Entry*> Entries;
+    int r = get(projectName.c_str(), issueId.c_str(), issue, Entries);
+    if (r < 0) {
+        // issue not found
+        sendHttpHeaderInvalidResource(conn);
+    } else {
+        std::string format = getParamFromQueryString(q, "format");
+
+        sendHttpHeader200(conn);
+
+        if (format == "text") RText::printIssue(conn, issue, Entries);
+        else RHtml::printIssue(conn, projectName.c_str(), issue, Entries);
+
+    }
+
 
     sendHttpHeader200(conn);
     mg_printf(conn, "Content-Type: text/html\r\n\r\n");
