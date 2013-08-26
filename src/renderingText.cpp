@@ -50,4 +50,6 @@ void RText::printIssueList(struct mg_connection *conn, std::list<struct Issue*> 
 void RText::printIssue(struct mg_connection *conn, const Issue &issue, const std::list<Entry*> &Entries)
 {
     LOG_DEBUG("RText::printIssue...");
+    mg_printf(conn, "Content-Type: text/plain\r\n\r\n");
+
 }

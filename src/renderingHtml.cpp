@@ -129,6 +129,9 @@ void RHtml::printIssue(struct mg_connection *conn, const char *project, const Is
 {
     LOG_DEBUG("printIssue...");
 
+    mg_printf(conn, "Content-Type: text/html\r\n\r\n");
+    printHeader(conn, project);
+
     // print issue
     mg_printf(conn, "Issue %s<br>\n", issue.id.c_str());
     mg_printf(conn, "mtime: %d<br>\n", issue.mtime);
@@ -155,7 +158,9 @@ void RHtml::printIssue(struct mg_connection *conn, const char *project, const Is
     for (e = entries.begin(); e != entries.end(); e++) {
         Entry ee = *(*e);
         mg_printf(conn, "Author: %s / %d<br>\n", ee.author.c_str(), ee.ctime);
-        mg_printf(conn, "message: %s<br>\n", ee.message.c_str());
-        mg_printf(conn, "<hr>xxx\n", ee.message.c_str());
+        mg_printf(conn, "message: <pre>%s</pre>\n", ee.message.c_str());
     }
+
+    printFooter(conn, project);
+
 }

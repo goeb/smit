@@ -235,12 +235,6 @@ void httpGetIssue(struct mg_connection *conn, const std::string & projectName, c
         else RHtml::printIssue(conn, projectName.c_str(), issue, Entries);
 
     }
-
-
-    sendHttpHeader200(conn);
-    mg_printf(conn, "Content-Type: text/html\r\n\r\n");
-    mg_printf(conn, "httpGetIssue: project=%s, issue=%s\n", projectName.c_str(), issueId.c_str());
-
 }
 
 void httpPostEntry(struct mg_connection *conn, const std::string & projectName, const std::string & issueId)
