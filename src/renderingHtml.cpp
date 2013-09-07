@@ -7,6 +7,22 @@
 #include "logging.h"
 
 
+ContextParameters::ContextParameters(std::string _project, std::string _username, int _numberOfIssues)
+{
+    project = _project;
+    username = _username;
+    numberOfIssues = _numberOfIssues;
+}
+
+void ContextParameters::printSmitData(struct mg_connection *conn)
+{
+    mg_printf(conn, "%s", "<script id=\"smit_data\" type=\"application/json\">\n{");
+    mg_printf(conn, "\"smit_user\": \"%s\"", username.c_str());
+    mg_printf(conn, ", \"smit_numberOfIssues\": \"%d\"", numberOfIssues);
+    mg_printf(conn, "%s", "}\n</script>");
+}
+
+
 void RHtml::printHeader(struct mg_connection *conn, const char *project)
 {
     std::string path;
@@ -157,8 +173,24 @@ void RHtml::printIssue(struct mg_connection *conn, const char *project, const Is
     std::list<Entry*>::const_iterator e;
     for (e = entries.begin(); e != entries.end(); e++) {
         Entry ee = *(*e);
-        mg_printf(conn, "Author: %s / %d<br>\n", ee.author.c_str(), ee.ctime);
-        mg_printf(conn, "message: <pre>%s</pre>\n", ee.message.c_str());
+        mg_printf(conn, "<div class=\"smit_entry\">\n");
+
+        mg_printf(conn, "<div class=\"smit_entryHeader\">\n");
+        mg_printf(conn, "Author: <span class=\"smit_entryAuthor\">%s</span>", ee.author.c_str());
+        mg_printf(conn, " / <span class=\"smit_entryCtime\">%d</span>\n", ee.ctime); // TODO display human-readable date
+        mg_printf(conn, "</div>\n"); // end header
+
+        mg_printf(conn, "<div class=\"smit_entryMessage\">\n");
+        mg_printf(conn, "%s\n", ee.message.c_str());
+        mg_printf(conn, "</div>\n"); // end message
+
+        // other fields
+        mg_printf(conn, "<div class=\"smit_entryOtherFields\">\n");
+        mg_printf(conn, "");
+        mg_printf(conn, "</div>\n"); // other fields
+
+        mg_printf(conn, "</div>\n");
+
     }
 
     printFooter(conn, project);

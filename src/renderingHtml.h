@@ -18,4 +18,21 @@ public:
 
 };
 
+/** SmitData is used to manage the values in the HTML
+  * The HTML items marked with class "smit_data" will have
+  * their value replaced by client-side scripting.
+  *
+  */
+class ContextParameters {
+public:
+    ContextParameters(std::string _project, std::string _username, int _numberOfIssues);
+    void printSmitData(struct mg_connection *conn);
+private:
+    std::string username;
+    int numberOfIssues;
+    std::string project;
+
+};
+
+
 #endif

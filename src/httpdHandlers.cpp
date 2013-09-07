@@ -281,7 +281,7 @@ int begin_request_handler(struct mg_connection *conn) {
             else if ( (resource == "issues") && (method == "GET") ) httpGetIssue(conn, project, uri);
             else if ( (resource == "issues") && (method == "POST") ) httpPostEntry(conn, project, uri);
             else handled = false;
-        }
+        } else handled = false;
     }
     if (handled) return 1;
     else return 0; // let Mongoose handle static file
