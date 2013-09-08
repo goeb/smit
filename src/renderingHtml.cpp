@@ -192,7 +192,7 @@ void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx,
         mg_printf(conn, "</td>\n", span);
 
         workingColumn += span;
-        if (workingColumn >= MAX_COLUMNS) {
+        if (workingColumn > MAX_COLUMNS) {
             mg_printf(conn, "</tr>\n");
             workingColumn = 1;
         }
