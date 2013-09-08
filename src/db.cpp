@@ -387,20 +387,49 @@ int Project::loadConfig(const char *path)
         } else if (0 == token.compare("setDefaultColspec")) {
             if (line->empty()) {
                 LOG_ERROR("Missing setDefaultColspec in '%s'", path);
-            } else {
-                std::string colspec = line->front();
-                if (colspec.size() > 0) {
-                    defaultColspec = parseColspec((char*)colspec.c_str());
-                } else {
-                    LOG_ERROR("Empty setDefaultColspec in '%s'", path);
-                }
+                continue; // ignore this line
             }
+            std::string colspec = line->front();
+            if (colspec.size() > 0) {
+                defaultColspec = parseColspec((char*)colspec.c_str());
+            } else {
+                LOG_ERROR("Empty setDefaultColspec in '%s'", path);
+            }
+
         } else if (0 == token.compare("setDefaultFilter")) {
             // TODO
             LOG_ERROR("setDefaultFilter not implemented");
          } else if (0 == token.compare("setDefaultSorting")) {
             // TODO
             LOG_ERROR("setDefaultSorting not implemented");
+        } else if (0 == token.compare("setHtmlFieldDisplay")) {
+            if (line->empty()) {
+                LOG_ERROR("Empty 'setHtmlFieldDisplay'");
+                continue; // ignore this line
+            }
+            std::list<std::string>::iterator i;
+            for (i = line->begin(); i != line->end(); i++) {
+                // syntax is 'aaa' or 'aaa,2'
+                int span = 1;
+                std::string fieldName = *i;
+                size_t n = fieldName.find_first_of(",");
+                if (n != std::string::npos) {
+                    if (n >= fieldName.size()-1) {
+                        // the comma is the last character
+                        // do nothing, span = 1
+                    } else if (n == 0) {
+                        // the comma is the first character
+                        LOG_ERROR("Invalid comma");
+                        continue; // ignore this field
+                    } else {
+                        span = atoi(fieldName.substr(n+1).c_str());
+                        fieldName = fieldName.substr(0, n);
+                    }
+                }
+                LOG_DEBUG("setHtmlFieldDisplay: add field=%s, span=%d", fieldName.c_str(), span);
+                config.htmlFieldDisplay.push_back(std::make_pair(fieldName, span));
+            }
+
         } else {
             LOG_ERROR("Unknown function '%s'", token.c_str());
 

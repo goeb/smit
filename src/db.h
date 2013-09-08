@@ -49,6 +49,7 @@ typedef struct FieldSpec {
 struct ProjectConfig {
     std::string name; // name of the project
     std::map<std::string, FieldSpec> fields;
+    std::list<std::pair<std::string, int> > htmlFieldDisplay;
     std::map<std::string, std::string> customDisplays;
     std::string defaultDislpay; // one of customDisplays
     
