@@ -3,20 +3,11 @@
 
 #include <list>
 #include <string>
+#include <stdint.h>
 
 #include "mongoose.h"
 #include "db.h"
 
-class RHtml {
-public:
-    static void printHeader(struct mg_connection *conn, const char *project);
-    static void printFooter(struct mg_connection *conn, const char *project);
-
-    static void printProjectList(struct mg_connection *conn, const std::list<std::string> &pList);
-    static void printIssueList(struct mg_connection *conn, const char *project, std::list<Issue*> issueList, std::list<std::string> colspec);
-    static void printIssue(struct mg_connection *conn, const char *project, const Issue &issue, const std::list<Entry*> &entries);
-
-};
 
 /** SmitData is used to manage the values in the HTML
   * The HTML items marked with class "smit_data" will have
@@ -25,14 +16,27 @@ public:
   */
 class ContextParameters {
 public:
-    ContextParameters(std::string _project, std::string _username, int _numberOfIssues);
+    ContextParameters(std::string p, std::string u, int n, std::list<std::pair<std::string, uint8_t> > h);
     void printSmitData(struct mg_connection *conn);
-private:
+
     std::string username;
     int numberOfIssues;
     std::string project;
+    std::list<std::pair<std::string, uint8_t> > htmlFieldDisplay;
 
 };
+
+class RHtml {
+public:
+    static void printHeader(struct mg_connection *conn, const char *project);
+    static void printFooter(struct mg_connection *conn, const char *project);
+
+    static void printProjectList(struct mg_connection *conn, const std::list<std::string> &pList);
+    static void printIssueList(struct mg_connection *conn, const char *project, std::list<Issue*> issueList, std::list<std::string> colspec);
+    static void printIssue(struct mg_connection *conn, const ContextParameters &ctx, const Issue &issue, const std::list<Entry*> &entries);
+
+};
+
 
 
 #endif

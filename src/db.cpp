@@ -417,10 +417,6 @@ int Project::loadConfig(const char *path)
                     if (n >= fieldName.size()-1) {
                         // the comma is the last character
                         // do nothing, span = 1
-                    } else if (n == 0) {
-                        // the comma is the first character
-                        LOG_ERROR("Invalid comma");
-                        continue; // ignore this field
                     } else {
                         span = atoi(fieldName.substr(n+1).c_str());
                         fieldName = fieldName.substr(0, n);
@@ -500,20 +496,20 @@ int add(const char *project, const char *issueId, const Entry &entry)
 }
 
 // Get a given issue and all its entries
-int get(const char *project, const char *issueId, Issue &issue, std::list<Entry*> &Entries)
+int get(const char *project, const char *issueId, Issue &issue, std::list<Entry*> &Entries, ProjectConfig &config)
 {
     LOG_DEBUG("get issue: %s/%s", project, issueId);
 
     std::map<std::string, Project*>::iterator p = Database::Db.projects.find(project);
     if (p == Database::Db.projects.end()) {
-        LOG_ERROR("Invald project: %s", project);
+        LOG_ERROR("Invalid project: %s", project);
         return -1; // return error code
     } else {
         if (!p->second) {
             LOG_ERROR("Invalid null pointer for project '%s'", project);
             return -1; // return error code
         }
-
+        config = p->second->getConfig();
         return p->second->get(issueId, issue, Entries);
     }
 }

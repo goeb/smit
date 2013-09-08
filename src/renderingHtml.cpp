@@ -7,11 +7,12 @@
 #include "logging.h"
 
 
-ContextParameters::ContextParameters(std::string _project, std::string _username, int _numberOfIssues)
+ContextParameters::ContextParameters(std::string p, std::string u, int n, std::list<std::pair<std::string, uint8_t> > h)
 {
-    project = _project;
-    username = _username;
-    numberOfIssues = _numberOfIssues;
+    project = p;
+    username = u;
+    numberOfIssues = n;
+    htmlFieldDisplay = h;
 }
 
 void ContextParameters::printSmitData(struct mg_connection *conn)
@@ -141,33 +142,63 @@ void RHtml::printIssueList(struct mg_connection *conn, const char *project, std:
 }
 
 
-void RHtml::printIssue(struct mg_connection *conn, const char *project, const Issue &issue, const std::list<Entry*> &entries)
+void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx, const Issue &issue, const std::list<Entry*> &entries)
 {
     LOG_DEBUG("printIssue...");
 
     mg_printf(conn, "Content-Type: text/html\r\n\r\n");
-    printHeader(conn, project);
+    printHeader(conn, ctx.project.c_str());
 
-    // print issue
-    mg_printf(conn, "Issue %s<br>\n", issue.id.c_str());
-    mg_printf(conn, "mtime: %d<br>\n", issue.mtime);
+    // print the fields of the issue in a two-column table
+    mg_printf(conn, "<table class=\"smit_fields_summary\">");
+    int workingColumn = 1;
+    const uint8_t MAX_COLUMNS = 2;
 
-    std::map<std::string, std::string>::const_iterator p;
-    for (p = issue.singleProperties.begin(); p != issue.singleProperties.end(); p++) {
-        mg_printf(conn, "%s: %s<br>\n", p->first.c_str(), p->second.c_str());
-    }
-    std::map<std::string, std::list<std::string> >::const_iterator mp;
-    for (mp = issue.multiProperties.begin(); mp != issue.multiProperties.end(); mp++) {
-        std::list<std::string>::iterator v;
-        std::list<std::string> values = mp->second;
-        std::ostringstream text;
-
-        for (v = values.begin(); v != values.end(); v++) {
-            if (v != values.begin()) text << ", ";
-            text << v->c_str();
+    std::list<std::pair<std::string, uint8_t> >::const_iterator h;
+    for (h=ctx.htmlFieldDisplay.begin(); h!=ctx.htmlFieldDisplay.end(); h++) {
+        std::string key = h->first;
+        uint8_t span = h->second;
+        if (span > MAX_COLUMNS) {
+            LOG_ERROR("span %d overflow. Use 2.", span);
+            span = MAX_COLUMNS;
         }
-        mg_printf(conn, "%s: %s<br>\n", mp->first.c_str(), text.str().c_str());
+        std::ostringstream value;
+
+        if (key == "mtime") value << issue.mtime;
+        else if (key == "id") value << issue.id;
+        else {
+            std::map<std::string, std::string>::const_iterator p = issue.singleProperties.find(key);
+            std::map<std::string, std::list<std::string> >::const_iterator mp = issue.multiProperties.find(key);
+
+            if (p != issue.singleProperties.end()) value << p->second;
+            else if (mp != issue.multiProperties.end()) {
+                std::list<std::string>::iterator v;
+                std::list<std::string> values = mp->second;
+
+                for (v = values.begin(); v != values.end(); v++) {
+                    if (v != values.begin()) value << ", ";
+                    value << v->c_str();
+                }
+
+            }
+        }
+
+        if (workingColumn == 1) {
+            mg_printf(conn, "<tr>");
+        }
+        mg_printf(conn, "<td span=\"%d\">", span);
+        mg_printf(conn, "<span class=\"smit_field_label\">%s: </span>\n", key.c_str());
+        mg_printf(conn, "<span class=\"smit_field_value\">%s</span>\n", value.str().c_str());
+        mg_printf(conn, "</td>\n", span);
+
+        workingColumn += span;
+        if (workingColumn >= MAX_COLUMNS) {
+            mg_printf(conn, "</tr>\n");
+            workingColumn = 1;
+        }
     }
+    mg_printf(conn, "</table>\n");
+
 
     // print entries
     std::list<Entry*>::const_iterator e;
@@ -193,6 +224,6 @@ void RHtml::printIssue(struct mg_connection *conn, const char *project, const Is
 
     }
 
-    printFooter(conn, project);
+    printFooter(conn, ctx.project.c_str());
 
 }

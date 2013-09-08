@@ -222,7 +222,8 @@ void httpGetIssue(struct mg_connection *conn, const std::string & projectName, c
 
     Issue issue;
     std::list<Entry*> Entries;
-    int r = get(projectName.c_str(), issueId.c_str(), issue, Entries);
+    ProjectConfig config;
+    int r = get(projectName.c_str(), issueId.c_str(), issue, Entries, config);
     if (r < 0) {
         // issue not found or other error
         sendHttpHeaderInvalidResource(conn);
@@ -232,7 +233,10 @@ void httpGetIssue(struct mg_connection *conn, const std::string & projectName, c
         sendHttpHeader200(conn);
 
         if (format == "text") RText::printIssue(conn, issue, Entries);
-        else RHtml::printIssue(conn, projectName.c_str(), issue, Entries);
+        else {
+            ContextParameters ctx = ContextParameters(projectName, "xxx", 0, config.htmlFieldDisplay);
+            RHtml::printIssue(conn, ctx, issue, Entries);
+        }
 
     }
 }

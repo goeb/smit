@@ -6,6 +6,7 @@
 #include <list>
 #include <set>
 #include <pthread.h>
+#include <stdint.h>
 
 #include "ustring.h"
 
@@ -49,7 +50,7 @@ typedef struct FieldSpec {
 struct ProjectConfig {
     std::string name; // name of the project
     std::map<std::string, FieldSpec> fields;
-    std::list<std::pair<std::string, int> > htmlFieldDisplay;
+    std::list<std::pair<std::string, uint8_t> > htmlFieldDisplay;
     std::map<std::string, std::string> customDisplays;
     std::string defaultDislpay; // one of customDisplays
     
@@ -100,6 +101,7 @@ public:
     void consolidateIssues();
     std::list<Issue*> search(const char *fulltext, const char *filterSpec, const char *sortingSpec);
     inline std::list<std::string> getDefaultColspec() { return defaultColspec; }
+    inline ProjectConfig getConfig() { return config; }
     int get(const char *issueId, Issue &issue, std::list<Entry*> &Entries);
 
 private:
@@ -146,7 +148,7 @@ std::list<struct Issue*> search(const char * project, const char *fulltext, cons
 int add(const char *project, const char *issueId, const Entry &entry);
 
 // Get a given issue and all its entries
-int get(const char *project, const char *issueId, Issue &issue, std::list<Entry*> &Entries);
+int get(const char *project, const char *issueId, Issue &issue, std::list<Entry*> &Entries, ProjectConfig &config);
 
 
 // Deleting an entry is only possible if:
