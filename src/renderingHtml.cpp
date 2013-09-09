@@ -149,6 +149,8 @@ void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx,
     mg_printf(conn, "Content-Type: text/html\r\n\r\n");
     printHeader(conn, ctx.project.c_str());
 
+    mg_printf(conn, "<div class=\"smit_issue\">");
+
     // print the fields of the issue in a two-column table
     mg_printf(conn, "<table class=\"smit_fields_summary\">");
     int workingColumn = 1;
@@ -184,12 +186,10 @@ void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx,
         }
 
         if (workingColumn == 1) {
-            mg_printf(conn, "<tr>");
+            mg_printf(conn, "<tr class=\"smit_fieldname_%s\">\n", key.c_str());
         }
-        mg_printf(conn, "<td span=\"%d\">", span);
-        mg_printf(conn, "<span class=\"smit_field_label\">%s: </span>\n", key.c_str());
-        mg_printf(conn, "<span class=\"smit_field_value\">%s</span>\n", value.str().c_str());
-        mg_printf(conn, "</td>\n", span);
+        mg_printf(conn, "<td class=\"smit_field_label smit_fieldname_label_%s\">%s: </td>\n", key.c_str(), key.c_str());
+        mg_printf(conn, "<td class=\"smit_field_value smit_fieldname_label_%s\" colspan=\"%d\">%s</td>\n", key.c_str(), 2*span-1, value.str().c_str());
 
         workingColumn += span;
         if (workingColumn > MAX_COLUMNS) {
@@ -206,23 +206,25 @@ void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx,
         Entry ee = *(*e);
         mg_printf(conn, "<div class=\"smit_entry\">\n");
 
-        mg_printf(conn, "<div class=\"smit_entryHeader\">\n");
-        mg_printf(conn, "Author: <span class=\"smit_entryAuthor\">%s</span>", ee.author.c_str());
-        mg_printf(conn, " / <span class=\"smit_entryCtime\">%d</span>\n", ee.ctime); // TODO display human-readable date
+        mg_printf(conn, "<div class=\"smit_entry_header\">\n");
+        mg_printf(conn, "Author: <span class=\"smit_entry_author\">%s</span>", ee.author.c_str());
+        mg_printf(conn, " / <span class=\"smit_entry_ctime\">%d</span>\n", ee.ctime); // TODO display human-readable date
         mg_printf(conn, "</div>\n"); // end header
 
-        mg_printf(conn, "<div class=\"smit_entryMessage\">\n");
+        mg_printf(conn, "<div class=\"smit_entry_message\">\n");
         mg_printf(conn, "%s\n", ee.message.c_str());
         mg_printf(conn, "</div>\n"); // end message
 
         // other fields
-        mg_printf(conn, "<div class=\"smit_entryOtherFields\">\n");
+        mg_printf(conn, "<div class=\"smit_entry_other_fields\">\n");
         mg_printf(conn, "");
         mg_printf(conn, "</div>\n"); // other fields
 
         mg_printf(conn, "</div>\n");
 
     }
+
+    mg_printf(conn, "</div>");
 
     printFooter(conn, ctx.project.c_str());
 

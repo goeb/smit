@@ -1,0 +1,28 @@
+<html>
+    <head>
+        <title>MyProject project</title>
+        <link rel="stylesheet" type="text/css" href="/myproject/html/style.css">
+        <script src="/js/smit.js"></script>
+    </head>
+
+    <body>
+
+        Logged in as: <span class="smit_user">(not logged in)</span>
+        <script id="smit_data" type="application/json">
+            {"smit_user": "Mr. John", "smit_numberOfIssues": 34}
+        </script>
+        <br>
+
+        <a href="/myproject/issues/new">Create new issue</a> -
+        <a href="/myproject/issue/?sort=owner&colspec=id+mtime+title+status+owner+target_version">Issues by owner</a> -
+        <a href="/myproject/issue/?sort=status&colspec=id+mtime+title+status+owner+target_version">Issues by status</a> -
+        <a href="/myproject/issues/?sort=target_version&colspec=id+mtime+title+status+owner+target_version">Issues by target version</a> -
+        <a href="/myproject/issues/?sort=mtime&colspec=id+mtime+title+status+owner+target_version&filter=status:open">Open issues</a> -
+
+        <div class="searchbox">
+        <form action="list" method="get">
+            <input type="text" name="search">
+            <input type="submit" value="Search">
+        </form>
+        </div>
+        <hr>

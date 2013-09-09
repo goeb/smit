@@ -1,0 +1,33 @@
+
+# command params ...
+# reserved fields are: id, title, ctime, mtime, author
+addField status select "open" "closed" "deleted"
+addField owner selectUser
+addField target_version select \
+    "non renseigne" \
+    v0.1 \
+    v0.2 \
+    v0.3 \
+    v0.4
+
+
+addField tags multiselect v4.0 v4.1 v5.0
+
+# how fields are displayed on the issue page
+# in a two-column table, from left to right, then up to bottom.
+# [,2] indicates when the field must be spanned over 2 columns.
+# ,1 or ,2 indicates when an empty placeholder must be used.
+setHtmlFieldDisplay id,2 title,2 status owner target_version tags ctime author
+
+# links in the header of the page
+addListDisplay "Open issues" "filter=status:open&sort=mtime"
+addListDisplay "Deleted issues" "filter=status:deleted"
+
+# when 'colspec' is not given in the url query string
+setDefaultColspec "id+title+mtime+owner"
+# when 'filter' is not given in the url query string
+setDefaultFilter "status:open"
+# when 'sort' is not given in the url query string
+setDefaultSorting "sort=mtime"
+
+
