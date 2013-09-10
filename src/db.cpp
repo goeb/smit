@@ -139,19 +139,16 @@ Entry *loadEntry(std::string dir, const char* basename)
             continue; // ignore this line
         }
         std::string key = line->front();
-        std::string value = line->back();
+        line->pop_front(); // remove key from tokens
+        std::string firstValue = line->front();
 
         if (0 == key.compare(K_CTIME)) {
-            e->ctime = atoi((char*)value.c_str());
-        } else if (0 == key.compare(K_PARENT)) e->parent = value;
-        else if (0 == key.compare(K_AUTHOR)) e->author = value;
-        else if (0 == key.compare(K_MESSAGE)) e->message = value;
-        else if (line->size() == 2) {
-            e->singleProperties[key] = value;
-        } else {
-            // multi properties
-            line->pop_front(); // remove key from tokens
-            e->multiProperties[key] = *line;
+            e->ctime = atoi((char*)firstValue.c_str());
+        } else if (0 == key.compare(K_PARENT)) e->parent = firstValue;
+        else if (0 == key.compare(K_AUTHOR)) e->author = firstValue;
+        else if (0 == key.compare(K_MESSAGE)) e->message = firstValue;
+        else {
+            e->properties[key] = *line;
         }
     }
     return e;
@@ -191,22 +188,14 @@ void Project::consolidateIssues()
             // (in order to have only most recent properties)
 
             // singleProperties
-            std::map<std::string, std::string>::iterator p;
-            for (p = currentEntry->singleProperties.begin(); p != currentEntry->singleProperties.end(); p++) {
-                if (currentIssue->singleProperties.count(p->first) == 0) {
+            std::map<std::string, std::list<std::string> >::iterator p;
+            for (p = currentEntry->properties.begin(); p != currentEntry->properties.end(); p++) {
+                if (currentIssue->properties.count(p->first) == 0) {
                     // not already existing. Create it.
-                    currentIssue->singleProperties[p->first] = p->second;
+                    currentIssue->properties[p->first] = p->second;
                 }
             }
 
-            // multiProperties
-            std::map<std::string, std::list<std::string> >::iterator mp;
-            for (mp = currentEntry->multiProperties.begin(); mp != currentEntry->multiProperties.end(); mp++) {
-                if (currentIssue->multiProperties.count(mp->first) == 0) {
-                    // not already existing. Create it.
-                    currentIssue->multiProperties[mp->first] = mp->second;
-                }
-            }
             parentId = currentEntry->parent;
             //LOG_DEBUG("Next parent: %s", parentId.c_str());
         }
@@ -349,7 +338,7 @@ int Project::loadConfig(const char *path)
     }
     // else continue and parse the file
 
-    config.name = path; // name of the project
+    config.path = path; // name of the project
 
     int r = fseek(f, 0, SEEK_END); // go to the end of the file
     if (r != 0) {
@@ -379,8 +368,11 @@ int Project::loadConfig(const char *path)
         line->pop_front();
         if (0 == token.compare("addField")) {
             FieldSpec field = parseFieldSpec(*line);
-            if (field.name.size() > 0) config.fields[field.name] = field;
-            // else: parse error
+            if (field.name.size() > 0) {
+                config.fields[field.name] = field;
+                config.orderedFields.push_back(field.name);
+            }
+            // else: parse error, ignore
         } else if (0 == token.compare("addListDisplay")) {
             // TODO
             LOG_ERROR("addListDisplay not implemented");
@@ -402,30 +394,6 @@ int Project::loadConfig(const char *path)
          } else if (0 == token.compare("setDefaultSorting")) {
             // TODO
             LOG_ERROR("setDefaultSorting not implemented");
-        } else if (0 == token.compare("setHtmlFieldDisplay")) {
-            if (line->empty()) {
-                LOG_ERROR("Empty 'setHtmlFieldDisplay'");
-                continue; // ignore this line
-            }
-            std::list<std::string>::iterator i;
-            for (i = line->begin(); i != line->end(); i++) {
-                // syntax is 'aaa' or 'aaa,2'
-                int span = 1;
-                std::string fieldName = *i;
-                size_t n = fieldName.find_first_of(",");
-                if (n != std::string::npos) {
-                    if (n >= fieldName.size()-1) {
-                        // the comma is the last character
-                        // do nothing, span = 1
-                    } else {
-                        span = atoi(fieldName.substr(n+1).c_str());
-                        fieldName = fieldName.substr(0, n);
-                    }
-                }
-                LOG_DEBUG("setHtmlFieldDisplay: add field=%s, span=%d", fieldName.c_str(), span);
-                config.htmlFieldDisplay.push_back(std::make_pair(fieldName, span));
-            }
-
         } else {
             LOG_ERROR("Unknown function '%s'", token.c_str());
 

@@ -234,7 +234,7 @@ void httpGetIssue(struct mg_connection *conn, const std::string & projectName, c
 
         if (format == "text") RText::printIssue(conn, issue, Entries);
         else {
-            ContextParameters ctx = ContextParameters(projectName, "xxx", 0, config.htmlFieldDisplay);
+            ContextParameters ctx = ContextParameters("xxx", 0, config);
             RHtml::printIssue(conn, ctx, issue, Entries);
         }
 
@@ -243,6 +243,8 @@ void httpGetIssue(struct mg_connection *conn, const std::string & projectName, c
 
 void httpPostEntry(struct mg_connection *conn, const std::string & projectName, const std::string & issueId)
 {
+    mg_printf(conn, "hello xxx\n");
+
 }
 
 

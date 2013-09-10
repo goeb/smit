@@ -16,12 +16,12 @@
   */
 class ContextParameters {
 public:
-    ContextParameters(std::string p, std::string u, int n, std::list<std::pair<std::string, uint8_t> > h);
+    ContextParameters(std::string username, int numberOfIssues, const ProjectConfig &pConfig);
     void printSmitData(struct mg_connection *conn);
 
     std::string username;
     int numberOfIssues;
-    std::string project;
+    ProjectConfig projectConfig;
     std::list<std::pair<std::string, uint8_t> > htmlFieldDisplay;
 
 };
@@ -34,6 +34,9 @@ public:
     static void printProjectList(struct mg_connection *conn, const std::list<std::string> &pList);
     static void printIssueList(struct mg_connection *conn, const char *project, std::list<Issue*> issueList, std::list<std::string> colspec);
     static void printIssue(struct mg_connection *conn, const ContextParameters &ctx, const Issue &issue, const std::list<Entry*> &entries);
+    static std::string toString(const std::list<std::string> &values);
+    static bool inList(const std::list<std::string> &listOfValues, const std::string &value);
+
 
 };
 

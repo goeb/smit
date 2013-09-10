@@ -28,13 +28,9 @@ void RText::printIssueList(struct mg_connection *conn, std::list<struct Issue*> 
         mg_printf(conn, "%d, ", (*i)->ctime);
         mg_printf(conn, "%d, ", (*i)->mtime);
 
-        std::map<std::string, std::string>::iterator p;
-        for (p=(*i)->singleProperties.begin(); p!=(*i)->singleProperties.end(); p++) {
-            mg_printf(conn, "%s, ", p->second.c_str());
-        }
-        std::map<std::string, std::list<std::string> >::iterator mp;
-        for (mp=(*i)->multiProperties.begin(); mp!=(*i)->multiProperties.end(); mp++) {
-            std::list<std::string> values = mp->second;
+        std::map<std::string, std::list<std::string> >::iterator p;
+        for (p=(*i)->properties.begin(); p!=(*i)->properties.end(); p++) {
+            std::list<std::string> values = p->second;
             std::list<std::string>::iterator v;
             for (v=values.begin(); v!=values.end(); v++) {
                 mg_printf(conn, "%s+", v->c_str());

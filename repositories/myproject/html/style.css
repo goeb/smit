@@ -129,7 +129,11 @@ form {
 
 }
 
-.smit_entry {
+select {
+    vertical-align: top;
+}
+
+.sm_entry {
     width: 60em;
     background-color: rgb(232, 232, 232);
     margin: 1px 1px 10px;
@@ -140,48 +144,81 @@ form {
     font-size: 9pt;
     font-family: Verdana,sans-serif;
 }
-.smit_entry_header {
+.sm_entry_header {
     margin: 0px;
     padding: 0px;
     background-color: transparent;
     font-weight: bold;
 }
-.smit_entry_message {
+.sm_entry_message {
     white-space: pre;
     font-family: monospace;
     font-size: medium;
     
 }
-.smit_entry_other_fields {
+.sm_entry_other_fields {
     background-color: #e4f4ef;
 }
 
-.smit_fields_summary {
+.sm_fields_summary {
     font-family: Verdana,sans-serif;
     font-size: small;
     border-collapse:collapse;
 }
-.smit_field_label {
+
+/* fields in the issue page */
+.sm_flabel {
     font-weight: bold;
     white-space: nowrap;
     font-family: Verdana,sans-serif;
     font-size: small;
     text-align: right;
 }
-.smit_field_value {
+input {
+    font-family: Verdana,sans-serif;
+    font-size: small;
+}
+.sm_fvalue {
     white-space: nowrap;
     padding-right: 6em;
 }
-.smit_fieldname_title, .smit_fieldname_id {
+.sm_fname_title, .sm_fname_id {
     background-color: rgb(208, 208, 208);
     border: 1px;
     padding:0;
 }
-.smit_issue {
+.sm_issue {
+    vertical-align: top;
     background: none repeat scroll 0% 0% rgb(240, 240, 240);
     border: 1px solid rgb(116, 126, 147);
     padding: 10px;
     font-size: 10pt;
     border-radius: 5px 5px 5px 5px;
     font-family: Helvetica,Arial,Geneva;
+}
+.sm_issue_header {
+    width: inherit;
+    margin: 8px 0px;
+    padding: 0.3em;
+    background-color: rgb(208, 208, 208);
+    border-radius: 0.5em 0.5em 0.5em 0.5em;
+    font-size: 125%;
+    font-weight: bold;
+}
+.sm_issue_id {
+    background-color: rgb(220, 220, 220);
+    padding-left: 1em;
+    padding-right: 1em;
+    border-radius: 0.3em 0.3em 0.3em 0.3em;
+    border: 1px solid black;
+}
+.sm_finput_title {
+    width: 50em;
+}
+.sm_issue_form {
+}
+
+textarea.sm_finput_message {
+    width: 500px;
+    height: 120px;
 }

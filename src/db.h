@@ -19,8 +19,7 @@ typedef struct Entry {
     int ctime; // creation time
     std::string author;
     std::string message;
-    std::map<std::string, std::string> singleProperties;
-    std::map<std::string, std::list<std::string> > multiProperties;
+    std::map<std::string, std::list<std::string> > properties;
 
 } Entry;
 
@@ -31,8 +30,7 @@ struct Issue {
     std::string head; // the latest entry
     int ctime; // creation time (the one of the first entry)
     int mtime; // modification time (the one of the last entry)
-    std::map<std::string, std::string> singleProperties; // properties of the issue
-    std::map<std::string, std::list<std::string> > multiProperties;
+    std::map<std::string, std::list<std::string> > properties;
 
     // the properties of the issue is the consolidation of all the properties
     // of its entries. For a given key, the most recent value has priority.
@@ -48,9 +46,9 @@ typedef struct FieldSpec {
 
 // Project config
 struct ProjectConfig {
-    std::string name; // name of the project
+    std::string path; // path of the project
     std::map<std::string, FieldSpec> fields;
-    std::list<std::pair<std::string, uint8_t> > htmlFieldDisplay;
+    std::list<std::string> orderedFields;
     std::map<std::string, std::string> customDisplays;
     std::string defaultDislpay; // one of customDisplays
     

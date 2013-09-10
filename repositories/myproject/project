@@ -13,11 +13,6 @@ addField target_version select \
 
 addField tags multiselect v4.0 v4.1 v5.0
 
-# how fields are displayed on the issue page
-# in a two-column table, from left to right, then up to bottom.
-# [,2] indicates when the field must be spanned over 2 columns.
-# ,1 or ,2 indicates when an empty placeholder must be used.
-setHtmlFieldDisplay id,2 title,2 status owner target_version tags ctime author
 
 # links in the header of the page
 addListDisplay "Open issues" "filter=status:open&sort=mtime"
