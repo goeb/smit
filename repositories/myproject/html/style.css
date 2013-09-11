@@ -15,110 +15,6 @@ a[href]:hover {
   text-decoration: underline;
 }
 
-table.body {
-  border: 0;
-  padding: 0;
-  border-spacing: 0;
-  border-collapse: separate;
-}
-
-.summary {
-    /*border-style: solid;*/
-    /*border-width: 1px;*/
-    /*padding-left: 1em;*/
-    padding-top: 1em;
-    padding-right: 1em;
-    /*float: left;*/
-}
-
-.title {
-    /*background-color: #f4f4ff;*/
-    padding: 5px;
-    font-size: 120%;
-    font-weight:bold;
-    border-bottom: solid gray 1px;
-}
-
-.label_title, .label_status, .label_owner, .label_priority, .label_summary, .label_message, .label_author, .label_mtime, .label_ctime, .label_id, .label_target_version {
-    color: #338;
-    text-align: right;
-    vertical-align: top;
-    white-space: nowrap;
-    padding-right: 5px;
-    margin-left: 10px;
-    font-weight:bold;
-}
-.tk_td_input {
-    vertical-align:top;
-}
-
-.field_title, .field_status, .field_owner, .field_priority, .field_summary, .field_tags {
-    float: left;
-    margin-left: 1em;
-    margin-right: 1em;
-    margin-top: 2px;
-    margin-bottom: 2px;
-}
-
-.tk_msg {
-    background-color: #f4f4ff;
-    padding: 5px;
-    border: solid gray 1px;
-    width: 60em;
-    margin: 8px;
-}
-.tk_msg_header {
-    font-weight:bold;
-}
-.tk_msg_id, .tk_msg_author, .tk_msg_date, .tk_msg_del {
-    padding-right: 1em;
-}
-.tk_input_title {
-    width: 50em;
-}
-.message {
-    clear: both;
-}
-
-form {
-  margin: 0;
-}
-
-
-
-.table_issues {
-  border-spacing: 0;
-  width: 100%;
-}
-
-.th_issues, .td_issues {
-  padding: 0 4px 0 4px;
-  color: #404070;
-  background-color: #eef;
-  border: 1px solid white;
-  vertical-align: top;
-  empty-cells: show;
-}
-.table_issues td a[href]:hover { color: #404070 }
-.table_issues td a[href]:link { color: #404070 }
-.table_issues td a[href] { color: #404070 }
-
-.th_issues {
-    font-weight:bold;
-}
-
-
-.searchbox {
-    float: right;
-}
-
-.tke_fieldconfig {
-    vertical-align: text-top;
-}
-.tke_fieldconfig_block {
-    padding: 1em;
-    /*border: solid 1px;*/
-}
 
 .clickable {
     cursor: pointer;
@@ -129,10 +25,15 @@ form {
 
 }
 
-select {
+table.sm_fields_summary  td {
+    padding-bottom: 0.5em;
     vertical-align: top;
 }
-
+.sm_fields_summary {
+    width: 100%;
+    /*border-bottom: 1px solid grey;*/
+    margin-bottom: 2em;
+}
 .sm_entry {
     width: 60em;
     background-color: rgb(232, 232, 232);
@@ -213,12 +114,16 @@ input {
     border: 1px solid black;
 }
 .sm_finput_title {
-    width: 50em;
+    width: 100%;
 }
 .sm_issue_form {
+    margin-top: 3em;
+    width: 55em;
 }
-
+input[type=submit] {
+    display: block;
+}
 textarea.sm_finput_message {
-    width: 500px;
+    width: 50em;
     height: 120px;
 }

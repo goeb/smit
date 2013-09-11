@@ -101,6 +101,8 @@ public:
     inline std::list<std::string> getDefaultColspec() { return defaultColspec; }
     inline ProjectConfig getConfig() { return config; }
     int get(const char *issueId, Issue &issue, std::list<Entry*> &Entries);
+    int addEntry(const std::map<std::string, std::string> &properties, const std::string &issueId);
+    inline std::string getName() { return name; }
 
 private:
     ProjectConfig config;
@@ -108,6 +110,7 @@ private:
     std::map<std::string, Entry*> entries;
     std::list<std::string> defaultColspec;
     Locker locker;
+    std::string name;
 };
 
 
@@ -115,7 +118,7 @@ class Database {
 public:
     static Database Db;
     std::map<std::string, Project*> projects;
-    static bool hasProject(const std::string &projectName);
+    static Project *getProject(const std::string &projectName);
     std::string pathToRepository;
 
     static std::list<std::string> getDefautlColspec(const char *project);

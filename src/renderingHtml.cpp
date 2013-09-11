@@ -223,7 +223,8 @@ void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx,
     // print form for adding a message / modifying the issue
     // TODO if access rights granted
 
-    mg_printf(conn, "<form method=\"post\" class=\"sm_issue_form\">");
+    // enctype=\"multipart/form-data\"
+    mg_printf(conn, "<form method=\"post\"  class=\"sm_issue_form\">");
     // print the fields of the issue in a two-column table
 
     // title
@@ -320,12 +321,15 @@ void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx,
             workingColumn = 1;
         }
     }
-   mg_printf( conn, "</table>\n");
 
-   mg_printf( conn, "<textarea class=\"sm_finput sm_finput_message\" placeholder=\"%s\">\n", "Enter a message");
-   mg_printf( conn, "</textarea>\n");
+    mg_printf(conn, "<td class=\"sm_flabel sm_flabel_message\" >message: </td>\n");
+    mg_printf(conn, "<td colspan=\"3\">\n");
+    mg_printf(conn, "<textarea class=\"sm_finput sm_finput_message\" placeholder=\"%s\" name=\"message\">\n", "Enter a message");
+    mg_printf(conn, "</textarea>\n");
+    mg_printf(conn, "</td>\n");
+    mg_printf(conn, "</table>\n");
 
-   mg_printf( conn, "<input type=\"submit\" value=\"%s\">\n", "Add Message");
+    mg_printf(conn, "<input type=\"submit\" value=\"%s\">\n", "Add Message");
 
     mg_printf(conn, "</form>");
 

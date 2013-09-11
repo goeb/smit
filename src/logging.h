@@ -4,8 +4,8 @@
 
 #include <stdio.h>
 
-#define LOG_ERROR(...) { printf("ERROR %s:%d ", __FILE__, __LINE__); printf(__VA_ARGS__); printf("\n"); }
-#define LOG_INFO(...)  { printf("INFO  %s:%d ", __FILE__, __LINE__); printf(__VA_ARGS__); printf("\n"); }
-#define LOG_DEBUG(...) { printf("DEBUG %s:%d ", __FILE__, __LINE__); printf(__VA_ARGS__); printf("\n"); }
+#define LOG_ERROR(...) do { printf("ERROR %s:%d ", __FILE__, __LINE__); printf(__VA_ARGS__); printf("\n"); } while (0)
+#define LOG_INFO(...)  do { printf("INFO  %s:%d ", __FILE__, __LINE__); printf(__VA_ARGS__); printf("\n"); } while (0)
+#define LOG_DEBUG(...) do { printf("DEBUG %s:%d ", __FILE__, __LINE__); printf(__VA_ARGS__); printf("\n"); } while (0)
 
 #endif

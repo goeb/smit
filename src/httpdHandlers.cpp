@@ -115,6 +115,10 @@ std::string getParamFromQueryString(const std::string & queryString, const char 
     while ((token = popToken(q, '&')) != "") {
         if (0 == token.compare(0, paramEqual.size(), paramEqual.c_str())) {
             popToken(token, '='); // remove the param= part
+            //len = mg_url_decode(p, (size_t)(s - p), dst, dst_len, 1);
+            //int mg_url_decode(const char *src, int src_len, char *dst,
+            //                  int dst_len, int is_form_url_encoded) {
+
             return token;
         }
     }
@@ -168,7 +172,7 @@ void httpGetRoot(struct mg_connection *conn)
 }
 
 
-void httpGetListOfIssues(struct mg_connection *conn, const std::string & projectName)
+void httpGetListOfIssues(struct mg_connection *conn, Project &p)
 {
     // get query string parameters:
     //     colspec    which fields are to be displayed in the table, and their order
@@ -183,7 +187,7 @@ void httpGetListOfIssues(struct mg_connection *conn, const std::string & project
     std::string fulltextSearch = getParamFromQueryString(q, "search");
     std::string sorting = getParamFromQueryString(q, "sort");
 
-    std::list<struct Issue*> issueList = search(projectName.c_str(), fulltextSearch.c_str(), filter.c_str(), sorting.c_str());
+    std::list<struct Issue*> issueList = p.search(fulltextSearch.c_str(), filter.c_str(), sorting.c_str());
 
 
     std::string colspec = getParamFromQueryString(q, "colspec");
@@ -192,29 +196,25 @@ void httpGetListOfIssues(struct mg_connection *conn, const std::string & project
         cols = parseColspec(colspec.c_str());
     } else {
         // get default colspec
-        cols = Database::getDefautlColspec(projectName.c_str());
+        cols = p.getDefaultColspec();
     }
     std::string format = getParamFromQueryString(q, "format");
 
     sendHttpHeader200(conn);
 
     if (format == "text") RText::printIssueList(conn, issueList, cols);
-    else RHtml::printIssueList(conn, projectName.c_str(), issueList, cols);
-
+    else RHtml::printIssueList(conn, p.getName().c_str(), issueList, cols);
 
 }
 
-void httpPostNewIssue(struct mg_connection *conn, const std::string & projectName)
+
+void httpGetNewIssueForm(struct mg_connection *conn, Project &p)
 {
 }
 
-void httpGetNewIssueForm(struct mg_connection *conn, const std::string & projectName)
+void httpGetIssue(struct mg_connection *conn, Project &p, const std::string & issueId)
 {
-}
-
-void httpGetIssue(struct mg_connection *conn, const std::string & projectName, const std::string & issueId)
-{
-    LOG_DEBUG("httpGetIssue: project=%s, issue=%s", projectName.c_str(), issueId.c_str());
+    LOG_DEBUG("httpGetIssue: project=%s, issue=%s", p.getName().c_str(), issueId.c_str());
 
     const struct mg_request_info *req = mg_get_request_info(conn);
     std::string q;
@@ -222,8 +222,8 @@ void httpGetIssue(struct mg_connection *conn, const std::string & projectName, c
 
     Issue issue;
     std::list<Entry*> Entries;
-    ProjectConfig config;
-    int r = get(projectName.c_str(), issueId.c_str(), issue, Entries, config);
+    ProjectConfig config = p.getConfig();
+    int r = p.get(issueId.c_str(), issue, Entries);
     if (r < 0) {
         // issue not found or other error
         sendHttpHeaderInvalidResource(conn);
@@ -241,10 +241,97 @@ void httpGetIssue(struct mg_connection *conn, const std::string & projectName, c
     }
 }
 
-void httpPostEntry(struct mg_connection *conn, const std::string & projectName, const std::string & issueId)
+void urlDecode(std::string &s)
 {
-    mg_printf(conn, "hello xxx\n");
+    // convert key and value
+    const int SIZ = 1024;
+    char localBuf[SIZ+1];
 
+    // output of URL decoding takes less characters than input
+
+    if (s.size() <= 1024) { // use local buffer
+        int r = mg_url_decode(s.c_str(), s.size(), localBuf, SIZ, 1);
+        if (r == -1) LOG_ERROR("Destination of mg_url_decode is too short: input size=%d, destination size=%d",
+                               s.size(), SIZ);
+    } else {
+        // allocated dynamically a buffer
+        char *buffer = new char[s.size()];
+        int r = mg_url_decode(s.c_str(), s.size(), buffer, s.size(), 1);
+        if (r == -1) LOG_ERROR("Destination of mg_url_decode is too short (2): destination size=%d", s.size());
+        else s = buffer;
+    }
+}
+
+
+void parseQueryStringVar(const std::string &var, std::string &key, std::string &value) {
+    size_t x = var.find('=');
+    if (x != std::string::npos) {
+        std::string key = var.substr(0, x);
+        std::string value = "";
+        if (x+1 < var.size()) {
+            value = var.substr(x+1);
+        }
+    }
+
+    urlDecode(key);
+    urlDecode(value);
+}
+
+
+void parseQueryString(const std::string & queryString, std::map<std::string, std::string> &vars)
+{
+    size_t n = queryString.size();
+    size_t i;
+    size_t offsetOfCurrentVar = 0;
+    for (i=0; i<n; i++) {
+        if (queryString[i] == '&') {
+            std::string var = queryString.substr(offsetOfCurrentVar, i-offsetOfCurrentVar-1);
+            std::string key, value;
+            parseQueryStringVar(var, key, value);
+            if (key.size() > 0) vars[key] = value;
+        }
+    }
+}
+
+/** Handle the posting of an entry
+  * If issueId is empty, then a new issue is created.
+  */
+void httpPostEntry(struct mg_connection *conn, Project &p, const std::string & issueId)
+{
+    const char *contentType = mg_get_header(conn, "Content-Type");
+    if (0 == strcmp("application/x-www-form-urlencoded", contentType)) {
+        // application/x-www-form-urlencoded
+        // post_data is "var1=val1&var2=val2...".
+        // multiselect is like: "tags=v4.1&tags=v5.0" (same var repeated)
+
+        const int SIZ = 4096;
+        char postFragment[SIZ+1];
+        int n; // number of bytes read
+        std::string postData;
+        while (n = mg_read(conn, postFragment, SIZ)) {
+            postFragment[n] = 0;
+            LOG_DEBUG("postFragment=%s", postFragment);
+            if (postData.size() > 10*SIZ*SIZ) {
+                // 10 MByte is too much. overflow. abort.
+                LOG_ERROR("Too much POST data. Abort.");
+                return;
+            }
+            postData += postFragment;
+        }
+        std::map<std::string, std::string> vars;
+        parseQueryString(postData, vars);
+
+        int r = p.addEntry(vars, issueId);
+        if (r != 0) {
+            // error
+        } else {
+            httpGetIssue(conn, p, issueId);
+        }
+
+    } else {
+        // multipart/form-data
+        LOG_ERROR("Content-Type '%s' not supported", contentType);
+    }
 }
 
 
@@ -279,13 +366,14 @@ int begin_request_handler(struct mg_connection *conn) {
     else {
         // check if it is a valid project resource such as /myp/issues, /myp/users, /myp/config
         std::string project = popToken(uri, '/');
-        if (Database::Db.hasProject(project)) {
+        Project *p = Database::Db.getProject(project);
+        if (p) {
             std::string resource = popToken(uri, '/');
-            if      ( (resource == "issues") && (method == "GET") && uri.empty() ) httpGetListOfIssues(conn, project);
-            else if ( (resource == "issues") && (method == "POST") && uri.empty() ) httpPostNewIssue(conn, project);
-            else if ( (resource == "issues") && (uri == "/new") && (method == "GET") ) httpGetNewIssueForm(conn, project);
-            else if ( (resource == "issues") && (method == "GET") ) httpGetIssue(conn, project, uri);
-            else if ( (resource == "issues") && (method == "POST") ) httpPostEntry(conn, project, uri);
+            if      ( (resource == "issues") && (method == "GET") && uri.empty() ) httpGetListOfIssues(conn, *p);
+            else if ( (resource == "issues") && (method == "POST") && uri.empty() ) httpPostEntry(conn, *p, "");
+            else if ( (resource == "issues") && (uri == "/new") && (method == "GET") ) httpGetNewIssueForm(conn, *p);
+            else if ( (resource == "issues") && (method == "GET") ) httpGetIssue(conn, *p, uri);
+            else if ( (resource == "issues") && (method == "POST") ) httpPostEntry(conn, *p, uri);
             else handled = false;
         } else handled = false;
     }

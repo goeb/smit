@@ -68,16 +68,6 @@ void Issue::loadHead(const std::string &issuePath)
     free(buf);
 }
 
-std::list<std::string> Database::getDefautlColspec(const char *project) {
-    std::list<std::string> defaultColspec;
-    std::map<std::string, Project*>::iterator p = Db.projects.find(project);
-    if (p == Db.projects.end()) {
-        LOG_ERROR("Cannot access to project '%s'", project);
-    } else {
-        defaultColspec = p->second->getDefaultColspec();
-    }
-    return defaultColspec;
-}
 
 
 // load in memory the given project
@@ -88,6 +78,7 @@ int Project::load(const char *path, char *name)
     LOG_INFO("Loading project %s...", path);
 
     Project *p = new Project;
+    p->name = name;
 
     AutoLocker scopeLocker(p->locker, LOCK_READ_WRITE);
 
@@ -406,7 +397,6 @@ int Project::loadConfig(const char *path)
 
 
 // search
-//   project: name of project where the search should be conduected
 //   fulltext: text that is searched (optional: 0 for no fulltext search)
 //   filterSpec: "status:open+label:v1.0+xx:yy"
 //   sortingSpec: "id+title-owner" (+ for ascending, - for descending order)
@@ -415,23 +405,6 @@ int Project::loadConfig(const char *path)
 //
 //   When fulltext search is enabled (fulltext != 0) then the search is done
 //   through all entries.
-std::list<struct Issue*> search(const char * project, const char *fulltext, const char *filterSpec, const char *sortingSpec)
-{
-    std::map<std::string, Project*>::iterator p = Database::Db.projects.find(project);
-    if (p == Database::Db.projects.end()) {
-        LOG_ERROR("Invald project: %s", project);
-        std::list<struct Issue*> result;
-        return result; // return empty list
-    } else {
-        if (!p->second) {
-            LOG_ERROR("Invalid null pointer for project '%s'", project);
-            return std::list<struct Issue*>(); // empty list
-        }
-        return p->second->search(fulltext, filterSpec, sortingSpec);
-
-
-    }
-}
 
 // filterSpec syntax:
 //     f1:aaa+f2:bbb-f3:ccc => issues with field f1 == aaa OR field f2 == bbb AND field f3 != ccc
@@ -456,31 +429,16 @@ std::list<Issue*> Project::search(const char *fulltext, const char *filterSpec, 
     }
     return result;
 }
-
-// add an entry in the database
-int add(const char *project, const char *issueId, const Entry &entry)
+int Project::addEntry(const std::map<std::string, std::string> &properties, const std::string &issueId)
 {
+    // create Entry object with properties
+    // write this entry to disk
+    // add this entry in Project::entries
+    // consolidate the issue
 
 }
 
-// Get a given issue and all its entries
-int get(const char *project, const char *issueId, Issue &issue, std::list<Entry*> &Entries, ProjectConfig &config)
-{
-    LOG_DEBUG("get issue: %s/%s", project, issueId);
 
-    std::map<std::string, Project*>::iterator p = Database::Db.projects.find(project);
-    if (p == Database::Db.projects.end()) {
-        LOG_ERROR("Invalid project: %s", project);
-        return -1; // return error code
-    } else {
-        if (!p->second) {
-            LOG_ERROR("Invalid null pointer for project '%s'", project);
-            return -1; // return error code
-        }
-        config = p->second->getConfig();
-        return p->second->get(issueId, issue, Entries);
-    }
-}
 
 
 // Deleting an entry is only possible if:
@@ -503,11 +461,11 @@ void setId(Entry &entry)
     entry.id = idBase34;
 }
 
-bool Database::hasProject(const std::string & projectName)
+Project *Database::getProject(const std::string & projectName)
 {
-    if (1 == Database::Db.projects.count(projectName)) {
-        return true;
-    } else return false;
+    std::map<std::string, Project*>::iterator p = Database::Db.projects.find(projectName);
+    if (p == Database::Db.projects.end()) return 0;
+    else return p->second;
 }
 
 std::list<std::string> getProjectList()
