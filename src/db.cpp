@@ -252,17 +252,23 @@ int Project::loadEntries(const char *path)
     }
 
 }
+Issue *Project::getIssue(const std::string &id)
+{
+    std::map<std::string, Issue*>::iterator i;
+    i = issues.find(id);
+    if (i == issues.end()) return 0;
+    else return i->second;
+}
 
 int Project::get(const char *issueId, Issue &issue, std::list<Entry*> &Entries)
 {
-    std::map<std::string, Issue*>::iterator i;
-    i = issues.find(issueId);
-    if (i == issues.end()) {
+    Issue *i = getIssue(issueId);
+    if (!i) {
         // issue not found
         LOG_DEBUG("Issue not found: %s", issueId);
         return -1;
     } else {
-        issue = *(i->second);
+        issue = *i;
         // build list of entries
         std::string currentEntryId = issue.head; // latest entry
 
@@ -429,9 +435,38 @@ std::list<Issue*> Project::search(const char *fulltext, const char *filterSpec, 
     }
     return result;
 }
-int Project::addEntry(const std::map<std::string, std::string> &properties, const std::string &issueId)
+int Project::addEntry(const std::map<std::string, std::list<std::string> > &properties, const std::string &issueId)
 {
+    locker.lockForWriting();
+
+    Issue *i = 0;
+    if (issueId.size()>0) {
+        i = getIssue(issueId);
+        if (!i) {
+            LOG_INFO("Cannot add new entry to unknown issue: %s", issueId.c_str());
+            return -1;
+        }
+    }
+    std::string parent;
+    if (i) parent = i->head;
+    else parent = "null";
+
+
     // create Entry object with properties
+    Entry *e = new Entry;
+    e->parent = parent;
+    // e->ctime = getTime();TODO
+    //e->id
+    e->author = "Fred"; // TODO
+    // add the properties...
+    std::map<std::string, std::list<std::string> >::const_iterator p;
+
+    for (p=properties.begin(); p!=properties.end(); p++) {
+        std::map<std::string, std::list<std::string> > properties;
+    };
+
+    // if issueId is empty, generate a new issueId
+
     // write this entry to disk
     // add this entry in Project::entries
     // consolidate the issue

@@ -278,7 +278,7 @@ void parseQueryStringVar(const std::string &var, std::string &key, std::string &
 }
 
 
-void parseQueryString(const std::string & queryString, std::map<std::string, std::string> &vars)
+void parseQueryString(const std::string & queryString, std::map<std::string, std::list<std::string> > &vars)
 {
     size_t n = queryString.size();
     size_t i;
@@ -288,7 +288,12 @@ void parseQueryString(const std::string & queryString, std::map<std::string, std
             std::string var = queryString.substr(offsetOfCurrentVar, i-offsetOfCurrentVar-1);
             std::string key, value;
             parseQueryStringVar(var, key, value);
-            if (key.size() > 0) vars[key] = value;
+            if (key.size() > 0) {
+                if (vars.count(key) == 0) {
+                    std::list<std::string> L;
+                    L.push_back(value);
+                } else vars[key].push_back(value);
+            }
         }
     }
 }
@@ -318,7 +323,7 @@ void httpPostEntry(struct mg_connection *conn, Project &p, const std::string & i
             }
             postData += postFragment;
         }
-        std::map<std::string, std::string> vars;
+        std::map<std::string, std::list<std::string> > vars;
         parseQueryString(postData, vars);
 
         int r = p.addEntry(vars, issueId);

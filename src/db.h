@@ -13,15 +13,14 @@
 // Data types
 
 // Entry
-typedef struct Entry {
+struct Entry {
     std::string parent; // id of the parent entry, empty if top-level
     std::string id; // unique id of this entry
     int ctime; // creation time
     std::string author;
     std::string message;
     std::map<std::string, std::list<std::string> > properties;
-
-} Entry;
+};
 
 // Issue
 // An issue is consolidated over all its entries
@@ -101,7 +100,9 @@ public:
     inline std::list<std::string> getDefaultColspec() { return defaultColspec; }
     inline ProjectConfig getConfig() { return config; }
     int get(const char *issueId, Issue &issue, std::list<Entry*> &Entries);
-    int addEntry(const std::map<std::string, std::string> &properties, const std::string &issueId);
+    int addEntry(const std::map<std::string, std::list<std::string> > &properties, const std::string &issueId);
+    Issue *getIssue(const std::string &id);
+
     inline std::string getName() { return name; }
 
 private:
