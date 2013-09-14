@@ -208,7 +208,12 @@ void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx,
         mg_printf(conn, "</div>\n"); // end header
 
         mg_printf(conn, "<div class=\"sm_entry_message\">\n");
-        mg_printf(conn, "%s\n", ee.message.c_str());
+        std::map<std::string, std::list<std::string> >::iterator m = ee.properties.find("message");
+        if (m != ee.properties.end()) {
+            if (m->second.size() != 0) {
+                mg_printf(conn, "%s\n", m->second.front().c_str());
+            }
+        }
         mg_printf(conn, "</div>\n"); // end message
 
         // other fields

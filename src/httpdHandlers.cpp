@@ -290,8 +290,8 @@ void parseQueryString(const std::string & queryString, std::map<std::string, std
             // param delimiter encountered or last character reached
             std::string var;
             size_t length;
-            if (i == n-1) length = i-offsetOfCurrentVar; // take the last char
-            else length = i-offsetOfCurrentVar-1; // do not take the '&'
+            if (queryString[i] == '&') length = i-offsetOfCurrentVar; // do not take the '&'
+            else length = i-offsetOfCurrentVar+1; // take the last char
 
             var = queryString.substr(offsetOfCurrentVar, length);
 

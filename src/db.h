@@ -18,7 +18,6 @@ struct Entry {
     std::string id; // unique id of this entry
     int ctime; // creation time
     std::string author;
-    std::string message;
     std::map<std::string, std::list<std::string> > properties;
     std::string serialize();
 };

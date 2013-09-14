@@ -145,7 +145,6 @@ Entry *loadEntry(std::string dir, const char* basename)
             e->ctime = atoi((char*)firstValue.c_str());
         } else if (0 == key.compare(K_PARENT)) e->parent = firstValue;
         else if (0 == key.compare(K_AUTHOR)) e->author = firstValue;
-        else if (0 == key.compare(K_MESSAGE)) e->message = firstValue;
         else {
             e->properties[key] = *line;
         }

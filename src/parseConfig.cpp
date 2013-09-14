@@ -171,18 +171,19 @@ int loadFile(const char *filepath, char **data)
 int writeToFile(const char *filepath, const std::string &data, bool allowOverwrite)
 {
     int result = 0;
-    mode_t mode = O_CREAT;
+    mode_t mode = O_CREAT|O_TRUNC|O_WRONLY;
     if (!allowOverwrite) mode |= O_EXCL;
 
-    int f = open(filepath, O_WRONLY, mode);
+    int f = open(filepath, mode);
     if (-1 == f) {
-        LOG_ERROR("Could not create file '%s', %s", filepath, strerror(errno));
+        LOG_ERROR("Could not create file '%s', (%d) %s", filepath, errno, strerror(errno));
         return -1;
     }
 
     int n = write(f, data.c_str(), data.size());
     if (n != data.size()) {
-        LOG_ERROR("Could not write all data, incomplete file '%s': %s", filepath, strerror(errno));
+        LOG_ERROR("Could not write all data, incomplete file '%s': (%d) %s",
+                  filepath, errno, strerror(errno));
         result = -1;
     }
 
@@ -257,7 +258,7 @@ std::string serializeProperty(const std::string &propertyName, const std::list<s
 
     if ( (values.size() == 1) && (values.front().find('\n') != std::string::npos) ) {
         // serialize as multi-line
-        const char *delimiter = " < -----------endofmsg---"; // TODO manage case where a value contains the delimiter
+        const char *delimiter = "-----------endofmsg---"; // TODO manage case where a value contains the delimiter
         s << " < " << delimiter << "\n";
         s << values.front() << "\n";
         s << delimiter;
