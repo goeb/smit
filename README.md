@@ -18,3 +18,8 @@ Features
 - Simple database on disk, with text files
 - Ability to serve several unrelated projects, with different structures
 
+
+
+Technical constraints
+---------------------
+Project name must not contain these characters: /

@@ -253,6 +253,7 @@ void urlDecode(std::string &s)
         int r = mg_url_decode(s.c_str(), s.size(), localBuf, SIZ, 1);
         if (r == -1) LOG_ERROR("Destination of mg_url_decode is too short: input size=%d, destination size=%d",
                                s.size(), SIZ);
+        s = localBuf;
     } else {
         // allocated dynamically a buffer
         char *buffer = new char[s.size()];
@@ -266,8 +267,8 @@ void urlDecode(std::string &s)
 void parseQueryStringVar(const std::string &var, std::string &key, std::string &value) {
     size_t x = var.find('=');
     if (x != std::string::npos) {
-        std::string key = var.substr(0, x);
-        std::string value = "";
+        key = var.substr(0, x);
+        value = "";
         if (x+1 < var.size()) {
             value = var.substr(x+1);
         }
@@ -283,19 +284,32 @@ void parseQueryString(const std::string & queryString, std::map<std::string, std
     size_t n = queryString.size();
     size_t i;
     size_t offsetOfCurrentVar = 0;
+    bool pendingParam = false; // indicate if a remaining param must be process after the 'if' loop
     for (i=0; i<n; i++) {
-        if (queryString[i] == '&') {
-            std::string var = queryString.substr(offsetOfCurrentVar, i-offsetOfCurrentVar-1);
+        if ( (queryString[i] == '&') || (i == n-1) ) {
+            // param delimiter encountered or last character reached
+            std::string var;
+            size_t length;
+            if (i == n-1) length = i-offsetOfCurrentVar; // take the last char
+            else length = i-offsetOfCurrentVar-1; // do not take the '&'
+
+            var = queryString.substr(offsetOfCurrentVar, length);
+
             std::string key, value;
             parseQueryStringVar(var, key, value);
             if (key.size() > 0) {
                 if (vars.count(key) == 0) {
                     std::list<std::string> L;
                     L.push_back(value);
+                    vars[key] = L;
                 } else vars[key].push_back(value);
             }
+            offsetOfCurrentVar = i+1;
+            pendingParam = false;
+
         }
     }
+    // append the latest parameter (if any)
 }
 
 /** Handle the posting of an entry

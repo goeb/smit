@@ -24,8 +24,7 @@ std::string bin2hex(const ustring & in)
     return hexResult;
 }
 
-
-ustring computeIdBase34(uint8_t *buffer, size_t length)
+std::string computeIdBase34(uint8_t *buffer, size_t length)
 {
     // compute sha1 and convert it to base34 visible string
     unsigned char md[SHA_DIGEST_LENGTH];
@@ -35,7 +34,9 @@ ustring computeIdBase34(uint8_t *buffer, size_t length)
     sha1sum.assign(md, SHA_DIGEST_LENGTH);
     LOG_DEBUG("sha1=%s", (char*)bin2hex(sha1sum).c_str());
 
-    return sha1sum; // TODO not visible string
+    std::string idBase34 = convert2base34(md, SHA_DIGEST_LENGTH, true);
+
+    return idBase34;
 }
 
 // vector that for each of 256^0, 256^1, 256^2, ... 256^20

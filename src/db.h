@@ -20,6 +20,7 @@ struct Entry {
     std::string author;
     std::string message;
     std::map<std::string, std::list<std::string> > properties;
+    std::string serialize();
 };
 
 // Issue

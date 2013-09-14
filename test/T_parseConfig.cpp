@@ -107,5 +107,20 @@ main()
     line++;
     ASSERT(line->size() == 2);
 
+    std::string s = doubleQuote("a b\nc d\\");
+    ASSERT(s == "\"a b\nc d\\\\\"");
+
+    s = doubleQuote("a \"b\"");
+    ASSERT(s == "\"a \\\"b\\\"\"");
+
+    std::list<std::string> values;
+    values.push_back("toto");
+    values.push_back("a\nb");
+    values.push_back("a b c");
+    values.push_back("a..\"..b");
+
+    s = serializeProperty("xyz", values);
+    ASSERT(s == "xyz toto \"a\nb\" \"a b c\" \"a..\\\"..b\"\n");
+
     utestEnd();
 }

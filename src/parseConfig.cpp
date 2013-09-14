@@ -2,6 +2,10 @@
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
+#include <sstream>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 #include "parseConfig.h"
 #include "logging.h"
@@ -164,6 +168,28 @@ int loadFile(const char *filepath, char **data)
     return n;
 }
 
+int writeToFile(const char *filepath, const std::string &data, bool allowOverwrite)
+{
+    int result = 0;
+    mode_t mode = O_CREAT;
+    if (!allowOverwrite) mode |= O_EXCL;
+
+    int f = open(filepath, O_WRONLY, mode);
+    if (-1 == f) {
+        LOG_ERROR("Could not create file '%s', %s", filepath, strerror(errno));
+        return -1;
+    }
+
+    int n = write(f, data.c_str(), data.size());
+    if (n != data.size()) {
+        LOG_ERROR("Could not write all data, incomplete file '%s': %s", filepath, strerror(errno));
+        result = -1;
+    }
+
+    close(f);
+    return result;
+}
+
 
 // "aaa+bb+ccc"
 // @return aaa, bbb, ccc
@@ -205,5 +231,46 @@ std::list<std::pair<char, std::string> > parseFieldSpec(const char *fieldSpec)
         } else currentToken += c;
     }
     if (currentToken.size() > 0) result.push_back(std::make_pair(sign, currentToken));
+}
+
+std::string doubleQuote(const std::string &input)
+{
+    size_t n = input.size();
+    std::string result = "\"";
+
+    size_t i;
+    size_t offsetOfCurrentVar = 0;
+    for (i=0; i<n; i++) {
+        if (input[i] == '\\') result += "\\\\";
+        else if (input[i] == '"') result += "\\\"";
+        else result += input[i];
+    }
+    result += '"';
+    return result;
+}
+
+
+std::string serializeProperty(const std::string &propertyName, const std::list<std::string> &values)
+{
+    std::ostringstream s;
+    s << propertyName; // preamble that indicates the name of the property
+
+    if ( (values.size() == 1) && (values.front().find('\n') != std::string::npos) ) {
+        // serialize as multi-line
+        const char *delimiter = " < -----------endofmsg---"; // TODO manage case where a value contains the delimiter
+        s << " < " << delimiter << "\n";
+        s << values.front() << "\n";
+        s << delimiter;
+
+    } else {
+        std::list<std::string>::const_iterator v;
+        for (v = values.begin(); v != values.end(); v++) {
+            s << " ";
+            if (v->find_first_of("\n \t\r\"") == std::string::npos) s << *v;
+            else s << doubleQuote(*v); // some characters needs escaping
+        }
+    }
+    s << "\n";
+    return s.str();
 }
 

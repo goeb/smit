@@ -1,4 +1,5 @@
 #include <string>
+#include <sstream>
 #include <openssl/sha.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -9,7 +10,7 @@
 #include <dirent.h>
 #include <stdlib.h>
 #include <stdint.h>
-
+#include <time.h>
 #include "db.h"
 #include "parseConfig.h"
 #include "logging.h"
@@ -70,9 +71,16 @@ void Issue::loadHead(const std::string &issuePath)
 
 
 
-// load in memory the given project
-// re-load if it was previously loaded
-// @return 0 if success, -1 if failure
+/** load in memory the given project
+  * re-load if it was previously loaded
+  * @param path
+  *    Full path where the project is stored
+  * @param name
+  *    Name of the project (generally the same as the basename of the path)
+  *
+  * @return 0 if success, -1 if failure
+  */
+
 int Project::load(const char *path, char *name)
 {
     LOG_INFO("Loading project %s...", path);
@@ -145,6 +153,19 @@ Entry *loadEntry(std::string dir, const char* basename)
     return e;
 }
 
+/** Copy properties of an entry to an issue.
+  * If overwrite == false, then an already existing property in the
+  * issue will not be overwritten.
+  */
+void consolidateIssueWithSingleEntry(Issue *i, Entry *e, bool overwrite) {
+    std::map<std::string, std::list<std::string> >::iterator p;
+    for (p = e->properties.begin(); p != e->properties.end(); p++) {
+        if (overwrite || (i->properties.count(p->first) == 0) ) {
+            i->properties[p->first] = p->second;
+        }
+    }
+}
+
 // 1. Walk through all loaded issues and compute the head
 //    if it was not found earlier during the loadEntries.
 // 2. Once the head is found, walk through all the entries
@@ -159,13 +180,15 @@ void Project::consolidateIssues()
 
         if (currentIssue->head.size() == 0) {
             // repair the head
+            // TODO
             LOG_INFO("Missing head for issue '%s'. Repairing TODO...", currentIssue->id.c_str());
         }
         // now that the head is found, walk through all entries
         // following the _parent properties.
 
         std::string parentId = currentIssue->head;
-        //LOG_DEBUG("parentId=%s", parentId.c_str());
+
+        // the entries are walked through backwards (from most recent to oldest)
         while (0 != parentId.compare("null")) {
             std::map<std::string, Entry*>::iterator e = entries.find(parentId);
             if (e == entries.end()) {
@@ -178,17 +201,10 @@ void Project::consolidateIssues()
             // create the same property in the issue, if not already existing
             // (in order to have only most recent properties)
 
-            // singleProperties
-            std::map<std::string, std::list<std::string> >::iterator p;
-            for (p = currentEntry->properties.begin(); p != currentEntry->properties.end(); p++) {
-                if (currentIssue->properties.count(p->first) == 0) {
-                    // not already existing. Create it.
-                    currentIssue->properties[p->first] = p->second;
-                }
-            }
+            consolidateIssueWithSingleEntry(currentIssue, currentEntry, false); // do not overwrite as we move from most recent to oldest
+
 
             parentId = currentEntry->parent;
-            //LOG_DEBUG("Next parent: %s", parentId.c_str());
         }
     }
     LOG_DEBUG("consolidateIssues() done.");
@@ -437,7 +453,7 @@ std::list<Issue*> Project::search(const char *fulltext, const char *filterSpec, 
 }
 int Project::addEntry(const std::map<std::string, std::list<std::string> > &properties, const std::string &issueId)
 {
-    locker.lockForWriting();
+    locker.lockForWriting(); // TODO look for optimization
 
     Issue *i = 0;
     if (issueId.size()>0) {
@@ -451,26 +467,65 @@ int Project::addEntry(const std::map<std::string, std::list<std::string> > &prop
     if (i) parent = i->head;
     else parent = "null";
 
-
     // create Entry object with properties
     Entry *e = new Entry;
     e->parent = parent;
-    // e->ctime = getTime();TODO
+    e->ctime = time(0);
     //e->id
     e->author = "Fred"; // TODO
-    // add the properties...
-    std::map<std::string, std::list<std::string> >::const_iterator p;
+    e->properties = properties;
 
-    for (p=properties.begin(); p!=properties.end(); p++) {
-        std::map<std::string, std::list<std::string> > properties;
-    };
+    // serialize the entry
+    std::string data = e->serialize();
 
+    // generate a id for this entry
+    std::string id;
+    id = computeIdBase34((uint8_t*)data.c_str(), data.size());
+
+    LOG_DEBUG("new entry: %s", id.c_str());
+
+    std::string pathOfNewEntry;
+
+    // write this entry to disk, update _HEAD
     // if issueId is empty, generate a new issueId
+    if (issueId.empty()) {
+        // create new directory for this issue
+        // TODO shorten the issueId
+        pathOfNewEntry = config.path + '/' + ENTRIES + '/' + id;
+        // TODO
+        int r = mkdir(pathOfNewEntry.c_str(), S_IRUSR | S_IXUSR);
+        if (r != 0) {
+            LOG_ERROR("Could not create dir '%s': %s", pathOfNewEntry.c_str(), strerror(errno));
+            return -1;
+        }
+        i = new Issue();
+        i->ctime = e->ctime;
+        i->id = id;
 
-    // write this entry to disk
+    } else {
+        pathOfNewEntry = config.path + '/' + ENTRIES + '/' + issueId;
+    }
+    pathOfNewEntry += '/';
+    pathOfNewEntry += id;
+    int r = writeToFile(pathOfNewEntry.c_str(), data, false); // do not allow overwrite
+    if (r != 0) {
+        // error. TODO
+        return r;
+    }
+
     // add this entry in Project::entries
-    // consolidate the issue
+    entries[id] = e;
 
+    // consolidate the issue
+    consolidateIssueWithSingleEntry(i, e, true);
+    i->mtime = e->ctime;
+    i->head = id;
+
+    // update _HEAD
+    std::string pathToHead = config.path + '/' + ENTRIES + '/' + issueId + '/' + HEAD;
+    r = writeToFile(pathToHead.c_str(), id, true); // allow overwrite for _HEAD
+
+    return r;
 }
 
 
@@ -485,8 +540,24 @@ int deleteEntry(std::string entry)
 
 }
 
+std::string Entry::serialize()
+{
+    std::ostringstream s;
 
-void setId(Entry &entry)
+    s << K_PARENT << " " << parent << "\n";
+    s << K_AUTHOR << " " << author << "\n";
+    s << K_CTIME << " " << ctime << "\n";
+
+    std::map<std::string, std::list<std::string> >::iterator p;
+    for (p = properties.begin(); p != properties.end(); p++) {
+        std::string key = p->first;
+        std::list<std::string> value = p->second;
+        s << serializeProperty(key, value);
+    }
+    return s.str();
+}
+
+void setId(Entry &entry) // TODO remove me! (unused)
 {
     // set the id, which is the SAH1 sum of the structure
     unsigned char md[SHA_DIGEST_LENGTH];
