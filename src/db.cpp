@@ -89,12 +89,11 @@ std::string Issue::getTitle() const
 
 int Project::load(const char *path, char *name)
 {
-    LOG_INFO("Loading project %s...", path);
-
     Project *p = new Project;
-    p->name = name;
+    LOG_INFO("Loading project %s (%p)...", path, p);
 
-    AutoLocker scopeLocker(p->locker, LOCK_READ_WRITE);
+    p->name = name;
+    p->path = path;
 
     int r = p->loadConfig(path);
     if (r == -1) {
@@ -356,8 +355,6 @@ int Project::loadConfig(const char *path)
     }
     // else continue and parse the file
 
-    config.path = path; // name of the project
-
     int r = fseek(f, 0, SEEK_END); // go to the end of the file
     if (r != 0) {
         LOG_ERROR("could not fseek(%s): %s", pathToProjectFile.c_str(), strerror(errno));
@@ -389,6 +386,7 @@ int Project::loadConfig(const char *path)
             if (field.name.size() > 0) {
                 config.fields[field.name] = field;
                 config.orderedFields.push_back(field.name);
+                LOG_DEBUG("orderedFields: added %s", field.name.c_str());
             }
             // else: parse error, ignore
         } else if (0 == token.compare("addListDisplay")) {
@@ -514,7 +512,7 @@ int Project::addEntry(const std::map<std::string, std::list<std::string> > &prop
         }
 
         id = id.substr(0, len); // shorten the issue here
-        pathOfNewEntry = config.path + '/' + ENTRIES + '/' + id;
+        pathOfNewEntry = path + '/' + ENTRIES + '/' + id;
         // TODO
         int r = mkdir(pathOfNewEntry.c_str(), S_IRUSR | S_IXUSR | S_IWUSR);
         if (r != 0) {
@@ -532,7 +530,7 @@ int Project::addEntry(const std::map<std::string, std::list<std::string> > &prop
         issues[id] = i;
 
     } else {
-        pathOfNewEntry = config.path + '/' + ENTRIES + '/' + issueId;
+        pathOfNewEntry = path + '/' + ENTRIES + '/' + issueId;
     }
     pathOfNewEntry += '/';
     pathOfNewEntry += id;
@@ -553,7 +551,7 @@ int Project::addEntry(const std::map<std::string, std::list<std::string> > &prop
     i->head = id;
 
     // update _HEAD
-    std::string pathToHead = config.path + '/' + ENTRIES + '/' + issueId + '/' + HEAD;
+    std::string pathToHead = path + '/' + ENTRIES + '/' + issueId + '/' + HEAD;
     r = writeToFile(pathToHead.c_str(), id, true); // allow overwrite for _HEAD
 
     locker.unlockForWriting();
@@ -619,6 +617,7 @@ std::list<std::string> getProjectList()
 
 Locker::Locker()
 {
+    nReaders = 0;
     pthread_mutex_init(&readOnlyMutex, 0);
     pthread_mutex_init(&readWriteMutex, 0);
 

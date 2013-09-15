@@ -7,11 +7,10 @@
 #include "logging.h"
 
 
-ContextParameters::ContextParameters(std::string u, int n, const ProjectConfig & pConfig)
+ContextParameters::ContextParameters(std::string u, int n, const Project &p) : project(p)
 {
     username = u;
     numberOfIssues = n;
-    projectConfig = pConfig;
 }
 
 void ContextParameters::printSmitData(struct mg_connection *conn)
@@ -23,31 +22,29 @@ void ContextParameters::printSmitData(struct mg_connection *conn)
 }
 
 
-void RHtml::printHeader(struct mg_connection *conn, const char *project)
+void RHtml::printHeader(struct mg_connection *conn, const std::string &projectPath)
 {
-    std::string path(project);
-    path += "/html/header.html";
+    std::string path = projectPath + "/html/header.html";
     char *data;
     int r = loadFile(path.c_str(), &data);
     if (r >= 0) {
         mg_printf(conn, "%s", data);
         free(data);
     } else {
-        LOG_ERROR("Could not load header.html for project %s", project);
+        LOG_ERROR("Could not load header.html for project %s", projectPath.c_str());
     }
 
 }
-void RHtml::printFooter(struct mg_connection *conn, const char *project)
+void RHtml::printFooter(struct mg_connection *conn, const std::string &projectPath)
 {
-    std::string path(project);
-    path += "/html/footer.html";
+    std::string path = projectPath + "/html/footer.html";
     char *data;
     int r = loadFile(path.c_str(), &data);
     if (r >= 0) {
         mg_printf(conn, "%s", data);
         free(data);
     } else {
-        LOG_ERROR("Could not load footer.html for project %s", project);
+        LOG_ERROR("Could not load footer.html for project %s", projectPath.c_str());
     }
 }
 
@@ -64,10 +61,11 @@ void RHtml::printProjectList(struct mg_connection *conn, const std::list<std::st
 }
 
 
-void RHtml::printIssueList(struct mg_connection *conn, const char *project, std::list<struct Issue*> issueList, std::list<std::string> colspec)
+void RHtml::printIssueList(struct mg_connection *conn, const ContextParameters &ctx,
+                           std::list<struct Issue*> issueList, std::list<std::string> colspec)
 {
     mg_printf(conn, "Content-Type: text/html\r\n\r\n");
-    printHeader(conn, project);
+    printHeader(conn, ctx.project.getPath());
 
     // TODO use colspec
     // TODO sorting
@@ -108,7 +106,7 @@ void RHtml::printIssueList(struct mg_connection *conn, const char *project, std:
             std::string href_rhs = "";
             if ( (column == "id") || (column == "title") ) {
                 href_lhs = "<a href=\"";
-                href_lhs = href_lhs + "/" + project + "/issues/";
+                href_lhs = href_lhs + "/" + ctx.project.getName() + "/issues/";
                 href_lhs = href_lhs + (char*)(*i)->id.c_str() + "\">";
                 href_rhs = "</a>";
             }
@@ -121,11 +119,11 @@ void RHtml::printIssueList(struct mg_connection *conn, const char *project, std:
     }
     mg_printf(conn, "</table>\n");
     mg_printf(conn, "%d issues\n", issueList.size());
-    printFooter(conn, project);
+    printFooter(conn, ctx.project.getName().c_str());
 
 }
 
-/** Conver to a string
+/** Convert to a string
   */
 std::string RHtml::toString(const std::list<std::string> &values)
 {
@@ -176,7 +174,7 @@ void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx,
     LOG_DEBUG("printIssue...");
 
     mg_printf(conn, "Content-Type: text/html\r\n\r\n");
-    printHeader(conn, ctx.projectConfig.path.c_str());
+    printHeader(conn, ctx.project.getPath().c_str());
 
     mg_printf(conn, "<div class=\"sm_issue\">");
 
@@ -193,8 +191,10 @@ void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx,
     int workingColumn = 1;
     const uint8_t MAX_COLUMNS = 2;
 
+    std::list<std::string> orderedFields = ctx.project.getConfig().orderedFields;
+
     std::list<std::string>::const_iterator f;
-    for (f=ctx.projectConfig.orderedFields.begin(); f!=ctx.projectConfig.orderedFields.end(); f++) {
+    for (f=orderedFields.begin(); f!=orderedFields.end(); f++) {
         std::string fname = *f;
         std::string value;
         std::map<std::string, std::list<std::string> >::const_iterator p = issue.properties.find(fname);
@@ -253,7 +253,7 @@ void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx,
 
 
     printIssueForm(conn, ctx, issue);
-    printFooter(conn, ctx.projectConfig.path.c_str());
+    printFooter(conn, ctx.project.getPath().c_str());
 }
 
 
@@ -262,13 +262,13 @@ void RHtml::printNewIssuePage(struct mg_connection *conn, const ContextParameter
     LOG_DEBUG("printNewPage...");
 
     mg_printf(conn, "Content-Type: text/html\r\n\r\n");
-    printHeader(conn, ctx.projectConfig.path.c_str());
+    printHeader(conn, ctx.project.getPath().c_str());
 
     mg_printf(conn, "<div class=\"sm_issue\">");
 
     Issue issue;
     printIssueForm(conn, ctx, issue);
-    printFooter(conn, ctx.projectConfig.path.c_str());
+    printFooter(conn, ctx.project.getPath().c_str());
 }
 
 
@@ -292,11 +292,21 @@ void RHtml::printIssueForm(struct mg_connection *conn, const ContextParameters &
     const uint8_t MAX_COLUMNS = 2;
     std::list<std::string>::const_iterator f;
 
-    for (f=ctx.projectConfig.orderedFields.begin(); f!=ctx.projectConfig.orderedFields.end(); f++) {
+    // debug
+    std::list<std::string> orderedFields = ctx.project.getConfig().orderedFields;
+    std::list<std::string>::iterator i;
+    for (i=orderedFields.begin(); i!=orderedFields.end(); i++) {
+        LOG_DEBUG("orderedFields(2): %s", i->c_str());
+    }
+
+    std::map<std::string, FieldSpec> fields = ctx.project.getConfig().fields;
+
+
+    for (f=orderedFields.begin(); f!=orderedFields.end(); f++) {
         std::string fname = *f;
 
-        std::map<std::string, FieldSpec>::const_iterator fieldSpec = ctx.projectConfig.fields.find(fname);
-        if (fieldSpec == ctx.projectConfig.fields.end()) {
+        std::map<std::string, FieldSpec>::const_iterator fieldSpec = fields.find(fname);
+        if (fieldSpec == fields.end()) {
             LOG_ERROR("Field '%s' (of setHtmlFieldDisplay) not found in addField options", fname.c_str());
             continue;
         }

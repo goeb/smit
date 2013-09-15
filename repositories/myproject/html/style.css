@@ -107,11 +107,13 @@ input {
     font-weight: bold;
 }
 .sm_issue_id {
-    background-color: rgb(220, 220, 220);
+    /*background-color: rgb(220, 220, 220);*/
     padding-left: 1em;
     padding-right: 1em;
-    border-radius: 0.3em 0.3em 0.3em 0.3em;
-    border: 1px solid black;
+    /*border-radius: 0.3em 0.3em 0.3em 0.3em;*/
+    border-right: 1px solid black;
+    font-family: monospace;
+
 }
 .sm_finput_title {
     width: 100%;

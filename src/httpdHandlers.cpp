@@ -221,18 +221,21 @@ void httpGetListOfIssues(struct mg_connection *conn, Project &p)
     sendHttpHeader200(conn);
 
     if (format == "text") RText::printIssueList(conn, issueList, cols);
-    else RHtml::printIssueList(conn, p.getName().c_str(), issueList, cols);
+    else {
+        ContextParameters ctx = ContextParameters("xxx-username", 0, p);
+
+        RHtml::printIssueList(conn, ctx, issueList, cols);
+    }
 
 }
 
 
-void httpGetNewIssueForm(struct mg_connection *conn, Project &p)
+void httpGetNewIssueForm(struct mg_connection *conn, const Project &p)
 {
-    ProjectConfig config = p.getConfig();
 
     sendHttpHeader200(conn);
 
-    ContextParameters ctx = ContextParameters("xxx-username", 0, config);
+    ContextParameters ctx = ContextParameters("xxx-username", 0, p);
 
     // only HTML format is needed
     RHtml::printNewIssuePage(conn, ctx);
@@ -248,7 +251,6 @@ void httpGetIssue(struct mg_connection *conn, Project &p, const std::string & is
 
     Issue issue;
     std::list<Entry*> Entries;
-    ProjectConfig config = p.getConfig();
     int r = p.get(issueId.c_str(), issue, Entries);
     if (r < 0) {
         // issue not found or other error
@@ -260,7 +262,7 @@ void httpGetIssue(struct mg_connection *conn, Project &p, const std::string & is
 
         if (format == "text") RText::printIssue(conn, issue, Entries);
         else {
-            ContextParameters ctx = ContextParameters("xxx-username", 0, config);
+            ContextParameters ctx = ContextParameters("xxx-username", 0, p);
             RHtml::printIssue(conn, ctx, issue, Entries);
         }
 
@@ -416,6 +418,7 @@ int begin_request_handler(struct mg_connection *conn) {
         // check if it is a valid project resource such as /myp/issues, /myp/users, /myp/config
         std::string project = popToken(uri, '/');
         Project *p = Database::Db.getProject(project);
+        LOG_DEBUG("project %s, %p", project.c_str(), p);
         if (p) {
             std::string resource = popToken(uri, '/');
             if      ( (resource == "issues") && (method == "GET") && uri.empty() ) httpGetListOfIssues(conn, *p);

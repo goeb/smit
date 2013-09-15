@@ -51,6 +51,7 @@ void test(const char *base16hex, const char* base34hexExpected)
     // least significant nibbles first
     uint8_t base16[SIZE];
     hex2bin(base16hex, base16, SIZE);
+
     std::string result = convert2base34(base16, SIZE, false);
 
     ASSERT(0 == result.compare(0, strlen(base34hexExpected), base34hexExpected));
@@ -62,17 +63,17 @@ int main(int argc, char **argv)
         // run unit test
         // least significant nibbles first
 
-        test("200000000000000000000000000000000000001", "KNUPCHTOLPMKL9BMWXEMOWHGSG652M");
+        test("200000000000000000000000000000000000001", "knupchtoLpmkL9bmwxemowhgsg652m00");
         test("1", "1");
         test("22", "01");
         test("32", "11");
-        test("001", "I7");
-        test("00001", "INM1");
-        test("000000000000000000000000000000000000001", "INUPCHTOLPMKL9BMWXEMOWHGSG652M");
-        test("000000000000000000000000000000000000002", "2DRHP0PF9HB79JMAVXTAFV1XMXCA4A1");
-        test("00000000000000000000000000000000000000FF", "0G69OABHX9M029LGVNGAWEOWL9OV4GT4");
-        test("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", "H5313S68L1BLNIW4UNVWMD8FGQU274U4");
-        test("21564AFEDCB53465121", "2CMWSJAL42CIQV1");
+        test("001", "i7");
+        test("00001", "inm1");
+        test("000000000000000000000000000000000000001", "inupchtoLpmkL9bmwxemowhgsg652m00");
+        test("000000000000000000000000000000000000002", "2drhp0pf9hb79jmavxtafv1xmxca4a10");
+        test("00000000000000000000000000000000000000FF", "0g69oabhx9m029LgvngaweowL9ov4gt4");
+        test("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", "h5313s68L1bLniw4unvwmd8fgqu274u4");
+        test("21564AFEDCB53465121", "2cmwsjaL42ciqv1");
 
 
         utestEnd();

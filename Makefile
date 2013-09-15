@@ -10,8 +10,6 @@ SRCS_CPP = src/db.cpp  \
 		   src/renderingText.cpp \
 		   src/renderingHtml.cpp
 
-
-
 CC = gcc
 CPP = g++
 
@@ -40,12 +38,14 @@ obj/%.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 obj/%.d: %.c
+	mkdir -p `dirname $@`
 	@set -e; rm -f $@; \
 	$(CPP) -M $(CPPFLAGS) $< > $@.$$$$; \
 	sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $@.$$$$ > $@; \
 	rm -f $@.$$$$
 
 obj/%.d: %.cpp
+	mkdir -p `dirname $@`
 	@set -e; rm -f $@; \
 	$(CC) -M $(CFLAGS) $< > $@.$$$$; \
 	sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $@.$$$$ > $@; \

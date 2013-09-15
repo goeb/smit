@@ -46,7 +46,6 @@ typedef struct FieldSpec {
 
 // Project config
 struct ProjectConfig {
-    std::string path; // path of the project
     std::map<std::string, FieldSpec> fields;
     std::list<std::string> orderedFields;
     std::map<std::string, std::string> customDisplays;
@@ -99,12 +98,13 @@ public:
     void consolidateIssues();
     std::list<Issue*> search(const char *fulltext, const char *filterSpec, const char *sortingSpec);
     inline std::list<std::string> getDefaultColspec() { return defaultColspec; }
-    inline ProjectConfig getConfig() { return config; }
     int get(const char *issueId, Issue &issue, std::list<Entry*> &Entries);
     int addEntry(const std::map<std::string, std::list<std::string> > &properties, std::string &issueId);
     Issue *getIssue(const std::string &id);
 
-    inline std::string getName() { return name; }
+    inline std::string getName() const { return name; }
+    inline std::string getPath() const { return path; }
+    inline ProjectConfig getConfig() const { return config; }
 
 private:
     ProjectConfig config;
@@ -113,6 +113,7 @@ private:
     std::list<std::string> defaultColspec;
     Locker locker;
     std::string name;
+    std::string path;
 };
 
 

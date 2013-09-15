@@ -171,10 +171,14 @@ int loadFile(const char *filepath, char **data)
 int writeToFile(const char *filepath, const std::string &data, bool allowOverwrite)
 {
     int result = 0;
-    mode_t mode = O_CREAT|O_TRUNC|O_WRONLY;
-    if (!allowOverwrite) mode |= O_EXCL;
+    mode_t mode = O_CREAT | O_TRUNC | O_WRONLY;
+    int flags = S_IRUSR | S_IWUSR;
+    if (!allowOverwrite) {
+        mode |= O_EXCL;
+        flags = S_IRUSR;
+    }
 
-    int f = open(filepath, mode, S_IRUSR);
+    int f = open(filepath, mode, flags);
     if (-1 == f) {
         LOG_ERROR("Could not create file '%s', (%d) %s", filepath, errno, strerror(errno));
         return -1;
