@@ -23,3 +23,4 @@ Features
 Technical constraints
 ---------------------
 Project name must not contain these characters: /
+Charset encoding UTF-8

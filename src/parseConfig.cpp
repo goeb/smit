@@ -174,7 +174,7 @@ int writeToFile(const char *filepath, const std::string &data, bool allowOverwri
     mode_t mode = O_CREAT|O_TRUNC|O_WRONLY;
     if (!allowOverwrite) mode |= O_EXCL;
 
-    int f = open(filepath, mode);
+    int f = open(filepath, mode, S_IRUSR);
     if (-1 == f) {
         LOG_ERROR("Could not create file '%s', (%d) %s", filepath, errno, strerror(errno));
         return -1;

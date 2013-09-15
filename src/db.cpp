@@ -459,6 +459,7 @@ int Project::addEntry(const std::map<std::string, std::list<std::string> > &prop
         i = getIssue(issueId);
         if (!i) {
             LOG_INFO("Cannot add new entry to unknown issue: %s", issueId.c_str());
+            locker.unlockForWriting();
             return -1;
         }
     }
@@ -495,6 +496,8 @@ int Project::addEntry(const std::map<std::string, std::list<std::string> > &prop
         int r = mkdir(pathOfNewEntry.c_str(), S_IRUSR | S_IXUSR);
         if (r != 0) {
             LOG_ERROR("Could not create dir '%s': %s", pathOfNewEntry.c_str(), strerror(errno));
+            locker.unlockForWriting();
+
             return -1;
         }
         i = new Issue();
@@ -509,6 +512,8 @@ int Project::addEntry(const std::map<std::string, std::list<std::string> > &prop
     int r = writeToFile(pathOfNewEntry.c_str(), data, false); // do not allow overwrite
     if (r != 0) {
         // error. TODO
+        locker.unlockForWriting();
+
         return r;
     }
 
@@ -523,6 +528,8 @@ int Project::addEntry(const std::map<std::string, std::list<std::string> > &prop
     // update _HEAD
     std::string pathToHead = config.path + '/' + ENTRIES + '/' + issueId + '/' + HEAD;
     r = writeToFile(pathToHead.c_str(), id, true); // allow overwrite for _HEAD
+
+    locker.unlockForWriting();
 
     return r;
 }

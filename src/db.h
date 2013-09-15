@@ -16,7 +16,7 @@
 struct Entry {
     std::string parent; // id of the parent entry, empty if top-level
     std::string id; // unique id of this entry
-    int ctime; // creation time
+    long ctime; // creation time
     std::string author;
     std::map<std::string, std::list<std::string> > properties;
     std::string serialize();

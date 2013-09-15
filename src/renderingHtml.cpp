@@ -148,6 +148,29 @@ bool RHtml::inList(const std::list<std::string> &listOfValues, const std::string
 }
 
 
+// Example: replaceAll(in, '"', "&quot;")
+// Replace all " by &quot;
+std::string replaceHtmlEntity(const std::string &in, char c, const char *replaceBy)
+{
+    std::string out = in;
+    size_t pos = 0;
+    while ((pos = out.find(c)) != std::string::npos) {
+        out = out.replace(pos, 1, replaceBy);
+    }
+    return out;
+}
+
+std::string htmlEscape(const std::string &value)
+{
+    std::string result = replaceHtmlEntity(value, '&', "&amp;");
+    result = replaceHtmlEntity(result, '"', "&quot;");
+    result = replaceHtmlEntity(result, '<', "&lt;");
+    result = replaceHtmlEntity(result, '>', "&gt;");
+    result = replaceHtmlEntity(result, '\'', "&apos;");
+    return result;
+}
+
+
 void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx, const Issue &issue, const std::list<Entry*> &entries)
 {
     LOG_DEBUG("printIssue...");
@@ -164,7 +187,7 @@ void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx,
     std::map<std::string, std::list<std::string> >::const_iterator t = issue.properties.find("title");
     std::string title = "[no title]";
     if (t != issue.properties.end() && (t->second.size()>0) ) title = t->second.front();
-    mg_printf(conn, "<span class=\"sm_issue_title\">%s</span>\n", title.c_str());
+    mg_printf(conn, "<span class=\"sm_issue_title\">%s</span>\n", htmlEscape(title).c_str());
     mg_printf(conn, "</div>\n");
 
     // issue summary
@@ -185,7 +208,7 @@ void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx,
             mg_printf(conn, "<tr>\n");
         }
         mg_printf(conn, "<td class=\"sm_flabel sm_flabel_%s\">%s: </td>\n", fname.c_str(), fname.c_str());
-        mg_printf(conn, "<td class=\"sm_fvalue sm_fvalue_%s\">%s</td>\n", fname.c_str(), value.c_str());
+        mg_printf(conn, "<td class=\"sm_fvalue sm_fvalue_%s\">%s</td>\n", fname.c_str(), htmlEscape(value).c_str());
 
         workingColumn += 1;
         if (workingColumn > MAX_COLUMNS) {
@@ -203,15 +226,21 @@ void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx,
         mg_printf(conn, "<div class=\"sm_entry\">\n");
 
         mg_printf(conn, "<div class=\"sm_entry_header\">\n");
-        mg_printf(conn, "Author: <span class=\"sm_entry_author\">%s</span>", ee.author.c_str());
-        mg_printf(conn, " / <span class=\"sm_entry_ctime\">%d</span>\n", ee.ctime); // TODO display human-readable date
+        mg_printf(conn, "Author: <span class=\"sm_entry_author\">%s</span>", htmlEscape(ee.author).c_str());
+        struct tm *tmp;
+        tmp = localtime(&ee.ctime);
+        char datetime[100+1];
+        strftime(datetime, 100, "%Y-%m-%d %H:%M:%S", tmp);
+        mg_printf(conn, " / <span class=\"sm_entry_ctime\">%s</span>\n", datetime);
+        // conversion date en javascript
+        // document.write(new Date(%d)).toString());
         mg_printf(conn, "</div>\n"); // end header
 
         mg_printf(conn, "<div class=\"sm_entry_message\">\n");
         std::map<std::string, std::list<std::string> >::iterator m = ee.properties.find("message");
         if (m != ee.properties.end()) {
             if (m->second.size() != 0) {
-                mg_printf(conn, "%s\n", m->second.front().c_str());
+                mg_printf(conn, "%s\n", htmlEscape(m->second.front()).c_str());
             }
         }
         mg_printf(conn, "</div>\n"); // end message
@@ -234,7 +263,7 @@ void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx,
 
     // title
     mg_printf(conn, "<span class=\"sm_flabel sm_flabel_title\">title:</span>");
-    mg_printf(conn, "<input class=\"sm_finput_title\" type=\"text\" name=\"title\" value=\"%s\">", title.c_str());
+    mg_printf(conn, "<input class=\"sm_finput_title\" type=\"text\" name=\"title\" value=\"%s\">", htmlEscape(title).c_str());
 
     mg_printf(conn, "<table class=\"sm_fields_summary\">");
     workingColumn = 1;
@@ -260,7 +289,7 @@ void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx,
         if (fspec.type == F_TEXT) {
             if (propertyValues.size()>0) value = propertyValues.front();
             input << "<input class=\"sm_finput_" << fname << "\" type=\"text\" name=\""
-                  << fname << "\" value=\"" << value << "\">\n";
+                  << fname << "\" value=\"" << htmlEscape(value) << "\">\n";
 
         } else if (fspec.type == F_SELECT) {
             if (propertyValues.size()>0) value = propertyValues.front();
@@ -270,7 +299,7 @@ void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx,
             for (so = fspec.selectOptions.begin(); so != fspec.selectOptions.end(); so++) {
                 input << "<option" ;
                 if (value == *so) input << " selected=\"selected\"";
-                input << ">" << *so << "</option>";
+                input << ">" << htmlEscape(*so) << "</option>";
             }
 
             input << "</select>";
@@ -284,7 +313,7 @@ void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx,
             for (so = fspec.selectOptions.begin(); so != fspec.selectOptions.end(); so++) {
                 input << "<option" ;
                 if (inList(propertyValues, *so)) input << " selected=\"selected\"";
-                input << ">" << *so << "</option>";
+                input << ">" << htmlEscape(*so) << "</option>";
             }
 
             input << "</select>";
@@ -303,7 +332,7 @@ void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx,
             for (u = users.begin(); u != users.end(); u++) {
                 input << "<option" ;
                 if (value == *u) input << " selected=\"selected\"";
-                input << ">" << *u << "</option>";
+                input << ">" << htmlEscape(*u) << "</option>";
             }
 
             input << "</select>";
