@@ -34,6 +34,7 @@ struct Issue {
     // the properties of the issue is the consolidation of all the properties
     // of its entries. For a given key, the most recent value has priority.
     void loadHead(const std::string &issuePath);
+    std::string getTitle() const;
 };
 
 enum FieldType { F_TEXT, F_SELECT, F_MULTISELECT, F_SELECT_USER};
@@ -100,7 +101,7 @@ public:
     inline std::list<std::string> getDefaultColspec() { return defaultColspec; }
     inline ProjectConfig getConfig() { return config; }
     int get(const char *issueId, Issue &issue, std::list<Entry*> &Entries);
-    int addEntry(const std::map<std::string, std::list<std::string> > &properties, const std::string &issueId);
+    int addEntry(const std::map<std::string, std::list<std::string> > &properties, std::string &issueId);
     Issue *getIssue(const std::string &id);
 
     inline std::string getName() { return name; }

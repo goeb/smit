@@ -59,6 +59,24 @@ void sendHttpHeader200(struct mg_connection *conn)
     mg_printf(conn, "HTTP/1.0 200 OK\r\n");
 }
 
+void sendHttpRedirect(struct mg_connection *conn, const std::string &redirectUrl)
+{
+    mg_printf(conn, "HTTP/1.1 303 See Other\r\n");
+    const char *scheme = 0;
+    if (mg_get_request_info(conn)->is_ssl) scheme = "https";
+    else scheme = "http";
+
+    const char *host = mg_get_header(conn, "Host"); // includes the TCP port (optionally)
+    if (!host) {
+        LOG_ERROR("No Host header in base request");
+        host ="";
+    }
+
+    mg_printf(conn, "Location: %s://%s/%s", scheme, host, redirectUrl.c_str());
+    mg_printf(conn, "\r\n\r\n");
+}
+
+
 int sendHttpHeaderInvalidResource(struct mg_connection *conn)
 {
     const char *uri = mg_get_request_info(conn)->uri;
@@ -210,6 +228,14 @@ void httpGetListOfIssues(struct mg_connection *conn, Project &p)
 
 void httpGetNewIssueForm(struct mg_connection *conn, Project &p)
 {
+    ProjectConfig config = p.getConfig();
+
+    sendHttpHeader200(conn);
+
+    ContextParameters ctx = ContextParameters("xxx-username", 0, config);
+
+    // only HTML format is needed
+    RHtml::printNewIssuePage(conn, ctx);
 }
 
 void httpGetIssue(struct mg_connection *conn, Project &p, const std::string & issueId)
@@ -234,7 +260,7 @@ void httpGetIssue(struct mg_connection *conn, Project &p, const std::string & is
 
         if (format == "text") RText::printIssue(conn, issue, Entries);
         else {
-            ContextParameters ctx = ContextParameters("xxx", 0, config);
+            ContextParameters ctx = ContextParameters("xxx-username", 0, config);
             RHtml::printIssue(conn, ctx, issue, Entries);
         }
 
@@ -340,11 +366,15 @@ void httpPostEntry(struct mg_connection *conn, Project &p, const std::string & i
         std::map<std::string, std::list<std::string> > vars;
         parseQueryString(postData, vars);
 
-        int r = p.addEntry(vars, issueId);
+        std::string id = issueId;
+        if (id == "new") id = ""; // TODO check if conflict between "new" and issue ids.
+        int r = p.addEntry(vars, id);
         if (r != 0) {
             // error
         } else {
-            httpGetIssue(conn, p, issueId);
+            // HTTP redirect TODO
+            std::string redirectUrl = p.getName() + "/issues/" + id;
+            sendHttpRedirect(conn, redirectUrl);
         }
 
     } else {
@@ -389,10 +419,9 @@ int begin_request_handler(struct mg_connection *conn) {
         if (p) {
             std::string resource = popToken(uri, '/');
             if      ( (resource == "issues") && (method == "GET") && uri.empty() ) httpGetListOfIssues(conn, *p);
-            else if ( (resource == "issues") && (method == "POST") && uri.empty() ) httpPostEntry(conn, *p, "");
-            else if ( (resource == "issues") && (uri == "/new") && (method == "GET") ) httpGetNewIssueForm(conn, *p);
-            else if ( (resource == "issues") && (method == "GET") ) httpGetIssue(conn, *p, uri);
             else if ( (resource == "issues") && (method == "POST") ) httpPostEntry(conn, *p, uri);
+            else if ( (resource == "issues") && (uri == "new") && (method == "GET") ) httpGetNewIssueForm(conn, *p);
+            else if ( (resource == "issues") && (method == "GET") ) httpGetIssue(conn, *p, uri);
             else handled = false;
         } else handled = false;
     }

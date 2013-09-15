@@ -34,8 +34,11 @@ public:
     static void printProjectList(struct mg_connection *conn, const std::list<std::string> &pList);
     static void printIssueList(struct mg_connection *conn, const char *project, std::list<Issue*> issueList, std::list<std::string> colspec);
     static void printIssue(struct mg_connection *conn, const ContextParameters &ctx, const Issue &issue, const std::list<Entry*> &entries);
+    static void printNewIssuePage(struct mg_connection *conn, const ContextParameters &ctx);
+
     static std::string toString(const std::list<std::string> &values);
     static bool inList(const std::list<std::string> &listOfValues, const std::string &value);
+    static void printIssueForm(struct mg_connection *conn, const ContextParameters &ctx, const Issue &issue);
 
 
 };

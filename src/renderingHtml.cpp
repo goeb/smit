@@ -184,10 +184,7 @@ void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx,
     // print id and title
     mg_printf(conn, "<div class=\"sm_issue_header\">\n");
     mg_printf(conn, "<span class=\"sm_issue_id\">%s</span>\n", issue.id.c_str());
-    std::map<std::string, std::list<std::string> >::const_iterator t = issue.properties.find("title");
-    std::string title = "[no title]";
-    if (t != issue.properties.end() && (t->second.size()>0) ) title = t->second.front();
-    mg_printf(conn, "<span class=\"sm_issue_title\">%s</span>\n", htmlEscape(title).c_str());
+    mg_printf(conn, "<span class=\"sm_issue_title\">%s</span>\n", htmlEscape(issue.getTitle()).c_str());
     mg_printf(conn, "</div>\n");
 
     // issue summary
@@ -254,7 +251,31 @@ void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx,
 
     }
 
-    // print form for adding a message / modifying the issue
+
+    printIssueForm(conn, ctx, issue);
+    printFooter(conn, ctx.projectConfig.path.c_str());
+}
+
+
+void RHtml::printNewIssuePage(struct mg_connection *conn, const ContextParameters &ctx)
+{
+    LOG_DEBUG("printNewPage...");
+
+    mg_printf(conn, "Content-Type: text/html\r\n\r\n");
+    printHeader(conn, ctx.projectConfig.path.c_str());
+
+    mg_printf(conn, "<div class=\"sm_issue\">");
+
+    Issue issue;
+    printIssueForm(conn, ctx, issue);
+    printFooter(conn, ctx.projectConfig.path.c_str());
+}
+
+
+/** print form for adding a message / modifying the issue
+  */
+void RHtml::printIssueForm(struct mg_connection *conn, const ContextParameters &ctx, const Issue &issue)
+{
     // TODO if access rights granted
 
     // enctype=\"multipart/form-data\"
@@ -263,10 +284,13 @@ void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx,
 
     // title
     mg_printf(conn, "<span class=\"sm_flabel sm_flabel_title\">title:</span>");
-    mg_printf(conn, "<input class=\"sm_finput_title\" type=\"text\" name=\"title\" value=\"%s\">", htmlEscape(title).c_str());
+    mg_printf(conn, "<input class=\"sm_finput_title\" type=\"text\" name=\"title\" value=\"%s\">",
+              htmlEscape(issue.getTitle()).c_str());
 
     mg_printf(conn, "<table class=\"sm_fields_summary\">");
-    workingColumn = 1;
+    int workingColumn = 1;
+    const uint8_t MAX_COLUMNS = 2;
+    std::list<std::string>::const_iterator f;
 
     for (f=ctx.projectConfig.orderedFields.begin(); f!=ctx.projectConfig.orderedFields.end(); f++) {
         std::string fname = *f;
@@ -368,8 +392,4 @@ void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx,
     mg_printf(conn, "</form>");
 
     mg_printf(conn, "</div>");
-
-
-    printFooter(conn, ctx.projectConfig.path.c_str());
-
 }

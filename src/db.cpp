@@ -69,7 +69,13 @@ void Issue::loadHead(const std::string &issuePath)
     free(buf);
 }
 
-
+std::string Issue::getTitle() const
+{
+    std::map<std::string, std::list<std::string> >::const_iterator t = properties.find("title");
+    std::string title = "";
+    if (t != properties.end() && (t->second.size()>0) ) title = t->second.front();
+    return title;
+}
 
 /** load in memory the given project
   * re-load if it was previously loaded
@@ -450,7 +456,12 @@ std::list<Issue*> Project::search(const char *fulltext, const char *filterSpec, 
     }
     return result;
 }
-int Project::addEntry(const std::map<std::string, std::list<std::string> > &properties, const std::string &issueId)
+
+/** If issueId is empty:
+  *     - a new issue is created
+  *     - its ID is returned within parameter 'issueId'
+  */
+int Project::addEntry(const std::map<std::string, std::list<std::string> > &properties, std::string &issueId)
 {
     locker.lockForWriting(); // TODO look for optimization
 
@@ -490,10 +501,22 @@ int Project::addEntry(const std::map<std::string, std::list<std::string> > &prop
     // if issueId is empty, generate a new issueId
     if (issueId.empty()) {
         // create new directory for this issue
-        // TODO shorten the issueId
+
+        // in order to have a short id, keep only the first characters
+        // and if another issue exists with this id, then increase the length.
+        int len = 3;
+        while (len < id.size() && getIssue(id.substr(0, len))) len++;
+        if (len > id.size()) {
+            // another issue with same id exists. Cannot proceed.
+            LOG_ERROR("Cannot store issue '%s': another exists with same id", id.c_str());
+            locker.unlockForWriting();
+            return -1;
+        }
+
+        id = id.substr(0, len); // shorten the issue here
         pathOfNewEntry = config.path + '/' + ENTRIES + '/' + id;
         // TODO
-        int r = mkdir(pathOfNewEntry.c_str(), S_IRUSR | S_IXUSR);
+        int r = mkdir(pathOfNewEntry.c_str(), S_IRUSR | S_IXUSR | S_IWUSR);
         if (r != 0) {
             LOG_ERROR("Could not create dir '%s': %s", pathOfNewEntry.c_str(), strerror(errno));
             locker.unlockForWriting();
@@ -503,6 +526,10 @@ int Project::addEntry(const std::map<std::string, std::list<std::string> > &prop
         i = new Issue();
         i->ctime = e->ctime;
         i->id = id;
+        issueId = id; // set the new issue ID
+
+        // add it to the internal memory
+        issues[id] = i;
 
     } else {
         pathOfNewEntry = config.path + '/' + ENTRIES + '/' + issueId;
