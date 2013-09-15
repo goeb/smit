@@ -129,3 +129,22 @@ textarea.sm_finput_message {
     width: 50em;
     height: 120px;
 }
+table.table_issues {
+    border-collapse:collapse;
+}
+table.table_issues td {
+    padding-right: 1em;
+    padding-left: 1em;
+    padding-bottom: 0.2em;
+    padding-top: 0.2em;
+    border-right: solid 1px rgb(200, 200, 186);
+}
+table.table_issues tr:nth-child(odd) td {
+    background-color: rgb(232, 232, 232);
+}
+table.table_issues tr:nth-child(even) td {
+    background-color: rgb(220, 220, 220);
+}
+.searchbox {
+    /*float: right;*/
+}
