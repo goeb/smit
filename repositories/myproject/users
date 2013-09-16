@@ -1,0 +1,22 @@
+
+# Notes:
+# The passwords are the same as the user name
+#     ro = read only
+#     rw = read write
+#     admin = rw + allowed to modify the structure of the project
+#
+# Supported hashes for passwords: sha1
+#
+
+addUser "John Smith" \
+    sha1 e61a3587b3f7a142b8c7b9263c82f8119398ecb7 \
+    ro
+
+addUser fred \
+    sha1 31017a722665e4afce586950f42944a6d331dabf \
+    admin
+
+addUser Alice \
+    sha1 35318264c9a98faf79965c270ac80c5606774df1
+    rw
+    

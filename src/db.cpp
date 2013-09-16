@@ -23,7 +23,6 @@
 #define K_PARENT "_parent"
 #define K_AUTHOR "author"
 #define K_CTIME "ctime"
-#define K_MESSAGE "message"
 
 Database Database::Db;
 
@@ -459,7 +458,7 @@ std::list<Issue*> Project::search(const char *fulltext, const char *filterSpec, 
   *     - a new issue is created
   *     - its ID is returned within parameter 'issueId'
   */
-int Project::addEntry(const std::map<std::string, std::list<std::string> > &properties, std::string &issueId)
+int Project::addEntry(std::map<std::string, std::list<std::string> > properties, std::string &issueId)
 {
     locker.lockForWriting(); // TODO look for optimization
 
@@ -471,7 +470,35 @@ int Project::addEntry(const std::map<std::string, std::list<std::string> > &prop
             locker.unlockForWriting();
             return -1;
         }
+
+        // simplify the entry by removing properties that have the same value
+        // in the issue (only the modified fiels are stored)
+        // TODO
+        // check if all properties are in the project config
+        // and that they bring a modification of the issue
+        // else, remove them
+        std::map<std::string, std::list<std::string> >::iterator entryProperty;
+        for (entryProperty=properties.begin(); entryProperty!=properties.end(); entryProperty++) {
+
+            std::map<std::string, FieldSpec>::iterator f;
+            f = config.fields.find(entryProperty->first);
+            if (f == config.fields.end()) {
+                // erase property beacuse it is not part of the official fields of the project
+                properties.erase(entryProperty);
+                continue;
+            }
+            std::map<std::string, std::list<std::string> >::iterator issueProperty;
+            issueProperty = i->properties.find(entryProperty->first);
+            if (issueProperty != i->properties.end()) {
+                if (issueProperty->second == entryProperty->second) {
+                    // the value of this property has not changed
+                    properties.erase(entryProperty);
+                    continue;
+                }
+            }
+        }
     }
+
     std::string parent;
     if (i) parent = i->head;
     else parent = "null";

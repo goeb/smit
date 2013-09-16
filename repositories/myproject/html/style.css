@@ -148,3 +148,11 @@ table.table_issues tr:nth-child(even) td {
 .searchbox {
     /*float: right;*/
 }
+.sm_other_fields {
+    border-top: 1px solid grey;
+}
+.sm_entry_pname {
+}
+.sm_entry_pvalue {
+    font-weight: bold;    
+}

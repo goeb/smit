@@ -234,7 +234,7 @@ void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx,
         mg_printf(conn, "</div>\n"); // end header
 
         mg_printf(conn, "<div class=\"sm_entry_message\">\n");
-        std::map<std::string, std::list<std::string> >::iterator m = ee.properties.find("message");
+        std::map<std::string, std::list<std::string> >::iterator m = ee.properties.find(K_MESSAGE);
         if (m != ee.properties.end()) {
             if (m->second.size() != 0) {
                 mg_printf(conn, "%s\n", htmlEscape(m->second.front()).c_str());
@@ -242,14 +242,38 @@ void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx,
         }
         mg_printf(conn, "</div>\n"); // end message
 
-        // other fields
-        mg_printf(conn, "<div class=\"sm_entry_other_fields\">\n");
-        mg_printf(conn, "");
-        mg_printf(conn, "</div>\n"); // other fields
 
-        mg_printf(conn, "</div>\n");
+        // print details of modified other fields
 
-    }
+        std::ostringstream otherFields;
+        bool firstInList = true;
+
+        for (f=orderedFields.begin(); f!=orderedFields.end(); f++) {
+            std::string pname = *f;
+            if (pname == K_MESSAGE) continue; // already processed
+
+            std::string value;
+            std::map<std::string, std::list<std::string> >::const_iterator p = ee.properties.find(pname);
+            if (p != ee.properties.end()) {
+                // the entry has this property
+                value = toString(p->second);
+
+                if (!firstInList) otherFields << ", "; // separate properties by a comma
+                otherFields << "<span class=\"sm_entry_pname\">" << pname << ": </span>";
+                otherFields << "<span class=\"sm_entry_pvalue\">" << htmlEscape(value) << "</span>";
+                firstInList = false;
+            }
+        }
+
+        if (otherFields.str().size() > 0) {
+            mg_printf(conn, "<div class=\"sm_other_fields\">\n");
+            mg_printf(conn, "%s", otherFields.str().c_str());
+            mg_printf(conn, "</div>\n");
+        }
+
+        mg_printf(conn, "</div>\n"); // end entry
+
+    } // end of entries
 
 
     printIssueForm(conn, ctx, issue);
@@ -392,7 +416,7 @@ void RHtml::printIssueForm(struct mg_connection *conn, const ContextParameters &
 
     mg_printf(conn, "<td class=\"sm_flabel sm_flabel_message\" >message: </td>\n");
     mg_printf(conn, "<td colspan=\"3\">\n");
-    mg_printf(conn, "<textarea class=\"sm_finput sm_finput_message\" placeholder=\"%s\" name=\"message\">\n", "Enter a message");
+    mg_printf(conn, "<textarea class=\"sm_finput sm_finput_message\" placeholder=\"%s\" name=\"%s\">\n", "Enter a message", K_MESSAGE);
     mg_printf(conn, "</textarea>\n");
     mg_printf(conn, "</td>\n");
     mg_printf(conn, "</table>\n");

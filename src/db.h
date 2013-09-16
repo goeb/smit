@@ -10,6 +10,8 @@
 
 #include "ustring.h"
 
+#define K_MESSAGE "message" // keyword used for the message. Could be changed to _message ? TODO ?
+
 // Data types
 
 // Entry
@@ -99,7 +101,7 @@ public:
     std::list<Issue*> search(const char *fulltext, const char *filterSpec, const char *sortingSpec);
     inline std::list<std::string> getDefaultColspec() { return defaultColspec; }
     int get(const char *issueId, Issue &issue, std::list<Entry*> &Entries);
-    int addEntry(const std::map<std::string, std::list<std::string> > &properties, std::string &issueId);
+    int addEntry(std::map<std::string, std::list<std::string> > properties, std::string &issueId);
     Issue *getIssue(const std::string &id);
 
     inline std::string getName() const { return name; }
