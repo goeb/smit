@@ -7,16 +7,14 @@ Small Issue Tracker
 Features
 --------
 
-- Do only issue tracking (no wiki, ...)
-- Generalist issue tracker, not only for software development, but also for
-  anything you might need (customer support, team issues, etc.)
-- Administrator may customize fields on the web interface without any
-  programming skills
-- Local web interface, or remote if setup on a server
-- Fast and light
-- Short issue identifiers in base 30 (using letters - eg: 3EF, RGJ, SD5)
-- Simple database on disk, with text files
+- Generalist issue tracker, for all needs (customer support, team issues, etc.)
 - Ability to serve several unrelated projects, with different structures
+- Easy to install locally or on a server
+- Easy to customize (no programming skills, only editing text, CSS, HTML)
+- Fast and light
+- Simple database on disk, with text files
+- Do only issue tracking (no wiki, ...)
+- Short issue identifiers in base 34 (using letters - eg: 3EF, RGJ, SD5)
 
 
 
