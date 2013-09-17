@@ -420,11 +420,16 @@ void RHtml::printIssueForm(struct mg_connection *conn, const ContextParameters &
         }
     }
 
+    if (workingColumn != 1) {
+        // add an empty cell
+        mg_printf(conn, "<td></td></tr>\n");
+    }
+    mg_printf(conn, "<tr>\n");
     mg_printf(conn, "<td class=\"sm_flabel sm_flabel_message\" >message: </td>\n");
     mg_printf(conn, "<td colspan=\"3\">\n");
     mg_printf(conn, "<textarea class=\"sm_finput sm_finput_message\" placeholder=\"%s\" name=\"%s\">\n", "Enter a message", K_MESSAGE);
     mg_printf(conn, "</textarea>\n");
-    mg_printf(conn, "</td>\n");
+    mg_printf(conn, "</td></tr>\n");
     mg_printf(conn, "</table>\n");
 
     mg_printf(conn, "<input type=\"submit\" value=\"%s\">\n", "Add Message");

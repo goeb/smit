@@ -52,6 +52,8 @@ table.sm_fields_summary  td {
     white-space: pre;
     font-family: monospace;
     font-size: medium;
+    padding-top: 0.5em;
+    padding-bottom: 0.5em;
 }
 .sm_other_fields {
     background-color: #E0E0E0;
