@@ -487,20 +487,20 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
                     // erase if message is emtpy
                     doErase = true;
                 }
-            }
-
-            std::map<std::string, FieldSpec>::iterator f;
-            f = config.fields.find(entryProperty->first);
-            if ( (f == config.fields.end()) && (entryProperty->first != K_TITLE) ) {
-                // erase property because it is not part of the official fields of the project
-                doErase = true;
             } else {
-                std::map<std::string, std::list<std::string> >::iterator issueProperty;
-                issueProperty = i->properties.find(entryProperty->first);
-                if (issueProperty != i->properties.end()) {
-                    if (issueProperty->second == entryProperty->second) {
-                        // the value of this property has not changed
-                        doErase = true;
+                std::map<std::string, FieldSpec>::iterator f;
+                f = config.fields.find(entryProperty->first);
+                if ( (f == config.fields.end()) && (entryProperty->first != K_TITLE) ) {
+                    // erase property because it is not part of the official fields of the project
+                    doErase = true;
+                } else {
+                    std::map<std::string, std::list<std::string> >::iterator issueProperty;
+                    issueProperty = i->properties.find(entryProperty->first);
+                    if (issueProperty != i->properties.end()) {
+                        if (issueProperty->second == entryProperty->second) {
+                            // the value of this property has not changed
+                            doErase = true;
+                        }
                     }
                 }
             }
