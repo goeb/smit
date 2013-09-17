@@ -306,12 +306,18 @@ void RHtml::printIssueForm(struct mg_connection *conn, const ContextParameters &
     mg_printf(conn, "<form method=\"post\"  class=\"sm_issue_form\">");
     // print the fields of the issue in a two-column table
 
+    // The form is made over a table with 4 columns.
+    // each row is made of 1 label, 1 input, 1 label, 1 input (4 columns)
+    // except for the title.
     // title
-    mg_printf(conn, "<span class=\"sm_flabel sm_flabel_title\">title:</span>");
-    mg_printf(conn, "<input class=\"sm_finput_title\" type=\"text\" name=\"title\" value=\"%s\">",
-              htmlEscape(issue.getTitle()).c_str());
-
     mg_printf(conn, "<table class=\"sm_fields_summary\">");
+    mg_printf(conn, "<tr>\n");
+    mg_printf(conn, "<td class=\"sm_flabel sm_flabel_title\">title: </td>\n");
+    mg_printf(conn, "<td class=\"sm_finput\" colspan=\"3\">");
+    mg_printf(conn, "<input class=\"sm_finput_title\" type=\"text\" name=\"title\" value=\"%s\">", htmlEscape(issue.getTitle()).c_str());
+    mg_printf(conn, "</td>\n");
+    mg_printf(conn, "</tr>\n");
+
     int workingColumn = 1;
     const uint8_t MAX_COLUMNS = 2;
     std::list<std::string>::const_iterator f;

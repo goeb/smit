@@ -149,7 +149,8 @@ table.table_issues tr:nth-child(even) td {
     /*float: right;*/
 }
 .sm_other_fields {
-    border-top: 1px solid grey;
+    border-top: 1px solid;
+    border-color: rgb(200, 200, 186);
 }
 .sm_entry_pname {
 }

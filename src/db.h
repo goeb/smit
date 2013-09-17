@@ -11,6 +11,7 @@
 #include "ustring.h"
 
 #define K_MESSAGE "message" // keyword used for the message. Could be changed to _message ? TODO ?
+#define K_TITLE "title"
 
 // Data types
 

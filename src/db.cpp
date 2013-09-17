@@ -478,24 +478,46 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
         // and that they bring a modification of the issue
         // else, remove them
         std::map<std::string, std::list<std::string> >::iterator entryProperty;
-        for (entryProperty=properties.begin(); entryProperty!=properties.end(); entryProperty++) {
+        entryProperty = properties.begin();
+        while (entryProperty != properties.end()) {
+            bool doErase = false;
+
+            if (entryProperty->first == K_MESSAGE) {
+                if (entryProperty->second.size() && entryProperty->second.front().empty()) {
+                    // erase if message is emtpy
+                    doErase = true;
+                }
+            }
 
             std::map<std::string, FieldSpec>::iterator f;
             f = config.fields.find(entryProperty->first);
-            if (f == config.fields.end()) {
-                // erase property beacuse it is not part of the official fields of the project
-                properties.erase(entryProperty);
-                continue;
-            }
-            std::map<std::string, std::list<std::string> >::iterator issueProperty;
-            issueProperty = i->properties.find(entryProperty->first);
-            if (issueProperty != i->properties.end()) {
-                if (issueProperty->second == entryProperty->second) {
-                    // the value of this property has not changed
-                    properties.erase(entryProperty);
-                    continue;
+            if ( (f == config.fields.end()) && (entryProperty->first != K_TITLE) ) {
+                // erase property because it is not part of the official fields of the project
+                doErase = true;
+            } else {
+                std::map<std::string, std::list<std::string> >::iterator issueProperty;
+                issueProperty = i->properties.find(entryProperty->first);
+                if (issueProperty != i->properties.end()) {
+                    if (issueProperty->second == entryProperty->second) {
+                        // the value of this property has not changed
+                        doErase = true;
+                    }
                 }
             }
+
+            if (doErase) {
+                // here we remove an item from the list that we are walking through
+                // be careful...
+                std::map<std::string, std::list<std::string> >::iterator itemToErase = entryProperty;
+                entryProperty++;
+                properties.erase(itemToErase);
+            } else entryProperty++;
+
+        }
+        if (properties.size() == 0) {
+            LOG_INFO("addEntry: no change. return without adding entry.");
+            locker.unlockForWriting();
+            return 0; // no change
         }
     }
 
