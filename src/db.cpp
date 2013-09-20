@@ -72,10 +72,11 @@ std::string getProperty(const std::map<std::string, std::list<std::string> > &pr
 {
     std::map<std::string, std::list<std::string> >::const_iterator t = properties.find(propertyName);
     std::string propertyValue = "";
-    if (t != properties.end() && (t->second.size()>0) ) propertyValue = t->second.front();
-    return propertyValue;
+    if (t != properties.end() && (t->second.size()>0) ) propertyValue = toString(t->second);
 
+    return propertyValue;
 }
+
 
 std::string Issue::getTitle() const
 {
@@ -279,13 +280,22 @@ int Project::loadEntries(const char *path)
     }
 
 }
-Issue *Project::getIssue(const std::string &id)
+Issue *Project::getIssue(const std::string &id) const
 {
-    std::map<std::string, Issue*>::iterator i;
+    std::map<std::string, Issue*>::const_iterator i;
     i = issues.find(id);
     if (i == issues.end()) return 0;
     else return i->second;
 }
+
+Entry *Project::getEntry(const std::string &id) const
+{
+    std::map<std::string, Entry*>::const_iterator e;
+    e = entries.find(id);
+    if (e == entries.end()) return 0;
+    else return e->second;
+}
+
 
 int Project::get(const char *issueId, Issue &issue, std::list<Entry*> &Entries)
 {
@@ -428,23 +438,17 @@ int Project::loadConfig(const char *path)
 }
 
 
-// search
-//   fulltext: text that is searched (optional: 0 for no fulltext search)
-//   filterSpec: "status:open+label:v1.0+xx:yy"
-//   sortingSpec: "id+title-owner" (+ for ascending, - for descending order)
-//
-// @return number of issues
-//
-//   When fulltext search is enabled (fulltext != 0) then the search is done
-//   through all entries.
-
-// filterSpec syntax:
-//     f1:aaa+f2:bbb-f3:ccc => issues with field f1 == aaa OR field f2 == bbb AND field f3 != ccc
-//     (fields '+' are ORed, and fields '-' are ANDed)
-//
-// sortingSpec syntax:
-//     f1+f2-f3 => sort issues by f1 ascending, then by f2 ascending, then by f3 descending
-std::list<Issue*> Project::search(const char *fulltext, const char *filterSpec, const char *sortingSpec)
+/** search
+  *   fulltext: text that is searched (optional: 0 for no fulltext search)
+  *             The case is ignored. (TODO)
+  *   filterSpec: status:open,release!v1.0,assignee:John Smith
+  *   sortingSpec: aa+bb-cc (+ for ascending, - for descending order)
+  *                sort issues by aa ascending, then by bb ascending, then by cc descending
+  *
+  * @return
+  *    The list of matching issues.
+  */
+std::list<Issue*> Project::search(const char *fulltextSearch, const char *filterSpec, const char *sortingSpec)
 {
     AutoLocker scopeLocker(locker, LOCK_READ_ONLY);
 
@@ -457,9 +461,63 @@ std::list<Issue*> Project::search(const char *fulltext, const char *filterSpec, 
     std::list<struct Issue*> result;
     std::map<std::string, Issue*>::iterator i;
     for (i=issues.begin(); i!=issues.end(); i++) {
-        result.push_back(i->second);
+
+        Issue* issue = i->second;
+        // 1. TODO
+
+        // 2. search full text
+        if (! searchFullText(issue, fulltextSearch)) {
+            // do not keep this issue
+            continue;
+        }
+
+        // 3. remove the issues that are excluded by <filterSpec> (marked '-')
+        // TODO
+
+        // keep this issue in the result
+        result.push_back(issue);
     }
+
+    // 4. do the sorting
+    // TODO
     return result;
+}
+
+
+/** Search for the given text through the issue properties
+  * and the messages of the entries.
+  *
+  * @return
+  *     true if found, false otherwise
+  *
+  */
+bool Project::searchFullText(const Issue* issue, const char *text) const
+{
+    if (!text) return true;
+
+    // look if id contains the fulltextSearch
+    if (strcasestr(issue->id.c_str(), text)) return true; // found
+
+    // look through the properties of the issue
+    std::map<std::string, std::list<std::string> >::const_iterator p;
+    for (p = issue->properties.begin(); p != issue->properties.end(); p++) {
+        std::list<std::string>::const_iterator pp;
+        std::list<std::string> listOfValues = p->second;
+        for (pp = listOfValues.begin(); pp != listOfValues.end(); pp++) {
+            if (strcasestr(pp->c_str(), text)) return true;  // found
+        }
+    }
+
+    // look through the entries
+    Entry *e = 0;
+    std::string next = issue->head;
+    while (e = getEntry(next)) {
+        if (strcasestr(e->getMessage().c_str(), text)) return true; // found
+        next = e->parent;
+    }
+
+    return false; // text not found
+
 }
 
 /** If issueId is empty:
@@ -626,6 +684,11 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
 int deleteEntry(std::string entry)
 {
 
+}
+
+std::string Entry::getMessage()
+{
+    return getProperty(properties, K_MESSAGE);
 }
 
 int Entry::getCtime() const

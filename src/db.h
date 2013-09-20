@@ -24,6 +24,7 @@ struct Entry {
     std::map<std::string, std::list<std::string> > properties;
     std::string serialize();
     int getCtime() const;
+    std::string getMessage();
     std::string getStringifiedProperty(const std::string &propertyName);
     Entry() : ctime(0) {};
 
@@ -104,11 +105,14 @@ public:
     int loadConfig(const char *path);
     int loadEntries(const char *path);
     void consolidateIssues();
-    std::list<Issue*> search(const char *fulltext, const char *filterSpec, const char *sortingSpec);
+    std::list<Issue*> search(const char *fulltextSearch, const char *filterSpec, const char *sortingSpec);
     inline std::list<std::string> getDefaultColspec() { return defaultColspec; }
     int get(const char *issueId, Issue &issue, std::list<Entry*> &Entries);
     int addEntry(std::map<std::string, std::list<std::string> > properties, std::string &issueId);
-    Issue *getIssue(const std::string &id);
+    Issue *getIssue(const std::string &id) const;
+    Entry *getEntry(const std::string &id) const;
+    bool searchFullText(const Issue* issue, const char *text) const;
+
 
     inline std::string getName() const { return name; }
     inline std::string getPath() const { return path; }
