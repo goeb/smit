@@ -17,6 +17,19 @@ Features
 - Short issue identifiers in base 34 (using letters - eg: 3EF, RGJ, SD5)
 
 
+REST API
+--------
+
+Query string
+    
+    colspec=status+release+assignee
+    sort=a-b+c
+    search=hello world
+    filter=status:open,release!v1.0,assignee:John Smith
+        possible conflict if value of property contains the separator (,)
+    format=text | html
+
+
 
 Technical constraints
 ---------------------

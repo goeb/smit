@@ -68,12 +68,18 @@ void Issue::loadHead(const std::string &issuePath)
     free(buf);
 }
 
+std::string getProperty(const std::map<std::string, std::list<std::string> > &properties, const std::string &propertyName)
+{
+    std::map<std::string, std::list<std::string> >::const_iterator t = properties.find(propertyName);
+    std::string propertyValue = "";
+    if (t != properties.end() && (t->second.size()>0) ) propertyValue = t->second.front();
+    return propertyValue;
+
+}
+
 std::string Issue::getTitle() const
 {
-    std::map<std::string, std::list<std::string> >::const_iterator t = properties.find("title");
-    std::string title = "";
-    if (t != properties.end() && (t->second.size()>0) ) title = t->second.front();
-    return title;
+    return getProperty(properties, "title");
 }
 
 /** load in memory the given project
@@ -167,6 +173,8 @@ void consolidateIssueWithSingleEntry(Issue *i, Entry *e, bool overwrite) {
             i->properties[p->first] = p->second;
         }
     }
+    // update also mtime of the issue
+    if (i->mtime == 0 || overwrite) i->mtime = e->ctime;
 }
 
 // 1. Walk through all loaded issues and compute the head
@@ -620,6 +628,33 @@ int deleteEntry(std::string entry)
 
 }
 
+int Entry::getCtime() const
+{
+    return ctime;
+}
+
+/** Concatenate a list of strings to a string
+  */
+std::string toString(const std::list<std::string> &values)
+{
+    std::ostringstream text;
+    std::list<std::string>::const_iterator v;
+    for (v=values.begin(); v!=values.end(); v++) {
+        if (v != values.begin()) text << ", ";
+        text << v->c_str();
+    }
+    return text.str();
+}
+
+
+std::string Entry::getStringifiedProperty(const std::string &propertyName)
+{
+    std::map<std::string, std::list<std::string> >::iterator p;
+    p = properties.find(propertyName);
+    if (p == properties.end()) return "";
+    else toString(p->second);
+}
+
 std::string Entry::serialize()
 {
     std::ostringstream s;
@@ -637,15 +672,7 @@ std::string Entry::serialize()
     return s.str();
 }
 
-void setId(Entry &entry) // TODO remove me! (unused)
-{
-    // set the id, which is the SAH1 sum of the structure
-    unsigned char md[SHA_DIGEST_LENGTH];
-    SHA1((unsigned char *)&entry, sizeof(entry), md);
-    std::string idBase34 = convert2base34(md, SHA_DIGEST_LENGTH, true);
 
-    entry.id = idBase34;
-}
 
 Project *Database::getProject(const std::string & projectName)
 {

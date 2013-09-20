@@ -7,6 +7,17 @@
 #include "logging.h"
 
 
+std::string epochToString(time_t t)
+{
+    struct tm *tmp;
+    tmp = localtime(&t);
+    char datetime[20+1]; // should be enough
+    strftime(datetime, sizeof(datetime)-1, "%Y-%m-%d %H:%M:%S", tmp);
+    return std::string(datetime);
+}
+
+
+
 ContextParameters::ContextParameters(std::string u, int n, const Project &p) : project(p)
 {
     username = u;
@@ -91,8 +102,8 @@ void RHtml::printIssueList(struct mg_connection *conn, const ContextParameters &
             std::string column = *c;
 
             if (column == "id") text << (*i)->id.c_str();
-            else if (column == "ctime") text << (*i)->ctime;
-            else if (column == "mtime") text << (*i)->mtime;
+            else if (column == "ctime") text << epochToString((*i)->ctime);
+            else if (column == "mtime") text << epochToString((*i)->mtime);
             else {
                 // look if it is a single property
                 std::map<std::string, std::list<std::string> >::iterator p;
@@ -123,18 +134,6 @@ void RHtml::printIssueList(struct mg_connection *conn, const ContextParameters &
 
 }
 
-/** Convert to a string
-  */
-std::string RHtml::toString(const std::list<std::string> &values)
-{
-    std::ostringstream text;
-    std::list<std::string>::const_iterator v;
-    for (v=values.begin(); v!=values.end(); v++) {
-        if (v != values.begin()) text << ", ";
-        text << v->c_str();
-    }
-    return text.str();
-}
 
 bool RHtml::inList(const std::list<std::string> &listOfValues, const std::string &value)
 {
@@ -167,7 +166,6 @@ std::string htmlEscape(const std::string &value)
     result = replaceHtmlEntity(result, '\'', "&apos;");
     return result;
 }
-
 
 void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx, const Issue &issue, const std::list<Entry*> &entries)
 {
@@ -224,16 +222,12 @@ void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx,
 
         mg_printf(conn, "<div class=\"sm_entry_header\">\n");
         mg_printf(conn, "Author: <span class=\"sm_entry_author\">%s</span>", htmlEscape(ee.author).c_str());
-        struct tm *tmp;
-        tmp = localtime(&ee.ctime);
-        char datetime[100+1];
-        strftime(datetime, 100, "%Y-%m-%d %H:%M:%S", tmp);
-        mg_printf(conn, " / <span class=\"sm_entry_ctime\">%s</span>\n", datetime);
+        mg_printf(conn, " / <span class=\"sm_entry_ctime\">%s</span>\n", epochToString(ee.ctime).c_str());
         // conversion date en javascript
         // document.write(new Date(%d)).toString());
         mg_printf(conn, "</div>\n"); // end header
 
-        mg_printf(conn, "<div class=\"sm_entry_message\">\n");
+        mg_printf(conn, "<div class=\"sm_entry_message\">");
         std::map<std::string, std::list<std::string> >::iterator m = ee.properties.find(K_MESSAGE);
         if (m != ee.properties.end()) {
             if (m->second.size() != 0) {
@@ -243,16 +237,25 @@ void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx,
         mg_printf(conn, "</div>\n"); // end message
 
 
-        // print details of modified other fields
+        // print other modified properties
 
         std::ostringstream otherFields;
         bool firstInList = true;
+
+        // process title first as it is not part of orderedFields
+        std::map<std::string, std::list<std::string> >::const_iterator p = ee.properties.find(K_TITLE);
+        std::string value;
+        if (p != ee.properties.end()) {
+            value = toString(p->second);
+            otherFields << "<span class=\"sm_entry_pname\">" << K_TITLE << ": </span>";
+            otherFields << "<span class=\"sm_entry_pvalue\">" << htmlEscape(value) << "</span>";
+            firstInList = false;
+        }
 
         for (f=orderedFields.begin(); f!=orderedFields.end(); f++) {
             std::string pname = *f;
             if (pname == K_MESSAGE) continue; // already processed
 
-            std::string value;
             std::map<std::string, std::list<std::string> >::const_iterator p = ee.properties.find(pname);
             if (p != ee.properties.end()) {
                 // the entry has this property
@@ -314,7 +317,7 @@ void RHtml::printIssueForm(struct mg_connection *conn, const ContextParameters &
     mg_printf(conn, "<tr>\n");
     mg_printf(conn, "<td class=\"sm_flabel sm_flabel_title\">title: </td>\n");
     mg_printf(conn, "<td class=\"sm_finput\" colspan=\"3\">");
-    mg_printf(conn, "<input class=\"sm_finput_title\" type=\"text\" name=\"title\" value=\"%s\">", htmlEscape(issue.getTitle()).c_str());
+    mg_printf(conn, "<input class=\"sm_finput_title\" required=\"required\" type=\"text\" name=\"title\" value=\"%s\">", htmlEscape(issue.getTitle()).c_str());
     mg_printf(conn, "</td>\n");
     mg_printf(conn, "</tr>\n");
 

@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <errno.h>
+#include <arpa/inet.h>
 
 #include "mongoose.h"
 #include "httpdHandlers.h"
@@ -19,8 +20,29 @@ void usage()
     exit(1);
 }
 
+void testEmbeddedString(const char *filename)
+{
+    FILE *f = fopen(filename, "rb");
+    fseek(f, -4, SEEK_END);
+    uint8_t sizeString[4];
+    size_t n = fread(sizeString, sizeof(sizeString), 1, f);
+    uint32_t size;
+    memcpy(&size, sizeString, sizeof(uint32_t));
+    size = ntohl(size);
+    printf("size=%u\n", size);
+
+    fseek(f, -4-size, SEEK_END);
+    char data[100+1];
+    n = fread(data, size, 1, f);
+    data[size] = 0;
+    printf("data=%s\n", data);
+    fclose(f);
+
+}
+
 int main(int argc, const char **argv)
 {
+    //testEmbeddedString(argv[0]);
 
     if (argc != 2) usage();
 

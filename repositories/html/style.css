@@ -1,7 +1,7 @@
 
 /* main page styles */
 body {
-  color: #333;
+  color: black;
   /*margin: 0;*/
   font-family: Verdana,sans-serif;
   font-size: small;
@@ -38,28 +38,32 @@ table.sm_fields_summary  td {
 .sm_entry {
     border: 0;
     margin: 0;
-    border-top: 2px;
+    border-top: 3px;
     border-style: solid;
     border-color: #E0E0E0;
     padding: 5px;
 }
 .sm_entry_header {
+    color: #444;
     margin: 0px;
     padding: 0px;
     font-weight: bold;
+    font-size: 80%;
 }
 .sm_entry_message {
     white-space: pre;
     font-family: monospace;
-    font-size: medium;
+    font-size: 100%;
     padding-top: 0.5em;
     padding-bottom: 0.5em;
 }
 .sm_other_fields {
+    color: #444;
     background-color: #E0E0E0;
     padding: 7px;
     border-radius: 5px 5px 5px 5px;
     width: 60em;
+    font-size: 80%;
 }
 
 /* fields in the issue page */

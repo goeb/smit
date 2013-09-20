@@ -23,6 +23,10 @@ struct Entry {
     std::string author;
     std::map<std::string, std::list<std::string> > properties;
     std::string serialize();
+    int getCtime() const;
+    std::string getStringifiedProperty(const std::string &propertyName);
+    Entry() : ctime(0) {};
+
 };
 
 // Issue
@@ -33,6 +37,7 @@ struct Issue {
     int ctime; // creation time (the one of the first entry)
     int mtime; // modification time (the one of the last entry)
     std::map<std::string, std::list<std::string> > properties;
+    Issue() : ctime(0), mtime(0) {};
 
     // the properties of the issue is the consolidation of all the properties
     // of its entries. For a given key, the most recent value has priority.
@@ -165,6 +170,7 @@ int get(const char *project, const char *issueId, Issue &issue, std::list<Entry*
 int deleteEntry(std::string entry);
 
 std::string bin2hex(const ustring & in);
+std::string toString(const std::list<std::string> &values);
 
 std::list<std::string> getProjectList();
 
