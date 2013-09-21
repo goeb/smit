@@ -327,36 +327,55 @@ int Project::get(const char *issueId, Issue &issue, std::list<Entry*> &Entries)
 FieldSpec parseFieldSpec(std::list<std::string> & tokens)
 {
     // Supported syntax:
-    // name type params ...
-    // type = text | select | multiselect
+    // name [label <label>] type params ...
+    // type = text | select | multiselect | selectUser
     FieldSpec field;
-    if (tokens.size() >= 2) {
-        field.name = tokens.front();
-        tokens.pop_front();
-        std::string type = tokens.front();
-        tokens.pop_front();
-        if (0 == type.compare("text")) field.type = F_TEXT;
-        else if (0 == type.compare("selectUser")) field.type = F_SELECT_USER;
-        else if (0 == type.compare("select")) field.type = F_SELECT;
-        else if (0 == type.compare("multiselect")) field.type = F_MULTISELECT;
-        else { // error, unknown type
-            LOG_ERROR("Unkown field type '%s'", type.c_str());
-            field.name.clear();
-            return field; // error, indicated to caller by empty name of field
-        }
-
-        if (F_SELECT == field.type || F_MULTISELECT == field.type) {
-            // populate the allowed values
-            while (tokens.size() > 0) {
-                std::string value = tokens.front();
-                tokens.pop_front();
-                field.selectOptions.push_back(value);
-            }
-        }
-    } else { // not enough tokens
+    if (tokens.size() < 2) {
         LOG_ERROR("Not enough tokens");
         return field; // error, indicated to caller by empty name of field
     }
+
+    field.name = tokens.front();
+    tokens.pop_front();
+
+    if (tokens.front() == "label") {
+        if (tokens.size() < 2) {
+            LOG_ERROR("Not enough tokens");
+            field.name = "";
+            return field; // error, indicated to caller by empty name of field
+        }
+        tokens.pop_front(); // remove "label" token
+        field.label = tokens.front();
+        tokens.pop_front();
+    }
+
+    if (tokens.size() < 1) {
+        LOG_ERROR("Not enough tokens");
+        field.name = "";
+        return field; // error, indicated to caller by empty name of field
+    }
+
+    std::string type = tokens.front();
+    tokens.pop_front();
+    if (0 == type.compare("text")) field.type = F_TEXT;
+    else if (0 == type.compare("selectUser")) field.type = F_SELECT_USER;
+    else if (0 == type.compare("select")) field.type = F_SELECT;
+    else if (0 == type.compare("multiselect")) field.type = F_MULTISELECT;
+    else { // error, unknown type
+        LOG_ERROR("Unkown field type '%s'", type.c_str());
+        field.name.clear();
+        return field; // error, indicated to caller by empty name of field
+    }
+
+    if (F_SELECT == field.type || F_MULTISELECT == field.type) {
+        // populate the allowed values
+        while (tokens.size() > 0) {
+            std::string value = tokens.front();
+            tokens.pop_front();
+            field.selectOptions.push_back(value);
+        }
+    }
+    return field;
 }
 
 

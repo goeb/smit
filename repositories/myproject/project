@@ -1,9 +1,9 @@
 
 # command params ...
 # reserved fields are: id, title, ctime, mtime, author
-addField status select "open" "closed" "deleted"
-addField owner selectUser
-addField target_version select \
+addField status label "Statut" select "open" "closed" "deleted"
+addField owner label "Responsable" selectUser
+addField target_version label "Version cible" select \
     "non renseigne" \
     v0.1 \
     v0.2 \

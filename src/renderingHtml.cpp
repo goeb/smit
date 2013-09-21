@@ -86,7 +86,14 @@ void RHtml::printIssueList(struct mg_connection *conn, const ContextParameters &
     mg_printf(conn, "<tr class=\"tr_issues\">\n");
     std::list<std::string>::iterator colname;
     for (colname = colspec.begin(); colname != colspec.end(); colname++) {
-        mg_printf(conn, "<th class=\"th_issues\">%s</th>\n", (*colname).c_str());
+        std::string label;
+        std::map<std::string, FieldSpec> fSpecs = ctx.project.getConfig().fields;
+        std::map<std::string, FieldSpec>::const_iterator fs;
+        fs = fSpecs.find(*colname);
+        if (fs != ctx.project.getConfig().fields.end()) label = fs->second.label;
+
+        if (label.size()==0) label = *colname;
+        mg_printf(conn, "<th class=\"th_issues\">%s</th>\n", label.c_str());
 
     }
     mg_printf(conn, "</tr>\n");

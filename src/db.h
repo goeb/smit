@@ -53,6 +53,7 @@ typedef struct FieldSpec {
     std::string name;
     enum FieldType type;
     std::list<std::string> selectOptions; // for F_SELECT and F_MULTISELECT only
+    std::string label; // more user friendly than the name
 } FieldSpec;
 
 // Project config
