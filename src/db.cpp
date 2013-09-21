@@ -437,6 +437,79 @@ int Project::loadConfig(const char *path)
     return 0;
 }
 
+/** Parse the sorting specification
+  * Input syntax is:
+  *    aa+bb-cc
+  * (aa, bb, cc are property names)
+  *
+  * Ouput will be like:
+  *    [ (true, 'aa'), (true, 'bb'), (false, 'cc') ]
+  *
+  */
+std::list<std::pair<bool, std::string> > parseSortingSpec(const char *sortingSpec)
+{
+    bool currentOrder = true; // ascending
+    int len = strlen(sortingSpec);
+    std::string currentPropertyName;
+    int currentOffset = 0;
+    std::list<std::pair<bool, std::string> > result;
+    while (currentOffset < len) {
+        char c = sortingSpec[currentOffset];
+        if (c == '+' || c == ' ' || c == '-' ) {
+            if (currentPropertyName.size()>0) {
+                // store previous property name
+                result.push_back(std::make_pair(currentOrder, currentPropertyName));
+                currentPropertyName = "";
+            }
+            if (c == '+' || c == ' ') currentOrder = true;
+            else currentOrder = false;
+        } else {
+            currentPropertyName += c;
+        }
+        currentOffset++;
+    }
+    // store possible remaining currentPropertyName
+    if (currentPropertyName.size()>0) result.push_back(std::make_pair(currentOrder, currentPropertyName));
+
+    return result;
+}
+
+/**
+  * sortingSpec: a list of pairs (ascending-order, property-name)
+  *
+  */
+void sort(std::list<Issue*> &inout, const std::list<std::pair<bool, std::string> > &sortingSpec)
+{
+    if (sortingSpec.size()==0) return;
+
+    std::list<Issue*> workingList = inout; // make a copy
+    inout.clear();
+    Issue* maxIssue = 0;
+    // headsort algorithm is used
+    std::list<Issue*>::iterator i;
+    std::list<Issue*>::iterator imax; // iterator on position of the max element
+    while (workingList.size() > 0) {
+        // get the max of workingList
+        i = workingList.begin();
+        imax = i;
+        maxIssue = 0;
+        while (i != workingList.end()) {
+            if (!maxIssue) maxIssue = *i;
+            else {
+                if (maxIssue->lessThan(*i, sortingSpec)) {
+                    maxIssue = *i;
+                    imax = i;
+                }
+            }
+            i++;
+        }
+        // put maxIssue in the result
+        inout.push_back(maxIssue);
+        // erase max issue from working list
+        workingList.erase(imax);
+    }
+}
+
 
 /** search
   *   fulltext: text that is searched (optional: 0 for no fulltext search)
@@ -479,8 +552,48 @@ std::list<Issue*> Project::search(const char *fulltextSearch, const char *filter
     }
 
     // 4. do the sorting
-    // TODO
+    if (sortingSpec) {
+        std::list<std::pair<bool, std::string> > sSpec = parseSortingSpec(sortingSpec);
+        sort(result, sSpec);
+    }
     return result;
+}
+
+/** Compare 2 issues after sortingSpec.
+  *
+  * sortingSpec: a list of pairs (ascending-order, property-name)
+  *
+  * @return
+  *     true or false
+  */
+bool Issue::lessThan(Issue* other, const std::list<std::pair<bool, std::string> > &sortingSpec)
+{
+    if (!other) return false;
+
+    int result = 0; // 0 means equal, <0 means less-than, >0 means greater-than
+    std::list<std::pair<bool, std::string> >::const_iterator s = sortingSpec.begin() ;
+    while ( (result == 0) && (s != sortingSpec.end()) ) {
+        // case of id, ctime, mtime
+        if (s->second == "id") result = id.compare(other->id);
+        else if (s->second == "ctime") {
+            if (ctime < other->ctime) result = -1;
+            else if (ctime > other->ctime) result = +1;
+            else result = 0;
+        } else if (s->second == "mtime") {
+            if (mtime < other->mtime) result = -1;
+            else if (mtime > other->mtime) result = +1;
+            else result = 0;
+        } else {
+            // the other properties
+            std::string local = getProperty(properties, s->second);
+            std::string otherProperty = getProperty(other->properties, s->second);
+            result = local.compare(otherProperty);
+        }
+        if (!s->first) result = -result; // descending order
+        s++;
+    }
+    if (result<0) return false;
+    else return true;
 }
 
 

@@ -44,6 +44,8 @@ struct Issue {
     // of its entries. For a given key, the most recent value has priority.
     void loadHead(const std::string &issuePath);
     std::string getTitle() const;
+    bool lessThan(Issue* other, const std::list<std::pair<bool, std::string> > &sortingSpec);
+
 };
 
 enum FieldType { F_TEXT, F_SELECT, F_MULTISELECT, F_SELECT_USER};
