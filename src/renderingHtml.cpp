@@ -86,15 +86,8 @@ void RHtml::printIssueList(struct mg_connection *conn, const ContextParameters &
     mg_printf(conn, "<tr class=\"tr_issues\">\n");
     std::list<std::string>::iterator colname;
     for (colname = colspec.begin(); colname != colspec.end(); colname++) {
-        std::string label;
-        std::map<std::string, FieldSpec> fSpecs = ctx.project.getConfig().fields;
-        std::map<std::string, FieldSpec>::const_iterator fs;
-        fs = fSpecs.find(*colname);
-        if (fs != ctx.project.getConfig().fields.end()) label = fs->second.label;
-
-        if (label.size()==0) label = *colname;
+        std::string label = ctx.project.getLabelOfProperty(*colname);
         mg_printf(conn, "<th class=\"th_issues\">%s</th>\n", label.c_str());
-
     }
     mg_printf(conn, "</tr>\n");
 
@@ -201,6 +194,8 @@ void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx,
     std::list<std::string>::const_iterator f;
     for (f=orderedFields.begin(); f!=orderedFields.end(); f++) {
         std::string fname = *f;
+        std::string label = ctx.project.getLabelOfProperty(fname);
+
         std::string value;
         std::map<std::string, std::list<std::string> >::const_iterator p = issue.properties.find(fname);
 
@@ -209,7 +204,7 @@ void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx,
         if (workingColumn == 1) {
             mg_printf(conn, "<tr>\n");
         }
-        mg_printf(conn, "<td class=\"sm_flabel sm_flabel_%s\">%s: </td>\n", fname.c_str(), fname.c_str());
+        mg_printf(conn, "<td class=\"sm_flabel sm_flabel_%s\">%s: </td>\n", fname.c_str(), label.c_str());
         mg_printf(conn, "<td class=\"sm_fvalue sm_fvalue_%s\">%s</td>\n", fname.c_str(), htmlEscape(value).c_str());
 
         workingColumn += 1;
@@ -254,7 +249,7 @@ void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx,
         std::string value;
         if (p != ee.properties.end()) {
             value = toString(p->second);
-            otherFields << "<span class=\"sm_entry_pname\">" << K_TITLE << ": </span>";
+            otherFields << "<span class=\"sm_entry_pname\">" << ctx.project.getLabelOfProperty(K_TITLE) << ": </span>";
             otherFields << "<span class=\"sm_entry_pvalue\">" << htmlEscape(value) << "</span>";
             firstInList = false;
         }
@@ -269,7 +264,7 @@ void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx,
                 value = toString(p->second);
 
                 if (!firstInList) otherFields << ", "; // separate properties by a comma
-                otherFields << "<span class=\"sm_entry_pname\">" << pname << ": </span>";
+                otherFields << "<span class=\"sm_entry_pname\">" << ctx.project.getLabelOfProperty(pname) << ": </span>";
                 otherFields << "<span class=\"sm_entry_pvalue\">" << htmlEscape(value) << "</span>";
                 firstInList = false;
             }
@@ -322,7 +317,7 @@ void RHtml::printIssueForm(struct mg_connection *conn, const ContextParameters &
     // title
     mg_printf(conn, "<table class=\"sm_fields_summary\">");
     mg_printf(conn, "<tr>\n");
-    mg_printf(conn, "<td class=\"sm_flabel sm_flabel_title\">title: </td>\n");
+    mg_printf(conn, "<td class=\"sm_flabel sm_flabel_title\">%s: </td>\n", ctx.project.getLabelOfProperty("title").c_str());
     mg_printf(conn, "<td class=\"sm_finput\" colspan=\"3\">");
     mg_printf(conn, "<input class=\"sm_finput_title\" required=\"required\" type=\"text\" name=\"title\" value=\"%s\">", htmlEscape(issue.getTitle()).c_str());
     mg_printf(conn, "</td>\n");
@@ -332,18 +327,14 @@ void RHtml::printIssueForm(struct mg_connection *conn, const ContextParameters &
     const uint8_t MAX_COLUMNS = 2;
     std::list<std::string>::const_iterator f;
 
-    // debug
     std::list<std::string> orderedFields = ctx.project.getConfig().orderedFields;
-    std::list<std::string>::iterator i;
-    for (i=orderedFields.begin(); i!=orderedFields.end(); i++) {
-        LOG_DEBUG("orderedFields(2): %s", i->c_str());
-    }
 
     std::map<std::string, FieldSpec> fields = ctx.project.getConfig().fields;
 
 
     for (f=orderedFields.begin(); f!=orderedFields.end(); f++) {
         std::string fname = *f;
+        std::string label = ctx.project.getLabelOfProperty(fname);
 
         std::map<std::string, FieldSpec>::const_iterator fieldSpec = fields.find(fname);
         if (fieldSpec == fields.end()) {
@@ -420,7 +411,7 @@ void RHtml::printIssueForm(struct mg_connection *conn, const ContextParameters &
         if (workingColumn == 1) {
             mg_printf(conn, "<tr>\n");
         }
-        mg_printf(conn, "<td class=\"sm_flabel sm_flabel_%s\">%s: </td>\n", fname.c_str(), fname.c_str());
+        mg_printf(conn, "<td class=\"sm_flabel sm_flabel_%s\">%s: </td>\n", fname.c_str(), label.c_str());
         mg_printf(conn, "<td class=\"sm_finput\">%s</td>\n", input.str().c_str());
 
         workingColumn += 1;
@@ -435,7 +426,7 @@ void RHtml::printIssueForm(struct mg_connection *conn, const ContextParameters &
         mg_printf(conn, "<td></td></tr>\n");
     }
     mg_printf(conn, "<tr>\n");
-    mg_printf(conn, "<td class=\"sm_flabel sm_flabel_message\" >message: </td>\n");
+    mg_printf(conn, "<td class=\"sm_flabel sm_flabel_message\" >%s: </td>\n", ctx.project.getLabelOfProperty("message").c_str());
     mg_printf(conn, "<td colspan=\"3\">\n");
     mg_printf(conn, "<textarea class=\"sm_finput sm_finput_message\" placeholder=\"%s\" name=\"%s\">\n", "Enter a message", K_MESSAGE);
     mg_printf(conn, "</textarea>\n");

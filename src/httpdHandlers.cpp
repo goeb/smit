@@ -403,6 +403,7 @@ void httpPostEntry(struct mg_connection *conn, Project &p, const std::string & i
 
 int begin_request_handler(struct mg_connection *conn) {
 
+    LOG_DEBUG("begin_request_handler");
     bool handled = true;
     std::string uri = mg_get_request_info(conn)->uri;
     std::string method = mg_get_request_info(conn)->request_method;

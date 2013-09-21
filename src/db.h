@@ -53,7 +53,6 @@ typedef struct FieldSpec {
     std::string name;
     enum FieldType type;
     std::list<std::string> selectOptions; // for F_SELECT and F_MULTISELECT only
-    std::string label; // more user friendly than the name
 } FieldSpec;
 
 // Project config
@@ -62,7 +61,8 @@ struct ProjectConfig {
     std::list<std::string> orderedFields;
     std::map<std::string, std::string> customDisplays;
     std::string defaultDislpay; // one of customDisplays
-    
+    std::map<std::string, std::string> propertyLabels;
+
 };
 
 
@@ -115,6 +115,7 @@ public:
     Issue *getIssue(const std::string &id) const;
     Entry *getEntry(const std::string &id) const;
     bool searchFullText(const Issue* issue, const char *text) const;
+    std::string getLabelOfProperty(const std::string &propertyName) const;
 
 
     inline std::string getName() const { return name; }

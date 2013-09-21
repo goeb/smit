@@ -338,17 +338,6 @@ FieldSpec parseFieldSpec(std::list<std::string> & tokens)
     field.name = tokens.front();
     tokens.pop_front();
 
-    if (tokens.front() == "label") {
-        if (tokens.size() < 2) {
-            LOG_ERROR("Not enough tokens");
-            field.name = "";
-            return field; // error, indicated to caller by empty name of field
-        }
-        tokens.pop_front(); // remove "label" token
-        field.label = tokens.front();
-        tokens.pop_front();
-    }
-
     if (tokens.size() < 1) {
         LOG_ERROR("Not enough tokens");
         field.name = "";
@@ -439,6 +428,14 @@ int Project::loadConfig(const char *path)
             } else {
                 LOG_ERROR("Empty setDefaultColspec in '%s'", path);
             }
+        } else if (0 == token.compare("setPropertyLabel")) {
+            if (line->size() != 2) {
+                LOG_ERROR("Invalid setPropertyLabel");
+                continue; // ignore this line
+            }
+            std::string propName = line->front();
+            std::string propLabel = line->back();
+            config.propertyLabels[propName] = propLabel;
 
         } else if (0 == token.compare("setDefaultFilter")) {
             // TODO
@@ -454,6 +451,18 @@ int Project::loadConfig(const char *path)
 
     fclose(f);
     return 0;
+}
+
+std::string Project::getLabelOfProperty(const std::string &propertyName) const
+{
+    std::string label;
+    std::map<std::string, std::string> labels = config.propertyLabels;
+    std::map<std::string, std::string>::const_iterator l;
+    l = labels.find(propertyName);
+    if (l != labels.end()) label = l->second;
+
+    if (label.size()==0) label = propertyName;
+    return label;
 }
 
 /** Parse the sorting specification

@@ -1,9 +1,9 @@
 
 # command params ...
 # reserved fields are: id, title, ctime, mtime, author
-addField status label "Statut" select "open" "closed" "deleted"
-addField owner label "Responsable" selectUser
-addField target_version label "Version cible" select \
+addField status select "open" "closed" "deleted"
+addField owner selectUser
+addField target_version select \
     "non renseigne" \
     v0.1 \
     v0.2 \
@@ -12,6 +12,17 @@ addField target_version label "Version cible" select \
 
 
 addField tags multiselect v4.0 v4.1 v5.0
+
+setPropertyLabel title Description
+setPropertyLabel id "#"
+setPropertyLabel ctime "Date de création"
+setPropertyLabel mtime "Date de modification"
+setPropertyLabel status Statut
+setPropertyLabel owner Responsable
+setPropertyLabel target_version  "Version cible"
+setPropertyLabel tags Tags
+setPropertyLabel message Message
+
 
 
 # links in the header of the page
