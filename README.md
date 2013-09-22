@@ -39,7 +39,9 @@ Query string
 
     Full text search on all properties and messages.
 
-- filter=status:open,release!v1.0,assignee:John Smith
+- filterin=status:open
+  filterin=assignee:John Smith
+  filterout=release:undefined
 
     TODO 
     possible conflict if value of property contains the separator (,)

@@ -23,6 +23,7 @@
 #define K_PARENT "_parent"
 #define K_AUTHOR "author"
 #define K_CTIME "ctime"
+#define K_ID "id"
 
 Database Database::Db;
 
@@ -104,7 +105,7 @@ int Project::load(const char *path, char *name)
     int r = p->loadConfig(path);
     if (r == -1) {
         delete p;
-        LOG_ERROR("Project '%s' not loaded because of errors while reading the config.", path);
+        LOG_DEBUG("Project '%s' not loaded because of errors while reading the config.", path);
         return -1;
     }
 
@@ -477,7 +478,7 @@ std::string Project::getLabelOfProperty(const std::string &propertyName) const
 std::list<std::pair<bool, std::string> > parseSortingSpec(const char *sortingSpec)
 {
     bool currentOrder = true; // ascending
-    int len = strlen(sortingSpec);
+    size_t len = strlen(sortingSpec);
     std::string currentPropertyName;
     int currentOffset = 0;
     std::list<std::pair<bool, std::string> > result;
@@ -538,42 +539,120 @@ void sort(std::list<Issue*> &inout, const std::list<std::pair<bool, std::string>
     }
 }
 
+/** Parse the specification of filters
+  * Syntax of filterSpec is:
+  *     status:open,release!v1.0,assignee:John Smith
+  *
+  */
+void parseFilterSpec(const char *filterSpec,
+                     std::map<std::string, std::list<std::string> > &propertiesToKeep,
+                     std::map<std::string, std::list<std::string> > &propertiesToReject)
+{
+    if (!filterSpec) return;
+    size_t len = strlen(filterSpec);
+    std::string currentPropertyName;
+
+}
+
+enum FilterSearch {
+    PROPERTY_NOT_FILTERED,
+    PROPERTY_FILTERED_FOUND,
+    PROPERTY_FILTERED_NOT_FOUND
+};
+
+/** Look if the given property name/value is present in the given list
+  */
+FilterSearch filterProperty(const std::string &propertyName, const std::string &propertyValue,
+          const std::map<std::string, std::list<std::string> > &filter)
+{
+    std::map<std::string, std::list<std::string> >::const_iterator p;
+    p = filter.find(propertyName);
+    if (p == filter.end()) return PROPERTY_NOT_FILTERED;
+
+    std::list<std::string>::const_iterator v;
+    for (v = p->second.begin(); v != p->second.end(); v++) {
+        if (*v == propertyValue) return PROPERTY_FILTERED_FOUND;
+    }
+    return PROPERTY_FILTERED_NOT_FOUND; // not found
+}
+
+/**
+  * @return
+  *    true, if the issue should be kept
+  *    false, if the issue should be excluded
+  */
+bool Issue::filter(const std::map<std::string, std::list<std::string> > &filterIn,
+                   const std::map<std::string, std::list<std::string> > &filterOut)
+{
+    if (filterIn.size() == 0 && filterOut.size() == 0) return true;
+
+    // look for each property of the issue (except ctime and mtime)
+    // id
+    if (PROPERTY_FILTERED_FOUND == filterProperty(K_ID, id, filterOut)) return false;
+    if (PROPERTY_FILTERED_NOT_FOUND == filterProperty(K_ID, id, filterIn)) return false;
+
+    // other properties
+    std::map<std::string, std::list<std::string> >::const_iterator p;
+    for (p = properties.begin(); p != properties.end();  p++) {
+        std::list<std::string>::const_iterator v;
+        for (v = p->second.begin(); v != p->second.end(); v++) {
+            if (PROPERTY_FILTERED_FOUND == filterProperty(p->first, *v, filterOut)) return false;
+            if (PROPERTY_FILTERED_NOT_FOUND == filterProperty(p->first, *v, filterIn)) return false;
+        }
+    }
+    return true;
+}
 
 /** search
   *   fulltext: text that is searched (optional: 0 for no fulltext search)
   *             The case is ignored. (TODO)
-  *   filterSpec: status:open,release!v1.0,assignee:John Smith
+  *   filterIn: list of propName:value
+  *   filterOut: list of propName:value
   *   sortingSpec: aa+bb-cc (+ for ascending, - for descending order)
   *                sort issues by aa ascending, then by bb ascending, then by cc descending
   *
   * @return
   *    The list of matching issues.
+  *
+  * @remarks
+  * If filterIn and filterOut specify each the same property, then the
+  * filterOut will be either ignored or take precedence. Examples:
+  * Example 1:
+  * filterIn=propA:valueA1, filterOut=propA:valueA2
+  *     => filterIn will keep only valueA1 (and exclude implicitely valueA2
+  *        therefore filterOut is not necessary)
+  *
+  * Example 2:
+  * filterIn=propA:valueA1, filterOut=propA:valueA1
+  *     => filterOut takes precedence, valueA1 is excluded from the result
   */
-std::list<Issue*> Project::search(const char *fulltextSearch, const char *filterSpec, const char *sortingSpec)
+std::list<Issue*> Project::search(const char *fulltextSearch,
+                                  const std::map<std::string, std::list<std::string> > &filterIn,
+                                  const std::map<std::string, std::list<std::string> > &filterOut,
+                                  const char *sortingSpec)
 {
     AutoLocker scopeLocker(locker, LOCK_READ_ONLY);
 
     // General algorithm:
-    //     1. walk through all issues and keep those needed in <filterspec> (marked '+')
+    // For each issue:
+    //     1. keep only those specified by filterIn and filterOut
     //     2. then, if fulltext is not null, walk through these issues and their
     //        related messages and keep those that contain <fulltext>
-    //     3. then, remove the issues that are excluded by <filterSpec> (marked '-')
-    //     4. then, do the sorting according to <sortingSpec>
+    //     3. then, do the sorting according to <sortingSpec>
     std::list<struct Issue*> result;
+
     std::map<std::string, Issue*>::iterator i;
     for (i=issues.begin(); i!=issues.end(); i++) {
 
         Issue* issue = i->second;
         // 1. TODO
+        if (!issue->filter(filterIn, filterOut)) continue;
 
         // 2. search full text
         if (! searchFullText(issue, fulltextSearch)) {
             // do not keep this issue
             continue;
         }
-
-        // 3. remove the issues that are excluded by <filterSpec> (marked '-')
-        // TODO
 
         // keep this issue in the result
         result.push_back(issue);

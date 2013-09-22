@@ -45,6 +45,9 @@ struct Issue {
     void loadHead(const std::string &issuePath);
     std::string getTitle() const;
     bool lessThan(Issue* other, const std::list<std::pair<bool, std::string> > &sortingSpec);
+    bool filter(const std::map<std::string, std::list<std::string> > &filterIn,
+                const std::map<std::string, std::list<std::string> > &filterOut);
+
 
 };
 
@@ -108,7 +111,10 @@ public:
     int loadConfig(const char *path);
     int loadEntries(const char *path);
     void consolidateIssues();
-    std::list<Issue*> search(const char *fulltextSearch, const char *filterSpec, const char *sortingSpec);
+    std::list<Issue*> search(const char *fulltextSearch,
+                             const std::map<std::string, std::list<std::string> > &filterIn,
+                             const std::map<std::string, std::list<std::string> > &filterOut,
+                             const char *sortingSpec);
     inline std::list<std::string> getDefaultColspec() { return defaultColspec; }
     int get(const char *issueId, Issue &issue, std::list<Entry*> &Entries);
     int addEntry(std::map<std::string, std::list<std::string> > properties, std::string &issueId);
@@ -161,7 +167,10 @@ int loadProject(const char *path);
 // @return number of issues 
 //  When fulltext search is enabled (fulltext != 0) then the search is done
 //  through all entries.
-std::list<struct Issue*> search(const char * project, const char *fulltext, const char *filterSpec, const char *sortingSpec);
+std::list<struct Issue*> search(const char * project, const char *fulltext,
+                                const std::list<std::string> &filterIn,
+                                const std::list<std::string> &filterOut,
+                                const char *sortingSpec);
 
 
 // add an entry in the database

@@ -124,7 +124,7 @@ std::string popToken(std::string & uri, char separator)
 
 // if uri is "x=y&a=bcd" and param is "a"
 // then return "bcd"
-std::string getParamFromQueryString(const std::string & queryString, const char *param)
+std::string getFirstParamFromQueryString(const std::string & queryString, const char *param)
 {
     std::string q = queryString;
     std::string paramEqual = param;
@@ -143,6 +143,30 @@ std::string getParamFromQueryString(const std::string & queryString, const char 
     return "";
 }
 
+/** if uri is "x=y&a=bcd&a=efg" and param is "a"
+  * then return a list [ "bcd", "efg" ]
+  */
+std::list<std::string> getParamListFromQueryString(const std::string & queryString, const char *param)
+{
+    std::list<std::string> result;
+    std::string q = queryString; // TODO optimizattion can be done here (no need for copying..)
+    std::string paramEqual = param;
+    paramEqual += "=";
+    std::string token;
+    while ((token = popToken(q, '&')) != "") {
+        if (0 == token.compare(0, paramEqual.size(), paramEqual.c_str())) {
+            popToken(token, '='); // remove the param= part
+            //len = mg_url_decode(p, (size_t)(s - p), dst, dst_len, 1);
+            //int mg_url_decode(const char *src, int src_len, char *dst,
+            //                  int dst_len, int is_form_url_encoded) {
+
+            result.push_back(token);
+        }
+    }
+    return result;
+}
+
+
 void httpGetAdmin(struct mg_connection *conn)
 {
     // print list of available projects
@@ -151,7 +175,7 @@ void httpGetAdmin(struct mg_connection *conn)
     const struct mg_request_info *req = mg_get_request_info(conn);
     std::string q;
     if (req->query_string) q = req->query_string;
-    std::string format = getParamFromQueryString(q, "format");
+    std::string format = getFirstParamFromQueryString(q, "format");
 
     sendHttpHeader200(conn);
 
@@ -189,6 +213,27 @@ void httpGetRoot(struct mg_connection *conn)
     mg_printf(conn, "Request=%s\n", req.c_str());
 }
 
+/** @param filter
+  *     [ "version:v1.0", "version:1.0", "owner:John Doe" ]
+  */
+std::map<std::string, std::list<std::string> > parseFilter(const std::list<std::string> &filters)
+{
+    std::map<std::string, std::list<std::string> > result;
+    std::list<std::string>::const_iterator i;
+    for (i = filters.begin(); i != filters.end(); i++) {
+        // split apart from the first colon
+        size_t colon = (*i).find_first_of(":");
+        std::string propertyName = (*i).substr(0, colon);
+        std::string propertyValue = "";
+        if (colon != std::string::npos && colon < (*i).size()-1) propertyValue = (*i).substr(colon+1);
+
+        if (result.find(propertyName) == result.end()) result[propertyName] = std::list<std::string>();
+
+        result[propertyName].push_back(propertyValue);
+    }
+
+    return result;
+}
 
 void httpGetListOfIssues(struct mg_connection *conn, Project &p)
 {
@@ -201,14 +246,16 @@ void httpGetListOfIssues(struct mg_connection *conn, Project &p)
     std::string q;
     if (req->query_string) q = req->query_string;
 
-    std::string filter = getParamFromQueryString(q, "filter");
-    std::string fulltextSearch = getParamFromQueryString(q, "search");
-    std::string sorting = getParamFromQueryString(q, "sort");
+    std::map<std::string, std::list<std::string> > filterIn = parseFilter(getParamListFromQueryString(q, "filterin"));
+    std::map<std::string, std::list<std::string> > filterOut = parseFilter(getParamListFromQueryString(q, "filterout"));
+    std::string fulltextSearch = getFirstParamFromQueryString(q, "search");
 
-    std::list<struct Issue*> issueList = p.search(fulltextSearch.c_str(), filter.c_str(), sorting.c_str());
+    std::string sorting = getFirstParamFromQueryString(q, "sort");
+
+    std::list<struct Issue*> issueList = p.search(fulltextSearch.c_str(), filterIn, filterOut, sorting.c_str());
 
 
-    std::string colspec = getParamFromQueryString(q, "colspec");
+    std::string colspec = getFirstParamFromQueryString(q, "colspec");
     std::list<std::string> cols;
     if (colspec.size() > 0) {
         cols = parseColspec(colspec.c_str());
@@ -216,7 +263,7 @@ void httpGetListOfIssues(struct mg_connection *conn, Project &p)
         // get default colspec
         cols = p.getDefaultColspec();
     }
-    std::string format = getParamFromQueryString(q, "format");
+    std::string format = getFirstParamFromQueryString(q, "format");
 
     sendHttpHeader200(conn);
 
@@ -256,7 +303,7 @@ void httpGetIssue(struct mg_connection *conn, Project &p, const std::string & is
         // issue not found or other error
         sendHttpHeaderInvalidResource(conn);
     } else {
-        std::string format = getParamFromQueryString(q, "format");
+        std::string format = getFirstParamFromQueryString(q, "format");
 
         sendHttpHeader200(conn);
 
