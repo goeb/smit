@@ -43,8 +43,7 @@ Query string
   filterin=assignee:John Smith
   filterout=release:undefined
 
-    TODO 
-    possible conflict if value of property contains the separator (,)
+    filterin and filterout may be specified several times on the query string.
 
 - format=text | html
 

@@ -7,7 +7,9 @@
     </head>
 
     <body>
-
+        <div style="float: left; margin:1em;">
+        <img src="/html/smit.png" width="120px">
+        </div>
         Logged in as: <span class="smit_user">(not logged in)</span>
         <script id="smit_data" type="application/json">
             {"smit_user": "Mr. John", "smit_numberOfIssues": 34}
@@ -21,7 +23,7 @@
         <a href="/myproject/issues/?sort=mtime&colspec=id+mtime+title+status+owner+target_version&filter=status:open">Open issues</a> -
 
         <div class="searchbox">
-        <form action="" method="get">
+        <form action="/myproject/issues" method="get">
             <input type="text" name="search">
             <input type="submit" value="Search">
         </form>
