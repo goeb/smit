@@ -10,12 +10,15 @@
 #include "httpdHandlers.h"
 #include "logging.h"
 #include "db.h"
+#include "cpio.h"
 
 
 void usage()
 {
-    printf("Usage: smit <repository>\n"
+    printf("Usage: smit <command> [<args>]\n"
            "\n"
+           "Commands:\n"
+           "    extract (debug only)\n"
            "The repository is a directory where the projects are stored.\n");
     exit(1);
 }
@@ -44,7 +47,12 @@ int main(int argc, const char **argv)
 {
     //testEmbeddedString(argv[0]);
 
-    if (argc != 2) usage();
+    if (argc < 2) usage();
+
+    if (0 == strcmp(argv[1], "extract")) {
+        cpioExtractFile(argv[0], ".");
+        exit(0);
+    }
 
     // argv[1] is the repository directory
     const char *repo = argv[1];

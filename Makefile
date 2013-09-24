@@ -55,6 +55,13 @@ obj/%.d: %.cpp
 smit: $(OBJS)
 	g++ -o $@ $^ $(LDFLAGS)
 
+embedcpio:
+	find repositories | cpio -o > repositories.cpio
+	cat repositories.cpio >> smit
+	size=`stat -c %s repositories.cpio`; \
+	python -c "import struct; import sys; sys.stdout.write(struct.pack('I', $$size))" >> smit
+
+
 clean:
 	find . -name "*.o" -delete
 	rm smit

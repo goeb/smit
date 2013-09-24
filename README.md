@@ -22,6 +22,38 @@ Limitations
 - no wiki, no revision control
 - suitable for small projects (less than 10000 issues per project)
 
+Getting Started
+---------------
+    
+For the ones who want to experiment quickly:
+
+    git clone https://github.com/goeb/smit.git
+    cd smit
+    make
+    ./smit repositories &
+
+    <web-browser> http://127.0.0.1:8080/myproject/issues
+
+
+Why should I prefer Smit over Redmine, Bugzilla, RequestTracker, etc. ?
+---
+
+Smit is far simpler to start:
+    - get a copy of the smit program
+    - create a new repository and project (or copy from an archive)
+    - start smit
+
+Smit is far simpler to configure:
+    1. modify properties in the text file 'project'
+    2. restart smit
+    3. experiment, and start again at step 1 if you feel like
+
+Smit can be used offline (read-only):
+    - get a local copy of the smit program
+    - get a local copy of the repository
+    - start smit on your machine
+
+
 REST API
 --------
 
