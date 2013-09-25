@@ -22,6 +22,8 @@ setPropertyLabel owner Responsable
 setPropertyLabel target_version  "Version cible"
 setPropertyLabel tags Tags
 setPropertyLabel message Message
+setPropertyLabel long-line-break-message "Utiliser des lignes longues"
+setPropertyLabel Add-Message "Valider le message"
 
 
 

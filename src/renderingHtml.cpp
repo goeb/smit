@@ -11,8 +11,14 @@ std::string epochToString(time_t t)
 {
     struct tm *tmp;
     tmp = localtime(&t);
-    char datetime[20+1]; // should be enough
-    strftime(datetime, sizeof(datetime)-1, "%Y-%m-%d %H:%M:%S", tmp);
+    char datetime[100+1]; // should be enough
+    //strftime(datetime, sizeof(datetime)-1, "%Y-%m-%d %H:%M:%S", tmp);
+    if (time(0) - t > 48*3600) {
+        // date older than 2 days
+        strftime(datetime, sizeof(datetime)-1, "%d %b %Y", tmp);
+    } else {
+        strftime(datetime, sizeof(datetime)-1, "%d %b %Y, %H:%M:%S", tmp);
+    }
     return std::string(datetime);
 }
 
@@ -87,7 +93,7 @@ void RHtml::printIssueList(struct mg_connection *conn, const ContextParameters &
     std::list<std::string>::iterator colname;
     for (colname = colspec.begin(); colname != colspec.end(); colname++) {
         std::string label = ctx.project.getLabelOfProperty(*colname);
-        mg_printf(conn, "<th class=\"th_issues\">%s</th>\n", label.c_str());
+        mg_printf(conn, "<th class=\"th_issues\"><a href=\"\" title=\"Sort ascending\">%s</a></th>\n", label.c_str());
     }
     mg_printf(conn, "</tr>\n");
 
@@ -442,7 +448,7 @@ void RHtml::printIssueForm(struct mg_connection *conn, const ContextParameters &
 
     mg_printf(conn, "<tr><td></td>\n");
     mg_printf(conn, "<td colspan=\"3\">\n");
-    mg_printf(conn, "<input type=\"submit\" value=\"%s\">\n", "Add Message");
+    mg_printf(conn, "<input type=\"submit\" value=\"%s\">\n", ctx.project.getLabelOfProperty("Add-Message").c_str());
     mg_printf(conn, "</td></tr>\n");
 
     mg_printf(conn, "</table>\n");

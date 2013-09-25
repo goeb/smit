@@ -121,19 +121,30 @@ textarea.sm_finput_message {
 table.table_issues {
     border-collapse:collapse;
 }
+table.table_issues tr {
+    /*border-bottom: solid 1px rgb(200, 200, 186);*/
+}
 table.table_issues td {
     padding-right: 1em;
     padding-left: 1em;
     padding-bottom: 0.2em;
     padding-top: 0.2em;
     border-right: solid 1px rgb(200, 200, 186);
+    vertical-align:text-top;
 }
+table.table_issues tr:hover {
+    background-color: #E8E8E8;
+}
+/*
 table.table_issues tr:nth-child(odd) td {
-    background-color: rgb(232, 232, 232);
+    background-color: #E8E8E8;
 }
 table.table_issues tr:nth-child(even) td {
     background-color: #E0E0E0;
 }
+*/
+
+
 .searchbox {
     /*float: right;*/
 }
