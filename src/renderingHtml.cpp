@@ -428,12 +428,24 @@ void RHtml::printIssueForm(struct mg_connection *conn, const ContextParameters &
     mg_printf(conn, "<tr>\n");
     mg_printf(conn, "<td class=\"sm_flabel sm_flabel_message\" >%s: </td>\n", ctx.project.getLabelOfProperty("message").c_str());
     mg_printf(conn, "<td colspan=\"3\">\n");
-    mg_printf(conn, "<textarea class=\"sm_finput sm_finput_message\" placeholder=\"%s\" name=\"%s\">\n", "Enter a message", K_MESSAGE);
+    mg_printf(conn, "<textarea class=\"sm_finput sm_finput_message\" placeholder=\"%s\" name=\"%s\" wrap=\"hard\" cols=\"80\">\n",
+              "Enter a message", K_MESSAGE);
     mg_printf(conn, "</textarea>\n");
     mg_printf(conn, "</td></tr>\n");
-    mg_printf(conn, "</table>\n");
 
+    // check box "enable long lines"
+    mg_printf(conn, "<tr><td></td>\n");
+    mg_printf(conn, "<td class=\"sm_longlines\" colspan=\"3\">\n");
+    mg_printf(conn, "<input type=\"checkbox\" onclick=\"changeWrapping();\">\n");
+    mg_printf(conn, "%s\n", ctx.project.getLabelOfProperty("long-line-break-message").c_str());
+    mg_printf(conn, "</td></tr>\n");
+
+    mg_printf(conn, "<tr><td></td>\n");
+    mg_printf(conn, "<td colspan=\"3\">\n");
     mg_printf(conn, "<input type=\"submit\" value=\"%s\">\n", "Add Message");
+    mg_printf(conn, "</td></tr>\n");
+
+    mg_printf(conn, "</table>\n");
 
     mg_printf(conn, "</form>");
 

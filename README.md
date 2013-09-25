@@ -39,16 +39,19 @@ Why should I prefer Smit over Redmine, Bugzilla, RequestTracker, etc. ?
 ---
 
 Smit is far simpler to start:
+
     - get a copy of the smit program
     - create a new repository and project (or copy from an archive)
     - start smit
 
 Smit is far simpler to configure:
+
     1. modify properties in the text file 'project'
     2. restart smit
     3. experiment, and start again at step 1 if you feel like
 
 Smit can be used offline (read-only):
+
     - get a local copy of the smit program
     - get a local copy of the repository
     - start smit on your machine
