@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <sstream>
+#include <string.h>
 
 #include "renderingHtml.h"
 #include "db.h"
@@ -173,6 +174,95 @@ std::string htmlEscape(const std::string &value)
     return result;
 }
 
+/** Convert text to HTML rich text according to 1 rich text pattern
+  *
+  * Basic syntax rules:
+  * - a rich text block must start after a blank character of at the beginning of the line
+  * - a rich text block must end before a blank character of at the end of the line
+  */
+std::string convertToRichTextClass(const std::string &in, const char *begin, char end,
+                                   bool dropBlockSeparators, const char *htmlTag, const char *htmlClass)
+{
+    std::string result;
+    size_t i = 0;
+    size_t block = 0; // beginning of block, relevant only when insideBlock == true
+    size_t len = in.size();
+    bool insideBlock = false;
+    while (i<len) {
+        char c = in[i];
+
+        if (insideBlock) {
+            // look if we are at the end of a block
+            if (c == end && (end == '\n' || i == len-1 || isspace(in[i+1]) || isblank(in[i+1])) ) {
+                // end of block detected
+                size_t L;
+                if (dropBlockSeparators) {
+                    block++;
+                    L = i-block;
+                } else {
+                    L = i-block+1;
+                }
+                std::ostringstream currentBlock;
+
+
+                if (0 == strcmp("a", htmlTag)) {
+                    std::string hyperlink = in.substr(block+1, L-2);
+                    currentBlock << in[block] << "<" << htmlTag;
+                    currentBlock << " href=\"" << hyperlink << "\">" << hyperlink;
+                    currentBlock << "</" << htmlTag << ">" << c;
+
+                } else {
+                    currentBlock << "<" << htmlTag;
+                    currentBlock << " class=\"" << htmlClass << "\">";
+                    currentBlock << in.substr(block, L);
+                    currentBlock << "</" << htmlTag << ">";
+                }
+                result += currentBlock.str();
+                insideBlock = false;
+            } else if (c == '\n') {
+                // end of line cancels the pending block
+                result += in.substr(block, i-block+1);
+                insideBlock = false;
+            }
+        } else if (0 == strncmp(in.c_str()+i, begin, strlen(begin)) && // c == begin[0] &&
+                   ( i==0 || isspace(in[i-1]) || isblank(in[i-1])) ) {
+            // beginning of new block
+            insideBlock = true;
+            block = i;
+
+        } else result += c;
+        i++;
+    }
+    if (insideBlock) {
+        // cancel pending block
+        result += in.substr(block);
+    }
+    return result;
+
+}
+
+/** Convert text to HTML rich text
+  *
+  *    *a b c* => <span class="sm_bold">a b c</span>
+  *    _a b c_ => <span class="sm_underline">a b c</span>
+  *    /a b c/ => <span class="sm_italic">a b c</span>
+  *    [a b c] => <a href="a b c" class="sm_hyperlink">a b c</a>
+  *    > a b c =>  <span class="sm_quote">a b c</span> (> must be at the beginning of the line)
+  *
+  * (optional) Characters before and after block must be [\t \n.;:]
+  * A line break in the middle prevents the pattern from being recognized.
+  */
+std::string convertToRichText(const std::string &raw)
+{
+    std::string result = convertToRichTextClass(raw, "*", '*', true, "span", "sm_bold");
+    result = convertToRichTextClass(result, "_", '_', true, "span", "sm_underline");
+    result = convertToRichTextClass(result, "/", '/', true, "span", "sm_italic");
+    result = convertToRichTextClass(result, "[", ']', false, "a", "sm_hyperlink");
+    result = convertToRichTextClass(result, "&gt;", '\n', false, "a", "sm_quote");
+    return result;
+
+}
+
 void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx, const Issue &issue, const std::list<Entry*> &entries)
 {
     LOG_DEBUG("printIssue...");
@@ -239,7 +329,7 @@ void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx,
         std::map<std::string, std::list<std::string> >::iterator m = ee.properties.find(K_MESSAGE);
         if (m != ee.properties.end()) {
             if (m->second.size() != 0) {
-                mg_printf(conn, "%s\n", htmlEscape(m->second.front()).c_str());
+                mg_printf(conn, "%s\n", convertToRichText(htmlEscape(m->second.front())).c_str());
             }
         }
         mg_printf(conn, "</div>\n"); // end message
