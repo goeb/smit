@@ -191,7 +191,7 @@ void RHtml::printIssueList(struct mg_connection *conn, const ContextParameters &
         mg_printf(conn, "<th class=\"th_issues\"><a class=\"sm_sort_exclusive\" href=\"?%s\" title=\"Sort ascending\">%s</a>\n",
                   newQueryString.c_str(), label.c_str());
         newQueryString = getNewSortingSpec(conn, *colname, false);
-        mg_printf(conn, " <a href=\"?%s\" class=\"sm_sort_accumulate\" title=\"Sort and preserve other sorted columns\">&#8750;</a></th>\n", newQueryString.c_str());
+        mg_printf(conn, " <a href=\"?%s\" class=\"sm_sort_accumulate\" title=\"Sort and preserve other sorted columns\">&#10228;</a></th>\n", newQueryString.c_str());
     }
     mg_printf(conn, "</tr>\n");
 

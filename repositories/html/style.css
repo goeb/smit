@@ -121,15 +121,14 @@ textarea.sm_finput_message {
 table.table_issues {
     border-collapse:collapse;
 }
-table.table_issues tr {
-    /*border-bottom: solid 1px rgb(200, 200, 186);*/
-}
 table.table_issues td {
     padding-right: 1em;
     padding-left: 1em;
     padding-bottom: 0.2em;
     padding-top: 0.2em;
     border-right: solid 1px rgb(200, 200, 186);
+}
+table.table_issues tr {
     vertical-align:text-top;
 }
 table.table_issues tr:hover {
@@ -162,6 +161,7 @@ table.table_issues tr:nth-child(even) td {
 .sm_quote { color: green; }
 .sm_hyperlink { }
 
-a.sm_sort_accumulate { color: green; }
+a:link.sm_sort_accumulate { color: #344; }
+a:visited.sm_sort_accumulate { color: #344; }
 a.sm_sort_exclusive { }
 
