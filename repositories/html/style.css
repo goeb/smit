@@ -158,6 +158,6 @@ table.table_issues tr:nth-child(even) td {
 }
 .sm_bold { font-weight: bold; }
 .sm_underline { text-decoration: underline; }
-.sm_italic { font-style: italic; }
+.sm_highlight { background-color: yellow; }
 .sm_quote { color: green; }
 .sm_hyperlink { }

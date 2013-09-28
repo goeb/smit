@@ -306,7 +306,7 @@ std::string convertToRichTextInline(const std::string &in, char begin, char end,
   *
   *    *a b c* => <span class="sm_bold">a b c</span>
   *    _a b c_ => <span class="sm_underline">a b c</span>
-  *    /a b c/ => <span class="sm_italic">a b c</span>
+  *    /a b c/ => <span class="sm_highlight">a b c</span>
   *    [a b c] => <a href="a b c" class="sm_hyperlink">a b c</a>
   *    > a b c =>  <span class="sm_quote">a b c</span> (> must be at the beginning of the line)
   *
@@ -317,7 +317,7 @@ std::string convertToRichText(const std::string &raw)
 {
     std::string result = convertToRichTextInline(raw, '*', '*', true, "span", "sm_bold");
     result = convertToRichTextInline(result, '_', '_', true, "span", "sm_underline");
-    result = convertToRichTextInline(result, '/', '/', true, "span", "sm_italic");
+    result = convertToRichTextInline(result, '/', '/', true, "span", "sm_highlight");
     result = convertToRichTextInline(result, '[', ']', false, "a", "sm_hyperlink");
     result = convertToRichTextWholeline(result, "&gt;", "span", "sm_quote");
     return result;
