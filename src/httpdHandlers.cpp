@@ -26,6 +26,8 @@ typedef __int64 int64_t;
 #include "renderingText.h"
 #include "renderingHtml.h"
 #include "parseConfig.h"
+#include "stringTools.h"
+
 
 std::string request2string(struct mg_connection *conn)
 {
@@ -87,40 +89,6 @@ int sendHttpHeaderInvalidResource(struct mg_connection *conn)
     return 1; // request processed
 }
 
-//
-void trimLeft(std::string & s, char c)
-{
-    size_t i = 0;
-    while ( (s.size() > i) && (s[i] == c) ) i++;
-
-    if (i >= s.size()) s = "";
-    else s = s.substr(i);
-}
-
-// take first token name out of uri
-// /a/b/c -> a and b/c
-// a/b/c -> a and b/c
-std::string popToken(std::string & uri, char separator)
-{
-    if (uri.empty()) return "";
-
-    size_t i = 0;
-    trimLeft(uri, separator);
-
-    char sepStr[2];
-    sepStr[0] = separator;
-    sepStr[1] = 0;
-    size_t pos = uri.find_first_of(sepStr, i); // skip the first leading / of the uri
-    std::string firstToken = uri.substr(i, pos-i);
-
-    if (pos == std::string::npos) uri = "";
-    else {
-        uri = uri.substr(pos);
-        trimLeft(uri, separator);
-    }
-
-    return firstToken;
-}
 
 // if uri is "x=y&a=bcd" and param is "a"
 // then return "bcd"

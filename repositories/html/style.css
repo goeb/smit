@@ -161,3 +161,7 @@ table.table_issues tr:nth-child(even) td {
 .sm_highlight { background-color: yellow; }
 .sm_quote { color: green; }
 .sm_hyperlink { }
+
+a.sm_sort_accumulate { color: green; }
+a.sm_sort_exclusive { }
+

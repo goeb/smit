@@ -9,7 +9,8 @@ SRCS_CPP = src/db.cpp  \
 		   src/httpdHandlers.cpp \
 		   src/renderingText.cpp \
 		   src/renderingHtml.cpp \
-		   src/cpio.cpp
+		   src/cpio.cpp \
+		   src/stringTools.cpp
 
 CC = gcc
 CPP = g++

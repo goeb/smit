@@ -15,7 +15,8 @@ SOURCES += \
     ../../src/httpdHandlers.cpp \
     ../../src/renderingText.cpp \
     ../../src/renderingHtml.cpp \
-    ../../src/cpio.cpp
+    ../../src/cpio.cpp \
+    ../../src/stringTools.cpp
 
 HEADERS += \
     ../../mongoose/mongoose.h \
@@ -27,5 +28,6 @@ HEADERS += \
     ../../src/httpdHandlers.h \
     ../../src/renderingText.h \
     ../../src/renderingHtml.h \
-    ../../src/cpio.h
+    ../../src/cpio.h \
+    ../../src/stringTools.h
 

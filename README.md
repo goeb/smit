@@ -35,6 +35,16 @@ For the ones who want to experiment quickly:
     <web-browser> http://127.0.0.1:8080/myproject/issues
 
 
+In the future (that is "not yet"):
+
+    # initialize a repository
+    mkdir smitRepo && cd smitRepo
+    smit init
+    smit create-project MySampleProject
+    smit serve .
+
+
+
 Why should I prefer Smit over Redmine, Bugzilla, RequestTracker, etc. ?
 ---
 

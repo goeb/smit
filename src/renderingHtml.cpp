@@ -6,6 +6,7 @@
 #include "db.h"
 #include "parseConfig.h"
 #include "logging.h"
+#include "stringTools.h"
 
 
 std::string epochToString(time_t t)
@@ -78,6 +79,98 @@ void RHtml::printProjectList(struct mg_connection *conn, const std::list<std::st
     }
 }
 
+/** Build a new query string based on the current one, and update the sorting part
+  *
+  *
+  * Example:
+  * In: current query string is sort=xx&filterin=...&whatever...
+  *     property name is 'assignee'
+  * Out when exclusive is true:
+  *     sort=assignee&filterin=...&whatever...
+  * Out when exclusive is false:
+  *     sort=xx+assignee&filterin=...&whatever...
+  *
+  * When exclusive is false, the existing sorting is kept, except that:
+  * - if the property is already present, its order is inverted (+/-)
+  * - else, the property is added after the others
+  *
+  */
+std::string getNewSortingSpec(struct mg_connection *conn, const std::string property, bool exclusive)
+{
+    std::string qs = mg_get_request_info(conn)->query_string;
+    LOG_DEBUG("getNewSortingSpec: in=%s, exclusive=%d", qs.c_str(), exclusive);
+    std::string result;
+
+    const char *SORT_SPEC_HEADER = "sort=";
+
+    while (qs.size() > 0) {
+        std::string part = popToken(qs, '&');
+        if (0 == strncmp(SORT_SPEC_HEADER, part.c_str(), strlen(SORT_SPEC_HEADER))) {
+            // sorting spec, that we want to alter
+            std::string newSortingSpec = "";
+            popToken(part, '=');
+
+            if (exclusive) {
+                newSortingSpec = SORT_SPEC_HEADER;
+                newSortingSpec += property;
+            } else {
+                size_t len = part.size();
+                size_t currentOffset = 0;
+                std::string currentPropertyName;
+                char currentOrder = '+';
+                bool propertyFound = false; // detect if specified property is already present
+                while (currentOffset < len) {
+                    char c = part[currentOffset];
+                    if (c == '+' || c == ' ' || c == '-' ) {
+                        if (currentPropertyName.size()>0) {
+                            // store property name
+                            if (currentPropertyName == property) {
+                                if (currentOrder == '+') currentOrder = '-';
+                                else currentOrder = '+';
+                                propertyFound = true;
+                            }
+                            newSortingSpec += currentOrder;
+                            newSortingSpec += currentPropertyName;
+                            currentPropertyName = "";
+                        }
+                        currentOrder = c;
+                    } else {
+                        currentPropertyName += c;
+                    }
+                    currentOffset++;
+                }
+                // flush remaining
+                if (currentPropertyName.size()>0) {
+                    // store property name
+                    if (currentPropertyName == property) {
+                        if (currentOrder == '+') currentOrder = '-';
+                        else currentOrder = '+';
+                        propertyFound = true;
+                    }
+                    newSortingSpec += currentOrder;
+                    newSortingSpec += currentPropertyName;
+
+                }
+                if (!propertyFound) {
+                    // add it at the end
+                    newSortingSpec += '+';
+                    newSortingSpec += property;
+                }
+
+                newSortingSpec = newSortingSpec.insert(0, SORT_SPEC_HEADER); // add the "sort=" at the beginning
+            }
+            part = newSortingSpec;
+        }
+
+        // append to the result
+        if (result == "") result = part;
+        else result = result + '&' + part;
+    }
+    LOG_DEBUG("getNewSortingSpec: result=%s", result.c_str());
+
+
+    return result;
+}
 
 void RHtml::printIssueList(struct mg_connection *conn, const ContextParameters &ctx,
                            std::list<struct Issue*> issueList, std::list<std::string> colspec)
@@ -94,7 +187,11 @@ void RHtml::printIssueList(struct mg_connection *conn, const ContextParameters &
     std::list<std::string>::iterator colname;
     for (colname = colspec.begin(); colname != colspec.end(); colname++) {
         std::string label = ctx.project.getLabelOfProperty(*colname);
-        mg_printf(conn, "<th class=\"th_issues\"><a href=\"\" title=\"Sort ascending\">%s</a></th>\n", label.c_str());
+        std::string newQueryString = getNewSortingSpec(conn, *colname, true);
+        mg_printf(conn, "<th class=\"th_issues\"><a class=\"sm_sort_exclusive\" href=\"?%s\" title=\"Sort ascending\">%s</a>\n",
+                  newQueryString.c_str(), label.c_str());
+        newQueryString = getNewSortingSpec(conn, *colname, false);
+        mg_printf(conn, " <a href=\"?%s\" class=\"sm_sort_accumulate\" title=\"Sort and preserve other sorted columns\">&#8750;</a></th>\n", newQueryString.c_str());
     }
     mg_printf(conn, "</tr>\n");
 
@@ -228,17 +325,22 @@ std::string convertToRichTextWholeline(const std::string &in, const char *start,
 
 }
 
+bool isRichTextBlockSeparator(char c)
+{
+    if (isspace(c) || isblank(c)) return true;
+    if (c == '.'  || c == ';' || c == ':' || c == ',') return true;
+    return false;
+}
+
 /** Convert text to HTML rich text according to 1 rich text pattern
   *
   * Basic syntax rules:
-  * - a rich text block must start after a blank character of at the beginning of the line
-  * - a rich text block must end before a blank character of at the end of the line
+  * - a rich text block must start after a separator character of at the beginning of the line
+  * - a rich text block must end before a separator character of at the end of the line
   *
   * @param dropBlockSeparators
   *    If true, the begin and end separators a removed from the final HTML
   *
-  * @remarks
-  *    Think that ">" characters are probably actually "&gt;"
   */
 std::string convertToRichTextInline(const std::string &in, char begin, char end,
                                    bool dropBlockSeparators, const char *htmlTag, const char *htmlClass)
@@ -253,7 +355,7 @@ std::string convertToRichTextInline(const std::string &in, char begin, char end,
 
         if (insideBlock) {
             // look if we are at the end of a block
-            if (c == end && (end == '\n' || i == len-1 || isspace(in[i+1]) || isblank(in[i+1])) ) {
+            if (c == end && (end == '\n' || i == len-1 || isRichTextBlockSeparator(in[i+1]) ) ) {
                 // end of block detected
                 size_t L;
                 if (dropBlockSeparators) {
@@ -286,7 +388,7 @@ std::string convertToRichTextInline(const std::string &in, char begin, char end,
                 result += in.substr(block, i-block+1);
                 insideBlock = false;
             }
-        } else if ( (begin == c) && (i==0 || isspace(in[i-1]) || isblank(in[i-1])) ) {
+        } else if ( (begin == c) && (i==0 || isRichTextBlockSeparator(in[i-1]) ) ) {
             // beginning of new block
             insideBlock = true;
             block = i;
