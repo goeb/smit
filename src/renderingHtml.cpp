@@ -182,31 +182,47 @@ std::string convertToRichTextWholeline(const std::string &in, const char *start,
     size_t block = 0; // beginning of block, relevant only when insideBlock == true
     size_t len = in.size();
     bool insideBlock = false;
+    bool startOfLine = true;
     while (i<len) {
         char c = in[i];
-        if (insideBlock) {
-            if (c == '\n') {
-                std::ostringstream currentBlock;
+        if (c == '\n') {
+            startOfLine = true;
+
+            if (insideBlock) {
                 // end of line and end of block
+                std::ostringstream currentBlock;
+
                 currentBlock << "<" << htmlTag;
                 currentBlock << " class=\"" << htmlClass << "\">";
                 currentBlock << in.substr(block, i-block+1);
                 currentBlock << "</" << htmlTag << ">";
-                result += currentBlock.str() + c;
+                result += currentBlock.str();
                 insideBlock = false;
             }
-        } else if ( (i+strlen(start)+1 < len) && (0 == strncmp(start, in.c_str()+i+1, strlen(start))) ) {
+            result += c;
+
+        } else if (startOfLine && (i+strlen(start)-1 < len) && (0 == strncmp(start, in.c_str()+i, strlen(start))) ) {
             // beginning of new block
             insideBlock = true;
-            block = i+1;
-            result += c;
-        } else result += c;
+            block = i;
+
+        } else {
+            startOfLine = false;
+            if (!insideBlock) result += c;
+        }
 
         i++;
     }
+
     if (insideBlock) {
-        // cancel pending block
-        result += in.substr(block);
+        // flush pending block
+        std::ostringstream currentBlock;
+
+        currentBlock << "<" << htmlTag;
+        currentBlock << " class=\"" << htmlClass << "\">";
+        currentBlock << in.substr(block, i-block+1);
+        currentBlock << "</" << htmlTag << ">";
+        result += currentBlock.str();
     }
     return result;
 
