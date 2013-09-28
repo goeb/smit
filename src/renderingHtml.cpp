@@ -174,13 +174,57 @@ std::string htmlEscape(const std::string &value)
     return result;
 }
 
+
+std::string convertToRichTextWholeline(const std::string &in, const char *start, const char *htmlTag, const char *htmlClass)
+{
+    std::string result;
+    size_t i = 0;
+    size_t block = 0; // beginning of block, relevant only when insideBlock == true
+    size_t len = in.size();
+    bool insideBlock = false;
+    while (i<len) {
+        char c = in[i];
+        if (insideBlock) {
+            if (c == '\n') {
+                std::ostringstream currentBlock;
+                // end of line and end of block
+                currentBlock << "<" << htmlTag;
+                currentBlock << " class=\"" << htmlClass << "\">";
+                currentBlock << in.substr(block, i-block+1);
+                currentBlock << "</" << htmlTag << ">";
+                result += currentBlock.str() + c;
+                insideBlock = false;
+            }
+        } else if ( (i+strlen(start)+1 < len) && (0 == strncmp(start, in.c_str()+i+1, strlen(start))) ) {
+            // beginning of new block
+            insideBlock = true;
+            block = i+1;
+            result += c;
+        } else result += c;
+
+        i++;
+    }
+    if (insideBlock) {
+        // cancel pending block
+        result += in.substr(block);
+    }
+    return result;
+
+}
+
 /** Convert text to HTML rich text according to 1 rich text pattern
   *
   * Basic syntax rules:
   * - a rich text block must start after a blank character of at the beginning of the line
   * - a rich text block must end before a blank character of at the end of the line
+  *
+  * @param dropBlockSeparators
+  *    If true, the begin and end separators a removed from the final HTML
+  *
+  * @remarks
+  *    Think that ">" characters are probably actually "&gt;"
   */
-std::string convertToRichTextClass(const std::string &in, const char *begin, char end,
+std::string convertToRichTextInline(const std::string &in, char begin, char end,
                                    bool dropBlockSeparators, const char *htmlTag, const char *htmlClass)
 {
     std::string result;
@@ -206,6 +250,7 @@ std::string convertToRichTextClass(const std::string &in, const char *begin, cha
 
 
                 if (0 == strcmp("a", htmlTag)) {
+                    // for "a" tags, add "href=..."
                     std::string hyperlink = in.substr(block+1, L-2);
                     currentBlock << in[block] << "<" << htmlTag;
                     currentBlock << " href=\"" << hyperlink << "\">" << hyperlink;
@@ -219,13 +264,13 @@ std::string convertToRichTextClass(const std::string &in, const char *begin, cha
                 }
                 result += currentBlock.str();
                 insideBlock = false;
+
             } else if (c == '\n') {
                 // end of line cancels the pending block
                 result += in.substr(block, i-block+1);
                 insideBlock = false;
             }
-        } else if (0 == strncmp(in.c_str()+i, begin, strlen(begin)) && // c == begin[0] &&
-                   ( i==0 || isspace(in[i-1]) || isblank(in[i-1])) ) {
+        } else if ( (begin == c) && (i==0 || isspace(in[i-1]) || isblank(in[i-1])) ) {
             // beginning of new block
             insideBlock = true;
             block = i;
@@ -254,11 +299,11 @@ std::string convertToRichTextClass(const std::string &in, const char *begin, cha
   */
 std::string convertToRichText(const std::string &raw)
 {
-    std::string result = convertToRichTextClass(raw, "*", '*', true, "span", "sm_bold");
-    result = convertToRichTextClass(result, "_", '_', true, "span", "sm_underline");
-    result = convertToRichTextClass(result, "/", '/', true, "span", "sm_italic");
-    result = convertToRichTextClass(result, "[", ']', false, "a", "sm_hyperlink");
-    result = convertToRichTextClass(result, "&gt;", '\n', false, "a", "sm_quote");
+    std::string result = convertToRichTextInline(raw, '*', '*', true, "span", "sm_bold");
+    result = convertToRichTextInline(result, '_', '_', true, "span", "sm_underline");
+    result = convertToRichTextInline(result, '/', '/', true, "span", "sm_italic");
+    result = convertToRichTextInline(result, '[', ']', false, "a", "sm_hyperlink");
+    result = convertToRichTextWholeline(result, "&gt;", "span", "sm_quote");
     return result;
 
 }
