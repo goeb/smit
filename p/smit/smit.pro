@@ -16,7 +16,9 @@ SOURCES += \
     ../../src/renderingText.cpp \
     ../../src/renderingHtml.cpp \
     ../../src/cpio.cpp \
-    ../../src/stringTools.cpp
+    ../../src/stringTools.cpp \
+    ../../src/session.cpp \
+    ../../src/mutexTools.cpp
 
 HEADERS += \
     ../../mongoose/mongoose.h \
@@ -29,5 +31,7 @@ HEADERS += \
     ../../src/renderingText.h \
     ../../src/renderingHtml.h \
     ../../src/cpio.h \
-    ../../src/stringTools.h
+    ../../src/stringTools.h \
+    ../../src/session.h \
+    ../../src/mutexTools.h
 

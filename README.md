@@ -40,7 +40,14 @@ In the future (that is "not yet"):
     # initialize a repository
     mkdir smitRepo && cd smitRepo
     smit init
-    smit create-project MySampleProject
+
+    # add itialize a project
+    smit add-project MySampleProject
+
+    # add a user
+    smit add-user "John Smith" MySampleProject:rw
+    Enter password:
+    
     smit serve .
 
 

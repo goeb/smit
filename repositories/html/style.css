@@ -165,3 +165,18 @@ a:link.sm_sort_accumulate { color: #344; }
 a:visited.sm_sort_accumulate { color: #344; }
 a.sm_sort_exclusive { }
 
+.sm_signin {
+    width: 20em;
+    margin: 2em;
+    padding: 2em;
+    border-radius: 0.5em 0.5em 0.5em 0.5em;
+    background-color: #E0E0E0;
+}
+.sm_signin_title {
+    font-size: large;
+}
+.sm_signin_name, .sm_signin_password {
+    font-size: small;
+    font-weight: bold;
+}
+

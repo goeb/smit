@@ -52,8 +52,26 @@ void RHtml::printHeader(struct mg_connection *conn, const std::string &projectPa
     } else {
         LOG_ERROR("Could not load header.html for project %s", projectPath.c_str());
     }
-
 }
+
+void RHtml::printSigninPage(struct mg_connection *conn, const char *pathToRepository)
+{
+
+    mg_printf(conn, "Content-Type: text/html\r\n\r\n");
+
+    std::string path = pathToRepository;
+    path += "/html/signin.html";
+    char *data;
+    int r = loadFile(path.c_str(), &data);
+    if (r >= 0) {
+        mg_printf(conn, "%s", data);
+        free(data);
+    } else {
+        LOG_ERROR("Could not load %s", path.c_str());
+    }
+}
+
+
 void RHtml::printFooter(struct mg_connection *conn, const std::string &projectPath)
 {
     std::string path = projectPath + "/html/footer.html";

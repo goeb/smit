@@ -27,6 +27,11 @@ typedef __int64 int64_t;
 #include "renderingHtml.h"
 #include "parseConfig.h"
 #include "stringTools.h"
+#include "session.h"
+
+
+// static members
+std::string Rootdir;
 
 
 std::string request2string(struct mg_connection *conn)
@@ -61,7 +66,11 @@ void sendHttpHeader200(struct mg_connection *conn)
     mg_printf(conn, "HTTP/1.0 200 OK\r\n");
 }
 
-void sendHttpRedirect(struct mg_connection *conn, const std::string &redirectUrl)
+/**
+  * @param otherHeader
+  *    Must include the line-terminating \r\n
+  */
+void sendHttpRedirect(struct mg_connection *conn, const std::string &redirectUrl, const char *otherHeader)
 {
     mg_printf(conn, "HTTP/1.1 303 See Other\r\n");
     const char *scheme = 0;
@@ -75,9 +84,18 @@ void sendHttpRedirect(struct mg_connection *conn, const std::string &redirectUrl
     }
 
     mg_printf(conn, "Location: %s://%s/%s", scheme, host, redirectUrl.c_str());
+
+    if (otherHeader) mg_printf(conn, "%s", otherHeader);
     mg_printf(conn, "\r\n\r\n");
 }
 
+
+void setCookieAndRedirect(struct mg_connection *conn, const char *name, const char *value, const char *redirectUrl)
+{
+    std::ostringstream s;
+    s << "Set-Cookie: " << name << "=" << value << "\r\n";
+    sendHttpRedirect(conn, redirectUrl, s.str().c_str());
+}
 
 int sendHttpHeaderInvalidResource(struct mg_connection *conn)
 {
@@ -155,12 +173,10 @@ void httpPostAdmin(struct mg_connection *conn)
 {
 }
 
-void httpGetSignin(struct mg_connection *conn)
-{
-}
-
 void httpPostSignin(struct mg_connection *conn)
 {
+    // TODO check user name and credentials
+    setCookieAndRedirect(conn, "sessid", "12345", "/"); // TODO
 }
 
 void httGetUsers(struct mg_connection *conn)
@@ -173,12 +189,11 @@ void httPostUsers(struct mg_connection *conn)
 
 void httpGetRoot(struct mg_connection *conn)
 {
-    std::string req = request2string(conn);
-
+    //std::string req = request2string(conn);
     sendHttpHeader200(conn);
 
-    mg_printf(conn, "Content-Type: text/html\r\n\r\n");
-    mg_printf(conn, "Request=%s\n", req.c_str());
+    RHtml::printSigninPage(conn, Rootdir.c_str());
+
 }
 
 /** @param filter
@@ -389,9 +404,9 @@ void httpPostEntry(struct mg_connection *conn, Project &p, const std::string & i
         if (r != 0) {
             // error
         } else {
-            // HTTP redirect TODO
+            // HTTP redirect
             std::string redirectUrl = p.getName() + "/issues/" + id;
-            sendHttpRedirect(conn, redirectUrl);
+            sendHttpRedirect(conn, redirectUrl, 0);
         }
 
     } else {
@@ -425,7 +440,6 @@ int begin_request_handler(struct mg_connection *conn) {
     LOG_DEBUG("uri=%s, method=%s", uri.c_str(), method.c_str());
     if      ( (uri == "/admin") && (method == "GET") ) httpGetAdmin(conn);
     else if ( (uri == "/admin") && (method == "POST") ) httpPostAdmin(conn);
-    else if ( (uri == "/signin") && (method == "GET") ) httpGetSignin(conn);
     else if ( (uri == "/signin") && (method == "POST") ) httpPostSignin(conn);
     else if ( (uri == "/users") && (method == "GET") ) httGetUsers(conn);
     else if ( (uri == "/users") && (method == "POST") ) httPostUsers(conn);

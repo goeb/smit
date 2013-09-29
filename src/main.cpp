@@ -57,7 +57,8 @@ int main(int argc, const char **argv)
     // argv[1] is the repository directory
     const char *repo = argv[1];
     // Load all projects
-    dbInit(repo);
+    dbLoad(repo);
+    Rootdir = repo;
     struct mg_context *ctx;
     const char *options[] = {"listening_ports", "8080", "document_root", repo, NULL};
     struct mg_callbacks callbacks;
@@ -68,6 +69,7 @@ int main(int argc, const char **argv)
 
     LOG_DEBUG("Starting httpd server on port %s", options[1]);
     ctx = mg_start(&callbacks, NULL, options);
+
     getchar();  // Wait until user hits "enter"
     mg_stop(ctx);
 

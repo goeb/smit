@@ -10,7 +10,9 @@ SRCS_CPP = src/db.cpp  \
 		   src/renderingText.cpp \
 		   src/renderingHtml.cpp \
 		   src/cpio.cpp \
-		   src/stringTools.cpp
+		   src/stringTools.cpp \
+		   src/mutexTools.cpp \
+		   src/session.cpp
 
 CC = gcc
 CPP = g++

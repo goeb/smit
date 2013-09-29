@@ -9,6 +9,7 @@
 #include <stdint.h>
 
 #include "ustring.h"
+#include "mutexTools.h"
 
 #define K_MESSAGE "message" // keyword used for the message. Could be changed to _message ? TODO ?
 #define K_TITLE "title"
@@ -70,41 +71,6 @@ struct ProjectConfig {
 
 
 
-class Locker {
-public:
-    Locker();
-    ~Locker();
-    void lockForWriting();
-    void unlockForWriting();
-    void lockForReading();
-    void unlockForReading();
-
-private:
-    pthread_mutex_t readOnlyMutex;
-    pthread_mutex_t readWriteMutex;
-    int nReaders; // number of concurrent readers
-};
-
-
-enum LockMode { LOCK_READ_ONLY, LOCK_READ_WRITE };
-
-class AutoLocker {
-public:
-    inline AutoLocker(Locker & L, enum LockMode m) : locker(L), mode(m) {
-        if (mode == LOCK_READ_ONLY) locker.lockForReading();
-        else locker.lockForWriting();
-    }
-    inline ~AutoLocker() {
-        if (mode == LOCK_READ_ONLY) locker.unlockForReading();
-        else locker.unlockForWriting();
-    }
-
-private:
-    Locker & locker;
-    enum LockMode mode;
-};
-
-
 class Project {
 public:
     static int load(const char *path, char *name); // load a project
@@ -152,7 +118,7 @@ public:
 
 
 // Functions
-int dbInit(const char * pathToRepository); // initialize the given repository
+int dbLoad(const char * pathToRepository); // initialize the given repository
 
 // load in memory the given project
 // re-load if it was previously loaded
