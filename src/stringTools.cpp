@@ -27,13 +27,30 @@ std::string popToken(std::string & uri, char separator)
     return firstToken;
 }
 
-/** Remove characters at end of string
+/** Remove characters at the end of string
   */
-void trimLeft(std::string & s, char c)
+void trimRight(std::string &s, char c)
+{
+    size_t i = s.size()-1;
+    while ( (i>=0) && (s[i] == c) ) i--;
+
+    if (i < 0) s = "";
+    else s = s.substr(0, i+1);
+}
+
+/** Remove characters at the beginning of string
+  */
+void trimLeft(std::string &s, char c)
 {
     size_t i = 0;
     while ( (s.size() > i) && (s[i] == c) ) i++;
 
     if (i >= s.size()) s = "";
     else s = s.substr(i);
+}
+
+void trim(std::string &s, char c)
+{
+    trimLeft(s, c);
+    trimRight(s, c);
 }

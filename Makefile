@@ -1,4 +1,14 @@
 
+ifeq ($(WIN),1)
+	CC = i586-mingw32msvc-gcc
+	CXX = i586-mingw32msvc-g++
+	BUILD_DIR = build_win
+else
+	CC = gcc
+	CXX = g++
+	BUILD_DIR = build_linux86
+endif
+
 SRCS = mongoose/mongoose.c \
 
 
@@ -14,15 +24,12 @@ SRCS_CPP = src/db.cpp  \
 		   src/mutexTools.cpp \
 		   src/session.cpp
 
-CC = gcc
-CPP = g++
 
-OBJS = $(SRCS:%.c=obj/%.o) $(SRCS_CPP:%.cpp=obj/%.o)
-DEPENDS = $(SRCS:%.c=obj/%.d) $(SRCS_CPP:%.cpp=obj/%.d)
+OBJS = $(SRCS:%.c=$(BUILD_DIR)/%.o) $(SRCS_CPP:%.cpp=$(BUILD_DIR)/%.o)
+DEPENDS = $(SRCS:%.c=$(BUILD_DIR)/%.d) $(SRCS_CPP:%.cpp=$(BUILD_DIR)/%.d)
 
 CFLAGS = -g
 CFLAGS += -I mongoose
-CPPFLAGS = -g -I mongoose
 
 LDFLAGS = -ldl -pthread -lcrypto
 
@@ -32,26 +39,27 @@ all: smit
 print:
 	@echo SRCS=$(SRCS)
 	@echo OBJS=$(OBJS)
+	@echo WIN=$(WIN)
 
-obj/%.o: %.cpp
+$(BUILD_DIR)/%.o: %.cpp
 	mkdir -p `dirname $@`
-	$(CPP) $(CPPFLAGS) -c $< -o $@
+	$(CXX) $(CFLAGS) -c $< -o $@
 
-obj/%.o: %.c
+$(BUILD_DIR)/%.o: %.c
 	mkdir -p `dirname $@`
 	$(CC) $(CFLAGS) -c $< -o $@
 
-obj/%.d: %.c
-	mkdir -p `dirname $@`
-	@set -e; rm -f $@; \
-	$(CPP) -M $(CPPFLAGS) $< > $@.$$$$; \
-	sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $@.$$$$ > $@; \
-	rm -f $@.$$$$
-
-obj/%.d: %.cpp
+$(BUILD_DIR)/%.d: %.c
 	mkdir -p `dirname $@`
 	@set -e; rm -f $@; \
 	$(CC) -M $(CFLAGS) $< > $@.$$$$; \
+	sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $@.$$$$ > $@; \
+	rm -f $@.$$$$
+
+$(BUILD_DIR)/%.d: %.cpp
+	mkdir -p `dirname $@`
+	@set -e; rm -f $@; \
+	$(CXX) -M $(CFLAGS) $< > $@.$$$$; \
 	sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $@.$$$$ > $@; \
 	rm -f $@.$$$$
 

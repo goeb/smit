@@ -68,9 +68,9 @@ void sendHttpHeader200(struct mg_connection *conn)
 
 /**
   * @param otherHeader
-  *    Must include the line-terminating \r\n
+  *    Must not include the line-terminating \r\n
   */
-void sendHttpRedirect(struct mg_connection *conn, const std::string &redirectUrl, const char *otherHeader)
+void sendHttpRedirect(struct mg_connection *conn, const char *redirectUrl, const char *otherHeader)
 {
     mg_printf(conn, "HTTP/1.1 303 See Other\r\n");
     const char *scheme = 0;
@@ -83,9 +83,10 @@ void sendHttpRedirect(struct mg_connection *conn, const std::string &redirectUrl
         host ="";
     }
 
-    mg_printf(conn, "Location: %s://%s/%s", scheme, host, redirectUrl.c_str());
+    if (redirectUrl[0] == '/') redirectUrl++;
+    mg_printf(conn, "Location: %s://%s/%s", scheme, host, redirectUrl);
 
-    if (otherHeader) mg_printf(conn, "%s", otherHeader);
+    if (otherHeader) mg_printf(conn, "\r\n%s", otherHeader);
     mg_printf(conn, "\r\n\r\n");
 }
 
@@ -93,7 +94,7 @@ void sendHttpRedirect(struct mg_connection *conn, const std::string &redirectUrl
 void setCookieAndRedirect(struct mg_connection *conn, const char *name, const char *value, const char *redirectUrl)
 {
     std::ostringstream s;
-    s << "Set-Cookie: " << name << "=" << value << "\r\n";
+    s << "Set-Cookie: " << name << "=" << value;
     sendHttpRedirect(conn, redirectUrl, s.str().c_str());
 }
 
@@ -186,13 +187,48 @@ void httGetUsers(struct mg_connection *conn)
 void httPostUsers(struct mg_connection *conn)
 {
 }
+std::string getSessionIdFromCookie(struct mg_connection *conn)
+{
+    const char *cookie = mg_get_header(conn, "Cookie");
+    if (cookie) {
+        LOG_DEBUG("Cookie found: %s", cookie);
+        std::string c = cookie;
+        while (c.size() > 0) {
+            std::string name = popToken(c, '=');
+            trim(name, ' '); // remove spaces around
+            std::string value = popToken(c, ';');
+            trim(value, ' '); // remove spaces around
+
+            LOG_DEBUG("Cookie: name=%s, value=%s", name.c_str(), value.c_str());
+            if (name == "sessid") return value;
+        }
+
+    } else {
+        LOG_DEBUG("no Cookie found");
+    }
+    return "";
+}
 
 void httpGetRoot(struct mg_connection *conn)
 {
+    std::string sessionId = getSessionIdFromCookie(conn);
     //std::string req = request2string(conn);
     sendHttpHeader200(conn);
 
-    RHtml::printSigninPage(conn, Rootdir.c_str());
+    LOG_ERROR("session id not verified (TODO)");
+    if (sessionId.size()) { // TODO do a thourough check
+        // print list of available projects
+        std::list<std::string> pList = getProjectList();
+
+        const struct mg_request_info *req = mg_get_request_info(conn);
+        std::string q;
+        if (req->query_string) q = req->query_string;
+        std::string format = getFirstParamFromQueryString(q, "format");
+
+        if (format == "text") RText::printProjectList(conn, pList);
+        else RText::printProjectList(conn, pList);
+
+    } else RHtml::printSigninPage(conn, Rootdir.c_str());
 
 }
 
@@ -406,7 +442,7 @@ void httpPostEntry(struct mg_connection *conn, Project &p, const std::string & i
         } else {
             // HTTP redirect
             std::string redirectUrl = p.getName() + "/issues/" + id;
-            sendHttpRedirect(conn, redirectUrl, 0);
+            sendHttpRedirect(conn, redirectUrl.c_str(), 0);
         }
 
     } else {
