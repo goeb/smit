@@ -115,7 +115,9 @@ void RHtml::printProjectList(struct mg_connection *conn, const std::list<std::st
   */
 std::string getNewSortingSpec(struct mg_connection *conn, const std::string property, bool exclusive)
 {
-    std::string qs = mg_get_request_info(conn)->query_string;
+    const char *qstring = mg_get_request_info(conn)->query_string;
+    std::string qs;
+    if (qstring) qs = qstring;
     LOG_DEBUG("getNewSortingSpec: in=%s, exclusive=%d", qs.c_str(), exclusive);
     std::string result;
 

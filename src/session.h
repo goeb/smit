@@ -42,14 +42,14 @@ struct Session {
 
 class SessionBase {
 public:
-    std::string requestSession(const std::string &username, const std::string &passwd); // return session id
+    static std::string requestSession(const std::string &username, const std::string &passwd); // return session id
 
-    std::string getLoggedInUser(const std::string &sessionId); // return user name
+    static std::string getLoggedInUser(const std::string &sessionId); // return user name
     int destroySession(const std::string &sessionId);
 
 private:
     static SessionBase SessionDb;
-    int createSession(User u);
+    int createSession(const std::string &username);
     std::map<std::string, Session> sessions;
     Locker locker;
 

@@ -22,13 +22,13 @@ private:
 
 enum LockMode { LOCK_READ_ONLY, LOCK_READ_WRITE };
 
-class AutoLocker {
+class ScopeLocker {
 public:
-    inline AutoLocker(Locker & L, enum LockMode m) : locker(L), mode(m) {
+    inline ScopeLocker(Locker & L, enum LockMode m) : locker(L), mode(m) {
         if (mode == LOCK_READ_ONLY) locker.lockForReading();
         else locker.lockForWriting();
     }
-    inline ~AutoLocker() {
+    inline ~ScopeLocker() {
         if (mode == LOCK_READ_ONLY) locker.unlockForReading();
         else locker.unlockForWriting();
     }

@@ -215,8 +215,9 @@ void httpGetRoot(struct mg_connection *conn)
     //std::string req = request2string(conn);
     sendHttpHeader200(conn);
 
-    LOG_ERROR("session id not verified (TODO)");
-    if (sessionId.size()) { // TODO do a thourough check
+    LOG_DEBUG("session id: %s", sessionId.c_str());
+    std::string username = SessionBase::getLoggedInUser(sessionId);
+    if (username.size()) {
         // print list of available projects
         std::list<std::string> pList = getProjectList();
 

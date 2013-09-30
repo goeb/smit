@@ -631,7 +631,7 @@ std::list<Issue*> Project::search(const char *fulltextSearch,
                                   const std::map<std::string, std::list<std::string> > &filterOut,
                                   const char *sortingSpec)
 {
-    AutoLocker scopeLocker(locker, LOCK_READ_ONLY);
+    ScopeLocker scopeLocker(locker, LOCK_READ_ONLY);
 
     // General algorithm:
     // For each issue:
