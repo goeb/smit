@@ -60,7 +60,7 @@ void RHtml::printSigninPage(struct mg_connection *conn, const char *pathToReposi
     mg_printf(conn, "Content-Type: text/html\r\n\r\n");
 
     std::string path = pathToRepository;
-    path += "/html/signin.html";
+    path += "/public/signin.html";
     char *data;
     int r = loadFile(path.c_str(), &data);
     if (r >= 0) {

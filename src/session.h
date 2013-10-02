@@ -47,7 +47,7 @@ class SessionBase {
 public:
     static std::string requestSession(const std::string &username, const std::string &passwd); // return session id
 
-    static std::string getLoggedInUser(const std::string &sessionId); // return user name
+    static User getLoggedInUser(const std::string &sessionId); // return user name
     int destroySession(const std::string &sessionId);
 
 private:

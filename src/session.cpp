@@ -38,6 +38,13 @@ int UserBase::addUser(User newUser)
     UserDb.configuredUsers[u->username] = u;
 }
 
+enum Role User::getRole(const std::string &project)
+{
+    std::map<std::string, enum Role>::iterator r = rolesOnProjects.find(project);
+    if (r == rolesOnProjects.end()) return ROLE_NONE;
+    else return r->second;
+}
+
 
 // return session id
 std::string SessionBase::requestSession(const std::string &username, const std::string &passwd)
@@ -60,22 +67,29 @@ std::string SessionBase::requestSession(const std::string &username, const std::
 
 
 }
-// return user name
-std::string SessionBase::getLoggedInUser(const std::string &sessionId)
+/** Return a user object
+  *
+  * If no valid user if found, then the returned object has an empty username.
+  */
+User SessionBase::getLoggedInUser(const std::string &sessionId)
 {
     LOG_DEBUG("getLoggedInUser(%s)...", sessionId.c_str());
     ScopeLocker(SessionDb.locker, LOCK_READ_ONLY);
 
     std::map<std::string, Session>::iterator i = SessionDb.sessions.find(sessionId);
 
-    if (i == SessionDb.sessions.end()) return "";
+    if (i == SessionDb.sessions.end()) return User();
     else {
         Session s = i->second;
         if (time(0) - s.ctime > s.duration) {
             // session expired
             LOG_DEBUG("getLoggedInUser: session expired: %s", sessionId.c_str());
-            return "";
-        } else return s.username;
+            return User();
+        } else {
+            User *u = UserBase::getUser(s.username);
+            if (u) return *u;
+            else return User();
+        }
     }
 }
 

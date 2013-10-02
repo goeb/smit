@@ -159,24 +159,33 @@ std::list<std::string> getParamListFromQueryString(const std::string & queryStri
     return result;
 }
 
-
-void httpGetAdmin(struct mg_connection *conn)
+enum RenderingFormat { RENDERING_HTML, RENDERING_TEXT };
+enum RenderingFormat getFormat(struct mg_connection *conn)
 {
-    // print list of available projects
-    std::list<std::string> pList = getProjectList();
-
     const struct mg_request_info *req = mg_get_request_info(conn);
     std::string q;
     if (req->query_string) q = req->query_string;
     std::string format = getFirstParamFromQueryString(q, "format");
 
+    if (format == "html" || format.empty()) return RENDERING_HTML;
+    else return RENDERING_TEXT;
+}
+
+
+void httpGetAdmin(struct mg_connection *conn, User u)
+{
+    // print list of available projects
+    std::list<std::string> pList = getProjectList();
+
+    enum RenderingFormat format = getFormat(conn);
+
     sendHttpHeader200(conn);
 
-    if (format == "text") RText::printProjectList(conn, pList);
+    if (format == RENDERING_TEXT) RText::printProjectList(conn, pList);
     else RText::printProjectList(conn, pList);
 }
 
-void httpPostAdmin(struct mg_connection *conn)
+void httpPostAdmin(struct mg_connection *conn, User u)
 {
 }
 
@@ -252,13 +261,14 @@ void httpPostSignin(struct mg_connection *conn)
 
 }
 
-void httGetUsers(struct mg_connection *conn)
+void httGetUsers(struct mg_connection *conn, User u)
 {
 }
 
-void httPostUsers(struct mg_connection *conn)
+void httPostUsers(struct mg_connection *conn, User u)
 {
 }
+
 std::string getSessionIdFromCookie(struct mg_connection *conn)
 {
     const char *cookie = mg_get_header(conn, "Cookie");
@@ -281,28 +291,29 @@ std::string getSessionIdFromCookie(struct mg_connection *conn)
     return "";
 }
 
-void httpGetRoot(struct mg_connection *conn)
+void handleUnauthorizedAccess(struct mg_connection *conn, const std::string &resource)
 {
-    std::string sessionId = getSessionIdFromCookie(conn);
+    sendHttpHeader403(conn);
+    mg_printf(conn, "Forbidden");
+}
+
+void redirectToSignin(struct mg_connection *conn, const std::string &resource)
+{
+    sendHttpHeader200(conn);
+    RHtml::printSigninPage(conn, Rootdir.c_str(), resource.c_str());
+}
+
+void httpGetRoot(struct mg_connection *conn, User u)
+{
     //std::string req = request2string(conn);
     sendHttpHeader200(conn);
+    // print list of available projects
+    std::list<std::string> pList = getProjectList();
 
-    LOG_DEBUG("session id: %s", sessionId.c_str());
-    std::string username = SessionBase::getLoggedInUser(sessionId);
-    if (username.size()) {
-        // print list of available projects
-        std::list<std::string> pList = getProjectList();
+    enum RenderingFormat format = getFormat(conn);
 
-        const struct mg_request_info *req = mg_get_request_info(conn);
-        std::string q;
-        if (req->query_string) q = req->query_string;
-        std::string format = getFirstParamFromQueryString(q, "format");
-
-        if (format == "text") RText::printProjectList(conn, pList);
-        else RText::printProjectList(conn, pList);
-
-    } else RHtml::printSigninPage(conn, Rootdir.c_str(), "/");
-
+    if (format == RENDERING_TEXT) RText::printProjectList(conn, pList);
+    else RText::printProjectList(conn, pList);
 }
 
 /** @param filter
@@ -327,7 +338,7 @@ std::map<std::string, std::list<std::string> > parseFilter(const std::list<std::
     return result;
 }
 
-void httpGetListOfIssues(struct mg_connection *conn, Project &p)
+void httpGetListOfIssues(struct mg_connection *conn, Project &p, User u)
 {
     // get query string parameters:
     //     colspec    which fields are to be displayed in the table, and their order
@@ -355,11 +366,11 @@ void httpGetListOfIssues(struct mg_connection *conn, Project &p)
         // get default colspec
         cols = p.getDefaultColspec();
     }
-    std::string format = getFirstParamFromQueryString(q, "format");
+    enum RenderingFormat format = getFormat(conn);
 
     sendHttpHeader200(conn);
 
-    if (format == "text") RText::printIssueList(conn, issueList, cols);
+    if (format == RENDERING_TEXT) RText::printIssueList(conn, issueList, cols);
     else {
         ContextParameters ctx = ContextParameters("xxx-username", 0, p);
 
@@ -369,7 +380,7 @@ void httpGetListOfIssues(struct mg_connection *conn, Project &p)
 }
 
 
-void httpGetNewIssueForm(struct mg_connection *conn, const Project &p)
+void httpGetNewIssueForm(struct mg_connection *conn, const Project &p, User u)
 {
 
     sendHttpHeader200(conn);
@@ -380,7 +391,7 @@ void httpGetNewIssueForm(struct mg_connection *conn, const Project &p)
     RHtml::printNewIssuePage(conn, ctx);
 }
 
-void httpGetIssue(struct mg_connection *conn, Project &p, const std::string & issueId)
+void httpGetIssue(struct mg_connection *conn, Project &p, const std::string & issueId, User u)
 {
     LOG_DEBUG("httpGetIssue: project=%s, issue=%s", p.getName().c_str(), issueId.c_str());
 
@@ -395,11 +406,11 @@ void httpGetIssue(struct mg_connection *conn, Project &p, const std::string & is
         // issue not found or other error
         sendHttpHeaderInvalidResource(conn);
     } else {
-        std::string format = getFirstParamFromQueryString(q, "format");
+        enum RenderingFormat format = getFormat(conn);
 
         sendHttpHeader200(conn);
 
-        if (format == "text") RText::printIssue(conn, issue, Entries);
+        if (format == RENDERING_TEXT) RText::printIssue(conn, issue, Entries);
         else {
             ContextParameters ctx = ContextParameters("xxx-username", 0, p);
             RHtml::printIssue(conn, ctx, issue, Entries);
@@ -482,7 +493,7 @@ void parseQueryString(const std::string & queryString, std::map<std::string, std
 /** Handle the posting of an entry
   * If issueId is empty, then a new issue is created.
   */
-void httpPostEntry(struct mg_connection *conn, Project &p, const std::string & issueId)
+void httpPostEntry(struct mg_connection *conn, Project &p, const std::string & issueId, User u)
 {
     const char *contentType = mg_get_header(conn, "Content-Type");
     if (0 == strcmp("application/x-www-form-urlencoded", contentType)) {
@@ -530,7 +541,8 @@ void httpPostEntry(struct mg_connection *conn, Project &p, const std::string & i
 // Resources              Methods    Acces Granted     Description
 //-------------------------------------------------------------------------
 //     /                  GET        user              list of projects
-//v1.0 /signin            GET/POST   all               sign-in page
+//     /public/*          GET        all               public pages, javascript, CSS, logo
+//v1.0 /signin            POST       all               sign-in
 //     /admin             GET/POST   global-admin      management of projects (create, ...)
 //v1.0 /users                        global-admin      management of users for all projects
 //v1.0 /myp/config        GET/POST   project-admin     configuration of the project
@@ -543,29 +555,57 @@ void httpPostEntry(struct mg_connection *conn, Project &p, const std::string & i
 int begin_request_handler(struct mg_connection *conn) {
 
     LOG_DEBUG("begin_request_handler");
+
+    // check acces rights
+    std::string sessionId = getSessionIdFromCookie(conn);
+    LOG_DEBUG("session id: %s", sessionId.c_str());
+    User user = SessionBase::getLoggedInUser(sessionId);
+    // if username is empty, then no access is granted (only public pages will be available)
+
     bool handled = true;
     std::string uri = mg_get_request_info(conn)->uri;
     std::string method = mg_get_request_info(conn)->request_method;
     LOG_DEBUG("uri=%s, method=%s", uri.c_str(), method.c_str());
-    if      ( (uri == "/admin") && (method == "GET") ) httpGetAdmin(conn);
-    else if ( (uri == "/admin") && (method == "POST") ) httpPostAdmin(conn);
-    else if ( (uri == "/signin") && (method == "POST") ) httpPostSignin(conn);
-    else if ( (uri == "/users") && (method == "GET") ) httGetUsers(conn);
-    else if ( (uri == "/users") && (method == "POST") ) httPostUsers(conn);
-    else if ( (uri == "/") && (method == "GET") ) httpGetRoot(conn);
+
+    std::string resource = popToken(uri, '/');
+
+    if      ( (resource == "public") && (method == "GET") ) return 0; // let Mongoose handle static file
+    else if ( (resource == "signin") && (method == "POST") ) httpPostSignin(conn);
+    else if (user.username.size() == 0) {
+        // user not logged in
+        if (getFormat(conn) == RENDERING_HTML) redirectToSignin(conn, resource + "/" + uri);
+        else handleUnauthorizedAccess(conn, resource);
+
+    }
+    else if ( (resource == "admin") && (method == "GET") ) httpGetAdmin(conn, user);
+    else if ( (resource == "admin") && (method == "POST") ) httpPostAdmin(conn, user);
+    else if ( (resource == "users") && (method == "GET") ) httGetUsers(conn, user);
+    else if ( (resource == "users") && (method == "POST") ) httPostUsers(conn, user);
+    else if ( (resource == "") && (method == "GET") ) httpGetRoot(conn, user);
     else {
         // check if it is a valid project resource such as /myp/issues, /myp/users, /myp/config
-        std::string project = popToken(uri, '/');
-        Project *p = Database::Db.getProject(project);
-        LOG_DEBUG("project %s, %p", project.c_str(), p);
-        if (p) {
-            std::string resource = popToken(uri, '/');
-            if      ( (resource == "issues") && (method == "GET") && uri.empty() ) httpGetListOfIssues(conn, *p);
-            else if ( (resource == "issues") && (method == "POST") ) httpPostEntry(conn, *p, uri);
-            else if ( (resource == "issues") && (uri == "new") && (method == "GET") ) httpGetNewIssueForm(conn, *p);
-            else if ( (resource == "issues") && (method == "GET") ) httpGetIssue(conn, *p, uri);
-            else handled = false;
-        } else handled = false;
+        std::string project = resource;
+
+        // check if user has at lest read access
+        enum Role r = user.getRole(project);
+        if (r != ROLE_ADMIN && r != ROLE_RW && r != ROLE_RO) {
+            // no access granted for this user to this project
+            handleUnauthorizedAccess(conn, resource);
+
+        } else {
+
+            Project *p = Database::Db.getProject(project);
+            LOG_DEBUG("project %s, %p", project.c_str(), p);
+            if (p) {
+                resource = popToken(uri, '/');
+                if      ( (resource == "issues") && (method == "GET") && uri.empty() ) httpGetListOfIssues(conn, *p, user);
+                else if ( (resource == "issues") && (method == "POST") ) httpPostEntry(conn, *p, uri, user);
+                else if ( (resource == "issues") && (uri == "new") && (method == "GET") ) httpGetNewIssueForm(conn, *p, user);
+                else if ( (resource == "issues") && (method == "GET") ) httpGetIssue(conn, *p, uri, user);
+                else handled = false;
+
+            } else handled = false; // the resource is not a project
+        }
     }
     if (handled) return 1;
     else return 0; // let Mongoose handle static file
