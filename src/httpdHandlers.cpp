@@ -66,6 +66,11 @@ void sendHttpHeader200(struct mg_connection *conn)
     mg_printf(conn, "HTTP/1.0 200 OK\r\n");
 }
 
+void sendHttpHeader403(struct mg_connection *conn)
+{
+    mg_printf(conn, "HTTP/1.1 403 Forbidden\r\n\r\n");
+}
+
 /**
   * @param otherHeader
   *    Must not include the line-terminating \r\n
@@ -183,18 +188,68 @@ void httpPostSignin(struct mg_connection *conn)
         // application/x-www-form-urlencoded
         // post_data is "var1=val1&var2=val2...".
 
-        const int SIZ = 4096;
-        char postData[SIZ+1];
+        const int SIZ = 1024;
+        char buffer[SIZ+1];
         int n; // number of bytes read
-        n = mg_read(conn, postData, SIZ);
+        n = mg_read(conn, buffer, SIZ);
         if (n == SIZ) {
             LOG_ERROR("Post data for signin too long. Abort request.");
             return;
         }
-        postData[n] = 0;
-        LOG_DEBUG("postData=%s", postData);
-    } //else TODO
-    setCookieAndRedirect(conn, "sessid", "12345", "/"); // TODO
+        buffer[n] = 0;
+        LOG_DEBUG("postData=%s", buffer);
+        std::string postData = buffer;
+
+        // get the username
+        int r = mg_get_var(postData.c_str(), postData.size(),
+                           "username", buffer, SIZ);
+        if (r<=0) {
+            // error: empty, or too long, or not present
+            LOG_DEBUG("Cannot get username. r=%d, postData=%s", r, postData.c_str());
+            return;
+        }
+        std::string username = buffer;
+
+        // get the password
+        r = mg_get_var(postData.c_str(), postData.size(),
+                       "password", buffer, SIZ);
+
+        if (r<0) {
+            // error: empty, or too long, or not present
+            LOG_DEBUG("Cannot get password. r=%d, postData=%s", r, postData.c_str());
+            return;
+        }
+        std::string password = buffer;
+
+
+        // get the redirect page
+        r = mg_get_var(postData.c_str(), postData.size(),
+                       "redirect", buffer, SIZ);
+
+        if (r<0) {
+            // error: empty, or too long, or not present
+            LOG_DEBUG("Cannot get redirect. r=%d, postData=%s", r, postData.c_str());
+            return;
+        }
+        std::string redirect = buffer;
+
+
+        // check credentials
+        std::string sessionId = SessionBase::requestSession(username, password);
+
+        if (sessionId.size() == 0) {
+            LOG_DEBUG("Authentication refused");
+            sendHttpHeader403(conn);
+            return;
+        }
+
+        setCookieAndRedirect(conn, "sessid", sessionId.c_str(), redirect.c_str());
+
+    } else {
+        LOG_ERROR("Unsupported Content-Type in httpPostSignin: %s", contentType);
+        return;
+    }
+
 }
 
 void httGetUsers(struct mg_connection *conn)
@@ -246,7 +301,7 @@ void httpGetRoot(struct mg_connection *conn)
         if (format == "text") RText::printProjectList(conn, pList);
         else RText::printProjectList(conn, pList);
 
-    } else RHtml::printSigninPage(conn, Rootdir.c_str());
+    } else RHtml::printSigninPage(conn, Rootdir.c_str(), "/");
 
 }
 

@@ -54,7 +54,7 @@ void RHtml::printHeader(struct mg_connection *conn, const std::string &projectPa
     }
 }
 
-void RHtml::printSigninPage(struct mg_connection *conn, const char *pathToRepository)
+void RHtml::printSigninPage(struct mg_connection *conn, const char *pathToRepository, const char *redirect)
 {
 
     mg_printf(conn, "Content-Type: text/html\r\n\r\n");
@@ -65,6 +65,8 @@ void RHtml::printSigninPage(struct mg_connection *conn, const char *pathToReposi
     int r = loadFile(path.c_str(), &data);
     if (r >= 0) {
         mg_printf(conn, "%s", data);
+        // add javascript for updating the redirect URL
+        mg_printf(conn, "<script>document.getElementById(\"redirect\").value = \"%s\"</script>", redirect);
         free(data);
     } else {
         LOG_ERROR("Could not load %s", path.c_str());

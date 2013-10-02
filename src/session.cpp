@@ -4,6 +4,7 @@
 
 #include "session.h"
 #include "logging.h"
+#include "identifiers.h"
 
 // static members
 SessionBase SessionBase::SessionDb;
@@ -41,6 +42,22 @@ int UserBase::addUser(User newUser)
 // return session id
 std::string SessionBase::requestSession(const std::string &username, const std::string &passwd)
 {
+    User *u = UserBase::getUser(username);
+    if (!u) return "";
+
+    if (u->hashType == "sha1") {
+        std::string sha1 = getSha1(passwd);
+        if (sha1 != u->hashValue) {
+            LOG_DEBUG("Sha1 do not match %s <> %s", sha1.c_str(), u->hashValue.c_str());
+            return "";
+        }
+
+        // authentication succeeded
+        // create session
+        std::string sessid = SessionDb.createSession(username.c_str());
+        return sessid;
+    }
+
 
 }
 // return user name
@@ -67,7 +84,7 @@ int SessionBase::destroySession(const std::string &sessionId)
     return 0; // TODO
 }
 
-int SessionBase::createSession(const std::string &username)
+std::string SessionBase::createSession(const std::string &username)
 {
     ScopeLocker(locker, LOCK_READ_WRITE);
 
@@ -79,4 +96,5 @@ int SessionBase::createSession(const std::string &username)
     s.username = username;
     s.duration = SESSION_DURATION;
     SessionDb.sessions[s.id] = s;
+    return s.id;
 };

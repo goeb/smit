@@ -123,3 +123,12 @@ std::string convert2base34(const uint8_t *buffer, size_t length, bool skip_io)
     }
     return base34result;
 }
+std::string getSha1(const std::string &data)
+{
+    unsigned char md[SHA_DIGEST_LENGTH];
+    SHA1((uint8_t*)data.c_str(), data.size(), md);
+
+    ustring sha1sum;
+    sha1sum.assign(md, SHA_DIGEST_LENGTH);
+    return bin2hex(sha1sum);
+}

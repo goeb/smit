@@ -52,7 +52,7 @@ public:
 
 private:
     static SessionBase SessionDb;
-    int createSession(const std::string &username);
+    std::string createSession(const std::string &username);
     std::map<std::string, Session> sessions;
     Locker locker;
 

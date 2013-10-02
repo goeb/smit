@@ -38,7 +38,7 @@ public:
 
     static bool inList(const std::list<std::string> &listOfValues, const std::string &value);
     static void printIssueForm(struct mg_connection *conn, const ContextParameters &ctx, const Issue &issue);
-    static void printSigninPage(struct mg_connection *conn, const char *pathToRepository);
+    static void printSigninPage(struct mg_connection *conn, const char *pathToRepository, const char *redirect);
 
 
 };
