@@ -95,6 +95,7 @@ void setCookieAndRedirect(struct mg_connection *conn, const char *name, const ch
 {
     std::ostringstream s;
     s << "Set-Cookie: " << name << "=" << value;
+    s << "; Max-Age=" << SESSION_DURATION;
     sendHttpRedirect(conn, redirectUrl, s.str().c_str());
 }
 
@@ -177,6 +178,22 @@ void httpPostAdmin(struct mg_connection *conn)
 void httpPostSignin(struct mg_connection *conn)
 {
     // TODO check user name and credentials
+    const char *contentType = mg_get_header(conn, "Content-Type");
+    if (0 == strcmp("application/x-www-form-urlencoded", contentType)) {
+        // application/x-www-form-urlencoded
+        // post_data is "var1=val1&var2=val2...".
+
+        const int SIZ = 4096;
+        char postData[SIZ+1];
+        int n; // number of bytes read
+        n = mg_read(conn, postData, SIZ);
+        if (n == SIZ) {
+            LOG_ERROR("Post data for signin too long. Abort request.");
+            return;
+        }
+        postData[n] = 0;
+        LOG_DEBUG("postData=%s", postData);
+    } //else TODO
     setCookieAndRedirect(conn, "sessid", "12345", "/"); // TODO
 }
 

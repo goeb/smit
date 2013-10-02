@@ -155,10 +155,12 @@ table.table_issues tr:nth-child(even) td {
 .td_issues, .tr_issues {
     font-size: small;
 }
-.sm_bold { font-weight: bold; }
+strong { font-weight: bold; }
 .sm_underline { text-decoration: underline; }
-.sm_highlight { background-color: yellow; }
-.sm_quote { color: green; }
+em { background-color: yellow; }
+blockquote {
+    color: green;
+}
 .sm_hyperlink { }
 
 a:link.sm_sort_accumulate { color: #344; }

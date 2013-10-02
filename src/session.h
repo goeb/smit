@@ -6,6 +6,8 @@
 
 #include "mutexTools.h"
 
+#define SESSION_DURATION (60*15) // 15 minutes
+
 
 enum Role {
     ROLE_ADMIN,
@@ -24,12 +26,13 @@ struct User {
 
 class UserBase {
 public:
-    void load(const char *filename);
-    std::string getUser(const std::string &username);
-    int addUser(User u);
+    static void load(const char *filename);
+    static User* getUser(const std::string &username);
+    static int addUser(User u);
 
 private:
-    std::map<std::string, User> configuredUsers;
+    static UserBase UserDb;
+    std::map<std::string, User*> configuredUsers;
     Locker locker;
 };
 

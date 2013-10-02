@@ -348,15 +348,19 @@ std::string convertToRichTextWholeline(const std::string &in, const char *start,
 bool isRichTextBlockSeparator(char c)
 {
     if (isspace(c) || isblank(c)) return true;
-    if (c == '.'  || c == ';' || c == ':' || c == ',') return true;
+    //if (c == '.'  || c == ';' || c == ':' || c == ',') return true;
     return false;
 }
 
 /** Convert text to HTML rich text according to 1 rich text pattern
   *
   * Basic syntax rules:
-  * - a rich text block must start after a separator character of at the beginning of the line
-  * - a rich text block must end before a separator character of at the end of the line
+  * - rich text separators must be surrounded by blanks outside the rich text block, and non blank on the inside.
+  * Examples:
+  *    _underline_ => ok
+  *    aa_underline_ => nope (because a 'a' before the first _
+  *    _ underline_ => nope (because a space after the first _
+  *
   *
   * @param dropBlockSeparators
   *    If true, the begin and end separators a removed from the final HTML
@@ -375,7 +379,9 @@ std::string convertToRichTextInline(const std::string &in, char begin, char end,
 
         if (insideBlock) {
             // look if we are at the end of a block
-            if (c == end && (end == '\n' || i == len-1 || isRichTextBlockSeparator(in[i+1]) ) ) {
+            if (c == end &&
+                    (end == '\n' || i == len-1 || isRichTextBlockSeparator(in[i+1]) ) &&
+                    (i == 0 || !isRichTextBlockSeparator(in[i-1])) ) {
                 // end of block detected
                 size_t L;
                 if (dropBlockSeparators) {
@@ -408,7 +414,9 @@ std::string convertToRichTextInline(const std::string &in, char begin, char end,
                 result += in.substr(block, i-block+1);
                 insideBlock = false;
             }
-        } else if ( (begin == c) && (i==0 || isRichTextBlockSeparator(in[i-1]) ) ) {
+        } else if ( (begin == c) &&
+                    (i==0 || isRichTextBlockSeparator(in[i-1]) ) &&
+                    (i == len-1 || !isRichTextBlockSeparator(in[i+1])) ) {
             // beginning of new block
             insideBlock = true;
             block = i;
@@ -437,11 +445,11 @@ std::string convertToRichTextInline(const std::string &in, char begin, char end,
   */
 std::string convertToRichText(const std::string &raw)
 {
-    std::string result = convertToRichTextInline(raw, '*', '*', true, "span", "sm_bold");
+    std::string result = convertToRichTextInline(raw, '*', '*', true, "strong", "");
     result = convertToRichTextInline(result, '_', '_', true, "span", "sm_underline");
-    result = convertToRichTextInline(result, '/', '/', true, "span", "sm_highlight");
+    result = convertToRichTextInline(result, '/', '/', true, "em", "");
     result = convertToRichTextInline(result, '[', ']', false, "a", "sm_hyperlink");
-    result = convertToRichTextWholeline(result, "&gt;", "span", "sm_quote");
+    result = convertToRichTextWholeline(result, "&gt;", "blockquote", "");
     return result;
 
 }
