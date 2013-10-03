@@ -275,11 +275,19 @@ bool RHtml::inList(const std::list<std::string> &listOfValues, const std::string
 // Replace all " by &quot;
 std::string replaceHtmlEntity(const std::string &in, char c, const char *replaceBy)
 {
-    std::string out = in;
-    size_t pos = 0;
-    while ((pos = out.find(c)) != std::string::npos) {
-        out = out.replace(pos, 1, replaceBy);
+    std::string out;
+	size_t len = in.size();
+    size_t i = 0;
+    size_t savedOffset = 0;
+    while (i < len) {
+		if (in[i] == c) {
+			if (savedOffset < i) out += in.substr(savedOffset, i-savedOffset);
+			out += replaceBy;
+			savedOffset = i+1;
+		}
+		i++;
     }
+	if (savedOffset < i) out += in.substr(savedOffset, i-savedOffset);
     return out;
 }
 
