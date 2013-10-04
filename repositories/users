@@ -2,8 +2,9 @@
 # Notes:
 # In this example, the passwords are the same as the user name.
 # Access rights:
-#     ro = read only
-#     rw = read write
+#     ref   = user has no access but is referenced for selectUser properties
+#     ro    = read only
+#     rw    = read write
 #     admin = rw + allowed to modify the structure of the project
 #
 # Supported hashes for passwords: sha1
@@ -17,8 +18,9 @@ addUser fred \
     project myproject admin \
     project smit admin \
     sha1 31017a722665e4afce586950f42944a6d331dabf \
+    superadmin
 
 addUser Alice \
-    sha1 35318264c9a98faf79965c270ac80c5606774df1
+    sha1 35318264c9a98faf79965c270ac80c5606774df1 \
     project myproject rw
     

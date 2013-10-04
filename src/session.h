@@ -3,6 +3,8 @@
 
 #include <string>
 #include <map>
+#include <list>
+#include <set>
 
 #include "mutexTools.h"
 
@@ -13,6 +15,7 @@ enum Role {
     ROLE_ADMIN,
     ROLE_RW,     // read-write
     ROLE_RO,     // read-only
+    ROLE_REFERENCED, // may be referenced (selectUser)
     ROLE_NONE
 };
 
@@ -22,17 +25,22 @@ struct User {
     std::string hashValue;
     std::map<std::string, enum Role> rolesOnProjects;
     enum Role getRole(const std::string &project);
+    bool superadmin;
+    User();
+
 };
 
 class UserBase {
 public:
-    static void load(const char *filename);
+    static void load(const char *repository);
     static User* getUser(const std::string &username);
     static int addUser(User u);
-
+    static void addUserByProject(std::string project, std::string username);
+    static std::set<std::string> getUsersOfProject(std::string project);
 private:
     static UserBase UserDb;
     std::map<std::string, User*> configuredUsers;
+    std::map<std::string, std::set<std::string> > usersByProject; // for each project, indicate which users are at stake
     Locker locker;
 };
 

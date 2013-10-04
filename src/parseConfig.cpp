@@ -127,6 +127,7 @@ std::list<std::list<std::string> > parseConfig(const char *buf, size_t len)
 int loadFile(const char *filepath, char **data)
 {
     //LOG_DEBUG("Loading file '%s'...", filepath);
+    *data = 0;
     FILE *f = fopen(filepath, "rb");
     if (NULL == f) {
         LOG_DEBUG("Could not open file '%s', %s", filepath, strerror(errno));
@@ -279,3 +280,10 @@ std::string serializeProperty(const std::string &propertyName, const std::list<s
     return s.str();
 }
 
+std::string popListToken(std::list<std::string> &tokens)
+{
+    if (tokens.empty()) return "";
+    std::string token = tokens.front();
+    tokens.pop_front();
+    return token;
+}

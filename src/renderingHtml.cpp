@@ -1,12 +1,14 @@
 #include <stdlib.h>
 #include <sstream>
 #include <string.h>
+#include <set>
 
 #include "renderingHtml.h"
 #include "db.h"
 #include "parseConfig.h"
 #include "logging.h"
 #include "stringTools.h"
+#include "session.h"
 
 
 std::string epochToString(time_t t)
@@ -682,15 +684,11 @@ void RHtml::printIssueForm(struct mg_connection *conn, const ContextParameters &
 
         } else if (fspec.type == F_SELECT_USER) {
             if (propertyValues.size()>0) value = propertyValues.front();
-            std::list<std::string>::iterator u;
             input << "<select class=\"sm_finput_" << fname << "\" name=\"" << fname << "\">";
 
             // TODO
-            std::list<std::string> users;
-            users.push_back("John");
-            users.push_back("Fred");
-            users.push_back("Alice");
-            users.push_back("David G. Smith");
+            std::set<std::string> users = UserBase::getUsersOfProject(ctx.project.getName());
+            std::set<std::string>::iterator u;
             for (u = users.begin(); u != users.end(); u++) {
                 input << "<option" ;
                 if (value == *u) input << " selected=\"selected\"";

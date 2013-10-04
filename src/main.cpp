@@ -59,7 +59,7 @@ int main(int argc, const char **argv)
     const char *repo = argv[1];
     // Load all projects
     dbLoad(repo);
-    UserBase::load("xxx");
+    UserBase::load(repo);
     Rootdir = repo;
     struct mg_context *ctx;
     const char *options[] = {"listening_ports", "8080", "document_root", repo, NULL};

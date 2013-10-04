@@ -374,6 +374,8 @@ int Project::loadConfig(const char *path)
 {
     std::string pathToProjectFile = path;
     pathToProjectFile = pathToProjectFile + '/' + PROJECT_FILE;
+
+    // TODO use loadFile instead
     FILE *f = fopen(pathToProjectFile.c_str(), "r");
     if (NULL == f) {
         LOG_DEBUG("Could not open file %s, %s", pathToProjectFile.c_str(), strerror(errno));

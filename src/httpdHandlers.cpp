@@ -172,20 +172,7 @@ enum RenderingFormat getFormat(struct mg_connection *conn)
 }
 
 
-void httpGetAdmin(struct mg_connection *conn, User u)
-{
-    // print list of available projects
-    std::list<std::string> pList = getProjectList();
-
-    enum RenderingFormat format = getFormat(conn);
-
-    sendHttpHeader200(conn);
-
-    if (format == RENDERING_TEXT) RText::printProjectList(conn, pList);
-    else RText::printProjectList(conn, pList);
-}
-
-void httpPostAdmin(struct mg_connection *conn, User u)
+void httpPostRoot(struct mg_connection *conn, User u)
 {
 }
 
@@ -538,19 +525,17 @@ void httpPostEntry(struct mg_connection *conn, Project &p, const std::string & i
 
 // begin_request_handler is the main entry point of an incoming HTTP request
 //
-// Resources              Methods    Acces Granted     Description
+// Resources          Methods    Acces Granted     Description
 //-------------------------------------------------------------------------
-//     /                  GET        user              list of projects
-//     /public/*          GET        all               public pages, javascript, CSS, logo
-//v1.0 /signin            POST       all               sign-in
-//     /admin             GET/POST   global-admin      management of projects (create, ...)
-//v1.0 /users                        global-admin      management of users for all projects
-//v1.0 /myp/config        GET/POST   project-admin     configuration of the project
-//     /myp/users         GET/POST   project-admin     local configuration of users of the project (names, access rights, etc.)
-//v1.0 /myp/issues        GET/POST   user              issues of the project / add new issue
-//v1.0 /myp/issues/new    GET        user              page with a form for submitting new issue
-//     /myp/issues/XYZ    GET/POST   user              a particular issue: get all entries or add a new entry
-//v1.0 /any/other/file    GET        user              any existing file (relatively to the repository)
+// /                  GET/POST   user              list of projects / management of projects (create, ...)
+// /public/*          GET        all               public pages, javascript, CSS, logo
+// /signin            POST       all               sign-in
+// /users                        superadmin        management of users for all projects
+// /myp/config        GET/POST   project-admin     configuration of the project
+// /myp/issues        GET/POST   user              issues of the project / add new issue
+// /myp/issues/new    GET        user              page with a form for submitting new issue
+// /myp/issues/XYZ    GET/POST   user              a particular issue: get all entries or add a new entry
+// /any/other/file    GET        user              any existing file (relatively to the repository)
 
 int begin_request_handler(struct mg_connection *conn) {
 
@@ -577,11 +562,10 @@ int begin_request_handler(struct mg_connection *conn) {
         else handleUnauthorizedAccess(conn, resource);
 
     }
-    else if ( (resource == "admin") && (method == "GET") ) httpGetAdmin(conn, user);
-    else if ( (resource == "admin") && (method == "POST") ) httpPostAdmin(conn, user);
+    else if ( (resource == "") && (method == "GET") ) httpGetRoot(conn, user);
+    else if ( (resource == "") && (method == "POST") ) httpPostRoot(conn, user);
     else if ( (resource == "users") && (method == "GET") ) httGetUsers(conn, user);
     else if ( (resource == "users") && (method == "POST") ) httPostUsers(conn, user);
-    else if ( (resource == "") && (method == "GET") ) httpGetRoot(conn, user);
     else {
         // check if it is a valid project resource such as /myp/issues, /myp/users, /myp/config
         std::string project = resource;
