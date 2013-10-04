@@ -18,6 +18,8 @@ User::User()
     superadmin = false;
 }
 
+/** Load the users from file storage
+  */
 void UserBase::load(const char *repository)
 {
     std::string file = repository;
@@ -95,6 +97,8 @@ User* UserBase::getUser(const std::string &username)
     else return u->second;
 }
 
+/** Add a new user in database
+  */
 int UserBase::addUser(User newUser)
 {
     ScopeLocker(UserDb.locker, LOCK_READ_WRITE);
@@ -109,15 +113,12 @@ int UserBase::addUser(User newUser)
     r = newUser.rolesOnProjects.begin();
     for (r = newUser.rolesOnProjects.begin(); r != newUser.rolesOnProjects.end(); r++) {
 
-//        std::map<std::string, std::list<std::string> >::iterator p;
-//        p = UserDb.usersByProject.find(project);
-//        if (p == UserBase::usersByProject.end()) {
-//            // initiate the record for this project
-//            UserDb.usersByProject[project] = std::set<std::string>();
-//        }
         UserDb.usersByProject[r->first].insert(newUser.username);
     }
 }
+
+/** Get the list of users that are at stake in the given project
+  */
 std::set<std::string> UserBase::getUsersOfProject(std::string project)
 {
     ScopeLocker(UserDb.locker, LOCK_READ_ONLY);
@@ -128,6 +129,9 @@ std::set<std::string> UserBase::getUsersOfProject(std::string project)
     else return users->second;
 }
 
+
+/** Get the role of the user for the given project
+  */
 enum Role User::getRole(const std::string &project)
 {
     std::map<std::string, enum Role>::iterator r = rolesOnProjects.find(project);
@@ -136,27 +140,27 @@ enum Role User::getRole(const std::string &project)
 }
 
 
-// return session id
+/** Check user credentials and initiate a session
+  *
+  */
 std::string SessionBase::requestSession(const std::string &username, const std::string &passwd)
 {
+    std::string sessid = ""; // empty session id indicates that no session is on
     User *u = UserBase::getUser(username);
-    if (!u) return "";
 
-    if (u->hashType == "sha1") {
+    if (u && u->hashType == "sha1") {
         std::string sha1 = getSha1(passwd);
         if (sha1 != u->hashValue) {
             LOG_DEBUG("Sha1 do not match %s <> %s", sha1.c_str(), u->hashValue.c_str());
-            return "";
+            sessid = "";
         }
 
-        // authentication succeeded
-        // create session
-        std::string sessid = SessionDb.createSession(username.c_str());
-        return sessid;
+        // authentication succeeded, create session
+        sessid = SessionDb.createSession(username.c_str());
     }
-
-
+    return sessid;
 }
+
 /** Return a user object
   *
   * If no valid user if found, then the returned object has an empty username.
