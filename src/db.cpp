@@ -746,7 +746,7 @@ bool Project::searchFullText(const Issue* issue, const char *text) const
   *     - a new issue is created
   *     - its ID is returned within parameter 'issueId'
   */
-int Project::addEntry(std::map<std::string, std::list<std::string> > properties, std::string &issueId)
+int Project::addEntry(std::map<std::string, std::list<std::string> > properties, std::string &issueId, std::string username)
 {
     locker.lockForWriting(); // TODO look for optimization
 
@@ -818,7 +818,7 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
     e->parent = parent;
     e->ctime = time(0);
     //e->id
-    e->author = "Fred"; // TODO
+    e->author = username;
     e->properties = properties;
 
     // serialize the entry

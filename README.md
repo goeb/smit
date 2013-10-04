@@ -102,6 +102,48 @@ Query string
     text PARTIALLY IMPLEMENTED
 
 
+Repository structure
+--------------------
+
+A typical file tree is:
+
+    SMIT_REPO
+    ├── project A
+    │   ├── entries
+    │   │   ├── 4eg
+    │   │   ├── drl6
+    │   │   └── etc. (other entries)
+    │   ├── html
+    │   │   ├── footer.html
+    │   │   └── header.html
+    │   └── project
+    ├── project B
+    ├── etc. (other projects)
+    ├── public
+    │   ├── signin.html
+    │   ├── smit.js
+    │   ├── logo.png
+    │   └── style.css
+    └── users
+
+
+HTML pages are built as follows:
+
+    a header
+    the dynamic contents (list of issues or contents of an issue)
+    a footer
+    some javascript that updates some values in the page
+
+
+Headers:
+
+    <template>_global_header.html
+    <template>_global_footer.html
+    <template>_project_header.html
+    <template>_project_footer.html
+    <template>_style.css
+
+
 
 Technical constraints
 ---------------------

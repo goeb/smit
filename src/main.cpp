@@ -72,6 +72,7 @@ int main(int argc, const char **argv)
     LOG_DEBUG("Starting httpd server on port %s", options[1]);
     ctx = mg_start(&callbacks, NULL, options);
 
+    while (1) sleep(1); // block until ctrl-C
     getchar();  // Wait until user hits "enter"
     mg_stop(ctx);
 

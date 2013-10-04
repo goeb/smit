@@ -83,7 +83,7 @@ public:
                              const char *sortingSpec);
     inline std::list<std::string> getDefaultColspec() { return defaultColspec; }
     int get(const char *issueId, Issue &issue, std::list<Entry*> &Entries);
-    int addEntry(std::map<std::string, std::list<std::string> > properties, std::string &issueId);
+    int addEntry(std::map<std::string, std::list<std::string> > properties, std::string &issueId, std::string username);
     Issue *getIssue(const std::string &id) const;
     Entry *getEntry(const std::string &id) const;
     bool searchFullText(const Issue* issue, const char *text) const;

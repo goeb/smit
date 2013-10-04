@@ -145,6 +145,7 @@ enum Role User::getRole(const std::string &project)
   */
 std::string SessionBase::requestSession(const std::string &username, const std::string &passwd)
 {
+    LOG_DEBUG("Requesting session: username=%s, password=%s", username.c_str(), passwd.c_str());
     std::string sessid = ""; // empty session id indicates that no session is on
     User *u = UserBase::getUser(username);
 
@@ -153,10 +154,12 @@ std::string SessionBase::requestSession(const std::string &username, const std::
         if (sha1 != u->hashValue) {
             LOG_DEBUG("Sha1 do not match %s <> %s", sha1.c_str(), u->hashValue.c_str());
             sessid = "";
-        }
 
-        // authentication succeeded, create session
-        sessid = SessionDb.createSession(username.c_str());
+        } else {
+            // authentication succeeded, create session
+            sessid = SessionDb.createSession(username.c_str());
+            LOG_DEBUG("Session created for '%s': %s", username.c_str(), sessid.c_str());
+        }
     }
     return sessid;
 }

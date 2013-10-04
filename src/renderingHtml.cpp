@@ -476,6 +476,7 @@ void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx,
     mg_printf(conn, "<div class=\"sm_issue\">");
 
     // issue header
+    // -------------------------------------------------
     // print id and title
     mg_printf(conn, "<div class=\"sm_issue_header\">\n");
     mg_printf(conn, "<span class=\"sm_issue_id\">%s</span>\n", issue.id.c_str());
@@ -483,6 +484,7 @@ void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx,
     mg_printf(conn, "</div>\n");
 
     // issue summary
+    // -------------------------------------------------
     // print the fields of the issue in a two-column table
     mg_printf(conn, "<table class=\"sm_fields_summary\">");
     int workingColumn = 1;
@@ -515,17 +517,32 @@ void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx,
     mg_printf(conn, "</table>\n");
 
 
-    // print entries
+    // entries
+    // -------------------------------------------------
     std::list<Entry*>::const_iterator e;
     for (e = entries.begin(); e != entries.end(); e++) {
         Entry ee = *(*e);
         mg_printf(conn, "<div class=\"sm_entry\">\n");
 
         mg_printf(conn, "<div class=\"sm_entry_header\">\n");
-        mg_printf(conn, "Author: <span class=\"sm_entry_author\">%s</span>", htmlEscape(ee.author).c_str());
-        mg_printf(conn, " / <span class=\"sm_entry_ctime\">%s</span>\n", epochToString(ee.ctime).c_str());
-        // conversion date en javascript
+        mg_printf(conn, "<span class=\"sm_entry_author\">%s</span>", htmlEscape(ee.author).c_str());
+        mg_printf(conn, ", <span class=\"sm_entry_ctime\">%s</span>\n", epochToString(ee.ctime).c_str());
+        // conversion of date in javascript
         // document.write(new Date(%d)).toString());
+
+        // delete button
+        time_t delta = time(0) - ee.ctime;
+        std::list<Entry*>::const_iterator lastEntryIt = entries.end();
+        lastEntryIt--;
+        if ( (delta < 10*60) && (ee.author == ctx.username) && (e == lastEntryIt) ) {
+            // entry was created less than 10 minutes ago, and by same user, and is latest in the issue
+            mg_printf(conn, "<span class=\"sm_delete\">\n");
+            mg_printf(conn, "<form method=\"delete\" action=\"/%s/entries/%s\">\n", ctx.project.getName().c_str(), ee.id.c_str());
+            mg_printf(conn, "<input type=\"submit\" value=\"Delete\" title=\"Can be delete at most 5 minutes after being posted\">\n");
+            mg_printf(conn, "</form>\n");
+            mg_printf(conn, "</span>\n");
+        }
+
         mg_printf(conn, "</div>\n"); // end header
 
         mg_printf(conn, "<div class=\"sm_entry_message\">");
@@ -539,7 +556,7 @@ void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx,
 
 
         // print other modified properties
-
+        // -------------------------------------------------
         std::ostringstream otherFields;
         bool firstInList = true;
 
@@ -579,7 +596,8 @@ void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx,
 
     } // end of entries
 
-
+    // print the form
+    // -------------------------------------------------
     printIssueForm(conn, ctx, issue);
     printFooter(conn, ctx.project.getPath().c_str());
 }

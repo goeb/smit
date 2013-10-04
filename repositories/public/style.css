@@ -181,4 +181,11 @@ a.sm_sort_exclusive { }
     font-size: small;
     font-weight: bold;
 }
-
+.sm_delete, .sm_delete form {
+    vertical-align: top;
+    font-size: small;
+    display: inline-block;
+    /*border: 1px solid black;*/
+    margin: 0;
+    padding: 0;
+}

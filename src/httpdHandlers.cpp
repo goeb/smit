@@ -69,6 +69,7 @@ void sendHttpHeader200(struct mg_connection *conn)
 void sendHttpHeader403(struct mg_connection *conn)
 {
     mg_printf(conn, "HTTP/1.1 403 Forbidden\r\n\r\n");
+    mg_printf(conn, "403 Forbidden\r\n");
 }
 
 /**
@@ -180,6 +181,7 @@ void httpPostSignin(struct mg_connection *conn)
 {
     // TODO check user name and credentials
     const char *contentType = mg_get_header(conn, "Content-Type");
+
     if (0 == strcmp("application/x-www-form-urlencoded", contentType)) {
         // application/x-www-form-urlencoded
         // post_data is "var1=val1&var2=val2...".
@@ -228,7 +230,6 @@ void httpPostSignin(struct mg_connection *conn)
             return;
         }
         std::string redirect = buffer;
-
 
         // check credentials
         std::string sessionId = SessionBase::requestSession(username, password);
@@ -399,7 +400,7 @@ void httpGetIssue(struct mg_connection *conn, Project &p, const std::string & is
 
         if (format == RENDERING_TEXT) RText::printIssue(conn, issue, Entries);
         else {
-            ContextParameters ctx = ContextParameters("xxx-username", 0, p);
+            ContextParameters ctx = ContextParameters(u.username, 0, p);
             RHtml::printIssue(conn, ctx, issue, Entries);
         }
 
@@ -482,6 +483,12 @@ void parseQueryString(const std::string & queryString, std::map<std::string, std
   */
 void httpPostEntry(struct mg_connection *conn, Project &p, const std::string & issueId, User u)
 {
+    enum Role r = u.getRole(p.getName());
+    if (r != ROLE_RW && r != ROLE_ADMIN) {
+        sendHttpHeader403(conn);
+        return;
+    }
+
     const char *contentType = mg_get_header(conn, "Content-Type");
     if (0 == strcmp("application/x-www-form-urlencoded", contentType)) {
         // application/x-www-form-urlencoded
@@ -507,7 +514,7 @@ void httpPostEntry(struct mg_connection *conn, Project &p, const std::string & i
 
         std::string id = issueId;
         if (id == "new") id = ""; // TODO check if conflict between "new" and issue ids.
-        int r = p.addEntry(vars, id);
+        int r = p.addEntry(vars, id, u.username);
         if (r != 0) {
             // error
         } else {
@@ -523,19 +530,21 @@ void httpPostEntry(struct mg_connection *conn, Project &p, const std::string & i
 }
 
 
-// begin_request_handler is the main entry point of an incoming HTTP request
-//
-// Resources          Methods    Acces Granted     Description
-//-------------------------------------------------------------------------
-// /                  GET/POST   user              list of projects / management of projects (create, ...)
-// /public/*          GET        all               public pages, javascript, CSS, logo
-// /signin            POST       all               sign-in
-// /users                        superadmin        management of users for all projects
-// /myp/config        GET/POST   project-admin     configuration of the project
-// /myp/issues        GET/POST   user              issues of the project / add new issue
-// /myp/issues/new    GET        user              page with a form for submitting new issue
-// /myp/issues/XYZ    GET/POST   user              a particular issue: get all entries or add a new entry
-// /any/other/file    GET        user              any existing file (relatively to the repository)
+/** begin_request_handler is the main entry point of an incoming HTTP request
+  *
+  * Resources          Methods    Acces Granted     Description
+  * -------------------------------------------------------------------------
+  * /                  GET/POST   user              list of projects / management of projects (create, ...)
+  * /public/*          GET        all               public pages, javascript, CSS, logo
+  * /signin            POST       all               sign-in
+  * /users                        superadmin        management of users for all projects
+  * /myp/config        GET/POST   project-admin     configuration of the project
+  * /myp/issues        GET/POST   user              issues of the project / add new issue
+  * /myp/issues/new    GET        user              page with a form for submitting new issue
+  * /myp/issues/XYZ    GET/POST   user              a particular issue: get all entries or add a new entry
+  * /myp/entries/XYZ   DELETE     user              delete an entry
+  * /any/other/file    GET        user              any existing file (relatively to the repository)
+  */
 
 int begin_request_handler(struct mg_connection *conn) {
 
@@ -546,6 +555,8 @@ int begin_request_handler(struct mg_connection *conn) {
     LOG_DEBUG("session id: %s", sessionId.c_str());
     User user = SessionBase::getLoggedInUser(sessionId);
     // if username is empty, then no access is granted (only public pages will be available)
+
+    LOG_DEBUG("User logged: %s", user.username.c_str());
 
     bool handled = true;
     std::string uri = mg_get_request_info(conn)->uri;
