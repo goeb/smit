@@ -1,0 +1,145 @@
+
+<html>
+    <head>
+        <title>Project configuration</title>
+        <link rel="stylesheet" type="text/css" href="/public/style.css">
+<script>
+
+function addMoreProperties() {
+    // add 3 more properties on page
+    addField('', '', '');
+    addField('', '', '');
+    addField('', '', '');
+}
+function addField(name, type, opts) {
+    properties = document.getElementById('sm_config_properties');
+    n = properties.childNodes.length;
+    // add field n+1
+    n = n + 1;
+    fieldn = document.createElement('div');
+    fieldn.id = 'field' + n;
+
+    // input boxes for this field
+    i = document.createTextNode('#' + n + ' ');
+    fieldn.appendChild(i);
+
+    i = document.createElement('input');
+    i.name = 'field' + n + '_name';
+    i.size = 30;
+    i.value = name;
+    fieldn.appendChild(i);
+
+    i = document.createElement('select');
+    i.name = 'field' + n + '_type';
+    i.className = "updatable";
+    i.onchange = fupdateThis;
+    var options = ['text', 'list', 'multilist', 'user', 'textarea'];
+    for (index=0; index<options.length; index++) {
+        opt = document.createElement('option');
+        opt.innerHTML = options[index];
+        if (type == opt.innerHTML) opt.selected = 1;
+        i.appendChild(opt);
+    }
+    fieldn.appendChild(i);
+    fupdate(i, opts);
+    properties.appendChild(fieldn);
+
+
+}
+function fupdateThis() { fupdate(this); }
+function fupdate(item, value) {
+    //alert(item.value);
+    if (item.value == "text") show_size_input(item.parentNode, value);
+    else if (item.value == "list") show_list_input(item.parentNode, value);
+    else if (item.value == "multilist") show_list_input(item.parentNode, value);
+    else if (item.value == "user") show_user_input(item.parentNode);
+    else if (item.value == "textarea") show_textarea_input(item.parentNode, value);
+}
+function show_size_input(item, value) {
+    // hide extra details
+    x = document.getElementById(item.id + '_opt');
+    if (x) item.removeChild(x);
+
+    x = document.getElementById(item.id + '_help');
+    if (x) item.removeChild(x);
+}
+function show_list_input(item, value) {
+    x = document.getElementById(item.id + '_opt');
+    if (x) item.removeChild(x);
+    i = document.createElement('textarea')
+    i.name = item.id + '_opt';
+    i.id = i.name;
+    i.className = 'tke_fieldconfig';
+    i.rows = 4;
+    i.cols = 20;
+    if (value) i.value = value;
+    item.appendChild(i);
+
+    x = document.getElementById(item.id + '_help');
+    if (x) item.removeChild(x);
+    t = document.createElement('span');
+    t.innerHTML = "(one value on each line)";
+    t.id = item.id + '_help';
+    item.appendChild(t);
+}
+    function show_user_input(item) {
+        x = document.getElementById(item.id + '_opt');
+        if (x) item.removeChild(x);
+        x = document.getElementById(item.id + '_help');
+        if (x) item.removeChild(x);
+        t = document.createElement('span');
+        t.innerHTML = "(a list of valid users will be proposed)";
+        t.id = item.id + '_help';
+        item.appendChild(t);
+    }
+function show_textarea_input(item, value) {
+    x = document.getElementById(item.id + '_opt');
+    if (x) item.removeChild(x);
+    i = document.createElement('input')
+    i.name = item.id + '_opt';
+    i.id = i.name;
+    i.type = 'text';
+    if (value) i.value = value;
+    item.appendChild(i);
+        
+    x = document.getElementById(item.id + '_help');
+    if (x) item.removeChild(x);
+    t = document.createElement('span');
+    t.innerHTML = "(widht, height)";
+    t.id = item.id + '_help';
+    item.appendChild(t);
+}
+function init() {
+    addField('status', 'list', 'open\nclosed\n');
+    addField('priority', 'list', 'high\nmedium\nlow\n');
+    addField('assignee', 'user', '');
+    //replaceContentInContainer();
+}
+function replaceContentInContainer() {
+    matchClass = "updatable";
+    
+    var elems = document.getElementsByTagName('*'), i;
+    for (i in elems) {
+        if((' ' + elems[i].className + ' ').indexOf(' ' + matchClass + ' ')
+                > -1) {
+            fupdate(elems[i]);
+        }
+    }
+}
+</script>
+    </head>
+    <body onload="init();">
+        Create new project:<br>
+        <form method="POST" action="/new">
+            <input type="text" size="30" name="project_name"> <br>
+            <textarea>
+            </textarea>
+            <br>
+            Properties:<br>
+            Reserved properties: id, ctime, mtime, author, title<br>
+            <div id="sm_config_properties"></div>
+            <div onclick="addMoreProperties();" class="clickable">+ Click for more properties...</div>
+            <input type="submit" value="Validate">
+        </form>
+    </body>
+</html>
