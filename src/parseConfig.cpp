@@ -169,6 +169,12 @@ int loadFile(const char *filepath, char **data)
     return n;
 }
 
+/** Write a string to a file
+  *
+  * @return
+  *    0 if success
+  *    <0 if error
+  */
 int writeToFile(const char *filepath, const std::string &data, bool allowOverwrite)
 {
     int result = 0;

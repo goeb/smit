@@ -522,7 +522,7 @@ void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx,
     std::list<Entry*>::const_iterator e;
     for (e = entries.begin(); e != entries.end(); e++) {
         Entry ee = *(*e);
-        mg_printf(conn, "<div class=\"sm_entry\">\n");
+        mg_printf(conn, "<div class=\"sm_entry\" id=\"%s\">\n", ee.id.c_str());
 
         mg_printf(conn, "<div class=\"sm_entry_header\">\n");
         mg_printf(conn, "<span class=\"sm_entry_author\">%s</span>", htmlEscape(ee.author).c_str());
@@ -534,13 +534,12 @@ void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx,
         time_t delta = time(0) - ee.ctime;
         std::list<Entry*>::const_iterator lastEntryIt = entries.end();
         lastEntryIt--;
-        if ( (delta < 10*60) && (ee.author == ctx.username) && (e == lastEntryIt) ) {
+        if ( (delta < DELETE_DELAY_S) && (ee.author == ctx.username) && (e == lastEntryIt) ) {
             // entry was created less than 10 minutes ago, and by same user, and is latest in the issue
-            mg_printf(conn, "<span class=\"sm_delete\">\n");
-            mg_printf(conn, "<form method=\"delete\" action=\"/%s/entries/%s\">\n", ctx.project.getName().c_str(), ee.id.c_str());
-            mg_printf(conn, "<input type=\"submit\" value=\"Delete\" title=\"Can be delete at most 5 minutes after being posted\">\n");
-            mg_printf(conn, "</form>\n");
-            mg_printf(conn, "</span>\n");
+            mg_printf(conn, "<a href=\"#\" class=\"sm_delete\" title=\"Delete this entry (at most %d minutes after posting)\" ", (DELETE_DELAY_S/60));
+            mg_printf(conn, " onclick=\"deleteEntry('/%s/entries', '%s');return false;\">\n", ctx.project.getName().c_str(), ee.id.c_str());
+            mg_printf(conn, "&#10008; delete");
+            mg_printf(conn, "</a>\n");
         }
 
         mg_printf(conn, "</div>\n"); // end header
@@ -636,7 +635,8 @@ void RHtml::printIssueForm(struct mg_connection *conn, const ContextParameters &
     mg_printf(conn, "<tr>\n");
     mg_printf(conn, "<td class=\"sm_flabel sm_flabel_title\">%s: </td>\n", ctx.project.getLabelOfProperty("title").c_str());
     mg_printf(conn, "<td class=\"sm_finput\" colspan=\"3\">");
-    mg_printf(conn, "<input class=\"sm_finput_title\" required=\"required\" type=\"text\" name=\"title\" value=\"%s\">", htmlEscape(issue.getTitle()).c_str());
+    mg_printf(conn, "<input class=\"sm_finput_title\" required=\"required\" type=\"text\" name=\"title\" value=\"%s\" autofocus>",
+              htmlEscape(issue.getTitle()).c_str());
     mg_printf(conn, "</td>\n");
     mg_printf(conn, "</tr>\n");
 

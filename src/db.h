@@ -14,6 +14,8 @@
 #define K_MESSAGE "message" // keyword used for the message. Could be changed to _message ? TODO ?
 #define K_TITLE "title"
 
+#define DELETE_DELAY_S (10*60) // seconds
+
 // Data types
 
 // Entry
@@ -93,8 +95,12 @@ public:
     inline std::string getName() const { return name; }
     inline std::string getPath() const { return path; }
     inline ProjectConfig getConfig() const { return config; }
+    int writeHead(const std::string &issueId, const std::string &entryId);
+    int deleteEntry(std::string entryId, const std::string &username);
 
 private:
+    void consolidateIssue(Issue *i);
+
     ProjectConfig config;
     std::map<std::string, Issue*> issues;
     std::map<std::string, Entry*> entries;

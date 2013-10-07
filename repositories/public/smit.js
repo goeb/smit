@@ -28,4 +28,21 @@ function changeWrapping(){
     else msg.wrap = "hard";
 }
 
+function deleteEntry(urlPrefix, entryId) 
+{
+    var r = confirm("Confirm delete?");
+    if (r==true) {
+        var request = new XMLHttpRequest();
+        request.open('POST', urlPrefix + '/' + entryId + '/delete', false); // synchronous
+        request.send(null);
+        status = request.status;
+        if (status == 200) {
+            // ok
+            // remove entry from current HTML page
+            e = document.getElementById(entryId);
+            e.parentNode.removeChild(e);
+        } else alert('error');
+    }
+}
+
 window.onload = updateFields;

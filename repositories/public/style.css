@@ -189,3 +189,7 @@ a.sm_sort_exclusive { }
     margin: 0;
     padding: 0;
 }
+.sm_delete {
+    cursor: pointer;
+    color: red;
+}

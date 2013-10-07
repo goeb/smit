@@ -282,7 +282,6 @@ std::string getSessionIdFromCookie(struct mg_connection *conn)
 void handleUnauthorizedAccess(struct mg_connection *conn, const std::string &resource)
 {
     sendHttpHeader403(conn);
-    mg_printf(conn, "Forbidden");
 }
 
 void redirectToSignin(struct mg_connection *conn, const std::string &resource)
@@ -406,6 +405,36 @@ void httpGetIssue(struct mg_connection *conn, Project &p, const std::string & is
 
     }
 }
+
+/** Used for deleting an entry
+  * @param details
+  *     should be of the form: XYZ/delete
+  *
+  * @return
+  *     0, let Mongoose handle static file
+  *     1, do not.
+  */
+int httpDeleteEntry(struct mg_connection *conn, Project &p, std::string details, User u)
+{
+    LOG_DEBUG("httpPostEntry: project=%s, details=%s", p.getName().c_str(), details.c_str());
+
+    std::string entryId = popToken(details, '/');
+    if (details != "delete") return 0; // let Mongoose handle static file
+
+    int r = p.deleteEntry(entryId, u.username);
+    if (r < 0) {
+        // failure
+        LOG_INFO("deleteEntry returned %d", r);
+        sendHttpHeader403(conn);
+
+    } else {
+        sendHttpHeader200(conn);
+        mg_printf(conn, "\r\n"); // no contents
+    }
+
+    return 1; // request fully handled
+}
+
 
 void urlDecode(std::string &s)
 {
@@ -532,18 +561,18 @@ void httpPostEntry(struct mg_connection *conn, Project &p, const std::string & i
 
 /** begin_request_handler is the main entry point of an incoming HTTP request
   *
-  * Resources          Methods    Acces Granted     Description
+  * Resources               Methods    Acces Granted     Description
   * -------------------------------------------------------------------------
-  * /                  GET/POST   user              list of projects / management of projects (create, ...)
-  * /public/*          GET        all               public pages, javascript, CSS, logo
-  * /signin            POST       all               sign-in
-  * /users                        superadmin        management of users for all projects
-  * /myp/config        GET/POST   project-admin     configuration of the project
-  * /myp/issues        GET/POST   user              issues of the project / add new issue
-  * /myp/issues/new    GET        user              page with a form for submitting new issue
-  * /myp/issues/XYZ    GET/POST   user              a particular issue: get all entries or add a new entry
-  * /myp/entries/XYZ   DELETE     user              delete an entry
-  * /any/other/file    GET        user              any existing file (relatively to the repository)
+  * /                       GET/POST   user              list of projects / management of projects (create, ...)
+  * /public/*               GET        all               public pages, javascript, CSS, logo
+  * /signin                 POST       all               sign-in
+  * /users                            superadmin        management of users for all projects
+  * /myp/config             GET/POST   project-admin     configuration of the project
+  * /myp/issues             GET/POST   user              issues of the project / add new issue
+  * /myp/issues/new         GET        user              page with a form for submitting new issue
+  * /myp/issues/XYZ         GET/POST   user              a particular issue: get all entries or add a new entry
+  * /myp/entries/XYZ/delete POST       user              delete an entry
+  * /any/other/file         GET        user              any existing file (relatively to the repository)
   */
 
 int begin_request_handler(struct mg_connection *conn) {
@@ -597,6 +626,7 @@ int begin_request_handler(struct mg_connection *conn) {
                 else if ( (resource == "issues") && (method == "POST") ) httpPostEntry(conn, *p, uri, user);
                 else if ( (resource == "issues") && (uri == "new") && (method == "GET") ) httpGetNewIssueForm(conn, *p, user);
                 else if ( (resource == "issues") && (method == "GET") ) httpGetIssue(conn, *p, uri, user);
+                else if ( (resource == "entries") && (method == "POST") ) return httpDeleteEntry(conn, *p, uri, user);
                 else handled = false;
 
             } else handled = false; // the resource is not a project

@@ -24,6 +24,7 @@
 #define K_AUTHOR "author"
 #define K_CTIME "ctime"
 #define K_ID "id"
+#define K_PARENT_NULL "null"
 
 Database Database::Db;
 
@@ -179,6 +180,46 @@ void consolidateIssueWithSingleEntry(Issue *i, Entry *e, bool overwrite) {
     if (i->mtime == 0 || overwrite) i->mtime = e->ctime;
 }
 
+/** Consolidate an issue by accumulating all its entries
+  *
+  * This method must be called from a mutex-protected scope (no mutex is managed in here).
+  */
+void Project::consolidateIssue(Issue *i)
+{
+    if (!i) {
+        LOG_ERROR("Cannot consolidate null issue!");
+        return;
+    }
+
+    if (i->head.empty()) {
+        // repair the head
+        // TODO
+        LOG_ERROR("Missing head for issue '%s'. Repairing TODO...", i->id.c_str());
+        return;
+    }
+    // now that the head is found, walk through all entries
+    // following the _parent properties.
+
+    Entry *e = 0;
+    std::string parent = i->head;
+    // the entries are walked through backwards (from most recent to oldest)
+    do {
+        e = getEntry(parent);
+
+        if (!e) {
+            LOG_ERROR("Broken chain of entries: missing reference %s for issue %s", parent.c_str(), i->id.c_str());
+            break;
+        }
+        // for each property of the parent,
+        // create the same property in the issue, if not already existing
+        // (in order to have only most recent properties)
+
+        consolidateIssueWithSingleEntry(i, e, false); // do not overwrite as we move from most recent to oldest
+
+        parent = e->parent;
+    } while (parent != K_PARENT_NULL);
+}
+
 // 1. Walk through all loaded issues and compute the head
 //    if it was not found earlier during the loadEntries.
 // 2. Once the head is found, walk through all the entries
@@ -189,36 +230,9 @@ void Project::consolidateIssues()
     std::map<std::string, Issue*>::iterator i;
     for (i = issues.begin(); i != issues.end(); i++) {
         Issue *currentIssue = i->second;
-        //LOG_DEBUG("consolidateIssues() issue %s...", (char*)currentIssue->id.c_str());
 
-        if (currentIssue->head.size() == 0) {
-            // repair the head
-            // TODO
-            LOG_INFO("Missing head for issue '%s'. Repairing TODO...", currentIssue->id.c_str());
-        }
-        // now that the head is found, walk through all entries
-        // following the _parent properties.
+        consolidateIssue(currentIssue);
 
-        std::string parentId = currentIssue->head;
-
-        // the entries are walked through backwards (from most recent to oldest)
-        while (0 != parentId.compare("null")) {
-            std::map<std::string, Entry*>::iterator e = entries.find(parentId);
-            if (e == entries.end()) {
-                LOG_ERROR("Broken chain of entries: missing reference '%s'",
-                          parentId.c_str());
-                break; // abort the loop
-            }
-            Entry *currentEntry = e->second;
-            // for each property of the parent,
-            // create the same property in the issue, if not already existing
-            // (in order to have only most recent properties)
-
-            consolidateIssueWithSingleEntry(currentIssue, currentEntry, false); // do not overwrite as we move from most recent to oldest
-
-
-            parentId = currentEntry->parent;
-        }
     }
     LOG_DEBUG("consolidateIssues() done.");
 }
@@ -291,6 +305,8 @@ Issue *Project::getIssue(const std::string &id) const
 
 Entry *Project::getEntry(const std::string &id) const
 {
+    if (id == K_PARENT_NULL) return 0;
+
     std::map<std::string, Entry*>::const_iterator e;
     e = entries.find(id);
     if (e == entries.end()) return 0;
@@ -310,7 +326,7 @@ int Project::get(const char *issueId, Issue &issue, std::list<Entry*> &Entries)
         // build list of entries
         std::string currentEntryId = issue.head; // latest entry
 
-        while (0 != currentEntryId.compare("null")) {
+        while (0 != currentEntryId.compare(K_PARENT_NULL)) {
             std::map<std::string, Entry*>::iterator e = entries.find(currentEntryId);
             if (e == entries.end()) {
                 LOG_ERROR("Broken chain of entries: missing reference '%s'", currentEntryId.c_str());
@@ -748,21 +764,20 @@ bool Project::searchFullText(const Issue* issue, const char *text) const
   */
 int Project::addEntry(std::map<std::string, std::list<std::string> > properties, std::string &issueId, std::string username)
 {
-    locker.lockForWriting(); // TODO look for optimization
+    ScopeLocker scopeLocker(locker, LOCK_READ_WRITE) ; // TODO look for optimization
 
     Issue *i = 0;
     if (issueId.size()>0) {
         i = getIssue(issueId);
         if (!i) {
             LOG_INFO("Cannot add new entry to unknown issue: %s", issueId.c_str());
-            locker.unlockForWriting();
             return -1;
         }
 
         // simplify the entry by removing properties that have the same value
         // in the issue (only the modified fiels are stored)
-        // TODO
-        // check if all properties are in the project config
+        //
+        // check that all properties are in the project config
         // and that they bring a modification of the issue
         // else, remove them
         std::map<std::string, std::list<std::string> >::iterator entryProperty;
@@ -804,14 +819,13 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
         }
         if (properties.size() == 0) {
             LOG_INFO("addEntry: no change. return without adding entry.");
-            locker.unlockForWriting();
             return 0; // no change
         }
     }
 
     std::string parent;
     if (i) parent = i->head;
-    else parent = "null";
+    else parent = K_PARENT_NULL;
 
     // create Entry object with properties
     Entry *e = new Entry;
@@ -844,17 +858,15 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
         if (len > id.size()) {
             // another issue with same id exists. Cannot proceed.
             LOG_ERROR("Cannot store issue '%s': another exists with same id", id.c_str());
-            locker.unlockForWriting();
             return -1;
         }
 
         id = id.substr(0, len); // shorten the issue here
         pathOfNewEntry = path + '/' + ENTRIES + '/' + id;
-        // TODO
+
         int r = mkdir(pathOfNewEntry.c_str(), S_IRUSR | S_IXUSR | S_IWUSR);
         if (r != 0) {
             LOG_ERROR("Could not create dir '%s': %s", pathOfNewEntry.c_str(), strerror(errno));
-            locker.unlockForWriting();
 
             return -1;
         }
@@ -873,13 +885,14 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
     pathOfNewEntry += id;
     int r = writeToFile(pathOfNewEntry.c_str(), data, false); // do not allow overwrite
     if (r != 0) {
-        // error. TODO
-        locker.unlockForWriting();
+        // error.
+        LOG_ERROR("Could not write new entry to disk");
 
         return r;
     }
 
     // add this entry in Project::entries
+    e->id = id;
     entries[id] = e;
 
     // consolidate the issue
@@ -888,24 +901,75 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
     i->head = id;
 
     // update _HEAD
+    r = writeHead(issueId, id);
+
+    return r;
+}
+
+int Project::writeHead(const std::string &issueId, const std::string &entryId)
+{
     std::string pathToHead = path + '/' + ENTRIES + '/' + issueId + '/' + HEAD;
-    r = writeToFile(pathToHead.c_str(), id, true); // allow overwrite for _HEAD
-
-    locker.unlockForWriting();
-
+    int r = writeToFile(pathToHead.c_str(), entryId, true); // allow overwrite for _HEAD
+    if (r<0) {
+        LOG_ERROR("Cannot write HEAD (%s/%s)", issueId.c_str(), entryId.c_str());
+    }
     return r;
 }
 
 
 
+/** Deleting an entry is only possible if:
+  *     - the deleting happens less than DELETE_DELAY_S seconds after creation of the entry
+  *     - this entry is the HEAD (has no child)
+  *     - this entry is not the first of the issue
+  *     - the author of the entry is the same as the given username
+  * @return
+  *     0 if success
+  *     <0 in case of error
+  *
+  */
 
-// Deleting an entry is only possible if:
-//     - this entry is the HEAD (has no child)
-//     - the deleting happens less than 5 minutes after creation of the entry
-// @return TODO
-int deleteEntry(std::string entry)
+int Project::deleteEntry(std::string entryId, const std::string &username)
 {
+    ScopeLocker(locker, LOCK_READ_WRITE);
 
+    Issue *i = 0;
+    std::map<std::string, Entry*>::iterator ite;
+    ite = entries.find(entryId);
+    if (ite == entries.end()) return -1;
+
+    Entry *e = ite->second;
+
+    if (time(0) - e->ctime > DELETE_DELAY_S) return -2;
+    else if (e->parent == K_PARENT_NULL) return -3;
+    else if (e->author != username) return -4;
+
+    else {
+
+        // find the issue related to this entry
+        Entry *e2 = e;
+        while (e2 && e2->parent != K_PARENT_NULL) e2 = getEntry(e2->parent);
+
+        if (!e2) return -5; // could not find parent issue
+
+        i = getIssue(e2->id);
+        if (!i) return -6;
+
+        if (i->head != e->id) return -7;
+    }
+    // ok, we can delete this entry
+
+    // modify pointers
+    i->head = e->parent;
+    consolidateIssue(i);
+    // write to disk
+    int r = writeHead(i->id, e->parent);
+
+   // removre from internal tables
+    entries.erase(ite);
+    delete e;
+
+    return r;
 }
 
 std::string Entry::getMessage()
