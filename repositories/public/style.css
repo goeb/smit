@@ -1,10 +1,11 @@
 
 /* main page styles */
 body {
-  color: black;
-  /*margin: 0;*/
-  font-family: Verdana,sans-serif;
-  font-size: small;
+    color: black;
+    /*margin: 0;*/
+    font-family: Verdana,sans-serif;
+    font-size: small;
+    vertical-align: top;
 }
 a[href], a[href]:link {
   color:blue;
@@ -113,6 +114,9 @@ input {
 }
 input[type=submit] {
     display: block;
+}
+textarea {
+    vertical-align: top;
 }
 textarea.sm_finput_message {
     width: 50em;
