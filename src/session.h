@@ -8,7 +8,7 @@
 
 #include "mutexTools.h"
 
-#define SESSION_DURATION (60*15) // 15 minutes
+#define SESSION_DURATION (60*60) // 60 minutes
 
 
 enum Role {
