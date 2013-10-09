@@ -28,8 +28,8 @@ setPropertyLabel Add-Message "Valider le message"
 
 
 # links in the header of the page
-addListDisplay "Open issues" "filter=status:open&sort=mtime"
-addListDisplay "Deleted issues" "filter=status:deleted"
+addPredefinedView "Open issues" "filter=status:open&sort=mtime"
+addPredefinedView "Deleted issues" "filter=status:deleted"
 
 # when 'colspec' is not given in the url query string
 setDefaultColspec "id+title+mtime+owner"

@@ -433,9 +433,9 @@ int Project::loadConfig(const char *path)
                 LOG_DEBUG("orderedFields: added %s", field.name.c_str());
             }
             // else: parse error, ignore
-        } else if (0 == token.compare("addListDisplay")) {
+        } else if (0 == token.compare("addPredefinedView")) {
             // TODO
-            LOG_ERROR("addListDisplay not implemented");
+            LOG_ERROR("addPredefinedView not implemented");
         } else if (0 == token.compare("setDefaultColspec")) {
             if (line->empty()) {
                 LOG_ERROR("Missing setDefaultColspec in '%s'", path);
