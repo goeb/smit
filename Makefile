@@ -22,7 +22,8 @@ SRCS_CPP = src/db.cpp  \
 		   src/cpio.cpp \
 		   src/stringTools.cpp \
 		   src/mutexTools.cpp \
-		   src/session.cpp
+		   src/session.cpp \
+		   src/dateTools.cpp
 
 
 OBJS = $(SRCS:%.c=$(BUILD_DIR)/%.o) $(SRCS_CPP:%.cpp=$(BUILD_DIR)/%.o)

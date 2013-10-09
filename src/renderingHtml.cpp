@@ -126,12 +126,12 @@ std::string getNewSortingSpec(struct mg_connection *conn, const std::string prop
     std::string result;
 
     const char *SORT_SPEC_HEADER = "sort=";
+    std::string newSortingSpec = "";
 
     while (qs.size() > 0) {
         std::string part = popToken(qs, '&');
         if (0 == strncmp(SORT_SPEC_HEADER, part.c_str(), strlen(SORT_SPEC_HEADER))) {
             // sorting spec, that we want to alter
-            std::string newSortingSpec = "";
             popToken(part, '=');
 
             if (exclusive) {
@@ -189,6 +189,15 @@ std::string getNewSortingSpec(struct mg_connection *conn, const std::string prop
         // append to the result
         if (result == "") result = part;
         else result = result + '&' + part;
+    }
+
+    if (newSortingSpec.empty()) {
+        // no previous sort=...
+        // add one
+        newSortingSpec = "sort=";
+        newSortingSpec += property;
+        if (result == "") result = newSortingSpec;
+        else result = result + '&' + newSortingSpec;
     }
     LOG_DEBUG("getNewSortingSpec: result=%s", result.c_str());
 

@@ -18,7 +18,8 @@ SOURCES += \
     ../../src/cpio.cpp \
     ../../src/stringTools.cpp \
     ../../src/session.cpp \
-    ../../src/mutexTools.cpp
+    ../../src/mutexTools.cpp \
+    ../../src/dateTools.cpp
 
 HEADERS += \
     ../../mongoose/mongoose.h \
@@ -33,5 +34,6 @@ HEADERS += \
     ../../src/cpio.h \
     ../../src/stringTools.h \
     ../../src/session.h \
-    ../../src/mutexTools.h
+    ../../src/mutexTools.h \
+    ../../src/dateTools.h
 
