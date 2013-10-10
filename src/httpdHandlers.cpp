@@ -115,9 +115,36 @@ int sendHttpHeaderInvalidResource(struct mg_connection *conn)
     return 1; // request processed
 }
 
+void urlDecode(std::string &s)
+{
+    // convert key and value
+    const int SIZ = 1024;
+    char localBuf[SIZ+1];
 
-// if uri is "x=y&a=bcd" and param is "a"
-// then return "bcd"
+    // output of URL decoding takes less characters than input
+
+    if (s.size() <= 1024) { // use local buffer
+        int r = mg_url_decode(s.c_str(), s.size(), localBuf, SIZ, 1);
+        if (r == -1) LOG_ERROR("Destination of mg_url_decode is too short: input size=%d, destination size=%d",
+                               s.size(), SIZ);
+        s = localBuf;
+    } else {
+        // allocated dynamically a buffer
+        char *buffer = new char[s.size()];
+        int r = mg_url_decode(s.c_str(), s.size(), buffer, s.size(), 1);
+        if (r == -1) LOG_ERROR("Destination of mg_url_decode is too short (2): destination size=%d", s.size());
+        else s = buffer;
+    }
+}
+
+/** If uri is "x=y&a=bc+d" and param is "a"
+  * then return "bc d".
+  * @param param
+  *     Must be url-encoded.
+  *
+  * @return
+  *     Url-decoded value
+  */
 std::string getFirstParamFromQueryString(const std::string & queryString, const char *param)
 {
     std::string q = queryString;
@@ -126,10 +153,8 @@ std::string getFirstParamFromQueryString(const std::string & queryString, const 
     std::string token;
     while ((token = popToken(q, '&')) != "") {
         if (0 == token.compare(0, paramEqual.size(), paramEqual.c_str())) {
-            popToken(token, '='); // remove the param= part
-            //len = mg_url_decode(p, (size_t)(s - p), dst, dst_len, 1);
-            //int mg_url_decode(const char *src, int src_len, char *dst,
-            //                  int dst_len, int is_form_url_encoded) {
+            popToken(token, '='); // remove the 'param=' part
+			urlDecode(token);
 
             return token;
         }
@@ -139,6 +164,8 @@ std::string getFirstParamFromQueryString(const std::string & queryString, const 
 
 /** if uri is "x=y&a=bcd&a=efg" and param is "a"
   * then return a list [ "bcd", "efg" ]
+  * @return
+  *     Url-decoded values
   */
 std::list<std::string> getParamListFromQueryString(const std::string & queryString, const char *param)
 {
@@ -150,9 +177,7 @@ std::list<std::string> getParamListFromQueryString(const std::string & queryStri
     while ((token = popToken(q, '&')) != "") {
         if (0 == token.compare(0, paramEqual.size(), paramEqual.c_str())) {
             popToken(token, '='); // remove the param= part
-            //len = mg_url_decode(p, (size_t)(s - p), dst, dst_len, 1);
-            //int mg_url_decode(const char *src, int src_len, char *dst,
-            //                  int dst_len, int is_form_url_encoded) {
+			urlDecode(token);
 
             result.push_back(token);
         }
@@ -436,27 +461,6 @@ int httpDeleteEntry(struct mg_connection *conn, Project &p, std::string details,
 }
 
 
-void urlDecode(std::string &s)
-{
-    // convert key and value
-    const int SIZ = 1024;
-    char localBuf[SIZ+1];
-
-    // output of URL decoding takes less characters than input
-
-    if (s.size() <= 1024) { // use local buffer
-        int r = mg_url_decode(s.c_str(), s.size(), localBuf, SIZ, 1);
-        if (r == -1) LOG_ERROR("Destination of mg_url_decode is too short: input size=%d, destination size=%d",
-                               s.size(), SIZ);
-        s = localBuf;
-    } else {
-        // allocated dynamically a buffer
-        char *buffer = new char[s.size()];
-        int r = mg_url_decode(s.c_str(), s.size(), buffer, s.size(), 1);
-        if (r == -1) LOG_ERROR("Destination of mg_url_decode is too short (2): destination size=%d", s.size());
-        else s = buffer;
-    }
-}
 
 
 void parseQueryStringVar(const std::string &var, std::string &key, std::string &value) {
