@@ -1,4 +1,5 @@
 
+#include <sstream>
 #include "stringTools.h"
 
 /** take first token name out of uri
@@ -54,3 +55,17 @@ void trim(std::string &s, char c)
     trimLeft(s, c);
     trimRight(s, c);
 }
+
+/** Concatenate a list of strings to a string
+  */
+std::string toString(const std::list<std::string> &values)
+{
+    std::ostringstream text;
+    std::list<std::string>::const_iterator v;
+    for (v=values.begin(); v!=values.end(); v++) {
+        if (v != values.begin()) text << ", ";
+        text << v->c_str();
+    }
+    return text.str();
+}
+

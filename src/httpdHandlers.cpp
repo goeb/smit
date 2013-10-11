@@ -361,8 +361,10 @@ void httpGetListOfIssues(struct mg_connection *conn, Project &p, User u)
     std::string q;
     if (req->query_string) q = req->query_string;
 
-    std::map<std::string, std::list<std::string> > filterIn = parseFilter(getParamListFromQueryString(q, "filterin"));
-    std::map<std::string, std::list<std::string> > filterOut = parseFilter(getParamListFromQueryString(q, "filterout"));
+    std::list<std::string> filterin = getParamListFromQueryString(q, "filterin");
+    std::list<std::string> filterout = getParamListFromQueryString(q, "filterout");
+    std::map<std::string, std::list<std::string> > filterIn = parseFilter(filterin);
+    std::map<std::string, std::list<std::string> > filterOut = parseFilter(filterout);
     std::string fulltextSearch = getFirstParamFromQueryString(q, "search");
 
     std::string sorting = getFirstParamFromQueryString(q, "sort");
@@ -384,7 +386,11 @@ void httpGetListOfIssues(struct mg_connection *conn, Project &p, User u)
 
     if (format == RENDERING_TEXT) RText::printIssueList(conn, issueList, cols);
     else {
-        ContextParameters ctx = ContextParameters("xxx-username", 0, p);
+        ContextParameters ctx = ContextParameters(u, p);
+        ctx.setNumberOfIssues(issueList.size());
+        ctx.filterin = filterin;
+        ctx.filterout = filterout;
+        ctx.search = fulltextSearch;
 
         RHtml::printIssueList(conn, ctx, issueList, cols);
     }
@@ -397,7 +403,7 @@ void httpGetNewIssueForm(struct mg_connection *conn, const Project &p, User u)
 
     sendHttpHeader200(conn);
 
-    ContextParameters ctx = ContextParameters("xxx-username", 0, p);
+    ContextParameters ctx = ContextParameters(u, p);
 
     // only HTML format is needed
     RHtml::printNewIssuePage(conn, ctx);
@@ -424,7 +430,7 @@ void httpGetIssue(struct mg_connection *conn, Project &p, const std::string & is
 
         if (format == RENDERING_TEXT) RText::printIssue(conn, issue, Entries);
         else {
-            ContextParameters ctx = ContextParameters(u.username, 0, p);
+            ContextParameters ctx = ContextParameters(u, p);
             RHtml::printIssue(conn, ctx, issue, Entries);
         }
 

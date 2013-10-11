@@ -7,6 +7,7 @@
 
 #include "mongoose.h"
 #include "db.h"
+#include "session.h"
 
 
 /** SmitData is used to manage the values in the HTML
@@ -16,11 +17,16 @@
   */
 class ContextParameters {
 public:
-    ContextParameters(std::string username, int numberOfIssues, const Project &p);
+    ContextParameters(User u, const Project &p);
     void printSmitData(struct mg_connection *conn);
+    inline void setNumberOfIssues(int n) { numberOfIssues = n; }
 
     std::string username;
-    int numberOfIssues;
+    enum Role userRole;
+    int numberOfIssues; // TODO check if used
+    std::string search;
+    std::list<std::string> filterin;
+    std::list<std::string> filterout;
     const Project &project;
     std::list<std::pair<std::string, uint8_t> > htmlFieldDisplay;
 

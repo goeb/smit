@@ -53,15 +53,17 @@ $(BUILD_DIR)/%.o: %.c
 $(BUILD_DIR)/%.d: %.c
 	mkdir -p `dirname $@`
 	@set -e; rm -f $@; \
-	$(CC) -M $(CFLAGS) $< > $@.$$$$; \
-	sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $@.$$$$ > $@; \
+	obj=`echo $@ | sed -e "s/\.d$$/.o/"`; \
+	$(CXX) -MM $(CFLAGS) $< > $@.$$$$; \
+	sed "s,.*:,$$obj $@ : ,g" < $@.$$$$ > $@; \
 	rm -f $@.$$$$
 
 $(BUILD_DIR)/%.d: %.cpp
 	mkdir -p `dirname $@`
 	@set -e; rm -f $@; \
-	$(CXX) -M $(CFLAGS) $< > $@.$$$$; \
-	sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $@.$$$$ > $@; \
+	obj=`echo $@ | sed -e "s/\.d$$/.o/"`; \
+	$(CXX) -MM $(CFLAGS) $< > $@.$$$$; \
+	sed "s,.*:,$$obj $@ : ,g" < $@.$$$$ > $@; \
 	rm -f $@.$$$$
 
 smit: $(OBJS)
@@ -76,6 +78,7 @@ embedcpio:
 
 clean:
 	find . -name "*.o" -delete
+	find . -name "*.d" -delete
 	rm smit
 
 .PHONY: test

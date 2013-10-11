@@ -120,7 +120,7 @@ textarea {
 }
 textarea.sm_finput_message {
     width: 50em;
-    height: 120px;
+    height: 180px;
 }
 table.table_issues {
     border-collapse:collapse;
@@ -196,4 +196,13 @@ a.sm_sort_exclusive { }
 .sm_delete {
     cursor: pointer;
     color: red;
+}
+.sm_link_edit_form {
+    margin: 1em 0 1em 0;
+}
+.sm_view_summary {
+    color: #444;
+    background-color: #E0E0E0;
+    padding: 7px;
+    border-radius: 5px 5px 5px 5px;
 }

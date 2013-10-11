@@ -9,7 +9,7 @@
 #include "logging.h"
 #include "stringTools.h"
 #include "session.h"
-
+#include "global.h"
 
 std::string epochToString(time_t t)
 {
@@ -28,10 +28,10 @@ std::string epochToString(time_t t)
 
 
 
-ContextParameters::ContextParameters(std::string u, int n, const Project &p) : project(p)
+ContextParameters::ContextParameters(User u, const Project &p) : project(p)
 {
-    username = u;
-    numberOfIssues = n;
+    username = u.username;
+    userRole = u.getRole(p.getName());
 }
 
 void ContextParameters::printSmitData(struct mg_connection *conn)
@@ -211,14 +211,22 @@ void RHtml::printIssueList(struct mg_connection *conn, const ContextParameters &
     mg_printf(conn, "Content-Type: text/html\r\n\r\n");
     printHeader(conn, ctx.project.getPath());
 
-    // TODO use colspec
-    // TODO sorting
+    // print chose filters and search parameters
+    if (!ctx.search.empty() || !ctx.filterin.empty() || !ctx.filterout.empty()) {
+        mg_printf(conn, "<div class=\"sm_view_summary\">");
+        if (!ctx.search.empty()) mg_printf(conn, "search=%s<br>", ctx.search.c_str());
+        if (!ctx.filterin.empty()) mg_printf(conn, "filterin=%s<br>", toString(ctx.filterin).c_str());
+        if (!ctx.filterout.empty()) mg_printf(conn, "filterout=%s", toString(ctx.filterout).c_str());
+        mg_printf(conn, "</div>");
+    }
+
     mg_printf(conn, "<table class=\"table_issues\">\n");
 
     // print header of the table
     mg_printf(conn, "<tr class=\"tr_issues\">\n");
     std::list<std::string>::iterator colname;
     for (colname = colspec.begin(); colname != colspec.end(); colname++) {
+
         std::string label = ctx.project.getLabelOfProperty(*colname);
         std::string newQueryString = getNewSortingSpec(conn, *colname, true);
         mg_printf(conn, "<th class=\"th_issues\"><a class=\"sm_sort_exclusive\" href=\"?%s\" title=\"Sort ascending\">%s</a>\n",
@@ -525,6 +533,10 @@ void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx,
     }
     mg_printf(conn, "</table>\n");
 
+    // add a link to edit form if role enables it
+    if (ctx.userRole == ROLE_ADMIN || ctx.userRole == ROLE_RW) {
+        mg_printf(conn, "<div class=\"sm_link_edit_form\"><a href=\"#edit_form\">%s</a></div>", _("Add message / Edit properties"));
+    }
 
     // entries
     // -------------------------------------------------
@@ -606,7 +618,10 @@ void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx,
 
     // print the form
     // -------------------------------------------------
-    printIssueForm(conn, ctx, issue);
+    if (ctx.userRole == ROLE_ADMIN || ctx.userRole == ROLE_RW) {
+        printIssueForm(conn, ctx, issue);
+    }
+
     printFooter(conn, ctx.project.getPath().c_str());
 }
 
@@ -633,7 +648,7 @@ void RHtml::printIssueForm(struct mg_connection *conn, const ContextParameters &
     // TODO if access rights granted
 
     // enctype=\"multipart/form-data\"
-    mg_printf(conn, "<form method=\"post\"  class=\"sm_issue_form\">");
+    mg_printf(conn, "<form method=\"post\"  class=\"sm_issue_form\" id=\"edit_form\">");
     // print the fields of the issue in a two-column table
 
     // The form is made over a table with 4 columns.
@@ -644,7 +659,7 @@ void RHtml::printIssueForm(struct mg_connection *conn, const ContextParameters &
     mg_printf(conn, "<tr>\n");
     mg_printf(conn, "<td class=\"sm_flabel sm_flabel_title\">%s: </td>\n", ctx.project.getLabelOfProperty("title").c_str());
     mg_printf(conn, "<td class=\"sm_finput\" colspan=\"3\">");
-    mg_printf(conn, "<input class=\"sm_finput_title\" required=\"required\" type=\"text\" name=\"title\" value=\"%s\" autofocus>",
+    mg_printf(conn, "<input class=\"sm_finput_title\" required=\"required\" type=\"text\" name=\"title\" value=\"%s\">",
               htmlEscape(issue.getTitle()).c_str());
     mg_printf(conn, "</td>\n");
     mg_printf(conn, "</tr>\n");
