@@ -376,9 +376,7 @@ std::string convertToRichTextWholeline(const std::string &in, const char *start,
 
 bool isRichTextBlockSeparator(char c)
 {
-    if (isspace(c) || isblank(c)) return true;
-    //if (c == '.'  || c == ';' || c == ':' || c == ',') return true;
-    return false;
+    return ! isalnum(c);
 }
 
 /** Convert text to HTML rich text according to 1 rich text pattern
