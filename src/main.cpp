@@ -55,14 +55,27 @@ int main(int argc, const char **argv)
         exit(0);
     }
 
-    // argv[1] is the repository directory
-    const char *repo = argv[1];
+    int i = 0;
+    const char *listenPort = "8080";
+    const char *repo = 0;
+    while (i<argc) {
+        const char *arg = argv[i];
+        i++;
+        if (0 == strcmp(arg, "--port")) {
+            if (i<argc) listenPort = argv[i];
+        } else {
+            repo = arg;
+        }
+    }
+
+    if (!repo) usage();
+
     // Load all projects
     dbLoad(repo);
     UserBase::load(repo);
     Rootdir = repo;
     struct mg_context *ctx;
-    const char *options[] = {"listening_ports", "8080", "document_root", repo, NULL};
+    const char *options[] = {"listening_ports", listenPort, "document_root", repo, NULL};
     struct mg_callbacks callbacks;
 
     memset(&callbacks, 0, sizeof(callbacks));
