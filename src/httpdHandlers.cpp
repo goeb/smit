@@ -320,12 +320,15 @@ void httpGetRoot(struct mg_connection *conn, User u)
     //std::string req = request2string(conn);
     sendHttpHeader200(conn);
     // print list of available projects
-    std::list<std::string> pList = getProjectList();
+    std::list<std::pair<std::string, std::string> > pList = u.getProjects();
 
     enum RenderingFormat format = getFormat(conn);
 
     if (format == RENDERING_TEXT) RText::printProjectList(conn, pList);
-    else RText::printProjectList(conn, pList);
+    else {
+        ContextParameters ctx = ContextParameters(u, Database::Db.pathToRepository);
+        RHtml::printProjectList(conn, ctx, pList);
+    }
 }
 
 /** @param filter

@@ -206,3 +206,13 @@ a.sm_sort_exclusive { }
     padding: 7px;
     border-radius: 5px 5px 5px 5px;
 }
+.sm_username {
+    font-weight: bold;
+}
+.sm_project_link {
+
+}
+.sm_issues_count {
+    font-weight: bold;
+    margin-bottom: 1em;
+}

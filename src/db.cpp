@@ -1017,13 +1017,3 @@ Project *Database::getProject(const std::string & projectName)
     else return p->second;
 }
 
-std::list<std::string> getProjectList()
-{
-    std::list<std::string> pList;
-    std::map<std::string, Project*>::iterator p;
-    for (p = Database::Db.projects.begin(); p!=Database::Db.projects.end(); p++) {
-        pList.push_back(p->first);
-    }
-    return pList;
-}
-

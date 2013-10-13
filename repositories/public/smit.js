@@ -15,9 +15,9 @@ function update(classname, value)
 
 function updateFields()
 {
-    var x = document.getElementById("smit_data");
-    if (x) {
-        var data = JSON.parse(document.getElementById("smit_data").innerHTML);
+    var data = document.getElementById("sm_data");
+    if (data) {
+        var data = JSON.parse(data.innerHTML);
         for(var key in data) update(key, data[key]);
     }
 }
