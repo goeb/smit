@@ -1,1 +1,1 @@
-web: ./smit --port 80 repositories
+web: ./smit --port 8000 repositories

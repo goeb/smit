@@ -40,7 +40,7 @@ void RText::printIssueList(struct mg_connection *conn, std::list<struct Issue*> 
         mg_printf(conn, "\n");
     }
 
-    mg_printf(conn, "%d issues\n", issueList.size());
+    mg_printf(conn, "%u issues\n", issueList.size());
 }
 
 void RText::printIssue(struct mg_connection *conn, const Issue &issue, const std::list<Entry*> &Entries)

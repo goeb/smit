@@ -274,7 +274,7 @@ void RHtml::printIssueList(struct mg_connection *conn, const ContextParameters &
         mg_printf(conn, "</tr>\n");
     }
     mg_printf(conn, "</table>\n");
-    mg_printf(conn, "%d issues\n", issueList.size());
+    mg_printf(conn, "%u issues\n", issueList.size());
     printFooter(conn, ctx.project.getName().c_str());
 
 }

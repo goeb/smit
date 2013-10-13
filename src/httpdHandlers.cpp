@@ -125,14 +125,14 @@ void urlDecode(std::string &s)
 
     if (s.size() <= 1024) { // use local buffer
         int r = mg_url_decode(s.c_str(), s.size(), localBuf, SIZ, 1);
-        if (r == -1) LOG_ERROR("Destination of mg_url_decode is too short: input size=%d, destination size=%d",
+        if (r == -1) LOG_ERROR("Destination of mg_url_decode is too short: input size=%u, destination size=%d",
                                s.size(), SIZ);
         s = localBuf;
     } else {
         // allocated dynamically a buffer
         char *buffer = new char[s.size()];
         int r = mg_url_decode(s.c_str(), s.size(), buffer, s.size(), 1);
-        if (r == -1) LOG_ERROR("Destination of mg_url_decode is too short (2): destination size=%d", s.size());
+        if (r == -1) LOG_ERROR("Destination of mg_url_decode is too short (2): destination size=%u", s.size());
         else s = buffer;
     }
 }
