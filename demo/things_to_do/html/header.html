@@ -1,0 +1,29 @@
+<html>
+    <head>
+        <title>Things To Do</title>
+        <link rel="stylesheet" type="text/css" href="/public/style.css">
+        <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/>
+        <script src="/public/smit.js"></script>
+    </head>
+
+    <body>
+        <div style="float: left; margin:1em;">
+        <img src="/public/logo.png" width="120px" alt="Small Issue Tracker Logo">
+        </div>
+        Logged in as: <span class="sm_username">(not logged in)</span>
+        <script id="smit_data" type="application/json">
+            {"smit_user": "Mr. John", "smit_numberOfIssues": 34}
+        </script>
+        <br>
+
+        <a href="/things_to_do/issues/new">Create new issue</a> -
+        <a href="/things_to_do/issues/?sort=mtime&colspec=id+mtime+title+status+in_charge+due_date">All Issues</a> -
+        <a href="/things_to_do/issues/?sort=mtime&colspec=id+mtime+title+status+n_charge+due_date&filterin=status:open">Open Issues</a> -
+
+        <div class="searchbox">
+        <form action="/things_to_do/issues" method="get">
+            <input type="text" name="search">
+            <input type="submit" value="Search">
+        </form>
+        </div>
+        <br>

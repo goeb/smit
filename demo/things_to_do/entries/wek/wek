@@ -1,0 +1,12 @@
+_parent null
+author John Smith
+ctime 1381774250
+due_date "next month"
+in_charge "John Smith"
+message < -----------endofmsg---
+- buy sausages
+- buy coke
+- borrow chairs from Alice
+-----------endofmsg---
+status open
+title "Prepare barbecue with partners"

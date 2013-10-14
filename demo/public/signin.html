@@ -1,0 +1,25 @@
+<html>
+    <head>
+        <title>Smit Signin</title>
+        <link rel="stylesheet" type="text/css" href="/public/style.css">
+        <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/>
+        <script src="/public/smit.js"></script>
+    </head>
+
+    <body>
+        <img src="/public/logo.png" width="120px" alt="Small Issue Tracker Logo">
+        <br>
+        <br>
+        <div class="sm_signin">
+        <div class="sm_signin_title">Sign In</div>
+        <form method="post" action="/signin">
+            <div class="sm_signin_name">Name</div>
+            <input type="text" name="username" autofocus><br>
+            <div class="sm_signin_password">Password</div>
+            <input type="password" name="password"><br>
+            <input type="hidden" name="redirect" id="redirect"><br>
+            <input type="submit" value="Sign-in">
+        </form>
+        </div>
+    </body>
+</html>
