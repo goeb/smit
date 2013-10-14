@@ -652,6 +652,8 @@ void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx,
     }
 
     printFooter(conn, ctx.getProject().getPath().c_str());
+    ctx.printSmitData(conn);
+
 }
 
 
@@ -667,6 +669,7 @@ void RHtml::printNewIssuePage(struct mg_connection *conn, const ContextParameter
     Issue issue;
     printIssueForm(conn, ctx, issue);
     printFooter(conn, ctx.getProject().getPath().c_str());
+    ctx.printSmitData(conn);
 }
 
 

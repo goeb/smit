@@ -216,3 +216,6 @@ a.sm_sort_exclusive { }
     font-weight: bold;
     margin-bottom: 1em;
 }
+#sm_signout {
+    display:inline;
+}

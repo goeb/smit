@@ -57,7 +57,7 @@ public:
     static std::string requestSession(const std::string &username, const std::string &passwd); // return session id
 
     static User getLoggedInUser(const std::string &sessionId); // return user name
-    int destroySession(const std::string &sessionId);
+    static int destroySession(const std::string &sessionId);
 
 private:
     static SessionBase SessionDb;
