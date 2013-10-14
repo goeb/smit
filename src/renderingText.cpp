@@ -3,13 +3,13 @@
 #include "db.h"
 #include "logging.h"
 
-void RText::printProjectList(struct mg_connection *conn, const std::list<std::string> &pList)
+void RText::printProjectList(struct mg_connection *conn, const std::list<std::pair<std::string, std::string> > &pList)
 {
     mg_printf(conn, "Content-Type: text/plain\r\n\r\n");
 
-    std::list<std::string>::const_iterator p;
+    std::list<std::pair<std::string, std::string> >::const_iterator p;
     for (p=pList.begin(); p!=pList.end(); p++) {
-        mg_printf(conn, "%s\n", p->c_str());
+        mg_printf(conn, "%s (%s)\n", p->first.c_str(), p->second.c_str());
 
     }
 }
@@ -40,7 +40,7 @@ void RText::printIssueList(struct mg_connection *conn, std::list<struct Issue*> 
         mg_printf(conn, "\n");
     }
 
-    mg_printf(conn, "%d issues\n", issueList.size());
+    mg_printf(conn, "%u issues\n", issueList.size());
 }
 
 void RText::printIssue(struct mg_connection *conn, const Issue &issue, const std::list<Entry*> &Entries)

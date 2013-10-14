@@ -203,7 +203,7 @@ int writeToFile(const char *filepath, const std::string &data, bool allowOverwri
 }
 
 
-// "aaa+bb+ccc"
+// "aaa bb ccc"
 // @return aaa, bbb, ccc
 std::list<std::string> parseColspec(const char *colspec)
 {
@@ -213,7 +213,7 @@ std::list<std::string> parseColspec(const char *colspec)
     std::string currentToken;
     for (i=0; i<L; i++) {
         char c = colspec[i];
-        if (c == '+') {
+        if (c == ' ' || c == '+') {
             // push previous token if any
             if (currentToken.size() > 0) result.push_back(currentToken);
             currentToken.clear();

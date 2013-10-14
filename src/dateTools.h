@@ -4,5 +4,6 @@
 #include <string>
 
 std::string getLocalTimestamp();
+std::string epochToString(time_t t);
 
 #endif

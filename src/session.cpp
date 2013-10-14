@@ -139,6 +139,20 @@ enum Role User::getRole(const std::string &project)
     else return r->second;
 }
 
+/** Get the projects where the user has access (read or write)
+  */
+std::list<std::pair<std::string, std::string> > User::getProjects()
+{
+    std::list<std::pair<std::string, std::string> > result;
+    std::map<std::string, enum Role>::iterator r;
+    for (r = rolesOnProjects.begin(); r != rolesOnProjects.end(); r++) {
+        if (r->second == ROLE_ADMIN) result.push_back(std::make_pair(r->first, "admin"));
+        else if (r->second == ROLE_RW) result.push_back(std::make_pair(r->first, "rw"));
+        else if (r->second == ROLE_RO) result.push_back(std::make_pair(r->first, "ro"));
+    }
+    return result;
+}
+
 
 /** Check user credentials and initiate a session
   *

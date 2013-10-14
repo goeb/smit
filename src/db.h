@@ -161,7 +161,5 @@ int deleteEntry(std::string entry);
 std::string bin2hex(const ustring & in);
 std::string toString(const std::list<std::string> &values);
 
-std::list<std::string> getProjectList();
-
 
 #endif

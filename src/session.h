@@ -25,6 +25,7 @@ struct User {
     std::string hashValue;
     std::map<std::string, enum Role> rolesOnProjects;
     enum Role getRole(const std::string &project);
+    std::list<std::pair<std::string, std::string> > getProjects();
     bool superadmin;
     User();
 

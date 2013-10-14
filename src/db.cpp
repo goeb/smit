@@ -982,19 +982,6 @@ int Entry::getCtime() const
     return ctime;
 }
 
-/** Concatenate a list of strings to a string
-  */
-std::string toString(const std::list<std::string> &values)
-{
-    std::ostringstream text;
-    std::list<std::string>::const_iterator v;
-    for (v=values.begin(); v!=values.end(); v++) {
-        if (v != values.begin()) text << ", ";
-        text << v->c_str();
-    }
-    return text.str();
-}
-
 
 std::string Entry::getStringifiedProperty(const std::string &propertyName)
 {
@@ -1028,15 +1015,5 @@ Project *Database::getProject(const std::string & projectName)
     std::map<std::string, Project*>::iterator p = Database::Db.projects.find(projectName);
     if (p == Database::Db.projects.end()) return 0;
     else return p->second;
-}
-
-std::list<std::string> getProjectList()
-{
-    std::list<std::string> pList;
-    std::map<std::string, Project*>::iterator p;
-    for (p = Database::Db.projects.begin(); p!=Database::Db.projects.end(); p++) {
-        pList.push_back(p->first);
-    }
-    return pList;
 }
 

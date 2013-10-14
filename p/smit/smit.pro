@@ -35,5 +35,6 @@ HEADERS += \
     ../../src/stringTools.h \
     ../../src/session.h \
     ../../src/mutexTools.h \
-    ../../src/dateTools.h
+    ../../src/dateTools.h \
+    ../../src/global.h
 

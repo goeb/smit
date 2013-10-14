@@ -7,6 +7,7 @@
 
 #include "mongoose.h"
 #include "db.h"
+#include "session.h"
 
 
 /** SmitData is used to manage the values in the HTML
@@ -16,12 +17,20 @@
   */
 class ContextParameters {
 public:
-    ContextParameters(std::string username, int numberOfIssues, const Project &p);
-    void printSmitData(struct mg_connection *conn);
+    ContextParameters(User u, const Project &p);
+    ContextParameters(User u, const std::string &repo);
+    const Project &getProject() const;
+    void printSmitData(struct mg_connection *conn) const;
+    inline void setNumberOfIssues(int n) { numberOfIssues = n; }
 
     std::string username;
-    int numberOfIssues;
-    const Project &project;
+    std::string pathToRepository;
+    enum Role userRole;
+    int numberOfIssues; // TODO check if used
+    std::string search;
+    std::list<std::string> filterin;
+    std::list<std::string> filterout;
+    const Project *project;
     std::list<std::pair<std::string, uint8_t> > htmlFieldDisplay;
 
 };
@@ -30,8 +39,10 @@ class RHtml {
 public:
     static void printHeader(struct mg_connection *conn, const std::string &projectPath);
     static void printFooter(struct mg_connection *conn, const std::string &projectPath);
+    static void printGlobalHeader(struct mg_connection *conn, const std::string &repo);
+    static void printGlobalFooter(struct mg_connection *conn, const std::string &repo);
 
-    static void printProjectList(struct mg_connection *conn, const std::list<std::string> &pList);
+    static void printProjectList(struct mg_connection *conn, const ContextParameters &ctx, const std::list<std::pair<std::string, std::string> > &pList);
     static void printIssueList(struct mg_connection *conn, const ContextParameters &ctx, std::list<Issue*> issueList, std::list<std::string> colspec);
     static void printIssue(struct mg_connection *conn, const ContextParameters &ctx, const Issue &issue, const std::list<Entry*> &entries);
     static void printNewIssuePage(struct mg_connection *conn, const ContextParameters &ctx);

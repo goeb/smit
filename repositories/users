@@ -22,5 +22,5 @@ addUser fred \
 
 addUser Alice \
     sha1 35318264c9a98faf79965c270ac80c5606774df1 \
-    project myproject rw
+    project myproject ro
     

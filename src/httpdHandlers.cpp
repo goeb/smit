@@ -125,14 +125,14 @@ void urlDecode(std::string &s)
 
     if (s.size() <= 1024) { // use local buffer
         int r = mg_url_decode(s.c_str(), s.size(), localBuf, SIZ, 1);
-        if (r == -1) LOG_ERROR("Destination of mg_url_decode is too short: input size=%d, destination size=%d",
+        if (r == -1) LOG_ERROR("Destination of mg_url_decode is too short: input size=%u, destination size=%d",
                                s.size(), SIZ);
         s = localBuf;
     } else {
         // allocated dynamically a buffer
         char *buffer = new char[s.size()];
         int r = mg_url_decode(s.c_str(), s.size(), buffer, s.size(), 1);
-        if (r == -1) LOG_ERROR("Destination of mg_url_decode is too short (2): destination size=%d", s.size());
+        if (r == -1) LOG_ERROR("Destination of mg_url_decode is too short (2): destination size=%u", s.size());
         else s = buffer;
     }
 }
@@ -320,12 +320,15 @@ void httpGetRoot(struct mg_connection *conn, User u)
     //std::string req = request2string(conn);
     sendHttpHeader200(conn);
     // print list of available projects
-    std::list<std::string> pList = getProjectList();
+    std::list<std::pair<std::string, std::string> > pList = u.getProjects();
 
     enum RenderingFormat format = getFormat(conn);
 
     if (format == RENDERING_TEXT) RText::printProjectList(conn, pList);
-    else RText::printProjectList(conn, pList);
+    else {
+        ContextParameters ctx = ContextParameters(u, Database::Db.pathToRepository);
+        RHtml::printProjectList(conn, ctx, pList);
+    }
 }
 
 /** @param filter
@@ -361,8 +364,10 @@ void httpGetListOfIssues(struct mg_connection *conn, Project &p, User u)
     std::string q;
     if (req->query_string) q = req->query_string;
 
-    std::map<std::string, std::list<std::string> > filterIn = parseFilter(getParamListFromQueryString(q, "filterin"));
-    std::map<std::string, std::list<std::string> > filterOut = parseFilter(getParamListFromQueryString(q, "filterout"));
+    std::list<std::string> filterin = getParamListFromQueryString(q, "filterin");
+    std::list<std::string> filterout = getParamListFromQueryString(q, "filterout");
+    std::map<std::string, std::list<std::string> > filterIn = parseFilter(filterin);
+    std::map<std::string, std::list<std::string> > filterOut = parseFilter(filterout);
     std::string fulltextSearch = getFirstParamFromQueryString(q, "search");
 
     std::string sorting = getFirstParamFromQueryString(q, "sort");
@@ -384,7 +389,11 @@ void httpGetListOfIssues(struct mg_connection *conn, Project &p, User u)
 
     if (format == RENDERING_TEXT) RText::printIssueList(conn, issueList, cols);
     else {
-        ContextParameters ctx = ContextParameters("xxx-username", 0, p);
+        ContextParameters ctx = ContextParameters(u, p);
+        ctx.setNumberOfIssues(issueList.size());
+        ctx.filterin = filterin;
+        ctx.filterout = filterout;
+        ctx.search = fulltextSearch;
 
         RHtml::printIssueList(conn, ctx, issueList, cols);
     }
@@ -397,7 +406,7 @@ void httpGetNewIssueForm(struct mg_connection *conn, const Project &p, User u)
 
     sendHttpHeader200(conn);
 
-    ContextParameters ctx = ContextParameters("xxx-username", 0, p);
+    ContextParameters ctx = ContextParameters(u, p);
 
     // only HTML format is needed
     RHtml::printNewIssuePage(conn, ctx);
@@ -424,7 +433,7 @@ void httpGetIssue(struct mg_connection *conn, Project &p, const std::string & is
 
         if (format == RENDERING_TEXT) RText::printIssue(conn, issue, Entries);
         else {
-            ContextParameters ctx = ContextParameters(u.username, 0, p);
+            ContextParameters ctx = ContextParameters(u, p);
             RHtml::printIssue(conn, ctx, issue, Entries);
         }
 
