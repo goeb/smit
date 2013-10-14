@@ -1,1 +1,1 @@
-web: ./smit --port $PORT repositories
+web: ./smit --port $PORT demo
