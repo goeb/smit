@@ -426,27 +426,20 @@ int Project::loadConfig(const char *path)
         std::string token = line->front();
         line->pop_front();
         if (0 == token.compare("addField")) {
-            FieldSpec field = parseFieldSpec(*line);
-            if (field.name.size() > 0) {
-                config.fields[field.name] = field;
-                config.orderedFields.push_back(field.name);
-                LOG_DEBUG("orderedFields: added %s", field.name.c_str());
+            PropertySpec property = parseFieldSpec(*line);
+            if (property.name.size() > 0) {
+                config.properties[property.name] = property;
+                config.orderedProperties.push_back(property.name);
+                LOG_DEBUG("orderedProperties: added %s", property.name.c_str());
             }
             // else: parse error, ignore
         } else if (0 == token.compare("addPredefinedView")) {
-            // TODO
-            LOG_ERROR("addPredefinedView not implemented");
-        } else if (0 == token.compare("setDefaultColspec")) {
-            if (line->empty()) {
-                LOG_ERROR("Missing setDefaultColspec in '%s'", path);
+            if (line->size() != 2) {
+                LOG_ERROR("Invalid 'addPredefinedView': argument count %d", line->size());
                 continue; // ignore this line
             }
-            std::string colspec = line->front();
-            if (colspec.size() > 0) {
-                defaultColspec = parseColspec((char*)colspec.c_str());
-            } else {
-                LOG_ERROR("Empty setDefaultColspec in '%s'", path);
-            }
+            config.predefinedViews.push_back(std::make_pair(line->front(), line->back()));
+
         } else if (0 == token.compare("setPropertyLabel")) {
             if (line->size() != 2) {
                 LOG_ERROR("Invalid setPropertyLabel");
@@ -456,12 +449,6 @@ int Project::loadConfig(const char *path)
             std::string propLabel = line->back();
             config.propertyLabels[propName] = propLabel;
 
-        } else if (0 == token.compare("setDefaultFilter")) {
-            // TODO
-            LOG_ERROR("setDefaultFilter not implemented");
-         } else if (0 == token.compare("setDefaultSorting")) {
-            // TODO
-            LOG_ERROR("setDefaultSorting not implemented");
         } else {
             LOG_ERROR("Unknown function '%s'", token.c_str());
 
@@ -792,8 +779,8 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
                 }
             } else {
                 std::map<std::string, FieldSpec>::iterator f;
-                f = config.fields.find(entryProperty->first);
-                if ( (f == config.fields.end()) && (entryProperty->first != K_TITLE) ) {
+                f = config.properties.find(entryProperty->first);
+                if ( (f == config.properties.end()) && (entryProperty->first != K_TITLE) ) {
                     // erase property because it is not part of the official fields of the project
                     doErase = true;
                 } else {
@@ -916,6 +903,16 @@ int Project::writeHead(const std::string &issueId, const std::string &entryId)
     return r;
 }
 
+std::list<std::string> Project::getDefaultColspec()
+{
+    std::list<std::string> colspec = config.orderedProperties;
+    // add mandatory properties that are not included in orderedProperties
+    colspec.push_front("title");
+    colspec.push_front("mtime");
+    colspec.push_front("ctime");
+    colspec.push_front("id");
+    return colspec;
+}
 
 
 /** Deleting an entry is only possible if:

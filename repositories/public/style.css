@@ -148,8 +148,9 @@ table.table_issues tr:nth-child(even) td {
 */
 
 
-.searchbox {
+.sm_searchbox {
     /*float: right;*/
+    display: inline;
 }
 .sm_entry_pname {
 }
@@ -209,10 +210,15 @@ a.sm_sort_exclusive { }
 .sm_username {
     font-weight: bold;
 }
-.sm_project_link {
+.sm_link_project {
 
 }
 .sm_issues_count {
     font-weight: bold;
     margin-bottom: 1em;
+}
+.sm_link_issues {
+}
+#sm_signout {
+    display: inline;
 }
