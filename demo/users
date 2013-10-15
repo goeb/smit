@@ -1,0 +1,25 @@
+
+# Notes:
+# In this example, the passwords are the same as the user name.
+# Access rights:
+#     ref   = user has no access but is referenced for selectUser properties
+#     ro    = read only
+#     rw    = read write
+#     admin = rw + allowed to modify the structure of the project
+#
+# Supported hashes for passwords: sha1
+#
+
+addUser "John Smith" \
+    project things_to_do rw \
+    sha1 e61a3587b3f7a142b8c7b9263c82f8119398ecb7
+
+addUser homer \
+    project things_to_do admin \
+    sha1 8a30fca9ea5b46722cbdad24c7470a442718cac8 \
+    superadmin
+
+addUser alice \
+    sha1 522b276a356bdf39013dfabea2cd43e141ecc9e8 \
+    project things_to_do ro
+    

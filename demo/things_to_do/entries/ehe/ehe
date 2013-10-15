@@ -1,0 +1,15 @@
+_parent null
+author homer
+ctime 1381779645
+due_date "as soon as possible"
+in_charge "John Smith"
+message < -----------endofmsg---
+As there is no documentation yet, here is a short summary:
+
+use / characters around words for /highlighting/
+use * characters around words for *bold*
+use [] characters around words for hyperlinks [http://example.com]
+use _ for _underline_
+-----------endofmsg---
+status open
+title "documentation on rich text"

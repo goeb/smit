@@ -11,9 +11,9 @@
         <img src="/public/logo.png" width="120px" alt="Small Issue Tracker Logo">
         </div>
         Logged in as: <span class="sm_username">(not logged in)</span>
-        <script id="smit_data" type="application/json">
-            {"smit_user": "Mr. John", "smit_numberOfIssues": 34}
-        </script>
+        <form action="/signout" method="post" id="sm_signout">
+            <a href="javascript:;" onclick="document.getElementById('sm_signout').submit();">Signout</a>
+        </form>
         <br>
 
         <a href="/myproject/issues/new">Create new issue</a> -

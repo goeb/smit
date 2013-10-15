@@ -1,0 +1,13 @@
+_parent null
+author homer
+ctime 1381778471
+due_date "next week"
+in_charge homer
+message < -----------endofmsg---
+The prerequisite for this are:
+- borrow a lawn-mower from the neighbour
+- buy some gazoline
+- have a dry day
+-----------endofmsg---
+status open
+title "Mow the lawn"

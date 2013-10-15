@@ -206,7 +206,17 @@ User SessionBase::getLoggedInUser(const std::string &sessionId)
 
 int SessionBase::destroySession(const std::string &sessionId)
 {
-    return 0; // TODO
+    ScopeLocker(SessionDb.locker, LOCK_READ_WRITE);
+
+    std::map<std::string, Session>::iterator i = SessionDb.sessions.find(sessionId);
+    if (i != SessionDb.sessions.end()) {
+        LOG_DEBUG("Destroying session %s", sessionId.c_str());
+        SessionDb.sessions.erase(i);
+    } else {
+        LOG_DEBUG("Destroying session: no such session '%s'", sessionId.c_str());
+    }
+
+    return 0;
 }
 
 std::string SessionBase::createSession(const std::string &username)

@@ -204,7 +204,6 @@ void httpPostRoot(struct mg_connection *conn, User u)
 
 void httpPostSignin(struct mg_connection *conn)
 {
-    // TODO check user name and credentials
     const char *contentType = mg_get_header(conn, "Content-Type");
 
     if (0 == strcmp("application/x-www-form-urlencoded", contentType)) {
@@ -274,6 +273,20 @@ void httpPostSignin(struct mg_connection *conn)
 
 }
 
+void redirectToSignin(struct mg_connection *conn, const std::string &resource)
+{
+    sendHttpHeader200(conn);
+    RHtml::printSigninPage(conn, Rootdir.c_str(), resource.c_str());
+}
+
+
+void httpPostSignout(struct mg_connection *conn, const std::string &sessionId)
+{
+    int r = SessionBase::destroySession(sessionId);
+    redirectToSignin(conn, "/");
+}
+
+
 void httGetUsers(struct mg_connection *conn, User u)
 {
 }
@@ -307,12 +320,6 @@ std::string getSessionIdFromCookie(struct mg_connection *conn)
 void handleUnauthorizedAccess(struct mg_connection *conn, const std::string &resource)
 {
     sendHttpHeader403(conn);
-}
-
-void redirectToSignin(struct mg_connection *conn, const std::string &resource)
-{
-    sendHttpHeader200(conn);
-    RHtml::printSigninPage(conn, Rootdir.c_str(), resource.c_str());
 }
 
 void httpGetRoot(struct mg_connection *conn, User u)
@@ -609,7 +616,9 @@ int begin_request_handler(struct mg_connection *conn) {
 
     if      ( (resource == "public") && (method == "GET") ) return 0; // let Mongoose handle static file
     else if ( (resource == "signin") && (method == "POST") ) httpPostSignin(conn);
+    else if ( (resource == "signout") && (method == "POST") ) httpPostSignout(conn, sessionId);
     else if (user.username.size() == 0) {
+
         // user not logged in
         if (getFormat(conn) == RENDERING_HTML) redirectToSignin(conn, resource + "/" + uri);
         else handleUnauthorizedAccess(conn, resource);
