@@ -23,8 +23,8 @@ setPropertyLabel Add-Message "Validate"
 
 
 # links in the header of the page
-addPredefinedView "Open issues" "filter=status:open&sort=-mtime"
-addPredefinedView "Deleted issues" "filter=status:deleted"
+addPredefinedView "Open issues" "filterin=status:open&sort=-mtime"
+addPredefinedView "All issues" "sort=-mtime"
 
 # when 'colspec' is not given in the url query string
 setDefaultColspec "id+mtime+title+status+in_charge+due_date"
