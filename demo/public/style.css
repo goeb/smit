@@ -112,9 +112,6 @@ input {
     padding-top: 2em;
     margin-top: 4em;
 }
-input[type=submit] {
-    display: block;
-}
 textarea {
     vertical-align: top;
 }
@@ -125,12 +122,16 @@ textarea.sm_finput_message {
 table.table_issues {
     border-collapse:collapse;
 }
-table.table_issues td {
+.th_issues, .td_issues {
     padding-right: 1em;
     padding-left: 1em;
     padding-bottom: 0.2em;
     padding-top: 0.2em;
     border-right: solid 1px rgb(200, 200, 186);
+    font-size: small;
+}
+.th_issues {
+    border-bottom: solid 1px rgb(200, 200, 186);
 }
 table.table_issues tr {
     vertical-align:text-top;
@@ -148,16 +149,14 @@ table.table_issues tr:nth-child(even) td {
 */
 
 
-.searchbox {
+.sm_searchbox {
     /*float: right;*/
+    display: inline;
 }
 .sm_entry_pname {
 }
 .sm_entry_pvalue {
     font-weight: bold;    
-}
-.td_issues, .tr_issues {
-    font-size: small;
 }
 strong { font-weight: bold; }
 .sm_underline { text-decoration: underline; }
@@ -209,13 +208,24 @@ a.sm_sort_exclusive { }
 .sm_username {
     font-weight: bold;
 }
-.sm_project_link {
+.sm_link_project {
 
 }
 .sm_issues_count {
     font-weight: bold;
     margin-bottom: 1em;
 }
+.sm_link_issues {
+}
 #sm_signout {
-    display:inline;
+    display: inline;
+}
+.sm_predefined_view, .sm_link_new_issue {
+    padding: 3px;
+    margin: 0.5em;
+    /*background-color: #E0E0E0;*/
+    box-shadow: 2px 2px 4px #888888;
+}
+.sm_navigation_project {
+    padding: 1em;
 }

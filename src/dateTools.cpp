@@ -42,3 +42,21 @@ std::string epochToString(time_t t)
     return std::string(datetime);
 }
 
+/** Return the duration since that time
+  * @return "x days", or "x months", or "x hours", etc.
+  */
+std::string epochToStringDelta(time_t t)
+{
+    char datetime[100+1]; // should be enough
+    //strftime(datetime, sizeof(datetime)-1, "%Y-%m-%d %H:%M:%S", tmp);
+    time_t delta = time(0) - t;
+    if (delta < 60) snprintf(datetime, sizeof(datetime)-1, "%ld s", delta);
+    else if (delta < 60*60) snprintf(datetime, sizeof(datetime)-1, "%ld min", delta/60);
+    else if (delta < 60*60*24) snprintf(datetime, sizeof(datetime)-1, "%ld h", delta/60/60);
+    else if (delta < 60*60*24*7) snprintf(datetime, sizeof(datetime)-1, "%ld d", delta/60/60/24);
+    else if (delta < 60*60*24*30) snprintf(datetime, sizeof(datetime)-1, "%ld wk", delta/60/60/24/7);
+    else if (delta < 60*60*24*365) snprintf(datetime, sizeof(datetime)-1, "%ld yr", delta/60/60/24/30);
+    else return epochToString(t);
+
+    return std::string(datetime);
+}

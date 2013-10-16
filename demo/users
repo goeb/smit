@@ -23,3 +23,10 @@ addUser alice \
     sha1 522b276a356bdf39013dfabea2cd43e141ecc9e8 \
     project things_to_do ro
     
+addUser fred \
+    project myproject admin \
+    project smit admin \
+    project things_to_do admin \
+    sha1 31017a722665e4afce586950f42944a6d331dabf \
+    superadmin
+

@@ -156,8 +156,10 @@ std::string htmlEscape(const std::string &value)
   */
 void RHtml::printNavigationBar(struct mg_connection *conn, const ContextParameters &ctx)
 {
+    mg_printf(conn, "<div class=\"sm_navigation_project\">\n");
     if (ctx.userRole == ROLE_ADMIN || ctx.userRole == ROLE_RW) {
-        mg_printf(conn, "<a href=\"/%s/issues/new\">%s</a>", htmlEscape(ctx.project->getName()).c_str(), _("Create new issue"));
+        mg_printf(conn, "<a href=\"/%s/issues/new\" class=\"sm_link_new_issue\">%s</a> ", htmlEscape(ctx.project->getName()).c_str(),
+                  _("Create new issue"));
     }
     std::list<std::pair<std::string, std::string> >::const_iterator v;
     ProjectConfig config = ctx.project->getConfig();
@@ -169,6 +171,7 @@ void RHtml::printNavigationBar(struct mg_connection *conn, const ContextParamete
     mg_printf(conn, "<input class=\"sm_searchbox\" type=\"text\" name=\"search\" autofocus>\n");
     mg_printf(conn, "<input class=\"sm_searchbox\" type=\"submit\" value=\"%s\">", _("Search"));
     mg_printf(conn, "</form>\n");
+    mg_printf(conn, "</div>\n");
 }
 
 void RHtml::printProjectList(struct mg_connection *conn, const ContextParameters &ctx, const std::list<std::pair<std::string, std::string> > &pList)
@@ -297,7 +300,6 @@ void RHtml::printProjectPage(struct mg_connection *conn, const ContextParameters
     mg_printf(conn, "Content-Type: text/html\r\n\r\n");
     printHeader(conn, ctx.getProject().getPath());
     printNavigationBar(conn, ctx);
-    mg_printf(conn, "<div class=\"sm_link_issues\"><a href=\"issues\">%s</a></div>\n", _("Issues"));
     printFooter(conn, ctx.getProject().getName().c_str());
     ctx.printSmitData(conn);
 
@@ -308,6 +310,7 @@ void RHtml::printIssueList(struct mg_connection *conn, const ContextParameters &
 {
     mg_printf(conn, "Content-Type: text/html\r\n\r\n");
     printHeader(conn, ctx.getProject().getPath());
+    printNavigationBar(conn, ctx);
 
     // print chose filters and search parameters
     if (!ctx.search.empty() || !ctx.filterin.empty() || !ctx.filterout.empty()) {
@@ -332,7 +335,7 @@ void RHtml::printIssueList(struct mg_connection *conn, const ContextParameters &
         mg_printf(conn, "<th class=\"th_issues\"><a class=\"sm_sort_exclusive\" href=\"?%s\" title=\"Sort ascending\">%s</a>\n",
                   newQueryString.c_str(), label.c_str());
         newQueryString = getNewSortingSpec(conn, *colname, false);
-        mg_printf(conn, " <a href=\"?%s\" class=\"sm_sort_accumulate\" title=\"Sort and preserve other sorted columns\">&#10228;</a></th>\n", newQueryString.c_str());
+        mg_printf(conn, "\n<br><a href=\"?%s\" class=\"sm_sort_accumulate\" title=\"Sort and preserve other sorted columns\">&#10228;</a></th>\n", newQueryString.c_str());
     }
     mg_printf(conn, "</tr>\n");
 
@@ -347,8 +350,8 @@ void RHtml::printIssueList(struct mg_connection *conn, const ContextParameters &
             std::string column = *c;
 
             if (column == "id") text << (*i)->id.c_str();
-            else if (column == "ctime") text << epochToString((*i)->ctime);
-            else if (column == "mtime") text << epochToString((*i)->mtime);
+            else if (column == "ctime") text << epochToStringDelta((*i)->ctime);
+            else if (column == "mtime") text << epochToStringDelta((*i)->mtime);
             else {
                 // look if it is a single property
                 std::map<std::string, std::list<std::string> >::iterator p;
@@ -557,6 +560,7 @@ void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx,
 
     mg_printf(conn, "Content-Type: text/html\r\n\r\n");
     printHeader(conn, ctx.getProject().getPath().c_str());
+    printNavigationBar(conn, ctx);
 
     mg_printf(conn, "<div class=\"sm_issue\">");
 
@@ -702,6 +706,7 @@ void RHtml::printNewIssuePage(struct mg_connection *conn, const ContextParameter
 
     mg_printf(conn, "Content-Type: text/html\r\n\r\n");
     printHeader(conn, ctx.getProject().getPath().c_str());
+    printNavigationBar(conn, ctx);
 
     mg_printf(conn, "<div class=\"sm_issue\">");
 
