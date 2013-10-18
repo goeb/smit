@@ -360,6 +360,16 @@ std::map<std::string, std::list<std::string> > parseFilter(const std::list<std::
     return result;
 }
 
+void httpGetProject(struct mg_connection *conn, Project &p, User u)
+{
+    enum RenderingFormat format = getFormat(conn);
+    sendHttpHeader200(conn);
+    if (format == RENDERING_HTML) {
+        ContextParameters ctx = ContextParameters(u, p);
+        RHtml::printProjectPage(conn, ctx);
+    }
+}
+
 void httpGetListOfIssues(struct mg_connection *conn, Project &p, User u)
 {
     // get query string parameters:
@@ -410,6 +420,11 @@ void httpGetListOfIssues(struct mg_connection *conn, Project &p, User u)
 
 void httpGetNewIssueForm(struct mg_connection *conn, const Project &p, User u)
 {
+    enum Role role = u.getRole(p.getName());
+    if (role != ROLE_RW && role != ROLE_ADMIN) {
+        sendHttpHeader403(conn);
+        return;
+    }
 
     sendHttpHeader200(conn);
 
@@ -461,6 +476,12 @@ int httpDeleteEntry(struct mg_connection *conn, Project &p, std::string details,
 
     std::string entryId = popToken(details, '/');
     if (details != "delete") return 0; // let Mongoose handle static file
+
+    enum Role role = u.getRole(p.getName());
+    if (role != ROLE_RW && role != ROLE_ADMIN) {
+        sendHttpHeader403(conn);
+        return 1; // request fully handled
+    }
 
     int r = p.deleteEntry(entryId, u.username);
     if (r < 0) {
@@ -644,7 +665,8 @@ int begin_request_handler(struct mg_connection *conn) {
             LOG_DEBUG("project %s, %p", project.c_str(), p);
             if (p) {
                 resource = popToken(uri, '/');
-                if      ( (resource == "issues") && (method == "GET") && uri.empty() ) httpGetListOfIssues(conn, *p, user);
+                if      ( resource.empty()       && (method == "GET") ) httpGetProject(conn, *p, user);
+                else if ( (resource == "issues") && (method == "GET") && uri.empty() ) httpGetListOfIssues(conn, *p, user);
                 else if ( (resource == "issues") && (method == "POST") ) httpPostEntry(conn, *p, uri, user);
                 else if ( (resource == "issues") && (uri == "new") && (method == "GET") ) httpGetNewIssueForm(conn, *p, user);
                 else if ( (resource == "issues") && (method == "GET") ) httpGetIssue(conn, *p, uri, user);

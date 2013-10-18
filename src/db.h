@@ -54,19 +54,18 @@ struct Issue {
 
 };
 
-enum FieldType { F_TEXT, F_SELECT, F_MULTISELECT, F_SELECT_USER};
-typedef struct FieldSpec {
+enum PropertyType { F_TEXT, F_SELECT, F_MULTISELECT, F_SELECT_USER};
+typedef struct PropertySpec {
     std::string name;
-    enum FieldType type;
+    enum PropertyType type;
     std::list<std::string> selectOptions; // for F_SELECT and F_MULTISELECT only
 } FieldSpec;
 
 // Project config
 struct ProjectConfig {
-    std::map<std::string, FieldSpec> fields;
-    std::list<std::string> orderedFields;
-    std::map<std::string, std::string> customDisplays;
-    std::string defaultDislpay; // one of customDisplays
+    std::map<std::string, PropertySpec> properties;
+    std::list<std::string> orderedProperties;
+    std::list<std::pair<std::string, std::string> > predefinedViews;
     std::map<std::string, std::string> propertyLabels;
 
 };
@@ -83,7 +82,6 @@ public:
                              const std::map<std::string, std::list<std::string> > &filterIn,
                              const std::map<std::string, std::list<std::string> > &filterOut,
                              const char *sortingSpec);
-    inline std::list<std::string> getDefaultColspec() { return defaultColspec; }
     int get(const char *issueId, Issue &issue, std::list<Entry*> &Entries);
     int addEntry(std::map<std::string, std::list<std::string> > properties, std::string &issueId, std::string username);
     Issue *getIssue(const std::string &id) const;
@@ -97,6 +95,7 @@ public:
     inline ProjectConfig getConfig() const { return config; }
     int writeHead(const std::string &issueId, const std::string &entryId);
     int deleteEntry(std::string entryId, const std::string &username);
+    std::list<std::string> getDefaultColspec();
 
 private:
     void consolidateIssue(Issue *i);
@@ -104,7 +103,6 @@ private:
     ProjectConfig config;
     std::map<std::string, Issue*> issues;
     std::map<std::string, Entry*> entries;
-    std::list<std::string> defaultColspec;
     Locker locker;
     std::string name;
     std::string path;
