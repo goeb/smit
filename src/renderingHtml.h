@@ -32,6 +32,7 @@ public:
     std::list<std::string> filterout;
     const Project *project;
     std::list<std::pair<std::string, uint8_t> > htmlFieldDisplay;
+    std::string rootdir; // root directory of the web server
 
 };
 
@@ -44,6 +45,7 @@ public:
     static void printNavigationBar(struct mg_connection *conn, const ContextParameters &ctx, bool autofocus);
 
     static void printProjectList(struct mg_connection *conn, const ContextParameters &ctx, const std::list<std::pair<std::string, std::string> > &pList);
+    static void printProjectConfig(struct mg_connection *conn, const ContextParameters &ctx);
     static void printProjectPage(struct mg_connection *conn, const ContextParameters &ctx);
     static void printIssueList(struct mg_connection *conn, const ContextParameters &ctx, std::list<Issue*> issueList, std::list<std::string> colspec);
     static void printIssue(struct mg_connection *conn, const ContextParameters &ctx, const Issue &issue, const std::list<Entry*> &entries);

@@ -183,8 +183,11 @@ void RHtml::printProjectList(struct mg_connection *conn, const ContextParameters
 
     std::list<std::pair<std::string, std::string> >::const_iterator p;
     for (p=pList.begin(); p!=pList.end(); p++) {
-        mg_printf(conn, "<div class=\"sm_link_project\"><a href=\"/%s/issues/\">%s</a> (%s)</div>\n",
-                  p->first.c_str(), p->first.c_str(), _(p->second.c_str()));
+        std::string pname = htmlEscape(p->first.c_str());
+        mg_printf(conn, "<div class=\"sm_link_project\"><a href=\"/%s/issues/\">%s</a> (%s)",
+                  pname.c_str(), pname.c_str(), _(p->second.c_str()));
+        if (p->second == "admin") mg_printf(conn, " <a href=\"%s/config\">edit</a>", pname.c_str());
+        mg_printf(conn, "</div>\n");
     }
 
     printGlobalFooter(conn, ctx.pathToRepository);
@@ -296,6 +299,23 @@ std::string getNewSortingSpec(struct mg_connection *conn, const std::string prop
     return result;
 }
 
+void RHtml::printProjectConfig(struct mg_connection *conn, const ContextParameters &ctx)
+{
+    mg_printf(conn, "Content-Type: text/html\r\n\r\n");
+
+    std::string path = ctx.rootdir + "/public/project.html";
+    char *data;
+    int r = loadFile(path.c_str(), &data);
+    if (r >= 0) {
+        mg_printf(conn, "%s", data);
+        free(data);
+    } else {
+        LOG_ERROR("Could not load %s", path.c_str());
+    }
+
+    ctx.printSmitData(conn);
+
+}
 
 void RHtml::printProjectPage(struct mg_connection *conn, const ContextParameters &ctx)
 {

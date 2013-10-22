@@ -359,6 +359,19 @@ std::map<std::string, std::list<std::string> > parseFilter(const std::list<std::
 
     return result;
 }
+void httpGetProjectConfig(struct mg_connection *conn, Project &p, User u)
+{
+    if (u.getRole(p.getName()) != ROLE_ADMIN) return sendHttpHeader403(conn);
+
+    enum RenderingFormat format = getFormat(conn);
+    sendHttpHeader200(conn);
+    if (format == RENDERING_HTML) {
+        ContextParameters ctx = ContextParameters(u, p);
+        ctx.rootdir = Rootdir;
+        RHtml::printProjectConfig(conn, ctx);
+    }
+
+}
 
 void httpGetProject(struct mg_connection *conn, Project &p, User u)
 {
@@ -671,6 +684,7 @@ int begin_request_handler(struct mg_connection *conn) {
                 else if ( (resource == "issues") && (uri == "new") && (method == "GET") ) httpGetNewIssueForm(conn, *p, user);
                 else if ( (resource == "issues") && (method == "GET") ) httpGetIssue(conn, *p, uri, user);
                 else if ( (resource == "entries") && (method == "POST") ) return httpDeleteEntry(conn, *p, uri, user);
+                else if ( (resource == "config") && (method == "GET") ) httpGetProjectConfig(conn, *p, user);
                 else handled = false;
 
             } else handled = false; // the resource is not a project

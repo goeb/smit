@@ -10,8 +10,17 @@
 #include "parseConfig.h"
 #include "logging.h"
 
-
-std::list<std::list<std::string> > parseConfig(const char *buf, size_t len)
+/** Parse a text buffer and return a list of lines of tokens
+  *
+  * The syntax is:
+  * text := line *
+  * line := token * [ '\\' '\n' line ] *
+  * token := simple-token | double-quote-token | boundary-token
+  * simple-token := [^ \t\n\r"] *
+  * double-quote-token := '"' [^"] * '"'
+  * boundary-token := '<' boundary '\n' any-text '\n' boundary
+  */
+std::list<std::list<std::string> > parseConfigTokens(const char *buf, size_t len)
 {
     std::list<std::list<std::string> > linesOftokens;
     size_t i = 0;

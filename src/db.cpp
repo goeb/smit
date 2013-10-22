@@ -138,7 +138,7 @@ Entry *loadEntry(std::string dir, const char* basename)
     Entry *e = new Entry;
     e->id = basename;
 
-    std::list<std::list<std::string> > lines = parseConfig(buf, n);
+    std::list<std::list<std::string> > lines = parseConfigTokens(buf, n);
     free(buf);
 
     std::list<std::list<std::string> >::iterator line;
@@ -385,41 +385,9 @@ FieldSpec parseFieldSpec(std::list<std::string> & tokens)
 }
 
 
-// @return 0 if OK, -1 on error
-int Project::loadConfig(const char *path)
+ProjectConfig parseProjectConfig(std::list<std::list<std::string> > lines)
 {
-    std::string pathToProjectFile = path;
-    pathToProjectFile = pathToProjectFile + '/' + PROJECT_FILE;
-
-    // TODO use loadFile instead
-    FILE *f = fopen(pathToProjectFile.c_str(), "r");
-    if (NULL == f) {
-        LOG_DEBUG("Could not open file %s, %s", pathToProjectFile.c_str(), strerror(errno));
-        return -1;
-    }
-    // else continue and parse the file
-
-    int r = fseek(f, 0, SEEK_END); // go to the end of the file
-    if (r != 0) {
-        LOG_ERROR("could not fseek(%s): %s", pathToProjectFile.c_str(), strerror(errno));
-        fclose(f);
-        return -1;
-    }
-    long filesize = ftell(f);
-    if (filesize > 1024*1024) {
-        LOG_ERROR("loadConfig: file %s over-sized (%ld bytes)", path, filesize);
-        fclose(f);
-        return -1;
-    }
-    rewind(f);
-    char *buf = (char *)malloc(filesize);
-    size_t n = fread(buf, 1, filesize, f);
-    if (n != filesize) {
-        LOG_ERROR("fread(%s): short read. feof=%d, ferror=%d", pathToProjectFile.c_str(), feof(f), ferror(f));
-        fclose(f);
-        return -1;
-    }
-    std::list<std::list<std::string> > lines = parseConfig(buf, n);
+    ProjectConfig config;
 
     std::list<std::list<std::string> >::iterator line;
     for (line = lines.begin(); line != lines.end(); line++) {
@@ -454,6 +422,46 @@ int Project::loadConfig(const char *path)
 
         }
     }
+    return config;
+}
+
+// @return 0 if OK, -1 on error
+int Project::loadConfig(const char *path)
+{
+    std::string pathToProjectFile = path;
+    pathToProjectFile = pathToProjectFile + '/' + PROJECT_FILE;
+
+    // TODO use loadFile instead
+    FILE *f = fopen(pathToProjectFile.c_str(), "r");
+    if (NULL == f) {
+        LOG_DEBUG("Could not open file %s, %s", pathToProjectFile.c_str(), strerror(errno));
+        return -1;
+    }
+    // else continue and parse the file
+
+    int r = fseek(f, 0, SEEK_END); // go to the end of the file
+    if (r != 0) {
+        LOG_ERROR("could not fseek(%s): %s", pathToProjectFile.c_str(), strerror(errno));
+        fclose(f);
+        return -1;
+    }
+    long filesize = ftell(f);
+    if (filesize > 1024*1024) {
+        LOG_ERROR("loadConfig: file %s over-sized (%ld bytes)", path, filesize);
+        fclose(f);
+        return -1;
+    }
+    rewind(f);
+    char *buf = (char *)malloc(filesize);
+    size_t n = fread(buf, 1, filesize, f);
+    if (n != filesize) {
+        LOG_ERROR("fread(%s): short read. feof=%d, ferror=%d", pathToProjectFile.c_str(), feof(f), ferror(f));
+        fclose(f);
+        return -1;
+    }
+    std::list<std::list<std::string> > lines = parseConfigTokens(buf, n);
+
+    config = parseProjectConfig(lines);
 
     fclose(f);
     return 0;

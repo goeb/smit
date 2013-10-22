@@ -25,7 +25,7 @@ main()
     char buffer[1000];
     size_t n = fread(buffer, 1, 1000, f);
 
-    std::list<std::list<std::string> > tokens = parseConfig(buffer, n);
+    std::list<std::list<std::string> > tokens = parseConfigTokens(buffer, n);
 
     std::list<std::list<std::string> >::iterator i;
     for (i=tokens.begin(); i!=tokens.end(); i++) {
@@ -71,7 +71,7 @@ main()
     ASSERT(f!=0);
     n = fread(buffer, 1, 1000, f);
 
-    tokens = parseConfig(buffer, n);
+    tokens = parseConfigTokens(buffer, n);
 
     for (i=tokens.begin(); i!=tokens.end(); i++) {
         std::list<std::string> line = *i;
