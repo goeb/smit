@@ -58,7 +58,7 @@
                 i.name = 'property' + n + '_name';
                 i.size = 15;
                 i.value = name;
-                i.pattern = "[a-zA-Z_0-9]"
+                i.pattern = "[a-zA-Z_0-9]+"
                 i.placeholder = "logical_name"
                 i.title = "Allowed characters: letters, digits, underscore"
                 if (type == 'reserved') i.disabled = true;
@@ -175,7 +175,7 @@
         <br>
         <br>
         <h1>Create new project</h1>
-        <form method="POST" action="/new">
+        <form method="POST" action="">
             <div>
                 <table>
                     <tr>

@@ -372,15 +372,35 @@ void httpGetProjectConfig(struct mg_connection *conn, Project &p, User u)
     }
 
 }
-
-void httpGetProject(struct mg_connection *conn, Project &p, User u)
+void httpPostProjectConfig(struct mg_connection *conn, Project &p, User u)
 {
-    enum RenderingFormat format = getFormat(conn);
-    sendHttpHeader200(conn);
-    if (format == RENDERING_HTML) {
-        ContextParameters ctx = ContextParameters(u, p);
-        RHtml::printProjectPage(conn, ctx);
+    enum Role r = u.getRole(p.getName());
+    if (r != ROLE_ADMIN) {
+        sendHttpHeader403(conn);
+        return;
     }
+
+    std::string postData;
+
+    const char *contentType = mg_get_header(conn, "Content-Type");
+
+    if (0 == strcmp("application/x-www-form-urlencoded", contentType)) {
+        // application/x-www-form-urlencoded
+        // post_data is "var1=val1&var2=val2...".
+
+        const int SIZ = 1024;
+        char buffer[SIZ+1];
+        int n; // number of bytes read
+        n = mg_read(conn, buffer, SIZ);
+        if (n == SIZ) {
+            LOG_ERROR("Post data for signin too long. Abort request.");
+            return;
+        }
+        buffer[n] = 0;
+        LOG_DEBUG("postData=%s", buffer);
+        postData = buffer;
+    }
+    mg_printf(conn, "postData=%s", postData.c_str());
 }
 
 void httpGetListOfIssues(struct mg_connection *conn, Project &p, User u)
@@ -428,6 +448,20 @@ void httpGetListOfIssues(struct mg_connection *conn, Project &p, User u)
         RHtml::printIssueList(conn, ctx, issueList, cols);
     }
 
+}
+
+void httpGetProject(struct mg_connection *conn, Project &p, User u)
+{
+    // redirect to list of issues
+    return httpGetListOfIssues(conn, p, u);
+
+    // following code deactivated
+    enum RenderingFormat format = getFormat(conn);
+    sendHttpHeader200(conn);
+    if (format == RENDERING_HTML) {
+        ContextParameters ctx = ContextParameters(u, p);
+        RHtml::printProjectPage(conn, ctx);
+    }
 }
 
 
@@ -685,7 +719,9 @@ int begin_request_handler(struct mg_connection *conn) {
                 else if ( (resource == "issues") && (method == "GET") ) httpGetIssue(conn, *p, uri, user);
                 else if ( (resource == "entries") && (method == "POST") ) return httpDeleteEntry(conn, *p, uri, user);
                 else if ( (resource == "config") && (method == "GET") ) httpGetProjectConfig(conn, *p, user);
+                else if ( (resource == "config") && (method == "POST") ) httpPostProjectConfig(conn, *p, user);
                 else handled = false;
+
 
             } else handled = false; // the resource is not a project
         }

@@ -393,7 +393,7 @@ ProjectConfig parseProjectConfig(std::list<std::list<std::string> > lines)
     for (line = lines.begin(); line != lines.end(); line++) {
         std::string token = line->front();
         line->pop_front();
-        if (0 == token.compare("addField")) {
+        if (0 == token.compare("addProperty")) {
             PropertySpec property = parseFieldSpec(*line);
             if (property.name.size() > 0) {
                 config.properties[property.name] = property;
