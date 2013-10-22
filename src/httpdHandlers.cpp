@@ -243,17 +243,24 @@ void httpPostSignin(struct mg_connection *conn)
         }
         std::string password = buffer;
 
+        std::string redirect;
+        enum RenderingFormat format = getFormat(conn);
+        if (format == RENDERING_TEXT) {
+            // no need to get the redirect location
 
-        // get the redirect page
-        r = mg_get_var(postData.c_str(), postData.size(),
-                       "redirect", buffer, SIZ);
+        } else {
+            // get the redirect page
+            r = mg_get_var(postData.c_str(), postData.size(),
+                           "redirect", buffer, SIZ);
 
-        if (r<0) {
-            // error: empty, or too long, or not present
-            LOG_DEBUG("Cannot get redirect. r=%d, postData=%s", r, postData.c_str());
-            return;
+            if (r<0) {
+                // error: empty, or too long, or not present
+                LOG_DEBUG("Cannot get redirect. r=%d, postData=%s", r, postData.c_str());
+                return;
+            }
+            redirect = buffer;
         }
-        std::string redirect = buffer;
+
 
         // check credentials
         std::string sessionId = SessionBase::requestSession(username, password);

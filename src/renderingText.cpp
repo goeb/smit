@@ -19,28 +19,38 @@ void RText::printIssueList(struct mg_connection *conn, std::list<struct Issue*> 
 {
     mg_printf(conn, "Content-Type: text/plain\r\n\r\n");
 
-    // TODO use colspec
-    // TODO sorting
+    // print names of columns
+    std::list<std::string>::iterator colname;
+    for (colname = colspec.begin(); colname != colspec.end(); colname++) {
+        mg_printf(conn, "%s,\t", colname->c_str());
+   }
+    mg_printf(conn, "\n");
 
+    // list of issues
     std::list<struct Issue*>::iterator i;
     for (i=issueList.begin(); i!=issueList.end(); i++) {
-        mg_printf(conn, "%s, ", (*i)->id.c_str());
-        mg_printf(conn, "%d, ", (*i)->ctime);
-        mg_printf(conn, "%d, ", (*i)->mtime);
 
-        std::map<std::string, std::list<std::string> >::iterator p;
-        for (p=(*i)->properties.begin(); p!=(*i)->properties.end(); p++) {
-            std::list<std::string> values = p->second;
-            std::list<std::string>::iterator v;
-            for (v=values.begin(); v!=values.end(); v++) {
-                mg_printf(conn, "%s+", v->c_str());
+        std::list<std::string>::iterator c;
+        for (c = colspec.begin(); c != colspec.end(); c++) {
+            std::string text;
+            std::string column = *c;
+
+            if (column == "id") text = (*i)->id;
+            else if (column == "ctime") text = epochToString((*i)->ctime);
+            else if (column == "mtime") text = epochToString((*i)->mtime);
+            else {
+                std::map<std::string, std::list<std::string> >::iterator p;
+                std::map<std::string, std::list<std::string> > & properties = (*i)->properties;
+
+                p = properties.find(column);
+                if (p != properties.end()) text = toString(p->second);
             }
-            mg_printf(conn, ", ");
+
+            mg_printf(conn, "%s,\t", text.c_str());
         }
         mg_printf(conn, "\n");
     }
 
-    mg_printf(conn, "%u issues\n", issueList.size());
 }
 
 void RText::printIssue(struct mg_connection *conn, const Issue &issue, const std::list<Entry*> &Entries)

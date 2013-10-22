@@ -334,7 +334,7 @@ void RHtml::printIssueList(struct mg_connection *conn, const ContextParameters &
     printHeader(conn, ctx.getProject().getPath());
     printNavigationBar(conn, ctx, true);
 
-    // print chose filters and search parameters
+    // print chosen filters and search parameters
     if (!ctx.search.empty() || !ctx.filterin.empty() || !ctx.filterout.empty()) {
         mg_printf(conn, "<div class=\"sm_view_summary\">");
         if (!ctx.search.empty()) mg_printf(conn, "search: %s<br>", ctx.search.c_str());
@@ -375,7 +375,6 @@ void RHtml::printIssueList(struct mg_connection *conn, const ContextParameters &
             else if (column == "ctime") text << epochToStringDelta((*i)->ctime);
             else if (column == "mtime") text << epochToStringDelta((*i)->mtime);
             else {
-                // look if it is a single property
                 std::map<std::string, std::list<std::string> >::iterator p;
                 std::map<std::string, std::list<std::string> > & properties = (*i)->properties;
 
