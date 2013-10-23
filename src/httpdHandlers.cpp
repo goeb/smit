@@ -243,17 +243,24 @@ void httpPostSignin(struct mg_connection *conn)
         }
         std::string password = buffer;
 
+        std::string redirect;
+        enum RenderingFormat format = getFormat(conn);
+        if (format == RENDERING_TEXT) {
+            // no need to get the redirect location
 
-        // get the redirect page
-        r = mg_get_var(postData.c_str(), postData.size(),
-                       "redirect", buffer, SIZ);
+        } else {
+            // get the redirect page
+            r = mg_get_var(postData.c_str(), postData.size(),
+                           "redirect", buffer, SIZ);
 
-        if (r<0) {
-            // error: empty, or too long, or not present
-            LOG_DEBUG("Cannot get redirect. r=%d, postData=%s", r, postData.c_str());
-            return;
+            if (r<0) {
+                // error: empty, or too long, or not present
+                LOG_DEBUG("Cannot get redirect. r=%d, postData=%s", r, postData.c_str());
+                return;
+            }
+            redirect = buffer;
         }
-        std::string redirect = buffer;
+
 
         // check credentials
         std::string sessionId = SessionBase::requestSession(username, password);
@@ -359,15 +366,48 @@ std::map<std::string, std::list<std::string> > parseFilter(const std::list<std::
 
     return result;
 }
-
-void httpGetProject(struct mg_connection *conn, Project &p, User u)
+void httpGetProjectConfig(struct mg_connection *conn, Project &p, User u)
 {
+    if (u.getRole(p.getName()) != ROLE_ADMIN) return sendHttpHeader403(conn);
+
     enum RenderingFormat format = getFormat(conn);
     sendHttpHeader200(conn);
     if (format == RENDERING_HTML) {
         ContextParameters ctx = ContextParameters(u, p);
-        RHtml::printProjectPage(conn, ctx);
+        ctx.rootdir = Rootdir;
+        RHtml::printProjectConfig(conn, ctx);
     }
+
+}
+void httpPostProjectConfig(struct mg_connection *conn, Project &p, User u)
+{
+    enum Role r = u.getRole(p.getName());
+    if (r != ROLE_ADMIN) {
+        sendHttpHeader403(conn);
+        return;
+    }
+
+    std::string postData;
+
+    const char *contentType = mg_get_header(conn, "Content-Type");
+
+    if (0 == strcmp("application/x-www-form-urlencoded", contentType)) {
+        // application/x-www-form-urlencoded
+        // post_data is "var1=val1&var2=val2...".
+
+        const int SIZ = 1024;
+        char buffer[SIZ+1];
+        int n; // number of bytes read
+        n = mg_read(conn, buffer, SIZ);
+        if (n == SIZ) {
+            LOG_ERROR("Post data for signin too long. Abort request.");
+            return;
+        }
+        buffer[n] = 0;
+        LOG_DEBUG("postData=%s", buffer);
+        postData = buffer;
+    }
+    mg_printf(conn, "postData=%s", postData.c_str());
 }
 
 void httpGetListOfIssues(struct mg_connection *conn, Project &p, User u)
@@ -415,6 +455,20 @@ void httpGetListOfIssues(struct mg_connection *conn, Project &p, User u)
         RHtml::printIssueList(conn, ctx, issueList, cols);
     }
 
+}
+
+void httpGetProject(struct mg_connection *conn, Project &p, User u)
+{
+    // redirect to list of issues
+    return httpGetListOfIssues(conn, p, u);
+
+    // following code deactivated
+    enum RenderingFormat format = getFormat(conn);
+    sendHttpHeader200(conn);
+    if (format == RENDERING_HTML) {
+        ContextParameters ctx = ContextParameters(u, p);
+        RHtml::printProjectPage(conn, ctx);
+    }
 }
 
 
@@ -671,7 +725,10 @@ int begin_request_handler(struct mg_connection *conn) {
                 else if ( (resource == "issues") && (uri == "new") && (method == "GET") ) httpGetNewIssueForm(conn, *p, user);
                 else if ( (resource == "issues") && (method == "GET") ) httpGetIssue(conn, *p, uri, user);
                 else if ( (resource == "entries") && (method == "POST") ) return httpDeleteEntry(conn, *p, uri, user);
+                else if ( (resource == "config") && (method == "GET") ) httpGetProjectConfig(conn, *p, user);
+                else if ( (resource == "config") && (method == "POST") ) httpPostProjectConfig(conn, *p, user);
                 else handled = false;
+
 
             } else handled = false; // the resource is not a project
         }

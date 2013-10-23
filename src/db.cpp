@@ -138,7 +138,7 @@ Entry *loadEntry(std::string dir, const char* basename)
     Entry *e = new Entry;
     e->id = basename;
 
-    std::list<std::list<std::string> > lines = parseConfig(buf, n);
+    std::list<std::list<std::string> > lines = parseConfigTokens(buf, n);
     free(buf);
 
     std::list<std::list<std::string> >::iterator line;
@@ -385,6 +385,46 @@ FieldSpec parseFieldSpec(std::list<std::string> & tokens)
 }
 
 
+ProjectConfig parseProjectConfig(std::list<std::list<std::string> > lines)
+{
+    ProjectConfig config;
+
+    std::list<std::list<std::string> >::iterator line;
+    for (line = lines.begin(); line != lines.end(); line++) {
+        std::string token = line->front();
+        line->pop_front();
+        if (0 == token.compare("addProperty")) {
+            PropertySpec property = parseFieldSpec(*line);
+            if (property.name.size() > 0) {
+                config.properties[property.name] = property;
+                config.orderedProperties.push_back(property.name);
+                LOG_DEBUG("orderedProperties: added %s", property.name.c_str());
+            }
+            // else: parse error, ignore
+        } else if (0 == token.compare("addPredefinedView")) {
+            if (line->size() != 2) {
+                LOG_ERROR("Invalid 'addPredefinedView': argument count %d", line->size());
+                continue; // ignore this line
+            }
+            config.predefinedViews.push_back(std::make_pair(line->front(), line->back()));
+
+        } else if (0 == token.compare("setPropertyLabel")) {
+            if (line->size() != 2) {
+                LOG_ERROR("Invalid setPropertyLabel");
+                continue; // ignore this line
+            }
+            std::string propName = line->front();
+            std::string propLabel = line->back();
+            config.propertyLabels[propName] = propLabel;
+
+        } else {
+            LOG_ERROR("Unknown function '%s'", token.c_str());
+
+        }
+    }
+    return config;
+}
+
 // @return 0 if OK, -1 on error
 int Project::loadConfig(const char *path)
 {
@@ -419,41 +459,9 @@ int Project::loadConfig(const char *path)
         fclose(f);
         return -1;
     }
-    std::list<std::list<std::string> > lines = parseConfig(buf, n);
+    std::list<std::list<std::string> > lines = parseConfigTokens(buf, n);
 
-    std::list<std::list<std::string> >::iterator line;
-    for (line = lines.begin(); line != lines.end(); line++) {
-        std::string token = line->front();
-        line->pop_front();
-        if (0 == token.compare("addField")) {
-            PropertySpec property = parseFieldSpec(*line);
-            if (property.name.size() > 0) {
-                config.properties[property.name] = property;
-                config.orderedProperties.push_back(property.name);
-                LOG_DEBUG("orderedProperties: added %s", property.name.c_str());
-            }
-            // else: parse error, ignore
-        } else if (0 == token.compare("addPredefinedView")) {
-            if (line->size() != 2) {
-                LOG_ERROR("Invalid 'addPredefinedView': argument count %d", line->size());
-                continue; // ignore this line
-            }
-            config.predefinedViews.push_back(std::make_pair(line->front(), line->back()));
-
-        } else if (0 == token.compare("setPropertyLabel")) {
-            if (line->size() != 2) {
-                LOG_ERROR("Invalid setPropertyLabel");
-                continue; // ignore this line
-            }
-            std::string propName = line->front();
-            std::string propLabel = line->back();
-            config.propertyLabels[propName] = propLabel;
-
-        } else {
-            LOG_ERROR("Unknown function '%s'", token.c_str());
-
-        }
-    }
+    config = parseProjectConfig(lines);
 
     fclose(f);
     return 0;

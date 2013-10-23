@@ -1,0 +1,46 @@
+#!/bin/sh
+
+usage() {
+    echo "Usage:"
+    echo "    smit <options> <command> <arguments>"
+    echo
+    echo "Options:"
+    echo
+    echo "Examples:"
+    echo "    smit signin http://127.0.0.1:8080 john johnpasswd"
+    echo "    smit get http://localhost:8080/smit/issues?colspec=id+title"
+
+    exit 1
+}
+
+SMIT_COOKIE=.smitCookie
+
+command=""
+while [ "$1" != "" ]; do
+    case "$1" in
+        --*|-?) shift;; # no option yet
+        *) command="$1"; shift; break;
+        esac
+done
+
+args="$@"
+ 
+if [ "$command" = "" ]; then usage; fi
+
+signin() {
+    echo "signin... args=$args"
+    url="$1"
+    username="$2"
+    passwd="$3"
+
+    curl -d "username=$username&password=$passwd" -c $SMIT_COOKIE "$url?format=text"
+}
+
+get() {
+    url="$1"
+    if [ `echo "$url" | grep "\?"` ]; then q="&";
+    else q="?"; fi
+    curl -b $SMIT_COOKIE "$url${q}format=text"
+}
+
+eval $command $args

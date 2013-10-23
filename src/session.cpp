@@ -32,7 +32,7 @@ void UserBase::load(const char *repository)
         return;
     }
 
-    std::list<std::list<std::string> > lines = parseConfig(data, n);
+    std::list<std::list<std::string> > lines = parseConfigTokens(data, n);
 
     free(data);
 

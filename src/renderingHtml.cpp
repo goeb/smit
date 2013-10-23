@@ -154,7 +154,7 @@ std::string htmlEscape(const std::string &value)
   * - predefined views
   * - quick search form
   */
-void RHtml::printNavigationBar(struct mg_connection *conn, const ContextParameters &ctx)
+void RHtml::printNavigationBar(struct mg_connection *conn, const ContextParameters &ctx, bool autofocus)
 {
     mg_printf(conn, "<div class=\"sm_navigation_project\">\n");
     if (ctx.userRole == ROLE_ADMIN || ctx.userRole == ROLE_RW) {
@@ -168,7 +168,9 @@ void RHtml::printNavigationBar(struct mg_connection *conn, const ContextParamete
                   htmlEscape(ctx.project->getName()).c_str(), v->second.c_str(), htmlEscape(v->first).c_str());
     }
     mg_printf(conn, "<form class=\"sm_searchbox\" action=\"/%s/issues\" method=\"get\">\n", htmlEscape(ctx.project->getName()).c_str());
-    mg_printf(conn, "<input class=\"sm_searchbox\" type=\"text\" name=\"search\" autofocus>\n");
+    mg_printf(conn, "<input class=\"sm_searchbox\" type=\"text\" name=\"search\"");
+    if (autofocus) mg_printf(conn, " autofocus");
+    mg_printf(conn, " >\n");
     mg_printf(conn, "<input class=\"sm_searchbox\" type=\"submit\" value=\"%s\">", _("Search"));
     mg_printf(conn, "</form>\n");
     mg_printf(conn, "</div>\n");
@@ -181,8 +183,11 @@ void RHtml::printProjectList(struct mg_connection *conn, const ContextParameters
 
     std::list<std::pair<std::string, std::string> >::const_iterator p;
     for (p=pList.begin(); p!=pList.end(); p++) {
-        mg_printf(conn, "<div class=\"sm_link_project\"><a href=\"/%s/issues/\">%s</a> (%s)</div>\n",
-                  p->first.c_str(), p->first.c_str(), _(p->second.c_str()));
+        std::string pname = htmlEscape(p->first.c_str());
+        mg_printf(conn, "<div class=\"sm_link_project\"><a href=\"/%s/issues/\">%s</a> (%s)",
+                  pname.c_str(), pname.c_str(), _(p->second.c_str()));
+        if (p->second == "admin") mg_printf(conn, " <a href=\"%s/config\">edit</a>", pname.c_str());
+        mg_printf(conn, "</div>\n");
     }
 
     printGlobalFooter(conn, ctx.pathToRepository);
@@ -294,12 +299,29 @@ std::string getNewSortingSpec(struct mg_connection *conn, const std::string prop
     return result;
 }
 
+void RHtml::printProjectConfig(struct mg_connection *conn, const ContextParameters &ctx)
+{
+    mg_printf(conn, "Content-Type: text/html\r\n\r\n");
+
+    std::string path = ctx.rootdir + "/public/project.html";
+    char *data;
+    int r = loadFile(path.c_str(), &data);
+    if (r >= 0) {
+        mg_printf(conn, "%s", data);
+        free(data);
+    } else {
+        LOG_ERROR("Could not load %s", path.c_str());
+    }
+
+    ctx.printSmitData(conn);
+
+}
 
 void RHtml::printProjectPage(struct mg_connection *conn, const ContextParameters &ctx)
 {
     mg_printf(conn, "Content-Type: text/html\r\n\r\n");
     printHeader(conn, ctx.getProject().getPath());
-    printNavigationBar(conn, ctx);
+    printNavigationBar(conn, ctx, true);
     printFooter(conn, ctx.getProject().getName().c_str());
     ctx.printSmitData(conn);
 
@@ -310,9 +332,9 @@ void RHtml::printIssueList(struct mg_connection *conn, const ContextParameters &
 {
     mg_printf(conn, "Content-Type: text/html\r\n\r\n");
     printHeader(conn, ctx.getProject().getPath());
-    printNavigationBar(conn, ctx);
+    printNavigationBar(conn, ctx, true);
 
-    // print chose filters and search parameters
+    // print chosen filters and search parameters
     if (!ctx.search.empty() || !ctx.filterin.empty() || !ctx.filterout.empty()) {
         mg_printf(conn, "<div class=\"sm_view_summary\">");
         if (!ctx.search.empty()) mg_printf(conn, "search: %s<br>", ctx.search.c_str());
@@ -353,7 +375,6 @@ void RHtml::printIssueList(struct mg_connection *conn, const ContextParameters &
             else if (column == "ctime") text << epochToStringDelta((*i)->ctime);
             else if (column == "mtime") text << epochToStringDelta((*i)->mtime);
             else {
-                // look if it is a single property
                 std::map<std::string, std::list<std::string> >::iterator p;
                 std::map<std::string, std::list<std::string> > & properties = (*i)->properties;
 
@@ -560,7 +581,7 @@ void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx,
 
     mg_printf(conn, "Content-Type: text/html\r\n\r\n");
     printHeader(conn, ctx.getProject().getPath().c_str());
-    printNavigationBar(conn, ctx);
+    printNavigationBar(conn, ctx, true);
 
     mg_printf(conn, "<div class=\"sm_issue\">");
 
@@ -691,7 +712,7 @@ void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx,
     // print the form
     // -------------------------------------------------
     if (ctx.userRole == ROLE_ADMIN || ctx.userRole == ROLE_RW) {
-        printIssueForm(conn, ctx, issue);
+        printIssueForm(conn, ctx, issue, false);
     }
 
     printFooter(conn, ctx.getProject().getPath().c_str());
@@ -706,12 +727,12 @@ void RHtml::printNewIssuePage(struct mg_connection *conn, const ContextParameter
 
     mg_printf(conn, "Content-Type: text/html\r\n\r\n");
     printHeader(conn, ctx.getProject().getPath().c_str());
-    printNavigationBar(conn, ctx);
+    printNavigationBar(conn, ctx, false);
 
     mg_printf(conn, "<div class=\"sm_issue\">");
 
     Issue issue;
-    printIssueForm(conn, ctx, issue);
+    printIssueForm(conn, ctx, issue, true);
     printFooter(conn, ctx.getProject().getPath().c_str());
     ctx.printSmitData(conn);
 }
@@ -719,7 +740,7 @@ void RHtml::printNewIssuePage(struct mg_connection *conn, const ContextParameter
 
 /** print form for adding a message / modifying the issue
   */
-void RHtml::printIssueForm(struct mg_connection *conn, const ContextParameters &ctx, const Issue &issue)
+void RHtml::printIssueForm(struct mg_connection *conn, const ContextParameters &ctx, const Issue &issue, bool autofocus)
 {
     // TODO if access rights granted
 
@@ -735,8 +756,11 @@ void RHtml::printIssueForm(struct mg_connection *conn, const ContextParameters &
     mg_printf(conn, "<tr>\n");
     mg_printf(conn, "<td class=\"sm_flabel sm_flabel_title\">%s: </td>\n", ctx.getProject().getLabelOfProperty("title").c_str());
     mg_printf(conn, "<td class=\"sm_finput\" colspan=\"3\">");
-    mg_printf(conn, "<input class=\"sm_finput_title\" required=\"required\" type=\"text\" name=\"title\" value=\"%s\">",
+
+    mg_printf(conn, "<input class=\"sm_finput_title\" required=\"required\" type=\"text\" name=\"title\" value=\"%s\"",
               htmlEscape(issue.getTitle()).c_str());
+    if (autofocus) mg_printf(conn, " autofocus");
+    mg_printf(conn, ">");
     mg_printf(conn, "</td>\n");
     mg_printf(conn, "</tr>\n");
 

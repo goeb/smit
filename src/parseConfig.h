@@ -6,7 +6,7 @@
 #include <string>
 #include <list>
 
-std::list<std::list<std::string> > parseConfig(const char *buf, size_t len);
+std::list<std::list<std::string> > parseConfigTokens(const char *buf, size_t len);
 
 int loadFile(const char *filepath, char **data);
 int writeToFile(const char *filepath, const std::string &data, bool allowOverwrite);

@@ -1,9 +1,9 @@
 
 # command params ...
 # reserved fields are: id, title, ctime, mtime
-addField status select "open" "closed" "deleted"
-addField in_charge selectUser
-addField due_date select \
+addProperty status select "open" "closed" "deleted"
+addProperty in_charge selectUser
+addProperty due_date select \
     "" \
     "as soon as possible" \
     "next week" \
