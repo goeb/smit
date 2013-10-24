@@ -55,8 +55,10 @@ std::string epochToStringDelta(time_t t)
     else if (delta < 60*60*24) snprintf(datetime, sizeof(datetime)-1, "%ld h", delta/60/60);
     else if (delta < 60*60*24*7) snprintf(datetime, sizeof(datetime)-1, "%ld d", delta/60/60/24);
     else if (delta < 60*60*24*30) snprintf(datetime, sizeof(datetime)-1, "%ld wk", delta/60/60/24/7);
-    else if (delta < 60*60*24*365) snprintf(datetime, sizeof(datetime)-1, "%ld yr", delta/60/60/24/30);
+    else if (delta < 60*60*24*365) snprintf(datetime, sizeof(datetime)-1, "%ld m", delta/60/60/24/30);
+    else if (delta > 0) snprintf(datetime, sizeof(datetime)-1, "%ld yr", delta/60/60/24/30/365);
     else return epochToString(t);
+
 
     return std::string(datetime);
 }
