@@ -2,6 +2,7 @@
 #include <sstream>
 #include <string.h>
 #include <set>
+#include <stdarg.h>
 
 #include "renderingHtml.h"
 #include "db.h"
@@ -11,6 +12,7 @@
 #include "dateTools.h"
 #include "session.h"
 #include "global.h"
+
 
 ContextParameters::ContextParameters(User u, const Project &p) : project(&p)
 {
@@ -148,6 +150,78 @@ std::string htmlEscape(const std::string &value)
     return result;
 }
 
+#define FOREACH(i, list) for (i=list.begin(); i!= list.end(); i++)
+
+#define LOCAL_SIZE 512
+class HtmlNode {
+public:
+    HtmlNode(const std::string &_nodeName) {
+        nodeName = _nodeName;
+    }
+    /** Constructor for text contents */
+    HtmlNode() { }
+
+    std::string nodeName;// empty if text content only
+    std::map<std::string, std::string> attributes;
+    std::string text;
+
+    std::list<HtmlNode> contents;
+
+    /** the values must be html-escaped */
+    void addAttribute(const char *name, const char* format, ...) {
+        va_list list;
+        va_start(list, format);
+        char value[LOCAL_SIZE];
+        int n = vsnprintf(value, LOCAL_SIZE, format, list);
+        if (n >= LOCAL_SIZE || n < 0) {
+            LOG_ERROR("addAttribute error: vsnprintf n=%d", n);
+        } else {
+            attributes[name] = value;
+        }
+    }
+
+    void print(struct mg_connection *conn) {
+        if (nodeName.empty()) {
+            // text contents
+            mg_printf(conn, "%s", text.c_str());
+        } else {
+            mg_printf(conn, "<%s ", nodeName.c_str());
+            std::map<std::string, std::string>::iterator i;
+            FOREACH(i, attributes) {
+                mg_printf(conn, "%s=\"%s\" ", i->first.c_str(), i->second.c_str());
+            }
+            mg_printf(conn, ">\n");
+
+            if (nodeName == "input") return; // no closing tag nor any contents
+
+            std::list<HtmlNode>::iterator c;
+            FOREACH(c, contents) {
+                c->print(conn);
+            }
+            // close HTML node
+            mg_printf(conn, "</%s>\n", nodeName.c_str());
+        }
+
+    }
+    void addContents(const char* format, ...) {
+        va_list list;
+        va_start(list, format);
+        char buffer[LOCAL_SIZE];
+        int n = vsnprintf(buffer, LOCAL_SIZE, format, list);
+        if (n >= LOCAL_SIZE || n < 0) {
+            LOG_ERROR("addText error: vsnprintf n=%d", n);
+        } else {
+            HtmlNode node;
+            node.text = htmlEscape(buffer);
+            contents.push_back(node);
+        }
+    }
+
+    void addContents(const class HtmlNode &node) {
+        contents.push_back(node);
+    }
+
+};
 
 /** Print links for navigating through issues;
   * - "create new issue"
@@ -156,24 +230,38 @@ std::string htmlEscape(const std::string &value)
   */
 void RHtml::printNavigationBar(struct mg_connection *conn, const ContextParameters &ctx, bool autofocus)
 {
-    mg_printf(conn, "<div class=\"sm_navigation_project\">\n");
+    HtmlNode div("div");
+    div.addAttribute("class", "sm_navigation_project");
     if (ctx.userRole == ROLE_ADMIN || ctx.userRole == ROLE_RW) {
-        mg_printf(conn, "<a href=\"/%s/issues/new\" class=\"sm_link_new_issue\">%s</a> ", htmlEscape(ctx.project->getName()).c_str(),
-                  _("Create new issue"));
+        HtmlNode a("a");
+        a.addAttribute("href", "/%s/issues/new", htmlEscape(ctx.project->getName()).c_str());
+        a.addAttribute("class", "sm_link_new_issue");
+        a.addContents("%s", _("Create new issue"));
+        div.addContents(a);
     }
     std::list<std::pair<std::string, std::string> >::const_iterator v;
     ProjectConfig config = ctx.project->getConfig();
     for (v = config.predefinedViews.begin(); v != config.predefinedViews.end(); v++) {
-        mg_printf(conn, "<a href=\"/%s/issues/?%s\" class=\"sm_predefined_view\">%s</a>\n",
-                  htmlEscape(ctx.project->getName()).c_str(), v->second.c_str(), htmlEscape(v->first).c_str());
+        HtmlNode a("a");
+        a.addAttribute("href", "/%s/issues/?%s", htmlEscape(ctx.project->getName()).c_str(),
+                       v->second.c_str());
+        a.addAttribute("class", "sm_predefined_view");
+        a.addContents("%s", v->first.c_str());
+        div.addContents(a);
     }
-    mg_printf(conn, "<form class=\"sm_searchbox\" action=\"/%s/issues\" method=\"get\">\n", htmlEscape(ctx.project->getName()).c_str());
-    mg_printf(conn, "<input class=\"sm_searchbox\" type=\"text\" name=\"search\"");
-    if (autofocus) mg_printf(conn, " autofocus");
-    mg_printf(conn, " >\n");
-    mg_printf(conn, "<input class=\"sm_searchbox\" type=\"submit\" value=\"%s\">", _("Search"));
-    mg_printf(conn, "</form>\n");
-    mg_printf(conn, "</div>\n");
+    HtmlNode form("form");
+    form.addAttribute("class", "sm_searchbox");
+    form.addAttribute("action", "/%s/issues", htmlEscape(ctx.project->getName()).c_str());
+    form.addAttribute("method", "get");
+
+    HtmlNode input("input");
+    input.addAttribute("class", "sm_searchbox");
+    input.addAttribute("type", "text");
+    input.addAttribute("name", "search");
+    if (autofocus) input.addAttribute("autofocus", "autofocus");
+    form.addContents(input);
+    div.addContents(form);
+    div.print(conn);
 }
 
 void RHtml::printProjectList(struct mg_connection *conn, const ContextParameters &ctx, const std::list<std::pair<std::string, std::string> > &pList)

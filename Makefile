@@ -29,7 +29,7 @@ SRCS_CPP = src/db.cpp  \
 OBJS = $(SRCS:%.c=$(BUILD_DIR)/%.o) $(SRCS_CPP:%.cpp=$(BUILD_DIR)/%.o)
 DEPENDS = $(SRCS:%.c=$(BUILD_DIR)/%.d) $(SRCS_CPP:%.cpp=$(BUILD_DIR)/%.d)
 
-CFLAGS = -g
+CFLAGS = -g -Wall
 CFLAGS += -I mongoose
 
 LDFLAGS = -ldl -pthread -lcrypto
