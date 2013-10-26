@@ -1,5 +1,7 @@
 
 #include <sstream>
+#include <string.h>
+
 #include "stringTools.h"
 
 /** take first token name out of uri
@@ -76,10 +78,10 @@ std::string toString(const std::list<std::string> &values)
   */
 std::string urlDecode(const std::string &src, int is_form_url_encoded)
 {
-    int i, j, a, b;
+    size_t i, a, b;
     std::string dst;
 #define HEXTOI(x) (isdigit(x) ? x - '0' : x - 'W')
-    int n = src.size();
+    size_t n = src.size();
     for (i = 0; i < n; i++) {
         if (src[i] == '%' && i < n - 2 &&
                 isxdigit((const unsigned char)src[i+1]) &&
@@ -95,6 +97,30 @@ std::string urlDecode(const std::string &src, int is_form_url_encoded)
         }
     }
 
+    return dst;
+}
+
+/** Encode a string for URL
+  *
+  * Used typically for a parameter in the query string.
+  * Also used for file names than may originally cause conflicts with slashes, etc.
+  */
+std::string urlEncode(const std::string &src)
+{
+    static const char *dontEscape = "._-$,;~()";
+    static const char *hex = "0123456789abcdef";
+    std::string dst;
+    size_t n = src.size();
+    size_t i;
+    for (i = 0; i < n; i++) {
+        if (isalnum((unsigned char) src[i]) ||
+                strchr(dontEscape, (unsigned char) src[i]) != NULL) dst += src[i];
+        else {
+            dst += '%';
+            dst += hex[((const unsigned char) src[i]) >> 4];
+            dst += hex[((const unsigned char) src[i]) & 0xf];
+        }
+    }
     return dst;
 }
 
