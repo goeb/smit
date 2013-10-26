@@ -115,27 +115,6 @@ int sendHttpHeaderInvalidResource(struct mg_connection *conn)
     return 1; // request processed
 }
 
-void urlDecode(std::string &s)
-{
-    // convert key and value
-    const int SIZ = 1024;
-    char localBuf[SIZ+1];
-
-    // output of URL decoding takes less characters than input
-
-    if (s.size() <= 1024) { // use local buffer
-        int r = mg_url_decode(s.c_str(), s.size(), localBuf, SIZ, 1);
-        if (r == -1) LOG_ERROR("Destination of mg_url_decode is too short: input size=%u, destination size=%d",
-                               s.size(), SIZ);
-        s = localBuf;
-    } else {
-        // allocated dynamically a buffer
-        char *buffer = new char[s.size()];
-        int r = mg_url_decode(s.c_str(), s.size(), buffer, s.size(), 1);
-        if (r == -1) LOG_ERROR("Destination of mg_url_decode is too short (2): destination size=%u", s.size());
-        else s = buffer;
-    }
-}
 
 /** If uri is "x=y&a=bc+d" and param is "a"
   * then return "bc d".
@@ -154,7 +133,7 @@ std::string getFirstParamFromQueryString(const std::string & queryString, const 
     while ((token = popToken(q, '&')) != "") {
         if (0 == token.compare(0, paramEqual.size(), paramEqual.c_str())) {
             popToken(token, '='); // remove the 'param=' part
-			urlDecode(token);
+            token = urlDecode(token);
 
             return token;
         }
@@ -177,7 +156,7 @@ std::list<std::string> getParamListFromQueryString(const std::string & queryStri
     while ((token = popToken(q, '&')) != "") {
         if (0 == token.compare(0, paramEqual.size(), paramEqual.c_str())) {
             popToken(token, '='); // remove the param= part
-			urlDecode(token);
+            token = urlDecode(token);
 
             result.push_back(token);
         }
@@ -289,7 +268,7 @@ void redirectToSignin(struct mg_connection *conn, const std::string &resource)
 
 void httpPostSignout(struct mg_connection *conn, const std::string &sessionId)
 {
-    int r = SessionBase::destroySession(sessionId);
+    SessionBase::destroySession(sessionId);
     redirectToSignin(conn, "/");
 }
 
@@ -564,8 +543,8 @@ void parseQueryStringVar(const std::string &var, std::string &key, std::string &
         }
     }
 
-    urlDecode(key);
-    urlDecode(value);
+    key = urlDecode(key);
+    value = urlDecode(value);
 }
 
 
@@ -574,7 +553,6 @@ void parseQueryString(const std::string & queryString, std::map<std::string, std
     size_t n = queryString.size();
     size_t i;
     size_t offsetOfCurrentVar = 0;
-    bool pendingParam = false; // indicate if a remaining param must be process after the 'if' loop
     for (i=0; i<n; i++) {
         if ( (queryString[i] == '&') || (i == n-1) ) {
             // param delimiter encountered or last character reached
@@ -595,8 +573,6 @@ void parseQueryString(const std::string & queryString, std::map<std::string, std
                 } else vars[key].push_back(value);
             }
             offsetOfCurrentVar = i+1;
-            pendingParam = false;
-
         }
     }
     // append the latest parameter (if any)
@@ -623,7 +599,7 @@ void httpPostEntry(struct mg_connection *conn, Project &p, const std::string & i
         char postFragment[SIZ+1];
         int n; // number of bytes read
         std::string postData;
-        while (n = mg_read(conn, postFragment, SIZ)) {
+        while ( (n = mg_read(conn, postFragment, SIZ)) ) {
             postFragment[n] = 0;
             LOG_DEBUG("postFragment=%s", postFragment);
             if (postData.size() > 10*SIZ*SIZ) {
@@ -659,10 +635,11 @@ void httpPostEntry(struct mg_connection *conn, Project &p, const std::string & i
   * Resources               Methods    Acces Granted     Description
   * -------------------------------------------------------------------------
   * /                       GET/POST   user              list of projects / management of projects (create, ...)
-  * /public/*               GET        all               public pages, javascript, CSS, logo
+  * /public/...             GET        all               public pages, javascript, CSS, logo
   * /signin                 POST       all               sign-in
-  * /users                            superadmin        management of users for all projects
+  * /users                             superadmin        management of users for all projects
   * /myp/config             GET/POST   project-admin     configuration of the project
+  * /myp/views              GET/POST   user              configuration of predefined views
   * /myp/issues             GET/POST   user              issues of the project / add new issue
   * /myp/issues/new         GET        user              page with a form for submitting new issue
   * /myp/issues/XYZ         GET/POST   user              a particular issue: get all entries or add a new entry

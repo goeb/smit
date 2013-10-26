@@ -69,3 +69,32 @@ std::string toString(const std::list<std::string> &values)
     return text.str();
 }
 
+/** Decode an URL
+  *
+  * Example: Hello+World%20And%2FMore
+  * => Hello World And/More
+  */
+std::string urlDecode(const std::string &src, int is_form_url_encoded)
+{
+    int i, j, a, b;
+    std::string dst;
+#define HEXTOI(x) (isdigit(x) ? x - '0' : x - 'W')
+    int n = src.size();
+    for (i = 0; i < n; i++) {
+        if (src[i] == '%' && i < n - 2 &&
+                isxdigit((const unsigned char)src[i+1]) &&
+                isxdigit((const unsigned char)src[i+2])) {
+            a = tolower((const unsigned char)src[i+1]);
+            b = tolower((const unsigned char)src[i+2]);
+            dst += (char) ((HEXTOI(a) << 4) | HEXTOI(b));
+            i += 2;
+        } else if (is_form_url_encoded && src[i] == '+') {
+            dst += ' ';
+        } else {
+            dst += src[i];
+        }
+    }
+
+    return dst;
+}
+

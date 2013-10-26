@@ -1,0 +1,10 @@
+
+# Values here are raw and should be url-encoded or html-escaped 
+# in a suitable manner by the program
+
+filterin status open
+filterin status stalled
+filterout tags v1.0
+sort +status-mtime
+colspec id mtime title status tags
+search "hello world"
