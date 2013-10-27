@@ -392,38 +392,48 @@ FieldSpec parseFieldSpec(std::list<std::string> & tokens)
     return field;
 }
 
-
-ProjectConfig parseProjectConfig(std::list<std::list<std::string> > lines)
+/** Return a configuration object from a list of lines of tokens
+  * The 'lines' parameter is modified and cleaned up of incorrect lines
+  * (suitable for subsequent searialisation to project file).
+  */
+ProjectConfig parseProjectConfig(std::list<std::list<std::string> > &lines)
 {
     ProjectConfig config;
 
     std::list<std::list<std::string> >::iterator line;
-    for (line = lines.begin(); line != lines.end(); line++) {
-        std::string token = line->front();
-        line->pop_front();
+    std::list<std::list<std::string> > wellFormatedLines;
+
+    FOREACH (line, lines) {
+        wellFormatedLines.push_back(*line);
+
+        std::string token = pop(*line);
         if (0 == token.compare("addProperty")) {
             PropertySpec property = parseFieldSpec(*line);
             if (property.name.size() > 0) {
                 config.properties[property.name] = property;
                 config.orderedProperties.push_back(property.name);
                 LOG_DEBUG("orderedProperties: added %s", property.name.c_str());
+
+            } else {
+                // parse error, ignore
+                wellFormatedLines.pop_back(); // remove incorrect line
             }
-            // else: parse error, ignore
 
         } else if (0 == token.compare("setPropertyLabel")) {
             if (line->size() != 2) {
                 LOG_ERROR("Invalid setPropertyLabel");
-                continue; // ignore this line
+                wellFormatedLines.pop_back(); // remove incorrect line
+            } else {
+                std::string propName = line->front();
+                std::string propLabel = line->back();
+                config.propertyLabels[propName] = propLabel;
             }
-            std::string propName = line->front();
-            std::string propLabel = line->back();
-            config.propertyLabels[propName] = propLabel;
-
         } else {
             LOG_ERROR("Unknown function '%s'", token.c_str());
-
+            wellFormatedLines.pop_back(); // remove incorrect line
         }
     }
+    lines = wellFormatedLines;
     return config;
 }
 
@@ -521,7 +531,26 @@ int Project::modifyConfig(std::list<std::list<std::string> > &tokens)
 {
     LOG_FUNC();
     ScopeLocker scopeLocker(locker, LOCK_READ_WRITE);
-    config = parseProjectConfig(tokens);
+    ProjectConfig c = parseProjectConfig(tokens);
+    if (c.properties.size() == 0) {
+        // error do not accept this
+        LOG_ERROR("Reject modification of project structure as there is no property at all");
+        return -1;
+    }
+    c.predefinedViews = config.predefinedViews; // keep those unchanged
+    config = c;
+
+    // write to file
+    std::string data = serializeTokens(tokens);
+
+    std::string pathToProjectFile = path + '/';
+    pathToProjectFile += PROJECT_FILE;
+    int r = writeToFile(pathToProjectFile.c_str(), data, true);
+    if (r != 0) {
+        LOG_ERROR("Cannot write new config of project: %s", pathToProjectFile.c_str());
+        return -1;
+    }
+
     return 0;
 }
 

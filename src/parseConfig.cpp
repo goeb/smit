@@ -9,6 +9,7 @@
 
 #include "parseConfig.h"
 #include "logging.h"
+#include "global.h"
 
 /** Parse a text buffer and return a list of lines of tokens
   *
@@ -232,6 +233,8 @@ std::list<std::string> parseColspec(const char *colspec)
     return result;
 }
 
+/** Double quotes are needed whenever the value contains one of: \n \t \r "
+  */
 std::string doubleQuote(const std::string &input)
 {
     size_t n = input.size();
@@ -247,6 +250,13 @@ std::string doubleQuote(const std::string &input)
     return result;
 }
 
+std::string serializeSimpleToken(const std::string token)
+{
+    if (token.empty()) return "\"\"";
+    else if (token.find_first_of("#\n \t\r\"") == std::string::npos) return token;
+    else return doubleQuote(token); // some characters needs escaping
+}
+
 
 std::string serializeProperty(const std::string &propertyName, const std::list<std::string> &values)
 {
@@ -255,7 +265,7 @@ std::string serializeProperty(const std::string &propertyName, const std::list<s
 
     if ( (values.size() == 1) && (values.front().find('\n') != std::string::npos) ) {
         // serialize as multi-line
-        const char *delimiter = "-----------endofmsg---"; // TODO manage case where a value contains the delimiter
+        const char *delimiter = "-----------endofmsg---"; // TODO manage case where a value contains this delimiter
         s << " < " << delimiter << "\n";
         s << values.front() << "\n";
         s << delimiter;
@@ -263,9 +273,7 @@ std::string serializeProperty(const std::string &propertyName, const std::list<s
     } else {
         std::list<std::string>::const_iterator v;
         for (v = values.begin(); v != values.end(); v++) {
-            s << " ";
-            if (v->find_first_of("\n \t\r\"") == std::string::npos) s << *v;
-            else s << doubleQuote(*v); // some characters needs escaping
+            s << " " << serializeSimpleToken(*v);
         }
     }
     s << "\n";
@@ -278,4 +286,19 @@ std::string popListToken(std::list<std::string> &tokens)
     std::string token = tokens.front();
     tokens.pop_front();
     return token;
+}
+
+std::string serializeTokens(const std::list<std::list<std::string> > &linesOfTokens)
+{
+    std::string result;
+    std::list<std::list<std::string> >::const_iterator line;
+    FOREACH(line, linesOfTokens) {
+        std::list<std::string>::const_iterator token;
+        FOREACH(token, (*line)) {
+            result += serializeSimpleToken(*token);
+            result += ' '; // separator on the same line
+        }
+        result += '\n'; // line separator
+    }
+    return result;
 }

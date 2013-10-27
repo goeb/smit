@@ -13,18 +13,21 @@ std::string popToken(std::string & uri, char separator)
     if (uri.empty()) return "";
 
     size_t i = 0;
-    trimLeft(uri, separator);
 
+    // convert char to char *
     char sepStr[2];
     sepStr[0] = separator;
     sepStr[1] = 0;
+
+    trimLeft(uri, sepStr);
+
     size_t pos = uri.find_first_of(sepStr, i); // skip the first leading / of the uri
     std::string firstToken = uri.substr(i, pos-i);
 
     if (pos == std::string::npos) uri = "";
     else {
         uri = uri.substr(pos);
-        trimLeft(uri, separator);
+        trimLeft(uri, sepStr);
     }
 
     return firstToken;
@@ -32,10 +35,10 @@ std::string popToken(std::string & uri, char separator)
 
 /** Remove characters at the end of string
   */
-void trimRight(std::string &s, char c)
+void trimRight(std::string &s, const char *c)
 {
     size_t i = s.size()-1;
-    while ( (i>=0) && (s[i] == c) ) i--;
+    while ( (i>=0) && strchr(c, s[i]) ) i--;
 
     if (i < 0) s = "";
     else s = s.substr(0, i+1);
@@ -43,19 +46,25 @@ void trimRight(std::string &s, char c)
 
 /** Remove characters at the beginning of string
   */
-void trimLeft(std::string &s, char c)
+void trimLeft(std::string &s, const char* c)
 {
     size_t i = 0;
-    while ( (s.size() > i) && (s[i] == c) ) i++;
+    while ( (s.size() > i) && strchr(c, s[i]) ) i++;
 
     if (i >= s.size()) s = "";
     else s = s.substr(i);
 }
 
-void trim(std::string &s, char c)
+void trim(std::string &s, const char *c)
 {
     trimLeft(s, c);
     trimRight(s, c);
+}
+
+void trimBlanks(std::string &s)
+{
+    trimLeft(s, "\n\t\r ");
+    trimRight(s, "\n\t\r ");
 }
 
 /** Concatenate a list of strings to a string

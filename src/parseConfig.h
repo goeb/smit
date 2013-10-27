@@ -15,6 +15,7 @@ std::list<std::string> parseColspec(const char *spec);
 std::string serializeProperty(const std::string &key, const std::list<std::string> &values);
 std::string doubleQuote(const std::string &input);
 std::string popListToken(std::list<std::string> &tokens);
+std::string serializeTokens(const std::list<std::list<std::string> > &linesOfTokens);
 
 
 
