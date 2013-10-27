@@ -222,6 +222,48 @@ public:
 
 };
 
+/** Return the query string associated to the predefined view
+  */
+std::string makeQueryString(const PredefinedView &pv)
+{
+    std::string qs;
+    if (! pv.sort.empty()) {
+        qs += "sort=" + pv.sort;
+    }
+    if (! pv.colspec.empty()) {
+        if (!qs.empty()) qs += '&';
+        qs += "colspec=" + pv.colspec;
+    }
+
+    if (! pv.search.empty()) {
+        if (!qs.empty()) qs += '&';
+        qs += "search=" + urlEncode(pv.search);
+    }
+
+    if (! pv.filterin.empty()) {
+        std::map<std::string, std::list<std::string> >::const_iterator filterin;
+        FOREACH(filterin, pv.filterin) {
+            std::list<std::string>::const_iterator value;
+            FOREACH(value, filterin->second) {
+                if (!qs.empty()) qs += '&';
+                qs += "filterin=" + filterin->first + ":" + urlEncode(*value);
+            }
+        }
+    }
+
+    if (! pv.filterout.empty()) {
+        std::map<std::string, std::list<std::string> >::const_iterator filterout;
+        FOREACH(filterout, pv.filterout) {
+            std::list<std::string>::const_iterator value;
+            FOREACH(value, filterout->second) {
+                if (!qs.empty()) qs += '&';
+                qs += "filterout=" + filterout->first + ":" + urlEncode(*value);
+            }
+        }
+    }
+    return qs;
+}
+
 /** Print links for navigating through issues;
   * - "create new issue"
   * - predefined views
@@ -238,16 +280,20 @@ void RHtml::printNavigationBar(struct mg_connection *conn, const ContextParamete
         a.addContents("%s", _("Create new issue"));
         div.addContents(a);
     }
-    std::list<std::pair<std::string, std::string> >::const_iterator v;
+
+    std::map<std::string, PredefinedView>::iterator pv;
     ProjectConfig config = ctx.project->getConfig();
-    for (v = config.predefinedViews.begin(); v != config.predefinedViews.end(); v++) {
+    FOREACH (pv, config.predefinedViews) {
         HtmlNode a("a");
         a.addAttribute("href", "/%s/issues/?%s", htmlEscape(ctx.project->getName()).c_str(),
-                       v->second.c_str());
+                       makeQueryString(pv->second).c_str());
         a.addAttribute("class", "sm_predefined_view");
-        a.addContents("%s", v->first.c_str());
+        a.addContents("%s", pv->first.c_str());
         div.addContents(a);
     }
+
+
+
     HtmlNode form("form");
     form.addAttribute("class", "sm_searchbox");
     form.addAttribute("action", "/%s/issues", htmlEscape(ctx.project->getName()).c_str());

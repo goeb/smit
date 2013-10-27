@@ -479,7 +479,7 @@ std::map<std::string, PredefinedView> parsePredefinedViews(std::list<std::list<s
                     }
 
                 } else if (token == "search") {
-                    pv.sort = pop(*line);
+                    pv.search = pop(*line);
                     if (pv.sort.empty()) {
                         LOG_ERROR("parsePredefinedViews: Empty property or value for filterin/out");
                         pv.name.clear(); // invalidate this line

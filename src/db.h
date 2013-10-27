@@ -72,9 +72,8 @@ struct PredefinedView {
 struct ProjectConfig {
     std::map<std::string, PropertySpec> properties;
     std::list<std::string> orderedProperties;
-    std::list<std::pair<std::string, std::string> > predefinedViews;
     std::map<std::string, std::string> propertyLabels;
-    std::map<std::string, PredefinedView> predefinedViewsXxx;
+    std::map<std::string, PredefinedView> predefinedViews;
 
 };
 
