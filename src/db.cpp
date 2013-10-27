@@ -409,12 +409,6 @@ ProjectConfig parseProjectConfig(std::list<std::list<std::string> > lines)
                 LOG_DEBUG("orderedProperties: added %s", property.name.c_str());
             }
             // else: parse error, ignore
-        } else if (0 == token.compare("addPredefinedView")) {
-            if (line->size() != 2) {
-                LOG_ERROR("Invalid 'addPredefinedView': argument count %d", line->size());
-                continue; // ignore this line
-            }
-            config.predefinedViews.push_back(std::make_pair(line->front(), line->back()));
 
         } else if (0 == token.compare("setPropertyLabel")) {
             if (line->size() != 2) {
@@ -540,10 +534,10 @@ void Project::loadPredefinedViews(const char *projectPath)
 
         free(buf); // not needed any longer
 
-        config.predefinedViewsXxx = parsePredefinedViews(lines);
+        config.predefinedViews = parsePredefinedViews(lines);
     } // else error of empty file
 
-    LOG_DEBUG("predefined views loaded: %d", config.predefinedViewsXxx.size());
+    LOG_DEBUG("predefined views loaded: %d", config.predefinedViews.size());
 }
 
 
