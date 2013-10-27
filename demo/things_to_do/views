@@ -1,0 +1,16 @@
+
+addView "Open Issues" \
+    filterin status open \
+    filterin status stalled \
+    filterout tags v1.0 \
+    sort +status-mtime \
+    colspec id+mtime+title+status+tags 
+
+
+addView "Issues with \"hello world\"" \
+    sort +status-mtime \
+    colspec id+mtime+title+status+tags \
+    search "hello world" 
+
+
+    

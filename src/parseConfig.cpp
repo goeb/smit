@@ -200,7 +200,7 @@ int writeToFile(const char *filepath, const std::string &data, bool allowOverwri
         return -1;
     }
 
-    int n = write(f, data.c_str(), data.size());
+    size_t n = write(f, data.c_str(), data.size());
     if (n != data.size()) {
         LOG_ERROR("Could not write all data, incomplete file '%s': (%d) %s",
                   filepath, errno, strerror(errno));
@@ -232,35 +232,12 @@ std::list<std::string> parseColspec(const char *colspec)
     return result;
 }
 
-// "aaa+bbb-ccc"
-// @return ('+', aaa), ('+', bbb), ('-', ccc)
-std::list<std::pair<char, std::string> > parseFieldSpec(const char *fieldSpec)
-{
-    std::list<std::pair<char, std::string> > result;
-    size_t i = 0;
-    size_t L = strlen(fieldSpec);
-    std::string currentToken;
-    char sign = '+';
-    for (i=0; i<L; i++) {
-        char c = fieldSpec[i];
-        if ( (c == '+') || (c == '+') ) {
-            // push previous token if any
-            if (currentToken.size() > 0) result.push_back(std::make_pair(sign, currentToken));
-
-            sign = c;
-            currentToken = "";
-        } else currentToken += c;
-    }
-    if (currentToken.size() > 0) result.push_back(std::make_pair(sign, currentToken));
-}
-
 std::string doubleQuote(const std::string &input)
 {
     size_t n = input.size();
     std::string result = "\"";
 
     size_t i;
-    size_t offsetOfCurrentVar = 0;
     for (i=0; i<n; i++) {
         if (input[i] == '\\') result += "\\\\";
         else if (input[i] == '"') result += "\\\"";

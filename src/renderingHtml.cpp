@@ -150,7 +150,6 @@ std::string htmlEscape(const std::string &value)
     return result;
 }
 
-#define FOREACH(i, list) for (i=list.begin(); i!= list.end(); i++)
 
 #define LOCAL_SIZE 512
 class HtmlNode {

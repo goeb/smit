@@ -26,11 +26,3 @@ setPropertyLabel Add-Message "Validate"
 addPredefinedView "Open issues" "filterin=status:open&sort=-mtime"
 addPredefinedView "All issues" "sort=-mtime"
 
-# when 'colspec' is not given in the url query string
-setDefaultColspec "id+mtime+title+status+in_charge+due_date"
-# when 'filter' is not given in the url query string
-setDefaultFilter "status:all"
-# when 'sort' is not given in the url query string
-setDefaultSorting "sort=mtime"
-
-

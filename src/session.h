@@ -35,7 +35,7 @@ class UserBase {
 public:
     static void load(const char *repository);
     static User* getUser(const std::string &username);
-    static int addUser(User u);
+    static void addUser(User u);
     static void addUserByProject(std::string project, std::string username);
     static std::set<std::string> getUsersOfProject(std::string project);
 private:

@@ -11,14 +11,19 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <time.h>
+
 #include "db.h"
 #include "parseConfig.h"
 #include "logging.h"
 #include "identifiers.h"
+#include "global.h"
+#include "stringTools.h"
 
 #define PROJECT_FILE "project"
 #define ENTRIES "entries" // sub-directory of a project where the entries are stored
 #define HEAD "_HEAD"
+#define VIEWS_FILE "views"
+
 
 #define K_PARENT "_parent"
 #define K_AUTHOR "author"
@@ -52,7 +57,7 @@ int dbLoad(const char * pathToRepository)
             std::string pathToProject = pathToRepository;
             pathToProject += '/';
             pathToProject += dp->d_name;
-            int r = Project::load(pathToProject.c_str(), dp->d_name);
+            Project::load(pathToProject.c_str(), dp->d_name);
         }
         closedir(dirp);
     }
@@ -110,6 +115,8 @@ int Project::load(const char *path, char *name)
         return -1;
     }
 
+    p->loadPredefinedViews(path);
+
     r = p->loadEntries(path);
     if (r == -1) {
         LOG_ERROR("Project '%s' not loaded because of errors while reading the entries.", path);
@@ -124,6 +131,7 @@ int Project::load(const char *path, char *name)
     Database::Db.projects[name] = p;
     return 0;
 }
+
 
 
 Entry *loadEntry(std::string dir, const char* basename)
@@ -293,7 +301,7 @@ int Project::loadEntries(const char *path)
         }
         closedir(entriesDirHandle);
     }
-
+    return 0;
 }
 Issue *Project::getIssue(const std::string &id) const
 {
@@ -425,47 +433,120 @@ ProjectConfig parseProjectConfig(std::list<std::list<std::string> > lines)
     return config;
 }
 
+std::map<std::string, PredefinedView> parsePredefinedViews(std::list<std::list<std::string> > lines)
+{
+    std::map<std::string, PredefinedView> pvs;
+    std::list<std::list<std::string> >::iterator line;
+    std::string token;
+    FOREACH(line, lines) {
+        token = pop(*line);
+        if (token.empty()) continue;
+
+        if (token == "addView") {
+            PredefinedView pv;
+            pv.name = pop(*line);
+            if (pv.name.empty()) {
+                LOG_ERROR("parsePredefinedViews: Empty view name. Skip.");
+                continue;
+            }
+
+            while (! line->empty()) {
+                token = pop(*line);
+                if (token == "filterin" || token == "filterout") {
+                    std::string property = pop(*line);
+                    std::string value = pop(*line);
+                    if (property.empty() || value.empty()) {
+                        LOG_ERROR("parsePredefinedViews: Empty property or value for filterin/out");
+                        pv.name.clear(); // invalidate this line
+                        break;
+                    }
+                    if (token == "filterin") pv.filterin[property].push_back(value);
+                    else pv.filterout[property].push_back(value);
+
+                } else if (token == "colspec") {
+                    pv.colspec = pop(*line);
+                    if (pv.colspec.empty()) {
+                        LOG_ERROR("parsePredefinedViews: Empty property or value for filterin/out");
+                        pv.name.clear(); // invalidate this line
+                        break;
+                    }
+                } else if (token == "sort") {
+                    pv.sort = pop(*line);
+                    if (pv.sort.empty()) {
+                        LOG_ERROR("parsePredefinedViews: Empty property or value for filterin/out");
+                        pv.name.clear(); // invalidate this line
+                        break;
+                    }
+
+                } else if (token == "search") {
+                    pv.sort = pop(*line);
+                    if (pv.sort.empty()) {
+                        LOG_ERROR("parsePredefinedViews: Empty property or value for filterin/out");
+                        pv.name.clear(); // invalidate this line
+                        break;
+                    }
+                } else {
+                    LOG_ERROR("parsePredefinedViews: Unexpected token %s", token.c_str());
+                    pv.name.clear();
+                }
+            }
+            if (! pv.name.empty()) pvs[pv.name] = pv;
+
+        } else {
+            LOG_ERROR("parsePredefinedViews: Unexpected token %s", token.c_str());
+        }
+    }
+
+    return pvs;
+}
+
+
 // @return 0 if OK, -1 on error
 int Project::loadConfig(const char *path)
 {
+    LOG_FUNC();
     std::string pathToProjectFile = path;
     pathToProjectFile = pathToProjectFile + '/' + PROJECT_FILE;
 
-    // TODO use loadFile instead
-    FILE *f = fopen(pathToProjectFile.c_str(), "r");
-    if (NULL == f) {
-        LOG_DEBUG("Could not open file %s, %s", pathToProjectFile.c_str(), strerror(errno));
-        return -1;
-    }
-    // else continue and parse the file
 
-    int r = fseek(f, 0, SEEK_END); // go to the end of the file
-    if (r != 0) {
-        LOG_ERROR("could not fseek(%s): %s", pathToProjectFile.c_str(), strerror(errno));
-        fclose(f);
-        return -1;
-    }
-    long filesize = ftell(f);
-    if (filesize > 1024*1024) {
-        LOG_ERROR("loadConfig: file %s over-sized (%ld bytes)", path, filesize);
-        fclose(f);
-        return -1;
-    }
-    rewind(f);
-    char *buf = (char *)malloc(filesize);
-    size_t n = fread(buf, 1, filesize, f);
-    if (n != filesize) {
-        LOG_ERROR("fread(%s): short read. feof=%d, ferror=%d", pathToProjectFile.c_str(), feof(f), ferror(f));
-        fclose(f);
-        return -1;
-    }
+    char *buf = 0;
+    int n = loadFile(pathToProjectFile.c_str(), &buf);
+
+    if (n <= 0) return -1; // error or empty file
+
     std::list<std::list<std::string> > lines = parseConfigTokens(buf, n);
+
+    free(buf); // not needed any longer
 
     config = parseProjectConfig(lines);
 
-    fclose(f);
     return 0;
 }
+
+void Project::loadPredefinedViews(const char *projectPath)
+{
+    LOG_FUNC();
+
+    std::string path = projectPath;
+    path += '/';
+    path += VIEWS_FILE;
+
+    char *buf = 0;
+    int n = loadFile(path.c_str(), &buf);
+
+    if (n > 0) {
+
+        std::list<std::list<std::string> > lines = parseConfigTokens(buf, n);
+
+        free(buf); // not needed any longer
+
+        config.predefinedViewsXxx = parsePredefinedViews(lines);
+    } // else error of empty file
+
+    LOG_DEBUG("predefined views loaded: %d", config.predefinedViewsXxx.size());
+}
+
+
 
 std::string Project::getLabelOfProperty(const std::string &propertyName) const
 {
@@ -493,7 +574,7 @@ std::list<std::pair<bool, std::string> > parseSortingSpec(const char *sortingSpe
     bool currentOrder = true; // ascending
     size_t len = strlen(sortingSpec);
     std::string currentPropertyName;
-    int currentOffset = 0;
+    size_t currentOffset = 0;
     std::list<std::pair<bool, std::string> > result;
     while (currentOffset < len) {
         char c = sortingSpec[currentOffset];
@@ -550,21 +631,6 @@ void sort(std::list<Issue*> &inout, const std::list<std::pair<bool, std::string>
         // erase max issue from working list
         workingList.erase(imax);
     }
-}
-
-/** Parse the specification of filters
-  * Syntax of filterSpec is:
-  *     status:open,release!v1.0,assignee:John Smith
-  *
-  */
-void parseFilterSpec(const char *filterSpec,
-                     std::map<std::string, std::list<std::string> > &propertiesToKeep,
-                     std::map<std::string, std::list<std::string> > &propertiesToReject)
-{
-    if (!filterSpec) return;
-    size_t len = strlen(filterSpec);
-    std::string currentPropertyName;
-
 }
 
 enum FilterSearch {
@@ -744,7 +810,7 @@ bool Project::searchFullText(const Issue* issue, const char *text) const
     // look through the entries
     Entry *e = 0;
     std::string next = issue->head;
-    while (e = getEntry(next)) {
+    while ( (e = getEntry(next)) ) {
         if (strcasestr(e->getMessage().c_str(), text)) return true; // found
         next = e->parent;
     }
@@ -848,7 +914,7 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
 
         // in order to have a short id, keep only the first characters
         // and if another issue exists with this id, then increase the length.
-        int len = 3;
+        size_t len = 3;
         while (len < id.size() && getIssue(id.substr(0, len))) len++;
         if (len > id.size()) {
             // another issue with same id exists. Cannot proceed.
@@ -987,14 +1053,6 @@ int Entry::getCtime() const
     return ctime;
 }
 
-
-std::string Entry::getStringifiedProperty(const std::string &propertyName)
-{
-    std::map<std::string, std::list<std::string> >::iterator p;
-    p = properties.find(propertyName);
-    if (p == properties.end()) return "";
-    else toString(p->second);
-}
 
 std::string Entry::serialize()
 {

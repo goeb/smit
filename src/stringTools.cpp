@@ -124,3 +124,13 @@ std::string urlEncode(const std::string &src)
     return dst;
 }
 
+std::string pop(std::list<std::string> & L)
+{
+    std::string token = "";
+    if (!L.empty()) {
+        token = L.front();
+        L.pop_front();
+    }
+    return token;
+
+}

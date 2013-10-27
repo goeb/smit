@@ -28,7 +28,6 @@ struct Entry {
     std::string serialize();
     int getCtime() const;
     std::string getMessage();
-    std::string getStringifiedProperty(const std::string &propertyName);
     Entry() : ctime(0) {};
 
 };
@@ -61,14 +60,24 @@ typedef struct PropertySpec {
     std::list<std::string> selectOptions; // for F_SELECT and F_MULTISELECT only
 } FieldSpec;
 
-// Project config
+struct PredefinedView {
+    std::string name;
+    std::map<std::string, std::list<std::string> > filterin;
+    std::map<std::string, std::list<std::string> > filterout;
+    std::string colspec;
+    std::string sort;
+    std::string search;
+};
+
 struct ProjectConfig {
     std::map<std::string, PropertySpec> properties;
     std::list<std::string> orderedProperties;
     std::list<std::pair<std::string, std::string> > predefinedViews;
     std::map<std::string, std::string> propertyLabels;
+    std::map<std::string, PredefinedView> predefinedViewsXxx;
 
 };
+
 
 
 
@@ -77,6 +86,8 @@ public:
     static int load(const char *path, char *name); // load a project
     int loadConfig(const char *path);
     int loadEntries(const char *path);
+    void loadPredefinedViews(const char *path);
+
     void consolidateIssues();
     std::list<Issue*> search(const char *fulltextSearch,
                              const std::map<std::string, std::list<std::string> > &filterIn,

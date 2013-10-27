@@ -99,7 +99,7 @@ User* UserBase::getUser(const std::string &username)
 
 /** Add a new user in database
   */
-int UserBase::addUser(User newUser)
+void UserBase::addUser(User newUser)
 {
     ScopeLocker(UserDb.locker, LOCK_READ_WRITE);
     User *u = new User;
