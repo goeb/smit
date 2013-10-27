@@ -538,18 +538,19 @@ int Project::modifyConfig(std::list<std::list<std::string> > &tokens)
         return -1;
     }
     c.predefinedViews = config.predefinedViews; // keep those unchanged
-    config = c;
 
     // write to file
     std::string data = serializeTokens(tokens);
 
     std::string pathToProjectFile = path + '/';
     pathToProjectFile += PROJECT_FILE;
-    int r = writeToFile(pathToProjectFile.c_str(), data, true);
+    int r = writeToFile(pathToProjectFile.c_str(), data);
     if (r != 0) {
         LOG_ERROR("Cannot write new config of project: %s", pathToProjectFile.c_str());
         return -1;
     }
+
+    config = c;
 
     return 0;
 }
@@ -975,7 +976,7 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
     }
     pathOfNewEntry += '/';
     pathOfNewEntry += id;
-    int r = writeToFile(pathOfNewEntry.c_str(), data, false); // do not allow overwrite
+    int r = writeToFile(pathOfNewEntry.c_str(), data);
     if (r != 0) {
         // error.
         LOG_ERROR("Could not write new entry to disk");
@@ -1001,7 +1002,7 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
 int Project::writeHead(const std::string &issueId, const std::string &entryId)
 {
     std::string pathToHead = path + '/' + ENTRIES + '/' + issueId + '/' + HEAD;
-    int r = writeToFile(pathToHead.c_str(), entryId, true); // allow overwrite for _HEAD
+    int r = writeToFile(pathToHead.c_str(), entryId);
     if (r<0) {
         LOG_ERROR("Cannot write HEAD (%s/%s)", issueId.c_str(), entryId.c_str());
     }

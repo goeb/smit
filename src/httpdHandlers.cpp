@@ -71,6 +71,11 @@ void sendHttpHeader403(struct mg_connection *conn)
     mg_printf(conn, "HTTP/1.1 403 Forbidden\r\n\r\n");
     mg_printf(conn, "403 Forbidden\r\n");
 }
+void sendHttpHeader500(struct mg_connection *conn)
+{
+    mg_printf(conn, "HTTP/1.1 500 Forbidden\r\n\r\n");
+    mg_printf(conn, "500 Internal Error\r\n");
+}
 
 /**
   * @param otherHeader
@@ -440,9 +445,16 @@ void httpPostProjectConfig(struct mg_connection *conn, Project &p, User u)
 
         // convert the post data to tokens
         std::list<std::list<std::string> > tokens = convertPostToTokens(postData);
-        p.modifyConfig(tokens);
+        int r = p.modifyConfig(tokens);
+        if (r == 0) {
+            // success, redirect to
+            std::string redirectUrl = p.getName() + "/config";
+            sendHttpRedirect(conn, redirectUrl.c_str(), 0);
+
+        } else { // error
+            sendHttpHeader500(conn);
+        }
     }
-    mg_printf(conn, "postData=%s", postData.c_str());
 }
 
 void httpGetListOfIssues(struct mg_connection *conn, Project &p, User u)

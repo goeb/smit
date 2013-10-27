@@ -185,19 +185,17 @@ int loadFile(const char *filepath, char **data)
   *    0 if success
   *    <0 if error
   */
-int writeToFile(const char *filepath, const std::string &data, bool allowOverwrite)
+int writeToFile(const char *filepath, const std::string &data)
 {
     int result = 0;
     mode_t mode = O_CREAT | O_TRUNC | O_WRONLY;
-    int flags = S_IRUSR | S_IWUSR;
-    if (!allowOverwrite) {
-        mode |= O_EXCL;
-        flags = S_IRUSR;
-    }
+    int flags = S_IRUSR;
 
-    int f = open(filepath, mode, flags);
+    std::string tmp = filepath;
+    tmp += ".tmp";
+    int f = open(tmp.c_str(), mode, flags);
     if (-1 == f) {
-        LOG_ERROR("Could not create file '%s', (%d) %s", filepath, errno, strerror(errno));
+        LOG_ERROR("Could not create file '%s', (%d) %s", tmp.c_str(), errno, strerror(errno));
         return -1;
     }
 
@@ -205,10 +203,17 @@ int writeToFile(const char *filepath, const std::string &data, bool allowOverwri
     if (n != data.size()) {
         LOG_ERROR("Could not write all data, incomplete file '%s': (%d) %s",
                   filepath, errno, strerror(errno));
-        result = -1;
+        return -1;
     }
 
     close(f);
+
+    int r = rename(tmp.c_str(), filepath);
+    if (r != 0) {
+        LOG_ERROR("Cannot rename '%s' -> '%s': (%d) %s", tmp.c_str(), filepath, errno, strerror(errno));
+        return -1;
+    }
+
     return result;
 }
 
