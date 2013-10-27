@@ -21,8 +21,3 @@ setPropertyLabel long-line-break-message "Use long lines"
 setPropertyLabel Add-Message "Validate"
 
 
-
-# links in the header of the page
-addPredefinedView "Open issues" "filterin=status:open&sort=-mtime"
-addPredefinedView "All issues" "sort=-mtime"
-

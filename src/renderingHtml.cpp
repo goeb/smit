@@ -436,7 +436,7 @@ void RHtml::printProjectConfig(struct mg_connection *conn, const ContextParamete
 {
     mg_printf(conn, "Content-Type: text/html\r\n\r\n");
 
-    std::string path = ctx.rootdir + "/public/project.html";
+    std::string path = ctx.rootdir + "/public/project_config.html";
     char *data;
     int r = loadFile(path.c_str(), &data);
     if (r >= 0) {
@@ -703,7 +703,7 @@ std::string convertToRichText(const std::string &raw)
     result = convertToRichTextInline(result, '_', '_', true, "span", "sm_underline");
     result = convertToRichTextInline(result, '/', '/', true, "em", "");
     result = convertToRichTextInline(result, '[', ']', false, "a", "sm_hyperlink");
-    result = convertToRichTextWholeline(result, "&gt;", "blockquote", "");
+    result = convertToRichTextWholeline(result, "&gt;", "div", "sm_quote");
     return result;
 
 }
@@ -788,6 +788,12 @@ void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx,
             mg_printf(conn, "&#10008; delete");
             mg_printf(conn, "</a>\n");
         }
+
+        // link to raw entry
+        mg_printf(conn, "(<a href=\"/%s/entries/%s/%s\" class=\"sm_raw_entry\">%s</a>)\n",
+                  htmlEscape(ctx.getProject().getName()).c_str(),
+                  issue.id.c_str(), ee.id.c_str(), _("raw"));
+
 
         mg_printf(conn, "</div>\n"); // end header
 

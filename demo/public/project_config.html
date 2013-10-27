@@ -11,37 +11,6 @@
                 // add 3 more properties on page
                 for (var i=0; i<n; i++) addProperty('', '', '', '');
             }
-            function addMorePredefinedViews(n) {
-                for (var i=0; i<n; i++) addPredefinedViews('', '');
-            }
-            function addPredefinedViews(text, url) {
-                var views = document.getElementById('sm_predefined_views');
-                var n = views.childNodes.length;
-                // add predefined view n+1
-                n = n + 1;
-                var viewn = document.createElement('div');
-                viewn.id = 'predefined_view_' + n;
-
-                // input boxes for this property
-                var i = document.createTextNode('#' + n + ' ');
-                viewn.appendChild(i);
-
-                i = document.createElement('input');
-                i.name = 'predefined_view_' + n + '_text';
-                i.size = 30;
-                i.value = text;
-                i.placeholder = "Description of the predefined view"
-                viewn.appendChild(i);
-
-                i = document.createElement('input');
-                i.name = 'predefined_view_' + n + '_url';
-                i.size = 30;
-                i.value = url;
-                i.placeholder = "eg: sort=-mtime&filterin=status:open"
-                viewn.appendChild(i);
-
-                views.appendChild(viewn);
-            }
             function addProperty(name, label, type, opts) {
                 var table = document.getElementById('sm_properties');
                 var n = table.rows.length;
@@ -50,59 +19,85 @@
                 row.id = 'property' + n;
 
                 // input boxes for this property
-                var i = document.createTextNode('#' + n + ' ');
-                var cell1 = row.insertCell(0);
-                cell1.appendChild(i);
-
-                var cell2 = row.insertCell(1);
+                var cell;
+                cell = row.insertCell(row.cells.length);
                 i = document.createElement('input');
-                i.name = 'property' + n + '_name';
+                i.type = "hidden"; i.name = "token"; i.value = "EOL";
+                cell.appendChild(i);
+
+                var i = document.createTextNode('#' + n + ' ');
+                cell.appendChild(i);
+
+                cell.appendChild(i);
+
+                cell = row.insertCell(row.cells.length);
+                i = document.createElement('input');
+                i.type = "hidden"; i.name = "token"; i.value = "addProperty";
+                cell.appendChild(i);
+
+                i = document.createElement('input');
+                i.name = 'token';
                 i.size = 15;
                 i.value = name;
                 i.pattern = "[a-zA-Z_0-9]+"
                 i.placeholder = "logical_name"
                 i.title = "Allowed characters: letters, digits, underscore"
                 if (type == 'reserved') i.disabled = true;
-                cell2.appendChild(i);
+                cell.appendChild(i);
 
-                var cell3 = row.insertCell(2);
-                i = document.createElement('input');
-                i.name = 'property' + n + '_label';
-                i.size = 20;
-                i.value = label;
-                i.placeholder = "Label that will be displayed";
-                i.title = "Label that will be displayed";
-                cell3.appendChild(i);
-
-                var cell4 = row.insertCell(3);
+                cell = row.insertCell(row.cells.length);
+                cell.id = 'type_' + name;
                 if (type == 'reserved') {
                     i = document.createElement('span');
                     i.innerHTML = 'reserved';
-                    cell4.appendChild(i);
+                    cell.appendChild(i);
                 } else {
                     i = document.createElement('select');
-                    i.name = 'property' + n + '_type';
+                    i.name = 'token';
                     i.className = "updatable";
                     i.onchange = fupdateThis;
-                    var options = ['text', 'list', 'multilist', 'user'];
+                    var options = ['text', 'select', 'multiselect', 'selectUser'];
                     for (index=0; index<options.length; index++) {
                         opt = document.createElement('option');
                         opt.innerHTML = options[index];
                         if (type == opt.innerHTML) opt.selected = 1;
                         i.appendChild(opt);
                     }
-                    cell4.appendChild(i);
+                    cell.appendChild(i);
                     fupdate(i, opts);
                 }
+
+                // label
+                cell = row.insertCell(row.cells.length);
+                i = document.createElement('input');
+                i.type = "hidden"; i.name = "token"; i.value = "EOL";
+                cell.appendChild(i);
+
+                i = document.createElement('input');
+                i.type = "hidden"; i.name = "token"; i.value = "setPropertyLabel";
+                cell.appendChild(i);
+
+                i = document.createElement('input');
+                i.type = "hidden"; i.name = "token"; i.value = name;
+                cell.appendChild(i);
+
+                i = document.createElement('input');
+                i.name = 'token';
+                i.size = 20;
+                i.value = label;
+                i.placeholder = "Label that will be displayed";
+                i.title = "Label that will be displayed";
+                cell.appendChild(i);
+
 
             }
             function fupdateThis() { fupdate(this); }
             function fupdate(item, value) {
                 //alert(item.value);
                 if (item.value == "text") show_size_input(item.parentNode, value);
-                else if (item.value == "list") show_list_input(item.parentNode, value);
-                else if (item.value == "multilist") show_list_input(item.parentNode, value);
-                else if (item.value == "user") show_user_input(item.parentNode);
+                else if (item.value == "select") show_list_input(item.parentNode, value);
+                else if (item.value == "multiselect") show_list_input(item.parentNode, value);
+                else if (item.value == "selectUser") show_user_input(item.parentNode);
             }
             function show_size_input(item, value) {
                 // hide extra details
@@ -113,16 +108,16 @@
                 if (x) item.removeChild(x);
             }
             function show_list_input(item, value) {
-                x = document.getElementById(item.id + '_opt');
-                if (x) item.removeChild(x);
-                i = document.createElement('textarea')
-                i.name = item.id + '_opt';
-                i.id = i.name;
-                i.className = 'tke_fieldconfig';
-                i.rows = 4;
-                i.cols = 20;
+                var i = document.getElementById(item.id + '_opt');
+                if (!i) {
+                    i = document.createElement('textarea')
+                    i.name = "token"
+                    i.id = item.id + '_opt';
+                    i.rows = 4;
+                    i.cols = 20;
+                    item.appendChild(i);
+                }
                 if (value) i.value = value;
-                item.appendChild(i);
 
                 x = document.getElementById(item.id + '_help');
                 if (x) item.removeChild(x);
@@ -149,9 +144,6 @@
                 addProperty('status', '', 'list', 'open\nclosed\n');
                 addProperty('priority', '', 'list', 'high\nmedium\nlow\n');
                 addProperty('assignee', '', 'user', '');
-                addPredefinedViews('Open issues', 'sort=-mtime&filterin=status:open')
-                addPredefinedViews('Closed issues', 'sort=-mtime&filterin=status:closed')
-                addPredefinedViews('All issues', 'sort=-mtime')
                 //replaceContentInContainer();
             }
             function replaceContentInContainer() {
@@ -205,7 +197,7 @@
             <noscript>You must enable Javascript to continue...</noscript>
 
             <table id="sm_properties" style="vertical-align: top;">
-                <tr><td>#</td><td>Logical Name</td><td>Label</td><td>Type</td></tr>
+                <tr><td>#</td><td>Logical Name</td><td>Type</td><td>Label</td></tr>
             </table>
             <div onclick="addMoreProperties(3);" class="clickable">+ Click for more properties...</div>
             <h2>Predefined views</h2>
