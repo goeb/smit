@@ -358,6 +358,13 @@ void httpGetProjectConfig(struct mg_connection *conn, Project &p, User u)
     }
 
 }
+std::list<std::list<std::string> > convertPostToTokens(std::string &postData)
+{
+    std::list<std::list<std::string> > tokens;
+    return tokens;
+}
+
+
 void httpPostProjectConfig(struct mg_connection *conn, Project &p, User u)
 {
     enum Role r = u.getRole(p.getName());
@@ -385,6 +392,10 @@ void httpPostProjectConfig(struct mg_connection *conn, Project &p, User u)
         buffer[n] = 0;
         LOG_DEBUG("postData=%s", buffer);
         postData = buffer;
+
+        // convert the post data to tokens
+        std::list<std::list<std::string> > tokens = convertPostToTokens(postData);
+        p.modifyConfig(tokens);
     }
     mg_printf(conn, "postData=%s", postData.c_str());
 }
@@ -578,6 +589,28 @@ void parseQueryString(const std::string & queryString, std::map<std::string, std
     // append the latest parameter (if any)
 }
 
+std::string readMgConn(struct mg_connection *conn, size_t maxSize)
+{
+    std::string postData;
+    const int SIZ = 4096;
+    char postFragment[SIZ+1];
+    int n; // number of bytes read
+
+    while ( (n = mg_read(conn, postFragment, SIZ)) ) {
+        postFragment[n] = 0;
+        LOG_DEBUG("postFragment=%s", postFragment);
+        if (postData.size() > maxSize) {
+            // 10 MByte is too much. overflow. abort.
+            LOG_ERROR("Too much POST data. Abort.");
+            break;
+        }
+        postData += postFragment;
+    }
+    return postData;
+
+}
+
+
 /** Handle the posting of an entry
   * If issueId is empty, then a new issue is created.
   */
@@ -595,20 +628,7 @@ void httpPostEntry(struct mg_connection *conn, Project &p, const std::string & i
         // post_data is "var1=val1&var2=val2...".
         // multiselect is like: "tags=v4.1&tags=v5.0" (same var repeated)
 
-        const int SIZ = 4096;
-        char postFragment[SIZ+1];
-        int n; // number of bytes read
-        std::string postData;
-        while ( (n = mg_read(conn, postFragment, SIZ)) ) {
-            postFragment[n] = 0;
-            LOG_DEBUG("postFragment=%s", postFragment);
-            if (postData.size() > 10*SIZ*SIZ) {
-                // 10 MByte is too much. overflow. abort.
-                LOG_ERROR("Too much POST data. Abort.");
-                return;
-            }
-            postData += postFragment;
-        }
+        std::string postData = readMgConn(conn, 10*1024*1024);
         std::map<std::string, std::list<std::string> > vars;
         parseQueryString(postData, vars);
 

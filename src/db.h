@@ -106,6 +106,7 @@ public:
     int writeHead(const std::string &issueId, const std::string &entryId);
     int deleteEntry(std::string entryId, const std::string &username);
     std::list<std::string> getDefaultColspec();
+    int modifyConfig(std::list<std::list<std::string> > &tokens);
 
 private:
     void consolidateIssue(Issue *i);

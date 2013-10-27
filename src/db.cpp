@@ -517,6 +517,14 @@ int Project::loadConfig(const char *path)
     return 0;
 }
 
+int Project::modifyConfig(std::list<std::list<std::string> > &tokens)
+{
+    LOG_FUNC();
+    ScopeLocker scopeLocker(locker, LOCK_READ_WRITE);
+    config = parseProjectConfig(tokens);
+    return 0;
+}
+
 void Project::loadPredefinedViews(const char *projectPath)
 {
     LOG_FUNC();
