@@ -43,17 +43,18 @@
                 views.appendChild(viewn);
             }
             function addProperty(name, label, type, opts) {
-                var properties = document.getElementById('sm_properties');
-                var n = properties.childNodes.length;
-                // add property n+1
-                n = n + 1;
-                var fieldn = document.createElement('div');
-                fieldn.id = 'property' + n;
+                var table = document.getElementById('sm_properties');
+                var n = table.rows.length;
+                var row = table.insertRow(n);
+
+                row.id = 'property' + n;
 
                 // input boxes for this property
                 var i = document.createTextNode('#' + n + ' ');
-                fieldn.appendChild(i);
+                var cell1 = row.insertCell(0);
+                cell1.appendChild(i);
 
+                var cell2 = row.insertCell(1);
                 i = document.createElement('input');
                 i.name = 'property' + n + '_name';
                 i.size = 15;
@@ -62,20 +63,22 @@
                 i.placeholder = "logical_name"
                 i.title = "Allowed characters: letters, digits, underscore"
                 if (type == 'reserved') i.disabled = true;
-                fieldn.appendChild(i);
+                cell2.appendChild(i);
 
+                var cell3 = row.insertCell(2);
                 i = document.createElement('input');
                 i.name = 'property' + n + '_label';
                 i.size = 20;
                 i.value = label;
                 i.placeholder = "Label that will be displayed";
                 i.title = "Label that will be displayed";
-                fieldn.appendChild(i);
+                cell3.appendChild(i);
 
+                var cell4 = row.insertCell(3);
                 if (type == 'reserved') {
                     i = document.createElement('span');
                     i.innerHTML = 'reserved';
-                    fieldn.appendChild(i);
+                    cell4.appendChild(i);
                 } else {
                     i = document.createElement('select');
                     i.name = 'property' + n + '_type';
@@ -88,10 +91,9 @@
                         if (type == opt.innerHTML) opt.selected = 1;
                         i.appendChild(opt);
                     }
-                    fieldn.appendChild(i);
+                    cell4.appendChild(i);
                     fupdate(i, opts);
                 }
-                properties.appendChild(fieldn);
 
             }
             function fupdateThis() { fupdate(this); }
@@ -182,12 +184,6 @@
                         <td>Project name:</td>
                         <td> <input type="text" size="50" name="name"> </td>
                     </tr>
-                    <!--tr style="vertical-align: top;">
-                        <td>Description:</td>
-                        <td>
-                            <textarea name="description" cols="60" rows="10"></textarea>
-                        </td>
-                    </tr-->
                 </table>
             </div>
             <h2>Properties</h2>
@@ -207,7 +203,10 @@
             <br>
             <br>
             <noscript>You must enable Javascript to continue...</noscript>
-            <div id="sm_properties"></div>
+
+            <table id="sm_properties" style="vertical-align: top;">
+                <tr><td>#</td><td>Logical Name</td><td>Label</td><td>Type</td></tr>
+            </table>
             <div onclick="addMoreProperties(3);" class="clickable">+ Click for more properties...</div>
             <h2>Predefined views</h2>
             <div id="sm_predefined_views"></div>
