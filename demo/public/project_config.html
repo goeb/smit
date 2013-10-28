@@ -115,16 +115,13 @@
                     i.id = item.id + '_opt';
                     i.rows = 4;
                     i.cols = 20;
+                    i.value = "one\r\nvalue\nper\nline"
                     item.appendChild(i);
                 }
                 if (value) i.value = value;
 
                 x = document.getElementById(item.id + '_help');
                 if (x) item.removeChild(x);
-                t = document.createElement('span');
-                t.innerHTML = "(one value per line)";
-                t.id = item.id + '_help';
-                item.appendChild(t);
             }
             function show_user_input(item) {
                 x = document.getElementById(item.id + '_opt');
@@ -140,7 +137,7 @@
                 addProperty('id', '#', 'reserved', '');
                 addProperty('ctime', 'Created', 'reserved', '');
                 addProperty('mtime', 'Modified', 'reserved', '');
-                addProperty('title', 'Description', 'reserved', '');
+                addProperty('summary', 'Description', 'reserved', '');
                 addProperty('status', '', 'list', 'open\nclosed\n');
                 addProperty('priority', '', 'list', 'high\nmedium\nlow\n');
                 addProperty('assignee', '', 'user', '');
@@ -190,7 +187,7 @@
             <code>id</code>,
             <code>ctime</code>,
             <code>mtime</code>,
-            <code>title</code>
+            <code>summary</code>
             . However you may assign a human-readable label to these, as well as for any other.
             <br>
             <br>

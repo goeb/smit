@@ -1,6 +1,6 @@
 
 # command params ...
-# reserved fields are: id, title, ctime, mtime
+# reserved fields are: id, summary, ctime, mtime
 addProperty status select "open" "closed" "deleted"
 addProperty in_charge selectUser
 addProperty due_date select \
@@ -9,7 +9,7 @@ addProperty due_date select \
     "next week" \
     "next month" 
 
-setPropertyLabel title Description
+setPropertyLabel summary Description
 setPropertyLabel id "#"
 setPropertyLabel ctime "Created"
 setPropertyLabel mtime "Modified"

@@ -514,10 +514,10 @@ void RHtml::printIssueList(struct mg_connection *conn, const ContextParameters &
                 p = properties.find(column);
                 if (p != properties.end()) text << toString(p->second);
             }
-            // add href if column is 'id' or 'title'
+            // add href if column is 'id' or 'summary'
             std::string href_lhs = "";
             std::string href_rhs = "";
-            if ( (column == "id") || (column == "title") ) {
+            if ( (column == "id") || (column == "summary") ) {
                 href_lhs = "<a href=\"";
                 href_lhs = href_lhs + "/" + ctx.getProject().getName() + "/issues/";
                 href_lhs = href_lhs + (char*)(*i)->id.c_str() + "\">";
@@ -720,10 +720,10 @@ void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx,
 
     // issue header
     // -------------------------------------------------
-    // print id and title
+    // print id and summary
     mg_printf(conn, "<div class=\"sm_issue_header\">\n");
     mg_printf(conn, "<span class=\"sm_issue_id\">%s</span>\n", issue.id.c_str());
-    mg_printf(conn, "<span class=\"sm_issue_title\">%s</span>\n", htmlEscape(issue.getTitle()).c_str());
+    mg_printf(conn, "<span class=\"sm_issue_summary\">%s</span>\n", htmlEscape(issue.getSummary()).c_str());
     mg_printf(conn, "</div>\n");
 
     // issue summary
@@ -812,12 +812,12 @@ void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx,
         std::ostringstream otherFields;
         bool firstInList = true;
 
-        // process title first as it is not part of orderedFields
-        std::map<std::string, std::list<std::string> >::const_iterator p = ee.properties.find(K_TITLE);
+        // process summary first as it is not part of orderedFields
+        std::map<std::string, std::list<std::string> >::const_iterator p = ee.properties.find(K_SUMMARY);
         std::string value;
         if (p != ee.properties.end()) {
             value = toString(p->second);
-            otherFields << "<span class=\"sm_entry_pname\">" << ctx.getProject().getLabelOfProperty(K_TITLE) << ": </span>";
+            otherFields << "<span class=\"sm_entry_pname\">" << ctx.getProject().getLabelOfProperty(K_SUMMARY) << ": </span>";
             otherFields << "<span class=\"sm_entry_pvalue\">" << htmlEscape(value) << "</span>";
             firstInList = false;
         }
@@ -889,15 +889,15 @@ void RHtml::printIssueForm(struct mg_connection *conn, const ContextParameters &
 
     // The form is made over a table with 4 columns.
     // each row is made of 1 label, 1 input, 1 label, 1 input (4 columns)
-    // except for the title.
-    // title
+    // except for the summary.
+    // summary
     mg_printf(conn, "<table class=\"sm_fields_summary\">");
     mg_printf(conn, "<tr>\n");
-    mg_printf(conn, "<td class=\"sm_flabel sm_flabel_title\">%s: </td>\n", ctx.getProject().getLabelOfProperty("title").c_str());
+    mg_printf(conn, "<td class=\"sm_flabel sm_flabel_summary\">%s: </td>\n", ctx.getProject().getLabelOfProperty("summary").c_str());
     mg_printf(conn, "<td class=\"sm_finput\" colspan=\"3\">");
 
-    mg_printf(conn, "<input class=\"sm_finput_title\" required=\"required\" type=\"text\" name=\"title\" value=\"%s\"",
-              htmlEscape(issue.getTitle()).c_str());
+    mg_printf(conn, "<input class=\"sm_finput_summary\" required=\"required\" type=\"text\" name=\"summary\" value=\"%s\"",
+              htmlEscape(issue.getSummary()).c_str());
     if (autofocus) mg_printf(conn, " autofocus");
     mg_printf(conn, ">");
     mg_printf(conn, "</td>\n");

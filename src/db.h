@@ -12,7 +12,7 @@
 #include "mutexTools.h"
 
 #define K_MESSAGE "message" // keyword used for the message. Could be changed to _message ? TODO ?
-#define K_TITLE "title"
+#define K_SUMMARY "summary"
 
 #define DELETE_DELAY_S (10*60) // seconds
 
@@ -45,7 +45,7 @@ struct Issue {
     // the properties of the issue is the consolidation of all the properties
     // of its entries. For a given key, the most recent value has priority.
     void loadHead(const std::string &issuePath);
-    std::string getTitle() const;
+    std::string getSummary() const;
     bool lessThan(Issue* other, const std::list<std::pair<bool, std::string> > &sortingSpec);
     bool filter(const std::map<std::string, std::list<std::string> > &filterIn,
                 const std::map<std::string, std::list<std::string> > &filterOut);
