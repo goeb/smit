@@ -1009,14 +1009,23 @@ int Project::writeHead(const std::string &issueId, const std::string &entryId)
     return r;
 }
 
+
+std::list<std::string> Project::getReservedProperties() const
+{
+    std::list<std::string> reserved;
+    reserved.push_front("id");
+    reserved.push_front("ctime");
+    reserved.push_front("mtime");
+    reserved.push_front("summary");
+    return reserved;
+}
+
 std::list<std::string> Project::getDefaultColspec()
 {
     std::list<std::string> colspec = config.orderedProperties;
     // add mandatory properties that are not included in orderedProperties
-    colspec.push_front("summary");
-    colspec.push_front("mtime");
-    colspec.push_front("ctime");
-    colspec.push_front("id");
+    std::list<std::string> reserved = getReservedProperties();
+    colspec.insert(colspec.begin(), reserved.begin(), reserved.end());
     return colspec;
 }
 

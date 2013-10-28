@@ -2,6 +2,7 @@
 #include "renderingText.h"
 #include "db.h"
 #include "logging.h"
+#include "stringTools.h"
 
 void RText::printProjectList(struct mg_connection *conn, const std::list<std::pair<std::string, std::string> > &pList)
 {

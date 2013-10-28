@@ -99,12 +99,12 @@ public:
     bool searchFullText(const Issue* issue, const char *text) const;
     std::string getLabelOfProperty(const std::string &propertyName) const;
 
-
     inline std::string getName() const { return name; }
     inline std::string getPath() const { return path; }
     inline ProjectConfig getConfig() const { return config; }
     int writeHead(const std::string &issueId, const std::string &entryId);
     int deleteEntry(std::string entryId, const std::string &username);
+    std::list<std::string> getReservedProperties() const;
     std::list<std::string> getDefaultColspec();
     int modifyConfig(std::list<std::list<std::string> > &tokens);
 
@@ -126,49 +126,11 @@ public:
     std::map<std::string, Project*> projects;
     static Project *getProject(const std::string &projectName);
     std::string pathToRepository;
-
-    static std::list<std::string> getDefautlColspec(const char *project);
-
 };
 
 
 // Functions
 int dbLoad(const char * pathToRepository); // initialize the given repository
-
-// load in memory the given project
-// re-load if it was previously loaded
-int loadProject(const char *path);
-
-
-// search
-//  project: name of project where the search should be conducted
-//  fulltext: text that is searched (optional: 0 for no fulltext search)
-//  filterSpec: "status:open+label:v1.0+xx:yy"
-//  sortingSpec: "id+title-owner" (+ for ascending, - for descending order)
-// @return number of issues 
-//  When fulltext search is enabled (fulltext != 0) then the search is done
-//  through all entries.
-std::list<struct Issue*> search(const char * project, const char *fulltext,
-                                const std::list<std::string> &filterIn,
-                                const std::list<std::string> &filterOut,
-                                const char *sortingSpec);
-
-
-// add an entry in the database
-int add(const char *project, const char *issueId, const Entry &entry);
-
-// Get a given issue and all its entries
-int get(const char *project, const char *issueId, Issue &issue, std::list<Entry*> &Entries, ProjectConfig &config);
-
-
-// Deleting an entry is only possible if:
-//     - this entry is the HEAD (has no child)
-//     - the deleting happens less than 5 minutes after creation of the entry
-// @return TODO
-int deleteEntry(std::string entry);
-
-std::string bin2hex(const ustring & in);
-std::string toString(const std::list<std::string> &values);
 
 
 #endif

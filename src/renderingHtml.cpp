@@ -34,6 +34,7 @@ const Project &ContextParameters::getProject() const
     return *project;
 }
 
+/** obsolete ?? */
 void ContextParameters::printSmitData(struct mg_connection *conn) const
 {
     mg_printf(conn, "%s", "<script id=\"sm_data\" type=\"application/json\">\n{");
@@ -69,7 +70,6 @@ void RHtml::printGlobalHeader(struct mg_connection *conn, const std::string &rep
     }
 }
 
-
 void RHtml::printSigninPage(struct mg_connection *conn, const char *pathToRepository, const char *redirect)
 {
 
@@ -89,7 +89,6 @@ void RHtml::printSigninPage(struct mg_connection *conn, const char *pathToReposi
     }
 }
 
-
 void RHtml::printFooter(struct mg_connection *conn, const std::string &projectPath)
 {
     std::string path = projectPath + "/html/footer.html";
@@ -102,6 +101,7 @@ void RHtml::printFooter(struct mg_connection *conn, const std::string &projectPa
         LOG_ERROR("Could not load footer.html for project %s", projectPath.c_str());
     }
 }
+
 void RHtml::printGlobalFooter(struct mg_connection *conn, const std::string &repo)
 {
     std::string path = repo + "/public/global_footer.html";
@@ -137,8 +137,6 @@ std::string replaceHtmlEntity(const std::string &in, char c, const char *replace
     if (savedOffset < i) out += in.substr(savedOffset, i-savedOffset);
     return out;
 }
-
-
 
 std::string htmlEscape(const std::string &value)
 {
@@ -326,8 +324,6 @@ void RHtml::printGlobalNavigation(struct mg_connection *conn, const ContextParam
   */
 void RHtml::printNavigationBar(struct mg_connection *conn, const ContextParameters &ctx, bool autofocus)
 {
-    printGlobalNavigation(conn, ctx);
-
     HtmlNode div("div");
     div.addAttribute("class", "sm_navigation_project");
     if (ctx.userRole == ROLE_ADMIN || ctx.userRole == ROLE_RW) {
@@ -348,8 +344,6 @@ void RHtml::printNavigationBar(struct mg_connection *conn, const ContextParamete
         a.addContents("%s", pv->first.c_str());
         div.addContents(a);
     }
-
-
 
     HtmlNode form("form");
     form.addAttribute("class", "sm_searchbox");
@@ -489,16 +483,116 @@ std::string getNewSortingSpec(struct mg_connection *conn, const std::string prop
     return result;
 }
 
+void printLinksToPredefinedViews(struct mg_connection *conn, const ContextParameters &ctx)
+{
+    ProjectConfig c = ctx.getProject().getConfig();
+    std::map<std::string, PredefinedView>::iterator pv;
+    FOREACH(pv, c.predefinedViews) {
+        mg_printf(conn, "<a href=\"views\">%s</a><br>\n", htmlEscape(pv->first).c_str());
+    }
+}
+
+void printScriptUpdateConfig(struct mg_connection *conn, const ContextParameters &ctx)
+{
+    mg_printf(conn, "<script>\n");
+
+    // fulfill reserved properties first
+    std::list<std::string> reserved = ctx.getProject().getReservedProperties();
+    std::list<std::string>::iterator r;
+    FOREACH(r, reserved) {
+        mg_printf(conn, "addProperty('%s', '%s', 'reserved', '');\n", r->c_str(),
+                  ctx.getProject().getLabelOfProperty(*r).c_str());
+    }
+
+    // other properties
+    ProjectConfig c = ctx.getProject().getConfig();
+    std::map<std::string, PropertySpec>::iterator p;
+    FOREACH(p, c.properties) {
+        PropertySpec pspec = p->second;
+        const char *type = "";
+        switch (pspec.type) {
+        case F_TEXT: type = "text"; break;
+        case F_SELECT: type = "select"; break;
+        case F_MULTISELECT: type = "multiselect"; break;
+        case F_SELECT_USER: type = "selectUser"; break;
+        }
+
+        mg_printf(conn, "addProperty('%s', '%s', '%s', '%s');\n", p->first.c_str(),
+                  ctx.getProject().getLabelOfProperty(p->first).c_str(),
+                  type, toString(pspec.selectOptions, "\\n").c_str());
+
+    }
+
+    mg_printf(conn, "replaceContentInContainer();\n");
+    mg_printf(conn, "</script>\n");
+}
+
+#define K_SM_DIV_NAVIGATION_GLOBAL "SM_DIV_NAVIGATION_GLOBAL"
+#define K_SM_DIV_NAVIGATION_ISSUES "SM_DIV_NAVIGATION_ISSUES"
+#define K_SM_DIV_PROJECT_NAME "SM_DIV_PROJECT_NAME"
+#define K_SM_SCRIPT_UPDATE_CONFIG "SM_SCRIPT_UPDATE_CONFIG"
+#define K_SM_DIV_PREDEFINED_VIEWS "SM_DIV_PREDEFINED_VIEWS"
+
 void RHtml::printProjectConfig(struct mg_connection *conn, const ContextParameters &ctx)
 {
     mg_printf(conn, "Content-Type: text/html\r\n\r\n");
 
-    std::string path = ctx.rootdir + "/public/project_config.html";
+    std::string path = ctx.rootdir + "/public/pconfig.html";
     char *data;
-    int r = loadFile(path.c_str(), &data);
-    if (r >= 0) {
-        mg_printf(conn, "%s", data);
-        free(data);
+    int n = loadFile(path.c_str(), &data);
+    if (n >= 0) {
+        // replace SM_ variables
+        int dumpFromHere = 0;
+        int searchFromHere = 0;
+        // locate next possible variable
+        char *p = 0;
+        while ( (p = strstr(data + searchFromHere, "SM_")) &&
+                (searchFromHere < n) ) {
+            size_t offset = p - data;
+            // print previous HTML
+            if (0 == strncmp(p, K_SM_DIV_PROJECT_NAME, strlen(K_SM_DIV_PROJECT_NAME))) {
+                // print this, only for new project
+                // TODO
+                data[offset] = 0;
+                mg_printf(conn, "%s", data + dumpFromHere); // print preceding raw HTML
+                dumpFromHere = offset + strlen(K_SM_DIV_PROJECT_NAME);
+                searchFromHere = dumpFromHere;
+
+            } else if (0 == strncmp(p, K_SM_DIV_NAVIGATION_GLOBAL, strlen(K_SM_DIV_NAVIGATION_GLOBAL))) {
+                data[offset] = 0;
+                mg_printf(conn, "%s", data + dumpFromHere); // print preceding raw HTML
+                printGlobalNavigation(conn, ctx); // print dynamic contents
+                dumpFromHere = offset + strlen(K_SM_DIV_NAVIGATION_GLOBAL);
+                searchFromHere = dumpFromHere;
+
+            } else if (0 == strncmp(p, K_SM_DIV_NAVIGATION_ISSUES, strlen(K_SM_DIV_NAVIGATION_ISSUES))) {
+                data[offset] = 0;
+                mg_printf(conn, "%s", data + dumpFromHere); // print preceding raw HTML
+                printNavigationBar(conn, ctx, false); // print dynamic contents
+                dumpFromHere = offset + strlen(K_SM_DIV_NAVIGATION_ISSUES);
+                searchFromHere = dumpFromHere;
+
+            } else if (0 == strncmp(p, K_SM_SCRIPT_UPDATE_CONFIG, strlen(K_SM_SCRIPT_UPDATE_CONFIG))) {
+                data[offset] = 0;
+                mg_printf(conn, "%s", data + dumpFromHere); // print preceding raw HTML
+                printScriptUpdateConfig(conn, ctx); // print dynamic contents
+                dumpFromHere = offset + strlen(K_SM_SCRIPT_UPDATE_CONFIG);
+                searchFromHere = dumpFromHere;
+
+            } else if (0 == strncmp(p, K_SM_DIV_PREDEFINED_VIEWS, strlen(K_SM_DIV_PREDEFINED_VIEWS))) {
+                data[offset] = 0;
+                mg_printf(conn, "%s", data + dumpFromHere); // print preceding raw HTML
+                printLinksToPredefinedViews(conn, ctx);
+                dumpFromHere = offset + strlen(K_SM_SCRIPT_UPDATE_CONFIG);
+                searchFromHere = dumpFromHere;
+
+            } else {
+                // unrecognized variable
+                searchFromHere = offset+1;
+            }
+        }
+        mg_printf(conn, "%s", data + dumpFromHere); // print preceding raw HTML
+
     } else {
         LOG_ERROR("Could not load %s", path.c_str());
     }
@@ -511,6 +605,7 @@ void RHtml::printProjectPage(struct mg_connection *conn, const ContextParameters
 {
     mg_printf(conn, "Content-Type: text/html\r\n\r\n");
     printHeader(conn, ctx.getProject().getPath());
+    printGlobalNavigation(conn, ctx);
     printNavigationBar(conn, ctx, true);
     printFooter(conn, ctx.getProject().getName().c_str());
     ctx.printSmitData(conn);
@@ -522,6 +617,7 @@ void RHtml::printIssueList(struct mg_connection *conn, const ContextParameters &
 {
     mg_printf(conn, "Content-Type: text/html\r\n\r\n");
     printHeader(conn, ctx.getProject().getPath());
+    printGlobalNavigation(conn, ctx);
     printNavigationBar(conn, ctx, true);
 
     // print chosen filters and search parameters
@@ -771,6 +867,7 @@ void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx,
 
     mg_printf(conn, "Content-Type: text/html\r\n\r\n");
     printHeader(conn, ctx.getProject().getPath().c_str());
+    printGlobalNavigation(conn, ctx);
     printNavigationBar(conn, ctx, true);
 
     mg_printf(conn, "<div class=\"sm_issue\">");
@@ -923,6 +1020,7 @@ void RHtml::printNewIssuePage(struct mg_connection *conn, const ContextParameter
 
     mg_printf(conn, "Content-Type: text/html\r\n\r\n");
     printHeader(conn, ctx.getProject().getPath().c_str());
+    printGlobalNavigation(conn, ctx);
     printNavigationBar(conn, ctx, false);
 
     mg_printf(conn, "<div class=\"sm_issue\">");
