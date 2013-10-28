@@ -1013,10 +1013,10 @@ int Project::writeHead(const std::string &issueId, const std::string &entryId)
 std::list<std::string> Project::getReservedProperties() const
 {
     std::list<std::string> reserved;
-    reserved.push_front("id");
-    reserved.push_front("ctime");
-    reserved.push_front("mtime");
-    reserved.push_front("summary");
+    reserved.push_back("id");
+    reserved.push_back("ctime");
+    reserved.push_back("mtime");
+    reserved.push_back("summary");
     return reserved;
 }
 
