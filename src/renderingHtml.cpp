@@ -264,6 +264,61 @@ std::string makeQueryString(const PredefinedView &pv)
     return qs;
 }
 
+/** Print global navigation bar
+  *
+  * - link to all projects page
+  * - link to modify project (if admin)
+  * - signed-in user indication and link to signout
+  */
+void RHtml::printGlobalNavigation(struct mg_connection *conn, const ContextParameters &ctx)
+{
+    HtmlNode div("div");
+    div.addAttribute("class", "sm_navigation_global");
+    HtmlNode linkToProjects("a");
+    linkToProjects.addAttribute("class", "sm_link_projects");
+    linkToProjects.addAttribute("href", "/");
+    linkToProjects.addContents("%s", _("All projects"));
+    div.addContents(linkToProjects);
+
+    if (ctx.userRole == ROLE_ADMIN) {
+        // link for modifying project structure
+        HtmlNode linkToModify("a");
+        linkToModify.addAttribute("class", "sm_link_modify_project");
+        linkToModify.addAttribute("href", "/%s/config", htmlEscape(ctx.project->getName()).c_str());
+        linkToModify.addContents("%s", _("Project configuration"));
+        div.addContents(" ");
+        div.addContents(linkToModify);
+    }
+
+    // signed-in
+    HtmlNode userinfo("span");
+    userinfo.addAttribute("class", "sm_userinfo");
+    userinfo.addContents("%s", _("Logged in as: "));
+    HtmlNode username("span");
+    username.addAttribute("class", "sm_username");
+    username.addContents("%s", htmlEscape(ctx.username).c_str());
+    userinfo.addContents(username);
+    div.addContents(userinfo);
+
+    // form to sign-out
+    HtmlNode signout("form");
+    signout.addAttribute("action", "/signout");
+    signout.addAttribute("method", "post");
+    signout.addAttribute("id", "sm_signout");
+    signout.addContents("(");
+    HtmlNode linkSignout("a");
+    linkSignout.addAttribute("href", "javascript:;");
+    linkSignout.addAttribute("onclick", "document.getElementById('sm_signout').submit();");
+    linkSignout.addContents("%s", _("Sign out"));
+    signout.addContents(linkSignout);
+    signout.addContents(")");
+    div.addContents(signout);
+
+    div.print(conn);
+
+}
+
+
 /** Print links for navigating through issues;
   * - "create new issue"
   * - predefined views
@@ -271,6 +326,8 @@ std::string makeQueryString(const PredefinedView &pv)
   */
 void RHtml::printNavigationBar(struct mg_connection *conn, const ContextParameters &ctx, bool autofocus)
 {
+    printGlobalNavigation(conn, ctx);
+
     HtmlNode div("div");
     div.addAttribute("class", "sm_navigation_project");
     if (ctx.userRole == ROLE_ADMIN || ctx.userRole == ROLE_RW) {

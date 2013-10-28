@@ -218,6 +218,15 @@ a.sm_sort_exclusive { }
     /*background-color: #E0E0E0;*/
     box-shadow: 2px 2px 4px #888888;
 }
+.sm_link_projects, .sm_link_modify_project {
+    padding: 3px;
+    margin: 0.5em;
+    background-color: #E0E0E0;
+    box-shadow: 2px 2px 4px #888888;
+}
 .sm_navigation_project {
     padding: 1em;
 }
+.sm_navigation_global {
+}
+
