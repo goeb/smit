@@ -26,6 +26,9 @@ a[href]:hover {
 
 }
 
+td {
+    vertical-align: top;
+}
 table.sm_fields_summary  td {
     padding-bottom: 0.5em;
     vertical-align: top;
@@ -161,7 +164,7 @@ table.table_issues tr:nth-child(even) td {
 strong { font-weight: bold; }
 .sm_underline { text-decoration: underline; }
 em { background-color: yellow; }
-blockquote {
+.sm_quote {
     color: green;
 }
 .sm_hyperlink { }

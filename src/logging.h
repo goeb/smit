@@ -15,4 +15,16 @@
     fprintf(stderr, "\n"); \
     } while (0)
 
+
+class FuncScope {
+public:
+    FuncScope(const char *name) { funcName = name; LOG("FUNC", "Entering %s...", funcName); }
+    ~FuncScope() { LOG("FUNC", "Leaving %s...", funcName); }
+private:
+    const char *funcName;
+};
+
+#define LOG_FUNC() FuncScope __fs(__func__);
+
+
 #endif

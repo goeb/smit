@@ -5,4 +5,7 @@
 // prepare for gettext
 #define _(String) (String)
 
+#define FOREACH(var, container) for (var=container.begin(); var!= container.end(); var++)
+
+
 #endif

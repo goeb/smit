@@ -150,7 +150,6 @@ std::string htmlEscape(const std::string &value)
     return result;
 }
 
-#define FOREACH(i, list) for (i=list.begin(); i!= list.end(); i++)
 
 #define LOCAL_SIZE 512
 class HtmlNode {
@@ -223,6 +222,48 @@ public:
 
 };
 
+/** Return the query string associated to the predefined view
+  */
+std::string makeQueryString(const PredefinedView &pv)
+{
+    std::string qs;
+    if (! pv.sort.empty()) {
+        qs += "sort=" + pv.sort;
+    }
+    if (! pv.colspec.empty()) {
+        if (!qs.empty()) qs += '&';
+        qs += "colspec=" + pv.colspec;
+    }
+
+    if (! pv.search.empty()) {
+        if (!qs.empty()) qs += '&';
+        qs += "search=" + urlEncode(pv.search);
+    }
+
+    if (! pv.filterin.empty()) {
+        std::map<std::string, std::list<std::string> >::const_iterator filterin;
+        FOREACH(filterin, pv.filterin) {
+            std::list<std::string>::const_iterator value;
+            FOREACH(value, filterin->second) {
+                if (!qs.empty()) qs += '&';
+                qs += "filterin=" + filterin->first + ":" + urlEncode(*value);
+            }
+        }
+    }
+
+    if (! pv.filterout.empty()) {
+        std::map<std::string, std::list<std::string> >::const_iterator filterout;
+        FOREACH(filterout, pv.filterout) {
+            std::list<std::string>::const_iterator value;
+            FOREACH(value, filterout->second) {
+                if (!qs.empty()) qs += '&';
+                qs += "filterout=" + filterout->first + ":" + urlEncode(*value);
+            }
+        }
+    }
+    return qs;
+}
+
 /** Print links for navigating through issues;
   * - "create new issue"
   * - predefined views
@@ -239,16 +280,20 @@ void RHtml::printNavigationBar(struct mg_connection *conn, const ContextParamete
         a.addContents("%s", _("Create new issue"));
         div.addContents(a);
     }
-    std::list<std::pair<std::string, std::string> >::const_iterator v;
+
+    std::map<std::string, PredefinedView>::iterator pv;
     ProjectConfig config = ctx.project->getConfig();
-    for (v = config.predefinedViews.begin(); v != config.predefinedViews.end(); v++) {
+    FOREACH (pv, config.predefinedViews) {
         HtmlNode a("a");
         a.addAttribute("href", "/%s/issues/?%s", htmlEscape(ctx.project->getName()).c_str(),
-                       v->second.c_str());
+                       makeQueryString(pv->second).c_str());
         a.addAttribute("class", "sm_predefined_view");
-        a.addContents("%s", v->first.c_str());
+        a.addContents("%s", pv->first.c_str());
         div.addContents(a);
     }
+
+
+
     HtmlNode form("form");
     form.addAttribute("class", "sm_searchbox");
     form.addAttribute("action", "/%s/issues", htmlEscape(ctx.project->getName()).c_str());
@@ -391,7 +436,7 @@ void RHtml::printProjectConfig(struct mg_connection *conn, const ContextParamete
 {
     mg_printf(conn, "Content-Type: text/html\r\n\r\n");
 
-    std::string path = ctx.rootdir + "/public/project.html";
+    std::string path = ctx.rootdir + "/public/project_config.html";
     char *data;
     int r = loadFile(path.c_str(), &data);
     if (r >= 0) {
@@ -658,7 +703,7 @@ std::string convertToRichText(const std::string &raw)
     result = convertToRichTextInline(result, '_', '_', true, "span", "sm_underline");
     result = convertToRichTextInline(result, '/', '/', true, "em", "");
     result = convertToRichTextInline(result, '[', ']', false, "a", "sm_hyperlink");
-    result = convertToRichTextWholeline(result, "&gt;", "blockquote", "");
+    result = convertToRichTextWholeline(result, "&gt;", "div", "sm_quote");
     return result;
 
 }
@@ -743,6 +788,12 @@ void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx,
             mg_printf(conn, "&#10008; delete");
             mg_printf(conn, "</a>\n");
         }
+
+        // link to raw entry
+        mg_printf(conn, "(<a href=\"/%s/entries/%s/%s\" class=\"sm_raw_entry\">%s</a>)\n",
+                  htmlEscape(ctx.getProject().getName()).c_str(),
+                  issue.id.c_str(), ee.id.c_str(), _("raw"));
+
 
         mg_printf(conn, "</div>\n"); // end header
 

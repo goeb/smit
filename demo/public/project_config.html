@@ -1,0 +1,211 @@
+
+<html>
+    <head>
+        <title>Project configuration</title>
+        <link rel="stylesheet" type="text/css" href="/public/style.css">
+        <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/>
+        <script src="/public/smit.js"></script>
+        <script>
+
+            function addMoreProperties(n) {
+                // add 3 more properties on page
+                for (var i=0; i<n; i++) addProperty('', '', '', '');
+            }
+            function addProperty(name, label, type, opts) {
+                var table = document.getElementById('sm_properties');
+                var n = table.rows.length;
+                var row = table.insertRow(n);
+
+                row.id = 'property' + n;
+
+                // input boxes for this property
+                var cell;
+                cell = row.insertCell(row.cells.length);
+                i = document.createElement('input');
+                i.type = "hidden"; i.name = "token"; i.value = "EOL";
+                cell.appendChild(i);
+
+                var i = document.createTextNode('#' + n + ' ');
+                cell.appendChild(i);
+
+                cell.appendChild(i);
+
+                cell = row.insertCell(row.cells.length);
+                i = document.createElement('input');
+                i.type = "hidden"; i.name = "token"; i.value = "addProperty";
+                cell.appendChild(i);
+
+                i = document.createElement('input');
+                i.name = 'token';
+                i.size = 15;
+                i.value = name;
+                i.pattern = "[a-zA-Z_0-9]+"
+                i.placeholder = "logical_name"
+                i.title = "Allowed characters: letters, digits, underscore"
+                if (type == 'reserved') i.disabled = true;
+                cell.appendChild(i);
+
+                cell = row.insertCell(row.cells.length);
+                cell.id = 'type_' + name;
+                if (type == 'reserved') {
+                    i = document.createElement('span');
+                    i.innerHTML = 'reserved';
+                    cell.appendChild(i);
+                } else {
+                    i = document.createElement('select');
+                    i.name = 'token';
+                    i.className = "updatable";
+                    i.onchange = fupdateThis;
+                    var options = ['text', 'select', 'multiselect', 'selectUser'];
+                    for (index=0; index<options.length; index++) {
+                        opt = document.createElement('option');
+                        opt.innerHTML = options[index];
+                        if (type == opt.innerHTML) opt.selected = 1;
+                        i.appendChild(opt);
+                    }
+                    cell.appendChild(i);
+                    fupdate(i, opts);
+                }
+
+                // label
+                cell = row.insertCell(row.cells.length);
+                i = document.createElement('input');
+                i.type = "hidden"; i.name = "token"; i.value = "EOL";
+                cell.appendChild(i);
+
+                i = document.createElement('input');
+                i.type = "hidden"; i.name = "token"; i.value = "setPropertyLabel";
+                cell.appendChild(i);
+
+                i = document.createElement('input');
+                i.type = "hidden"; i.name = "token"; i.value = name;
+                cell.appendChild(i);
+
+                i = document.createElement('input');
+                i.name = 'token';
+                i.size = 20;
+                i.value = label;
+                i.placeholder = "Label that will be displayed";
+                i.title = "Label that will be displayed";
+                cell.appendChild(i);
+
+
+            }
+            function fupdateThis() { fupdate(this); }
+            function fupdate(item, value) {
+                //alert(item.value);
+                if (item.value == "text") show_size_input(item.parentNode, value);
+                else if (item.value == "select") show_list_input(item.parentNode, value);
+                else if (item.value == "multiselect") show_list_input(item.parentNode, value);
+                else if (item.value == "selectUser") show_user_input(item.parentNode);
+            }
+            function show_size_input(item, value) {
+                // hide extra details
+                x = document.getElementById(item.id + '_opt');
+                if (x) item.removeChild(x);
+
+                x = document.getElementById(item.id + '_help');
+                if (x) item.removeChild(x);
+            }
+            function show_list_input(item, value) {
+                var i = document.getElementById(item.id + '_opt');
+                if (!i) {
+                    i = document.createElement('textarea')
+                    i.name = "token"
+                    i.id = item.id + '_opt';
+                    i.rows = 4;
+                    i.cols = 20;
+                    item.appendChild(i);
+                }
+                if (value) i.value = value;
+
+                x = document.getElementById(item.id + '_help');
+                if (x) item.removeChild(x);
+                t = document.createElement('span');
+                t.innerHTML = "(one value per line)";
+                t.id = item.id + '_help';
+                item.appendChild(t);
+            }
+            function show_user_input(item) {
+                x = document.getElementById(item.id + '_opt');
+                if (x) item.removeChild(x);
+                x = document.getElementById(item.id + '_help');
+                if (x) item.removeChild(x);
+                t = document.createElement('span');
+                t.innerHTML = "(a list of valid users will be proposed)";
+                t.id = item.id + '_help';
+                item.appendChild(t);
+            }
+            function init() {
+                addProperty('id', '#', 'reserved', '');
+                addProperty('ctime', 'Created', 'reserved', '');
+                addProperty('mtime', 'Modified', 'reserved', '');
+                addProperty('title', 'Description', 'reserved', '');
+                addProperty('status', '', 'list', 'open\nclosed\n');
+                addProperty('priority', '', 'list', 'high\nmedium\nlow\n');
+                addProperty('assignee', '', 'user', '');
+                //replaceContentInContainer();
+            }
+            function replaceContentInContainer() {
+                matchClass = "updatable";
+
+                var elems = document.getElementsByTagName('*'), i;
+                for (i in elems) {
+                    if((' ' + elems[i].className + ' ').indexOf(' ' + matchClass + ' ')
+                    > -1) {
+                        fupdate(elems[i]);
+                    }
+                }
+            }
+        </script>
+    </head>
+    <body onload="init();">
+        <div style="float: left; margin:1em;">
+            <img src="/public/logo.png" width="120px" alt="Small Issue Tracker Logo">
+        </div>
+        Logged in as: <span class="sm_username"></span>
+        <br>
+        <br>
+        <br>
+        <br>
+        <h1>Create new project</h1>
+        <form method="POST" action="">
+            <div>
+                <table>
+                    <tr>
+                        <td>Project name:</td>
+                        <td> <input type="text" size="50" name="name"> </td>
+                    </tr>
+                </table>
+            </div>
+            <h2>Properties</h2>
+            Edit here the properties that you want in your issues.<br>
+            Each property has:
+            <ul><li>a logical name, that must be unique among the properties of the project. This logical name is used in the address (query string) for filters and sorting.</li>
+                <li>a label, that is a more human friendly representation of the property, displayed in the pages. If the label is empty, then the logical name is used instead.</li>
+                <li>a type: text, list, multilist, user</li>
+                <li>a list of possible values, for list and multilist types</li>
+            </ul>
+            You cannot use the following names as they are reserved:
+            <code>id</code>,
+            <code>ctime</code>,
+            <code>mtime</code>,
+            <code>title</code>
+            . However you may assign a human-readable label to these, as well as for any other.
+            <br>
+            <br>
+            <noscript>You must enable Javascript to continue...</noscript>
+
+            <table id="sm_properties" style="vertical-align: top;">
+                <tr><td>#</td><td>Logical Name</td><td>Type</td><td>Label</td></tr>
+            </table>
+            <div onclick="addMoreProperties(3);" class="clickable">+ Click for more properties...</div>
+            <h2>Predefined views</h2>
+            <div id="sm_predefined_views"></div>
+            <a href="views">Add a new predefined view</a>
+            <br>
+
+            <input type="submit" value="Apply Configuration">
+        </form>
+    </body>
+</html>

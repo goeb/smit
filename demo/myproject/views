@@ -1,0 +1,6 @@
+
+addView "Open issues" filterin status open sort mtime 
+addView "Deleted issues" filterin status deleted 
+
+
+

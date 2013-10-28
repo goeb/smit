@@ -9,6 +9,7 @@
 
 #include "parseConfig.h"
 #include "logging.h"
+#include "global.h"
 
 /** Parse a text buffer and return a list of lines of tokens
   *
@@ -184,30 +185,35 @@ int loadFile(const char *filepath, char **data)
   *    0 if success
   *    <0 if error
   */
-int writeToFile(const char *filepath, const std::string &data, bool allowOverwrite)
+int writeToFile(const char *filepath, const std::string &data)
 {
     int result = 0;
     mode_t mode = O_CREAT | O_TRUNC | O_WRONLY;
-    int flags = S_IRUSR | S_IWUSR;
-    if (!allowOverwrite) {
-        mode |= O_EXCL;
-        flags = S_IRUSR;
-    }
+    int flags = S_IRUSR;
 
-    int f = open(filepath, mode, flags);
+    std::string tmp = filepath;
+    tmp += ".tmp";
+    int f = open(tmp.c_str(), mode, flags);
     if (-1 == f) {
-        LOG_ERROR("Could not create file '%s', (%d) %s", filepath, errno, strerror(errno));
+        LOG_ERROR("Could not create file '%s', (%d) %s", tmp.c_str(), errno, strerror(errno));
         return -1;
     }
 
-    int n = write(f, data.c_str(), data.size());
+    size_t n = write(f, data.c_str(), data.size());
     if (n != data.size()) {
         LOG_ERROR("Could not write all data, incomplete file '%s': (%d) %s",
                   filepath, errno, strerror(errno));
-        result = -1;
+        return -1;
     }
 
     close(f);
+
+    int r = rename(tmp.c_str(), filepath);
+    if (r != 0) {
+        LOG_ERROR("Cannot rename '%s' -> '%s': (%d) %s", tmp.c_str(), filepath, errno, strerror(errno));
+        return -1;
+    }
+
     return result;
 }
 
@@ -232,35 +238,14 @@ std::list<std::string> parseColspec(const char *colspec)
     return result;
 }
 
-// "aaa+bbb-ccc"
-// @return ('+', aaa), ('+', bbb), ('-', ccc)
-std::list<std::pair<char, std::string> > parseFieldSpec(const char *fieldSpec)
-{
-    std::list<std::pair<char, std::string> > result;
-    size_t i = 0;
-    size_t L = strlen(fieldSpec);
-    std::string currentToken;
-    char sign = '+';
-    for (i=0; i<L; i++) {
-        char c = fieldSpec[i];
-        if ( (c == '+') || (c == '+') ) {
-            // push previous token if any
-            if (currentToken.size() > 0) result.push_back(std::make_pair(sign, currentToken));
-
-            sign = c;
-            currentToken = "";
-        } else currentToken += c;
-    }
-    if (currentToken.size() > 0) result.push_back(std::make_pair(sign, currentToken));
-}
-
+/** Double quotes are needed whenever the value contains one of: \n \t \r "
+  */
 std::string doubleQuote(const std::string &input)
 {
     size_t n = input.size();
     std::string result = "\"";
 
     size_t i;
-    size_t offsetOfCurrentVar = 0;
     for (i=0; i<n; i++) {
         if (input[i] == '\\') result += "\\\\";
         else if (input[i] == '"') result += "\\\"";
@@ -268,6 +253,13 @@ std::string doubleQuote(const std::string &input)
     }
     result += '"';
     return result;
+}
+
+std::string serializeSimpleToken(const std::string token)
+{
+    if (token.empty()) return "\"\"";
+    else if (token.find_first_of("#\n \t\r\"") == std::string::npos) return token;
+    else return doubleQuote(token); // some characters needs escaping
 }
 
 
@@ -278,7 +270,7 @@ std::string serializeProperty(const std::string &propertyName, const std::list<s
 
     if ( (values.size() == 1) && (values.front().find('\n') != std::string::npos) ) {
         // serialize as multi-line
-        const char *delimiter = "-----------endofmsg---"; // TODO manage case where a value contains the delimiter
+        const char *delimiter = "-----------endofmsg---"; // TODO manage case where a value contains this delimiter
         s << " < " << delimiter << "\n";
         s << values.front() << "\n";
         s << delimiter;
@@ -286,9 +278,7 @@ std::string serializeProperty(const std::string &propertyName, const std::list<s
     } else {
         std::list<std::string>::const_iterator v;
         for (v = values.begin(); v != values.end(); v++) {
-            s << " ";
-            if (v->find_first_of("\n \t\r\"") == std::string::npos) s << *v;
-            else s << doubleQuote(*v); // some characters needs escaping
+            s << " " << serializeSimpleToken(*v);
         }
     }
     s << "\n";
@@ -301,4 +291,19 @@ std::string popListToken(std::list<std::string> &tokens)
     std::string token = tokens.front();
     tokens.pop_front();
     return token;
+}
+
+std::string serializeTokens(const std::list<std::list<std::string> > &linesOfTokens)
+{
+    std::string result;
+    std::list<std::list<std::string> >::const_iterator line;
+    FOREACH(line, linesOfTokens) {
+        std::list<std::string>::const_iterator token;
+        FOREACH(token, (*line)) {
+            result += serializeSimpleToken(*token);
+            result += ' '; // separator on the same line
+        }
+        result += '\n'; // line separator
+    }
+    return result;
 }

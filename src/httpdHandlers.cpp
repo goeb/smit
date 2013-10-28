@@ -71,6 +71,11 @@ void sendHttpHeader403(struct mg_connection *conn)
     mg_printf(conn, "HTTP/1.1 403 Forbidden\r\n\r\n");
     mg_printf(conn, "403 Forbidden\r\n");
 }
+void sendHttpHeader500(struct mg_connection *conn)
+{
+    mg_printf(conn, "HTTP/1.1 500 Forbidden\r\n\r\n");
+    mg_printf(conn, "500 Internal Error\r\n");
+}
 
 /**
   * @param otherHeader
@@ -115,27 +120,6 @@ int sendHttpHeaderInvalidResource(struct mg_connection *conn)
     return 1; // request processed
 }
 
-void urlDecode(std::string &s)
-{
-    // convert key and value
-    const int SIZ = 1024;
-    char localBuf[SIZ+1];
-
-    // output of URL decoding takes less characters than input
-
-    if (s.size() <= 1024) { // use local buffer
-        int r = mg_url_decode(s.c_str(), s.size(), localBuf, SIZ, 1);
-        if (r == -1) LOG_ERROR("Destination of mg_url_decode is too short: input size=%u, destination size=%d",
-                               s.size(), SIZ);
-        s = localBuf;
-    } else {
-        // allocated dynamically a buffer
-        char *buffer = new char[s.size()];
-        int r = mg_url_decode(s.c_str(), s.size(), buffer, s.size(), 1);
-        if (r == -1) LOG_ERROR("Destination of mg_url_decode is too short (2): destination size=%u", s.size());
-        else s = buffer;
-    }
-}
 
 /** If uri is "x=y&a=bc+d" and param is "a"
   * then return "bc d".
@@ -154,7 +138,7 @@ std::string getFirstParamFromQueryString(const std::string & queryString, const 
     while ((token = popToken(q, '&')) != "") {
         if (0 == token.compare(0, paramEqual.size(), paramEqual.c_str())) {
             popToken(token, '='); // remove the 'param=' part
-			urlDecode(token);
+            token = urlDecode(token);
 
             return token;
         }
@@ -177,7 +161,7 @@ std::list<std::string> getParamListFromQueryString(const std::string & queryStri
     while ((token = popToken(q, '&')) != "") {
         if (0 == token.compare(0, paramEqual.size(), paramEqual.c_str())) {
             popToken(token, '='); // remove the param= part
-			urlDecode(token);
+            token = urlDecode(token);
 
             result.push_back(token);
         }
@@ -289,7 +273,7 @@ void redirectToSignin(struct mg_connection *conn, const std::string &resource)
 
 void httpPostSignout(struct mg_connection *conn, const std::string &sessionId)
 {
-    int r = SessionBase::destroySession(sessionId);
+    SessionBase::destroySession(sessionId);
     redirectToSignin(conn, "/");
 }
 
@@ -310,9 +294,9 @@ std::string getSessionIdFromCookie(struct mg_connection *conn)
         std::string c = cookie;
         while (c.size() > 0) {
             std::string name = popToken(c, '=');
-            trim(name, ' '); // remove spaces around
+            trim(name, " "); // remove spaces around
             std::string value = popToken(c, ';');
-            trim(value, ' '); // remove spaces around
+            trim(value, " "); // remove spaces around
 
             LOG_DEBUG("Cookie: name=%s, value=%s", name.c_str(), value.c_str());
             if (name == "sessid") return value;
@@ -379,6 +363,68 @@ void httpGetProjectConfig(struct mg_connection *conn, Project &p, User u)
     }
 
 }
+
+/** Parse posted arguments into a list of tokens.
+  * Expected input is:
+  * token=arg1&token=arg2&...
+  * (token is the actual word "token")
+  */
+std::list<std::list<std::string> > convertPostToTokens(std::string &postData)
+{
+    LOG_FUNC();
+    LOG_DEBUG("convertPostToTokens: %s", postData.c_str());
+    std::list<std::list<std::string> > tokens;
+    std::list<std::string> line;
+
+    while (postData.size() > 0) {
+        std::string tokenPair = popToken(postData, '&');
+        std::string token = popToken(tokenPair, '=');
+        std::string &value = tokenPair;
+        if (token != "token") continue; // ignore this
+
+        if (value == "EOL") {
+            tokens.push_back(line);
+            LOG_DEBUG("convertPostToTokens: line=%s", toString(line).c_str());
+            line.clear();
+        } else {
+            // split by \r\n if needed, and trim blanks
+            value = urlDecode(value);
+            while (strchr(value.c_str(), '\n')) {
+                std::string subValue = popToken(value, '\n');
+                trimBlanks(subValue);
+                line.push_back(subValue);
+            }
+            trimBlanks(value);
+            line.push_back(value); // append the last subvalue
+        }
+    }
+    if (line.size() > 0) {
+        tokens.push_back(line);
+        LOG_DEBUG("convertPostToTokens: line=%s", toString(line).c_str());
+    }
+    return tokens;
+}
+std::string readMgConn(struct mg_connection *conn, size_t maxSize)
+{
+    std::string postData;
+    const int SIZ = 4096;
+    char postFragment[SIZ+1];
+    int n; // number of bytes read
+
+    while ( (n = mg_read(conn, postFragment, SIZ)) ) {
+        postFragment[n] = 0;
+        LOG_DEBUG("postFragment=%s", postFragment);
+        if (postData.size() > maxSize) {
+            // 10 MByte is too much. overflow. abort.
+            LOG_ERROR("Too much POST data. Abort.");
+            break;
+        }
+        postData += postFragment;
+    }
+    return postData;
+}
+
+
 void httpPostProjectConfig(struct mg_connection *conn, Project &p, User u)
 {
     enum Role r = u.getRole(p.getName());
@@ -395,19 +441,20 @@ void httpPostProjectConfig(struct mg_connection *conn, Project &p, User u)
         // application/x-www-form-urlencoded
         // post_data is "var1=val1&var2=val2...".
 
-        const int SIZ = 1024;
-        char buffer[SIZ+1];
-        int n; // number of bytes read
-        n = mg_read(conn, buffer, SIZ);
-        if (n == SIZ) {
-            LOG_ERROR("Post data for signin too long. Abort request.");
-            return;
+        postData = readMgConn(conn, 4096);
+
+        // convert the post data to tokens
+        std::list<std::list<std::string> > tokens = convertPostToTokens(postData);
+        int r = p.modifyConfig(tokens);
+        if (r == 0) {
+            // success, redirect to
+            std::string redirectUrl = p.getName() + "/config";
+            sendHttpRedirect(conn, redirectUrl.c_str(), 0);
+
+        } else { // error
+            sendHttpHeader500(conn);
         }
-        buffer[n] = 0;
-        LOG_DEBUG("postData=%s", buffer);
-        postData = buffer;
     }
-    mg_printf(conn, "postData=%s", postData.c_str());
 }
 
 void httpGetListOfIssues(struct mg_connection *conn, Project &p, User u)
@@ -564,8 +611,8 @@ void parseQueryStringVar(const std::string &var, std::string &key, std::string &
         }
     }
 
-    urlDecode(key);
-    urlDecode(value);
+    key = urlDecode(key);
+    value = urlDecode(value);
 }
 
 
@@ -574,7 +621,6 @@ void parseQueryString(const std::string & queryString, std::map<std::string, std
     size_t n = queryString.size();
     size_t i;
     size_t offsetOfCurrentVar = 0;
-    bool pendingParam = false; // indicate if a remaining param must be process after the 'if' loop
     for (i=0; i<n; i++) {
         if ( (queryString[i] == '&') || (i == n-1) ) {
             // param delimiter encountered or last character reached
@@ -595,12 +641,12 @@ void parseQueryString(const std::string & queryString, std::map<std::string, std
                 } else vars[key].push_back(value);
             }
             offsetOfCurrentVar = i+1;
-            pendingParam = false;
-
         }
     }
     // append the latest parameter (if any)
 }
+
+
 
 /** Handle the posting of an entry
   * If issueId is empty, then a new issue is created.
@@ -619,20 +665,7 @@ void httpPostEntry(struct mg_connection *conn, Project &p, const std::string & i
         // post_data is "var1=val1&var2=val2...".
         // multiselect is like: "tags=v4.1&tags=v5.0" (same var repeated)
 
-        const int SIZ = 4096;
-        char postFragment[SIZ+1];
-        int n; // number of bytes read
-        std::string postData;
-        while (n = mg_read(conn, postFragment, SIZ)) {
-            postFragment[n] = 0;
-            LOG_DEBUG("postFragment=%s", postFragment);
-            if (postData.size() > 10*SIZ*SIZ) {
-                // 10 MByte is too much. overflow. abort.
-                LOG_ERROR("Too much POST data. Abort.");
-                return;
-            }
-            postData += postFragment;
-        }
+        std::string postData = readMgConn(conn, 10*1024*1024);
         std::map<std::string, std::list<std::string> > vars;
         parseQueryString(postData, vars);
 
@@ -659,10 +692,11 @@ void httpPostEntry(struct mg_connection *conn, Project &p, const std::string & i
   * Resources               Methods    Acces Granted     Description
   * -------------------------------------------------------------------------
   * /                       GET/POST   user              list of projects / management of projects (create, ...)
-  * /public/*               GET        all               public pages, javascript, CSS, logo
+  * /public/...             GET        all               public pages, javascript, CSS, logo
   * /signin                 POST       all               sign-in
-  * /users                            superadmin        management of users for all projects
+  * /users                             superadmin        management of users for all projects
   * /myp/config             GET/POST   project-admin     configuration of the project
+  * /myp/views              GET/POST   user              configuration of predefined views
   * /myp/issues             GET/POST   user              issues of the project / add new issue
   * /myp/issues/new         GET        user              page with a form for submitting new issue
   * /myp/issues/XYZ         GET/POST   user              a particular issue: get all entries or add a new entry

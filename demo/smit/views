@@ -1,0 +1,10 @@
+
+addView "Open issues" \
+    filterin status open \
+    sort -mtime
+
+addView "All issues" sort -mtime
+
+addView "Closed issues" filterin status closed
+
+addView "Deleted issues" filterin status deleted
