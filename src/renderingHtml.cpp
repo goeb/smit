@@ -523,6 +523,11 @@ void printScriptUpdateConfig(struct mg_connection *conn, const ContextParameters
 
     }
 
+    // add 3 more empty properties
+    mg_printf(conn, "addProperty('', '', '', '');\n");
+    mg_printf(conn, "addProperty('', '', '', '');\n");
+    mg_printf(conn, "addProperty('', '', '', '');\n");
+
     mg_printf(conn, "replaceContentInContainer();\n");
     mg_printf(conn, "</script>\n");
 }
@@ -643,7 +648,8 @@ void RHtml::printIssueList(struct mg_connection *conn, const ContextParameters &
         mg_printf(conn, "<th class=\"sm_issues_th\"><a class=\"sm_sort_exclusive\" href=\"?%s\" title=\"Sort ascending\">%s</a>\n",
                   newQueryString.c_str(), label.c_str());
         newQueryString = getNewSortingSpec(conn, *colname, false);
-        mg_printf(conn, "\n<br><a href=\"?%s\" class=\"sm_sort_accumulate\" title=\"Sort and preserve other sorted columns\">&#10228;</a></th>\n", newQueryString.c_str());
+        mg_printf(conn, "\n<br><a href=\"?%s\" class=\"sm_sort_accumulate\" ", newQueryString.c_str());
+        mg_printf(conn, "title=\"Sort while preserving order of other columns\n(or invert current column if already sorted-by)\">&gt;&gt;&gt;</a></th>\n");
     }
     mg_printf(conn, "</tr>\n");
 

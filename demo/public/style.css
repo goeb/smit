@@ -26,6 +26,17 @@ a[href]:hover {
 td {
     vertical-align: top;
 }
+#sm_config_properties th {
+    font-weight: bold;
+    text-align: left;
+    padding-left: 1em;
+}
+#sm_config_properties td {
+    padding-bottom: 1em;
+    padding-left: 1em;
+    font-size: small;
+    border-collapse:collapse;
+}
 .sm_properties {
     width: 50em;
     margin-bottom: 2em;
@@ -227,7 +238,7 @@ a.sm_sort_exclusive { }
 .sm_link_projects, .sm_link_modify_project {
     padding: 3px;
     margin: 0.5em;
-    background-color: #E0E0E0;
+    background-color: #E8E8E8;
     box-shadow: 2px 2px 4px #888888;
 }
 .sm_navigation_project {

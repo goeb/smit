@@ -27,10 +27,13 @@ SM_DIV_PROJECT_NAME
             Each property has:
             <ul><li>a logical name, that must be unique among the properties of the project. This logical name is used in the address (query string) for filters and sorting.</li>
                 <li>a label, that is a more human friendly representation of the property, displayed in the pages. If the label is empty, then the logical name is used instead.</li>
-                <li>a type: text, list, multilist, user</li>
-                <li>a list of possible values, for list and multilist types</li>
+                <li>a type: <code>text</code>,
+                <code>select</code>,
+                <code>multiselect</code>,
+                <code>selectUser</code></li>
+                <li>a list of possible values, for types <code>select</code> and <code>multiselect</code></li>
             </ul>
-            You cannot use the following names as they are reserved:
+            You cannot use the following logical names as they are reserved:
             <code>id</code>,
             <code>ctime</code>,
             <code>mtime</code>,
@@ -40,13 +43,18 @@ SM_DIV_PROJECT_NAME
             <br>
             <noscript>You must enable Javascript to continue...</noscript>
 
-            <table id="sm_properties" style="vertical-align: top;">
-                <tr><td>#</td><td>Logical Name</td><td>Type</td><td>Label</td></tr>
+            <table id="sm_config_properties" style="vertical-align: top;">
+                <tr><th>#</th><th>Logical Name</th><th>Type</th><th>Label</th></tr>
             </table>
-            <input type="submit" value="Apply Configuration">
+            <br>
             <div onclick="addMoreProperties(3);" class="sm_clickable">+ Click for more properties...</div>
+            <br>
 SM_SCRIPT_UPDATE_CONFIG
+            <input type="submit" value="Apply Configuration">
+            <br>
+            <br>
             <h2>Predefined views</h2>
+            The modification of the predefined views is not implemented at the moment...<br>
 SM_DIV_PREDEFINED_VIEWS
             <a href="views">Add a new predefined view</a>
             <br>

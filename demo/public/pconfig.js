@@ -5,7 +5,7 @@ function addMoreProperties(n) {
 }
 
 function addProperty(name, label, type, opts) {
-    var table = document.getElementById('sm_properties');
+    var table = document.getElementById('sm_config_properties');
     var n = table.rows.length;
     var row = table.insertRow(n);
 
