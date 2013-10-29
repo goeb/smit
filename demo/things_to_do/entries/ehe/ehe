@@ -12,4 +12,4 @@ use [] characters around words for hyperlinks [http://example.com]
 use _ for _underline_
 -----------endofmsg---
 status open
-title "documentation on rich text"
+summary "documentation on rich text"

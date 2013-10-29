@@ -5,4 +5,4 @@ due_date "as soon as possible"
 in_charge "John Smith"
 message 
 status open
-title "fix nasty bug in the washing machine"
+summary "fix nasty bug in the washing machine"

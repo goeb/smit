@@ -68,13 +68,17 @@ void trimBlanks(std::string &s)
 }
 
 /** Concatenate a list of strings to a string
+  * By default the strings are separated by ", "
   */
-std::string toString(const std::list<std::string> &values)
+std::string toString(const std::list<std::string> &values, const char *sep)
 {
     std::ostringstream text;
     std::list<std::string>::const_iterator v;
     for (v=values.begin(); v!=values.end(); v++) {
-        if (v != values.begin()) text << ", ";
+        if (v != values.begin()) {
+            if (sep) text << sep;
+            else text << ", ";
+        }
         text << v->c_str();
     }
     return text.str();

@@ -99,7 +99,7 @@ std::string convert2base34(const uint8_t *buffer, size_t length, bool skip_io)
     // length must be SHA_DIGEST_LENGTH
 
     // buffer is a base-256 number, least significant value first
-    int i = 0;
+    size_t i = 0;
     int result[BASE_34_VECTOR_SIZE];
     memset(result, 0, sizeof(int)*BASE_34_VECTOR_SIZE);
     for (i=0; i<length; i++) {

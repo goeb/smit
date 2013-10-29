@@ -4,12 +4,12 @@ addView "Open Issues" \
     filterin status stalled \
     filterout tags v1.0 \
     sort +status-mtime \
-    colspec id+mtime+title+status+tags 
+    colspec id+mtime+summary+status+tags 
 
 
 addView "Issues with \"hello world\"" \
     sort +status-mtime \
-    colspec id+mtime+title+status+tags \
+    colspec id+mtime+summary+status+tags \
     search "hello world" 
 
 

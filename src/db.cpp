@@ -85,9 +85,9 @@ std::string getProperty(const std::map<std::string, std::list<std::string> > &pr
 }
 
 
-std::string Issue::getTitle() const
+std::string Issue::getSummary() const
 {
-    return getProperty(properties, "title");
+    return getProperty(properties, "summary");
 }
 
 /** load in memory the given project
@@ -886,7 +886,7 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
             } else {
                 std::map<std::string, FieldSpec>::iterator f;
                 f = config.properties.find(entryProperty->first);
-                if ( (f == config.properties.end()) && (entryProperty->first != K_TITLE) ) {
+                if ( (f == config.properties.end()) && (entryProperty->first != K_SUMMARY) ) {
                     // erase property because it is not part of the official fields of the project
                     doErase = true;
                 } else {
@@ -1009,14 +1009,23 @@ int Project::writeHead(const std::string &issueId, const std::string &entryId)
     return r;
 }
 
+
+std::list<std::string> Project::getReservedProperties() const
+{
+    std::list<std::string> reserved;
+    reserved.push_back("id");
+    reserved.push_back("ctime");
+    reserved.push_back("mtime");
+    reserved.push_back("summary");
+    return reserved;
+}
+
 std::list<std::string> Project::getDefaultColspec()
 {
     std::list<std::string> colspec = config.orderedProperties;
     // add mandatory properties that are not included in orderedProperties
-    colspec.push_front("title");
-    colspec.push_front("mtime");
-    colspec.push_front("ctime");
-    colspec.push_front("id");
+    std::list<std::string> reserved = getReservedProperties();
+    colspec.insert(colspec.begin(), reserved.begin(), reserved.end());
     return colspec;
 }
 

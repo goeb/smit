@@ -42,6 +42,7 @@ public:
     static void printFooter(struct mg_connection *conn, const std::string &projectPath);
     static void printGlobalHeader(struct mg_connection *conn, const std::string &repo);
     static void printGlobalFooter(struct mg_connection *conn, const std::string &repo);
+    static void printGlobalNavigation(struct mg_connection *conn, const ContextParameters &ctx);
     static void printNavigationBar(struct mg_connection *conn, const ContextParameters &ctx, bool autofocus);
 
     static void printProjectList(struct mg_connection *conn, const ContextParameters &ctx, const std::list<std::pair<std::string, std::string> > &pList);

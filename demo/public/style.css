@@ -17,23 +17,16 @@ a[href]:hover {
 }
 
 
-.clickable {
+.sm_clickable {
     cursor: pointer;
-}
-.clickable {
     text-decoration:underline;
     color: blue;
-
 }
 
 td {
     vertical-align: top;
 }
-table.sm_fields_summary  td {
-    padding-bottom: 0.5em;
-    vertical-align: top;
-}
-.sm_fields_summary {
+.sm_properties {
     width: 50em;
     margin-bottom: 2em;
     font-size: small;
@@ -61,7 +54,7 @@ table.sm_fields_summary  td {
     padding-top: 0.5em;
     padding-bottom: 0.5em;
 }
-.sm_other_fields {
+.sm_other_properties {
     color: #444;
     background-color: #E0E0E0;
     padding: 7px;
@@ -69,9 +62,7 @@ table.sm_fields_summary  td {
     width: 60em;
     font-size: 80%;
 }
-
-/* fields in the issue page */
-.sm_flabel {
+.sm_plabel {
     font-weight: bold;
     white-space: nowrap;
     font-size: small;
@@ -81,7 +72,7 @@ input {
     font-family: Verdana,sans-serif;
     font-size: small;
 }
-.sm_fvalue {
+.sm_pvalue {
     white-space: nowrap;
     padding-right: 6em;
 }
@@ -107,7 +98,7 @@ input {
     font-family: monospace;
 
 }
-.sm_finput_title {
+.sm_pinput_summary {
     width: 100%;
 }
 .sm_issue_form {
@@ -118,14 +109,14 @@ input {
 textarea {
     vertical-align: top;
 }
-textarea.sm_finput_message {
+textarea.sm_pinput_message {
     width: 50em;
     height: 180px;
 }
-table.table_issues {
+table.sm_issues_table {
     border-collapse:collapse;
 }
-.th_issues, .td_issues {
+.sm_issues_th, .sm_issues_td {
     padding-right: 1em;
     padding-left: 1em;
     padding-bottom: 0.2em;
@@ -133,13 +124,13 @@ table.table_issues {
     border-right: solid 1px rgb(200, 200, 186);
     font-size: small;
 }
-.th_issues {
+.sm_issues_th {
     border-bottom: solid 1px rgb(200, 200, 186);
 }
-table.table_issues tr {
+table.sm_issues_table tr {
     vertical-align:text-top;
 }
-table.table_issues tr:hover {
+table.sm_issues_table tr:hover {
     background-color: #E8E8E8;
 }
 /*
@@ -150,8 +141,6 @@ table.table_issues tr:nth-child(even) td {
     background-color: #E0E0E0;
 }
 */
-
-
 .sm_searchbox {
     /*float: right;*/
     display: inline;
@@ -229,6 +218,15 @@ a.sm_sort_exclusive { }
     /*background-color: #E0E0E0;*/
     box-shadow: 2px 2px 4px #888888;
 }
+.sm_link_projects, .sm_link_modify_project {
+    padding: 3px;
+    margin: 0.5em;
+    background-color: #E0E0E0;
+    box-shadow: 2px 2px 4px #888888;
+}
 .sm_navigation_project {
     padding: 1em;
 }
+.sm_navigation_global {
+}
+
