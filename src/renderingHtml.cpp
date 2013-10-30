@@ -34,16 +34,6 @@ const Project &ContextParameters::getProject() const
     return *project;
 }
 
-/** obsolete ?? */
-void ContextParameters::printSmitData(struct mg_connection *conn) const
-{
-    mg_printf(conn, "%s", "<script id=\"sm_data\" type=\"application/json\">\n{");
-    mg_printf(conn, "\"sm_username\": \"%s\"", username.c_str()); // TODO escape username for HTML & JSON
-    mg_printf(conn, ", \"sm_number_of_issues\": \"%d\"", numberOfIssues);
-    mg_printf(conn, "%s", "}\n</script>");
-}
-
-
 void RHtml::printHeader(struct mg_connection *conn, const std::string &projectPath)
 {
     std::string path = projectPath + "/html/header.html";
@@ -375,8 +365,6 @@ void RHtml::printProjectList(struct mg_connection *conn, const ContextParameters
     }
 
     printGlobalFooter(conn, ctx.pathToRepository);
-    ctx.printSmitData(conn);
-
 }
 
 /** Build a new query string based on the current one, and update the sorting part
@@ -601,9 +589,6 @@ void RHtml::printProjectConfig(struct mg_connection *conn, const ContextParamete
     } else {
         LOG_ERROR("Could not load %s", path.c_str());
     }
-
-    ctx.printSmitData(conn);
-
 }
 
 void RHtml::printProjectPage(struct mg_connection *conn, const ContextParameters &ctx)
@@ -613,8 +598,36 @@ void RHtml::printProjectPage(struct mg_connection *conn, const ContextParameters
     printGlobalNavigation(conn, ctx);
     printNavigationBar(conn, ctx, true);
     printFooter(conn, ctx.getProject().getName().c_str());
-    ctx.printSmitData(conn);
+}
 
+/** Get the property name that will be used for gouping
+
+  * Grouping will occur only :
+  *     - on the first property sorted-by
+  *     - and if this property is of type select, multiselect or selectUser
+  *
+  * If the grouping must not occur, then an empty  string is returned.
+  */
+std::string getPropertyForGrouping(const ProjectConfig &pconfig, const std::string &sortingSpec)
+{
+    const char* colspecDelimiters = "+- ";
+    if (sortingSpec.empty()) return "";
+
+    size_t i = 0;
+    if (strchr(colspecDelimiters, sortingSpec[0])) i = 1;
+
+    std::string property;
+    size_t n = sortingSpec.find_first_of(colspecDelimiters, i);
+    if (n == std::string::npos) property = sortingSpec.substr(i);
+    else property = sortingSpec.substr(i, n-i);
+
+    // check the type of the property
+    std::map<std::string, PropertySpec>::const_iterator propertySpec = pconfig.properties.find(property);
+    if (propertySpec == pconfig.properties.end()) return "";
+    enum PropertyType type = propertySpec->second.type;
+
+    if (type == F_TEXT) return "";
+    return property;
 }
 
 void RHtml::printIssueList(struct mg_connection *conn, const ContextParameters &ctx,
@@ -633,8 +646,12 @@ void RHtml::printIssueList(struct mg_connection *conn, const ContextParameters &
         if (!ctx.filterout.empty()) mg_printf(conn, "filterout: %s", toString(ctx.filterout).c_str());
         mg_printf(conn, "</div>");
     }
-    mg_printf(conn, "<div class=\"sm_issues_count\">%s: <span class=\"sm_number_of_issues\"></span></div>\n",
-              _("Issues found"));
+    mg_printf(conn, "<div class=\"sm_issues_count\">%s: <span class=\"sm_number_of_issues\">%d</span></div>\n",
+              _("Issues found"), issueList.size());
+
+
+    std::string group = getPropertyForGrouping(ctx.project->getConfig(), ctx.sort);
+    std::string currentGroup;
 
     mg_printf(conn, "<table class=\"sm_issues_table\">\n");
 
@@ -655,6 +672,15 @@ void RHtml::printIssueList(struct mg_connection *conn, const ContextParameters &
 
     std::list<struct Issue*>::iterator i;
     for (i=issueList.begin(); i!=issueList.end(); i++) {
+
+        if (! group.empty() &&
+            (i == issueList.begin() || getProperty((*i)->properties, group) != currentGroup) ) {
+                // insert group bar if relevant
+            mg_printf(conn, "<tr class=\"sm_group\">\n");
+            currentGroup = getProperty((*i)->properties, group);
+            mg_printf(conn, "<td class=\"sm_group\" colspan=\"%d\">%s</td>\n", colspec.size(), htmlEscape(currentGroup).c_str());
+            mg_printf(conn, "</tr>\n");
+        }
 
         mg_printf(conn, "<tr class=\"tr_issues\">\n");
 
@@ -691,8 +717,6 @@ void RHtml::printIssueList(struct mg_connection *conn, const ContextParameters &
     }
     mg_printf(conn, "</table>\n");
     printFooter(conn, ctx.getProject().getName().c_str());
-    ctx.printSmitData(conn);
-
 }
 
 
@@ -1003,8 +1027,6 @@ void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx,
     }
 
     printFooter(conn, ctx.getProject().getPath().c_str());
-    ctx.printSmitData(conn);
-
 }
 
 
@@ -1022,7 +1044,6 @@ void RHtml::printNewIssuePage(struct mg_connection *conn, const ContextParameter
     Issue issue;
     printIssueForm(conn, ctx, issue, true);
     printFooter(conn, ctx.getProject().getPath().c_str());
-    ctx.printSmitData(conn);
 }
 
 

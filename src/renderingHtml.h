@@ -20,14 +20,13 @@ public:
     ContextParameters(User u, const Project &p);
     ContextParameters(User u, const std::string &repo);
     const Project &getProject() const;
-    void printSmitData(struct mg_connection *conn) const;
-    inline void setNumberOfIssues(int n) { numberOfIssues = n; }
 
     std::string username;
     std::string pathToRepository;
     enum Role userRole;
     int numberOfIssues; // TODO check if used
     std::string search;
+    std::string sort;
     std::list<std::string> filterin;
     std::list<std::string> filterout;
     const Project *project;

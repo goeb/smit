@@ -3,6 +3,7 @@
 
 #include <string>
 #include <list>
+#include <map>
 
 std::string popToken(std::string & uri, char separator);
 void trimLeft(std::string & s, const char *c);
@@ -13,6 +14,7 @@ std::string toString(const std::list<std::string> &values, const char *sep = 0);
 std::string urlDecode(const std::string &src, int is_form_url_encoded=true);
 std::string urlEncode(const std::string &src);
 std::string pop(std::list<std::string> & L);
+std::string getProperty(const std::map<std::string, std::list<std::string> > &properties, const std::string &name);
 
 
 #endif

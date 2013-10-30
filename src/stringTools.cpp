@@ -145,5 +145,15 @@ std::string pop(std::list<std::string> & L)
         L.pop_front();
     }
     return token;
-
 }
+
+std::string getProperty(const std::map<std::string, std::list<std::string> > &properties, const std::string &name)
+{
+    std::map<std::string, std::list<std::string> >::const_iterator t = properties.find(name);
+    std::string propertyValue = "";
+    if (t != properties.end() && (t->second.size()>0) ) propertyValue = toString(t->second);
+
+    return propertyValue;
+}
+
+

@@ -75,15 +75,6 @@ void Issue::loadHead(const std::string &issuePath)
     free(buf);
 }
 
-std::string getProperty(const std::map<std::string, std::list<std::string> > &properties, const std::string &propertyName)
-{
-    std::map<std::string, std::list<std::string> >::const_iterator t = properties.find(propertyName);
-    std::string propertyValue = "";
-    if (t != properties.end() && (t->second.size()>0) ) propertyValue = toString(t->second);
-
-    return propertyValue;
-}
-
 
 std::string Issue::getSummary() const
 {

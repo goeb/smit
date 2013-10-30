@@ -144,6 +144,13 @@ table.sm_issues_table tr {
 table.sm_issues_table tr:hover {
     background-color: #E8E8E8;
 }
+.sm_group {
+    background-color: #E8E8E8;
+    border-top: solid 1px rgb(200, 200, 186);
+    border-bottom: solid 1px rgb(200, 200, 186);
+    font-size: small;
+    text-align: center;
+}
 /*
 table.table_issues tr:nth-child(odd) td {
     background-color: #E8E8E8;
@@ -246,4 +253,3 @@ a.sm_sort_exclusive { }
 }
 .sm_navigation_global {
 }
-

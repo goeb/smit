@@ -495,10 +495,10 @@ void httpGetListOfIssues(struct mg_connection *conn, Project &p, User u)
     if (format == RENDERING_TEXT) RText::printIssueList(conn, issueList, cols);
     else {
         ContextParameters ctx = ContextParameters(u, p);
-        ctx.setNumberOfIssues(issueList.size());
         ctx.filterin = filterin;
         ctx.filterout = filterout;
         ctx.search = fulltextSearch;
+        ctx.sort = sorting;
 
         RHtml::printIssueList(conn, ctx, issueList, cols);
     }
