@@ -152,7 +152,13 @@ table.table_issues tr:nth-child(even) td {
 }
 strong { font-weight: bold; }
 .sm_underline { text-decoration: underline; }
-em { background-color: yellow; }
+em {
+    background-color: yellow;
+    font-style:normal;
+}
+.sm_double_quote {
+    color: blue;
+}
 .sm_quote {
     color: green;
 }

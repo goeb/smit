@@ -709,6 +709,7 @@ std::string convertToRichTextWholeline(const std::string &in, const char *start,
     size_t len = in.size();
     bool insideBlock = false;
     bool startOfLine = true;
+    size_t sizeStart = strlen(start);
     while (i<len) {
         char c = in[i];
         if (c == '\n') {
@@ -720,14 +721,14 @@ std::string convertToRichTextWholeline(const std::string &in, const char *start,
 
                 currentBlock << "<" << htmlTag;
                 currentBlock << " class=\"" << htmlClass << "\">";
+                // the \n is included in the block. This is to solve the separation between \r and \n.
                 currentBlock << in.substr(block, i-block+1);
                 currentBlock << "</" << htmlTag << ">";
                 result += currentBlock.str();
                 insideBlock = false;
-            }
-            result += c;
+            } else result += c;
 
-        } else if (startOfLine && (i+strlen(start)-1 < len) && (0 == strncmp(start, in.c_str()+i, strlen(start))) ) {
+        } else if (startOfLine && (i+sizeStart-1 < len) && (0 == strncmp(start, in.c_str()+i, sizeStart)) ) {
             // beginning of new block
             insideBlock = true;
             block = i;
@@ -754,63 +755,51 @@ std::string convertToRichTextWholeline(const std::string &in, const char *start,
 
 }
 
-bool isRichTextBlockSeparator(char c)
-{
-    return ! isalnum(c);
-}
-
 /** Convert text to HTML rich text according to 1 rich text pattern
-  *
-  * Basic syntax rules:
-  * - rich text separators must be surrounded by blanks outside the rich text block, and non blank on the inside.
-  * Examples:
-  *    _underline_ => ok
-  *    aa_underline_ => nope (because a 'a' before the first _
-  *    _ underline_ => nope (because a space after the first _
   *
   *
   * @param dropBlockSeparators
   *    If true, the begin and end separators a removed from the final HTML
   *
   */
-std::string convertToRichTextInline(const std::string &in, char begin, char end,
-                                   bool dropBlockSeparators, const char *htmlTag, const char *htmlClass)
+std::string convertToRichTextInline(const std::string &in, char *begin, char *end,
+                                   bool dropDelimiters, const char *htmlTag, const char *htmlClass)
 {
     std::string result;
     size_t i = 0;
     size_t block = 0; // beginning of block, relevant only when insideBlock == true
     size_t len = in.size();
+    size_t sizeEnd = strlen(end);
+    size_t sizeBeginning = strlen(begin);
     bool insideBlock = false;
     while (i<len) {
         char c = in[i];
 
         if (insideBlock) {
             // look if we are at the end of a block
-            if (c == end &&
-                    (end == '\n' || i == len-1 || isRichTextBlockSeparator(in[i+1]) ) &&
-                    (i == 0 || !isRichTextBlockSeparator(in[i-1])) ) {
+            if ( (i <= len-sizeEnd) && (0 == strncmp(end, in.c_str()+i, sizeEnd)) ) {
                 // end of block detected
-                size_t L;
-                if (dropBlockSeparators) {
-                    block++;
-                    L = i-block;
+                size_t sizeBlock;
+                if (dropDelimiters) {
+                    block += sizeBeginning;
+                    sizeBlock = i-block;
                 } else {
-                    L = i-block+1;
+                    sizeBlock = i-block+sizeEnd;
                 }
+                i += sizeEnd;
                 std::ostringstream currentBlock;
-
 
                 if (0 == strcmp("a", htmlTag)) {
                     // for "a" tags, add "href=..."
-                    std::string hyperlink = in.substr(block+1, L-2);
-                    currentBlock << in[block] << "<" << htmlTag;
+                    std::string hyperlink = in.substr(block, sizeBlock);
+                    currentBlock << "<" << htmlTag;
                     currentBlock << " href=\"" << hyperlink << "\">" << hyperlink;
-                    currentBlock << "</" << htmlTag << ">" << c;
+                    currentBlock << "</" << htmlTag << ">";
 
                 } else {
                     currentBlock << "<" << htmlTag;
                     currentBlock << " class=\"" << htmlClass << "\">";
-                    currentBlock << in.substr(block, L);
+                    currentBlock << in.substr(block, sizeBlock);
                     currentBlock << "</" << htmlTag << ">";
                 }
                 result += currentBlock.str();
@@ -821,9 +810,7 @@ std::string convertToRichTextInline(const std::string &in, char begin, char end,
                 result += in.substr(block, i-block+1);
                 insideBlock = false;
             }
-        } else if ( (begin == c) &&
-                    (i==0 || isRichTextBlockSeparator(in[i-1]) ) &&
-                    (i == len-1 || !isRichTextBlockSeparator(in[i+1])) ) {
+        } else if ( (i <= len-sizeBeginning) && (0 == strncmp(begin, in.c_str()+i, sizeBeginning)) ) {
             // beginning of new block
             insideBlock = true;
             block = i;
@@ -852,11 +839,12 @@ std::string convertToRichTextInline(const std::string &in, char begin, char end,
   */
 std::string convertToRichText(const std::string &raw)
 {
-    std::string result = convertToRichTextInline(raw, '*', '*', true, "strong", "");
-    result = convertToRichTextInline(result, '_', '_', true, "span", "sm_underline");
-    result = convertToRichTextInline(result, '/', '/', true, "em", "");
-    result = convertToRichTextInline(result, '[', ']', false, "a", "sm_hyperlink");
-    result = convertToRichTextWholeline(result, "&gt;", "div", "sm_quote");
+    std::string result = convertToRichTextInline(raw, "**", "**", true, "strong", "");
+    result = convertToRichTextInline(result, "__", "__", true, "span", "sm_underline");
+    result = convertToRichTextInline(result, "&quot;", "&quot;", false, "span", "sm_double_quote");
+    result = convertToRichTextInline(result, "++", "++", true, "em", "");
+    result = convertToRichTextInline(result, "[[", "]]", true, "a", "sm_hyperlink");
+    result = convertToRichTextWholeline(result, "&gt;", "span", "sm_quote");
     return result;
 
 }
