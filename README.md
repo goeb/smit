@@ -1,4 +1,4 @@
-smit
+Smit
 ====
 
 Small Issue Tracker
@@ -9,32 +9,34 @@ Features
 
 - Generalist issue tracker, for all needs (customer support, team issues, etc.)
 - Full text searching
-- Ability to serve several unrelated projects, with different structures
+- Easy configuration of properties
+- Manage several projects
 - Easy to install locally or on a server
-- Easy to customize (no programming skills, only editing text, CSS, HTML, and in the future a web tools will help for this)
 - Fast and light
-- Simple database on disk, with text files
-- Short issue identifiers in base 34 (using letters - eg: 3EF, RGJ, SD5)
+- UTF-8
+- Offline issue tracking
 
-
-Limitations
------------
-- no wiki, no revision control
-- suitable for small projects (less than 10000 issues per project)
 
 Getting Started
 ---------------
+    
+Online demo:
+
+    http://smit.herokuapp.com
+
     
 For the ones who want to experiment quickly:
 
     git clone https://github.com/goeb/smit.git
     cd smit
     make
-    ./smit repositories &
+    ./smit demo &
 
-    <web-browser> http://127.0.0.1:8080/myproject/issues
+    <web-browser> http://127.0.0.1:8080/things_to_do/issues
 
 
+Roadmap
+---
 In the future (that is "not yet"):
 
     # initialize a repository
@@ -52,32 +54,13 @@ In the future (that is "not yet"):
 
 
 
-Why should I prefer Smit over Redmine, Bugzilla, RequestTracker, etc. ?
----
-
-Smit is far simpler to start:
-
-    - get a copy of the smit program
-    - create a new repository and project (or copy from an archive)
-    - start smit
-
-Smit is far simpler to configure:
-
-    1. modify properties in the text file 'project'
-    2. restart smit
-    3. experiment, and start again at step 1 if you feel like
-
-Smit can be used offline (read-only):
-
-    - get a local copy of the smit program
-    - get a local copy of the repository
-    - start smit on your machine
-
 
 REST API
 --------
 
 Query string
+
+Examples:
     
 - colspec=status+release+assignee
 
@@ -116,37 +99,20 @@ A typical file tree is:
     │   ├── html
     │   │   ├── footer.html
     │   │   └── header.html
-    │   └── project
+    │   ├── project
+    │   └── views
     ├── project B
     ├── etc. (other projects)
     ├── public
     │   ├── signin.html
     │   ├── smit.js
     │   ├── logo.png
-    │   └── style.css
+    │   ├── style.css
+    │   └── etc.
     └── users
 
 
 HTML pages are built as follows:
 
-    a header
-    the dynamic contents (list of issues or contents of an issue)
-    a footer
-    some javascript that updates some values in the page
+    To Be Completed
 
-
-Headers:
-
-    <template>_global_header.html
-    <template>_global_footer.html
-    <template>_project_header.html
-    <template>_project_footer.html
-    <template>_style.css
-
-
-
-Technical constraints
----------------------
-Project name must not contain these characters: /
-
-Charset encoding UTF-8
