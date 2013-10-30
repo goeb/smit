@@ -11,7 +11,7 @@ Features
 - Full text searching
 - Easy configuration of properties
 - Manage several projects
-- Easy to install locally or on a server
+- Easy to install locally, or on a server
 - Fast and light
 - UTF-8
 - Offline issue tracking
