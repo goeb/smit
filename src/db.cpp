@@ -1020,7 +1020,9 @@ std::list<std::string> Project::getReservedProperties() const
     return reserved;
 }
 
-std::list<std::string> Project::getDefaultColspec()
+/** Get the list of all properties
+  */
+std::list<std::string> Project::getPropertiesNames()
 {
     std::list<std::string> colspec = config.orderedProperties;
     // add mandatory properties that are not included in orderedProperties

@@ -217,10 +217,21 @@ int writeToFile(const char *filepath, const std::string &data)
     return result;
 }
 
+bool has(const std::list<std::string> &L, const std::string item)
+{
+    std::list<std::string>::const_iterator i;
+    FOREACH(i, L) {
+        if (*i == item) return true;
+    }
+    return false;
+}
 
-// "aaa bb ccc"
-// @return aaa, bbb, ccc
-std::list<std::string> parseColspec(const char *colspec)
+/** Parse a colspec and return a list of properties
+  *
+  * "aaa bb ccc" or "aaa+bb+ccc"
+  * @return aaa, bbb, ccc
+  */
+std::list<std::string> parseColspec(const char *colspec, const std::list<std::string> &knownProperties)
 {
     std::list<std::string> result;
     size_t i = 0;
@@ -230,11 +241,13 @@ std::list<std::string> parseColspec(const char *colspec)
         char c = colspec[i];
         if (c == ' ' || c == '+') {
             // push previous token if any
-            if (currentToken.size() > 0) result.push_back(currentToken);
+            if (currentToken.size() > 0) {
+                if (has(knownProperties, currentToken)) result.push_back(currentToken);
+            }
             currentToken.clear();
         } else currentToken += c;
     }
-    if (currentToken.size() > 0) result.push_back(currentToken);
+    if (currentToken.size() > 0 && has(knownProperties, currentToken)) result.push_back(currentToken);
     return result;
 }
 
