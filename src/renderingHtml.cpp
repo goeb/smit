@@ -792,7 +792,7 @@ std::string convertToRichTextWholeline(const std::string &in, const char *start,
   *    If true, the begin and end separators a removed from the final HTML
   *
   */
-std::string convertToRichTextInline(const std::string &in, char *begin, char *end,
+std::string convertToRichTextInline(const std::string &in, const char *begin, const char *end,
                                    bool dropDelimiters, const char *htmlTag, const char *htmlClass)
 {
     std::string result;
