@@ -3,11 +3,12 @@ Smit
 
 Small Issue Tracker
 
+Smit is a generalist issue tracker, suitable for customer support, team issues, bug tracking, etc.
+
 
 Features
 --------
 
-- Generalist issue tracker, for all needs (customer support, team issues, etc.)
 - Full text searching
 - Easy configuration of properties
 - Manage several projects
@@ -35,19 +36,36 @@ For the ones who want to experiment quickly:
     <web-browser> http://127.0.0.1:8080/things_to_do/issues
 
 
+
 Roadmap
 ---
-In the future (that is "not yet"):
+
+v1.0
+    command-line interface
+    web interface
+
+v1.1
+    file upload
+    make it also run on Windows
+
+v2.0
+    i18n (gettext)
+    branch and merge repositories
+
+
+Command-Line
+---
+This is a preview of what the command-line interface will look like:
 
     # initialize a repository
-    mkdir smitRepo && cd smitRepo
-    smit init
+    mkdir repo && cd repo
+    smit init .
 
     # add itialize a project
-    smit add-project MySampleProject
+    smit project create MySampleProject
 
     # add a user
-    smit add-user "John Smith" MySampleProject:rw
+    smit user add "John Smith" MySampleProject rw
     Enter password:
     
     smit serve .
@@ -74,11 +92,9 @@ Examples:
 
     Full text search on all properties and messages.
 
-- filterin=status:open
-  filterin=assignee:John Smith
-  filterout=release:undefined
+- filterin=status:open&filterin=assignee:John Smith&filterout=release:undefined
 
-    filterin and filterout may be specified several times on the query string.
+    'filterin' and 'filterout' may be specified several times on the query string.
 
 - format=text | html
 

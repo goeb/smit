@@ -11,7 +11,7 @@
 #include "ustring.h"
 #include "mutexTools.h"
 
-#define K_MESSAGE "message" // keyword used for the message. Could be changed to _message ? TODO ?
+#define K_MESSAGE "+message" // keyword used for the message. Could be changed to _message ? TODO ?
 #define K_SUMMARY "summary"
 
 #define DELETE_DELAY_S (10*60) // seconds

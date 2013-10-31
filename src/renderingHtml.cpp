@@ -970,11 +970,9 @@ void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx,
         mg_printf(conn, "</div>\n"); // end header
 
         mg_printf(conn, "<div class=\"sm_entry_message\">");
-        std::map<std::string, std::list<std::string> >::iterator m = ee.properties.find(K_MESSAGE);
-        if (m != ee.properties.end()) {
-            if (m->second.size() != 0) {
-                mg_printf(conn, "%s\n", convertToRichText(htmlEscape(m->second.front())).c_str());
-            }
+        std::string m = ee.getMessage();
+        if (! m.empty()) {
+            mg_printf(conn, "%s\n", convertToRichText(htmlEscape(m)).c_str());
         }
         mg_printf(conn, "</div>\n"); // end message
 
@@ -996,7 +994,7 @@ void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx,
 
         FOREACH(f, orderedProperties) {
             std::string pname = *f;
-            if (pname == K_MESSAGE) continue; // already processed
+//            if (pname == K_MESSAGE) continue; // already processed
 
             std::map<std::string, std::list<std::string> >::const_iterator p = ee.properties.find(pname);
             if (p != ee.properties.end()) {
@@ -1172,10 +1170,10 @@ void RHtml::printIssueForm(struct mg_connection *conn, const ContextParameters &
         mg_printf(conn, "<td></td></tr>\n");
     }
     mg_printf(conn, "<tr>\n");
-    mg_printf(conn, "<td class=\"sm_plabel sm_plabel_message\" >%s: </td>\n", ctx.getProject().getLabelOfProperty("message").c_str());
+    mg_printf(conn, "<td class=\"sm_plabel sm_plabel_message\" >%s: </td>\n", ctx.getProject().getLabelOfProperty(K_MESSAGE).c_str());
     mg_printf(conn, "<td colspan=\"3\">\n");
     mg_printf(conn, "<textarea class=\"sm_pinput sm_pinput_message\" placeholder=\"%s\" name=\"%s\" wrap=\"hard\" cols=\"80\">\n",
-              "Enter a message", K_MESSAGE);
+              "Enter a message", K_MESSAGE); // remove the '+' of K_MESSAGE
     mg_printf(conn, "</textarea>\n");
     mg_printf(conn, "</td></tr>\n");
 

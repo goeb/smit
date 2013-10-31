@@ -1,9 +1,9 @@
-_parent null
-author homer
-ctime 1381779645
++parent null
++author homer
++ctime 1381779645
 due_date "as soon as possible"
 in_charge "John Smith"
-message < -----------endofmsg---
++message < -----------endofmsg---
 As there is no documentation yet, here is a short summary:
 
 use / characters around words for /highlighting/

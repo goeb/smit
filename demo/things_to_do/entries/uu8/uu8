@@ -1,8 +1,8 @@
-_parent null
-author fred
-ctime 1381949007
++parent null
++author fred
++ctime 1381949007
 due_date "as soon as possible"
 in_charge "John Smith"
-message 
++message 
 status open
 summary "fix nasty bug in the washing machine"

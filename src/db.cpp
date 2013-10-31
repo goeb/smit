@@ -25,10 +25,10 @@
 #define VIEWS_FILE "views"
 
 
-#define K_PARENT "_parent"
-#define K_AUTHOR "author"
-#define K_CTIME "ctime"
-#define K_ID "id"
+#define K_PARENT "+parent"
+#define K_AUTHOR "+author"
+#define K_CTIME "+ctime"
+#define K_ISSUE_ID "id"
 #define K_PARENT_NULL "null"
 
 Database Database::Db;
@@ -690,8 +690,8 @@ bool Issue::filter(const std::map<std::string, std::list<std::string> > &filterI
 
     // look for each property of the issue (except ctime and mtime)
     // id
-    if (PROPERTY_FILTERED_FOUND == filterProperty(K_ID, id, filterOut)) return false;
-    if (PROPERTY_FILTERED_NOT_FOUND == filterProperty(K_ID, id, filterIn)) return false;
+    if (PROPERTY_FILTERED_FOUND == filterProperty(K_ISSUE_ID, id, filterOut)) return false;
+    if (PROPERTY_FILTERED_NOT_FOUND == filterProperty(K_ISSUE_ID, id, filterIn)) return false;
 
     // other properties
     std::map<std::string, std::list<std::string> >::const_iterator p;

@@ -1,7 +1,7 @@
-_parent ehe
-author homer
-ctime 1381779689
-message < -----------endofmsg---
++parent ehe
++author homer
++ctime 1381779689
++message < -----------endofmsg---
 And also, use > for quoting:
 
 > this is quote

@@ -1,5 +1,5 @@
-_parent wek
-author John Smith
-ctime 1381774278
++parent wek
++author John Smith
++ctime 1381774278
 due_date "as soon as possible"
-message "Alice has only 2 chairs. Ask also Homer."
++message "Alice has only 2 chairs. Ask also Homer."
