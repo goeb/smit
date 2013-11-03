@@ -78,6 +78,7 @@ void sendHttpHeader500(struct mg_connection *conn)
 /**
   * @param otherHeader
   *    Must not include the line-terminating \r\n
+  *    May be NULL
   */
 void sendHttpRedirect(struct mg_connection *conn, const char *redirectUrl, const char *otherHeader)
 {
@@ -505,7 +506,9 @@ void httpGetListOfIssues(struct mg_connection *conn, Project &p, User u)
 void httpGetProject(struct mg_connection *conn, Project &p, User u)
 {
     // redirect to list of issues
-    return httpGetListOfIssues(conn, p, u);
+    std::string url = "/";
+    url += p.getName() + "/issues";
+    sendHttpRedirect(conn, url.c_str(), 0);
 }
 
 
@@ -723,6 +726,7 @@ int begin_request_handler(struct mg_connection *conn) {
         else handleUnauthorizedAccess(conn, resource);
 
     }
+    else if ( (resource == "signin") && (method == "GET") ) sendHttpRedirect(conn, "/", 0);
     else if ( (resource == "") && (method == "GET") ) httpGetRoot(conn, user);
     else if ( (resource == "") && (method == "POST") ) httpPostRoot(conn, user);
     else if ( (resource == "users") && (method == "GET") ) httGetUsers(conn, user);

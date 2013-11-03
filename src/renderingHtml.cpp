@@ -570,7 +570,7 @@ void RHtml::printProjectConfig(struct mg_connection *conn, const ContextParamete
             if (varname.empty()) break;
 
             if (varname == K_SM_RAW_PROJECT_NAME) {
-                // TODO, when creating new project, the project name goes here
+                mg_printf(conn, "%s", htmlEscape(ctx.project->getName()).c_str());
 
             } else if (varname == K_SM_DIV_NAVIGATION_GLOBAL) {
                 printNavigationGlobal(conn, ctx);
@@ -1075,6 +1075,9 @@ void RHtml::printPageIssue(struct mg_connection *conn, const ContextParameters &
             } else if (varname == K_SM_DIV_ISSUE) {
                 printIssue(conn, ctx, issue, entries);
 
+            } else if (varname == K_SM_RAW_PROJECT_NAME) {
+                mg_printf(conn, "%s", htmlEscape(ctx.project->getName()).c_str());
+
             } else {
                 // unknown variable name
                 mg_printf(conn, "%s", varname.c_str());
@@ -1112,6 +1115,9 @@ void RHtml::printPageNewIssue(struct mg_connection *conn, const ContextParameter
             } else if (varname == K_SM_DIV_ISSUE) {
                 Issue issue;
                 printIssueForm(conn, ctx, issue, true);
+
+            } else if (varname == K_SM_RAW_PROJECT_NAME) {
+                mg_printf(conn, "%s", htmlEscape(ctx.project->getName()).c_str());
 
             } else {
                 // unknown variable name
