@@ -13,9 +13,9 @@ Features
 - Easy configuration of properties
 - Manage several projects
 - Easy to install locally, or on a server
-- Fast and light
+- Simple, fast and light
 - UTF-8
-- Offline issue tracking
+- Can be used offline
 
 
 Getting Started
@@ -63,17 +63,17 @@ And to add a user 'Peter' for that project:
 Roadmap
 ---
 
-v1.0
-    command-line interface
-    web interface
+- v1.0
+  - command-line interface
+  - web interface
 
-v1.1
-    file upload
-    make it also run on Windows
+- v1.1
+  - file upload
+  - make it also run on Windows
 
-v2.0
-    i18n (gettext)
-    branch and merge repositories
+- v2.0
+  - i18n (gettext)
+  - branch and merge repositories
 
 
 Command-Line
