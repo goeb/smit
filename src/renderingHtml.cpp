@@ -58,7 +58,11 @@ public:
         if (searchFromHere >= (buffer+size)) return "";
 
         const char *p0 = strstr(searchFromHere, "SM_");
-        if (!p0) return "";
+        if (!p0) {
+            // no SM variable found
+            dumpEnd = buffer+size;
+            return "";
+        }
 
         const char *p = p0;
         while ( (p < buffer+size) && (isalnum(*p) || ('_' == *p)) ) p++;
@@ -403,14 +407,13 @@ void RHtml::printPageProjectList(struct mg_connection *conn, const ContextParame
         VariableNavigator vn(data, n);
         while (1) {
             std::string varname = vn.getNextVariable();
+            vn.dumpPrevious(conn);
             if (varname.empty()) break;
 
             if (varname == K_SM_DIV_NAVIGATION_GLOBAL) {
-                vn.dumpPrevious(conn);
                 printGlobalNavigation(conn, ctx);
 
             } else if (varname == K_SM_DIV_PROJECTS) {
-                vn.dumpPrevious(conn);
                 printProjects(conn, pList);
 
             } else {
@@ -418,7 +421,6 @@ void RHtml::printPageProjectList(struct mg_connection *conn, const ContextParame
                 mg_printf(conn, "%s", varname.c_str());
             }
         }
-        vn.dumpPrevious(conn);
 
     } else {
         LOG_ERROR("Could not load %s", path.c_str());
@@ -590,33 +592,28 @@ void RHtml::printProjectConfig(struct mg_connection *conn, const ContextParamete
         VariableNavigator vn(data, n);
         while (1) {
             std::string varname = vn.getNextVariable();
+            vn.dumpPrevious(conn);
             if (varname.empty()) break;
 
             if (varname == K_SM_RAW_PROJECT_NAME) {
                 // TODO, when creating new project, the project name goes here
-                vn.dumpPrevious(conn);
 
             } else if (varname == K_SM_DIV_NAVIGATION_GLOBAL) {
-                vn.dumpPrevious(conn);
                 printGlobalNavigation(conn, ctx);
 
             } else if (varname == K_SM_DIV_NAVIGATION_ISSUES) {
-                vn.dumpPrevious(conn);
                 printNavigationBar(conn, ctx, false);
 
             } else if (varname == K_SM_SCRIPT_UPDATE_CONFIG) {
-                vn.dumpPrevious(conn);
                 printScriptUpdateConfig(conn, ctx);
 
             } else if (varname == K_SM_DIV_PREDEFINED_VIEWS) {
-                vn.dumpPrevious(conn);
                 printLinksToPredefinedViews(conn, ctx);
             } else {
                 // unknown variable name
                 mg_printf(conn, "%s", varname.c_str());
             }
         }
-        vn.dumpPrevious(conn);
 
     } else {
         LOG_ERROR("Could not load %s", path.c_str());
@@ -753,29 +750,25 @@ void RHtml::printPageIssueList(struct mg_connection *conn, const ContextParamete
         VariableNavigator vn(data, n);
         while (1) {
             std::string varname = vn.getNextVariable();
+            vn.dumpPrevious(conn);
             if (varname.empty()) break;
 
             if (varname == K_SM_DIV_NAVIGATION_GLOBAL) {
-                vn.dumpPrevious(conn);
                 printGlobalNavigation(conn, ctx);
 
             } else if (varname == K_SM_DIV_NAVIGATION_ISSUES) {
-                vn.dumpPrevious(conn);
                 printNavigationBar(conn, ctx, true);
 
             } else if (varname == K_SM_DIV_ISSUES) {
-                vn.dumpPrevious(conn);
                 printIssueList(conn, ctx, issueList, colspec);
 
             } else if (varname == K_SM_RAW_PROJECT_NAME) {
-                vn.dumpPrevious(conn);
                 mg_printf(conn, "%s", htmlEscape(ctx.project->getName()).c_str());
             } else {
                 // unknown variable name
                 mg_printf(conn, "%s", varname.c_str());
             }
         }
-        vn.dumpPrevious(conn);
 
     } else {
         LOG_ERROR("Could not load %s", path.c_str());
@@ -1091,22 +1084,21 @@ void RHtml::printPageIssue(struct mg_connection *conn, const ContextParameters &
         VariableNavigator vn(data, n);
         while (1) {
             std::string varname = vn.getNextVariable();
+
+            vn.dumpPrevious(conn);
+
             if (varname.empty()) break;
 
             if (varname == K_SM_DIV_NAVIGATION_GLOBAL) {
-                vn.dumpPrevious(conn);
                 printGlobalNavigation(conn, ctx);
 
             } else if (varname == K_SM_DIV_NAVIGATION_ISSUES) {
-                vn.dumpPrevious(conn);
                 printNavigationBar(conn, ctx, false);
 
             } else if (varname == K_SM_RAW_ISSUE_ID) {
-                vn.dumpPrevious(conn);
                 mg_printf(conn, "%s", issue.id.c_str());
 
             } else if (varname == K_SM_DIV_ISSUE) {
-                vn.dumpPrevious(conn);
                 printIssue(conn, ctx, issue, entries);
 
             } else {
@@ -1114,12 +1106,10 @@ void RHtml::printPageIssue(struct mg_connection *conn, const ContextParameters &
                 mg_printf(conn, "%s", varname.c_str());
             }
         }
-        vn.dumpPrevious(conn);
 
     } else {
         LOG_ERROR("Could not load %s", path.c_str());
     }
-
 }
 
 
