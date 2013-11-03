@@ -34,6 +34,61 @@ const Project &ContextParameters::getProject() const
     return *project;
 }
 
+
+#define K_SM_DIV_NAVIGATION_GLOBAL "SM_DIV_NAVIGATION_GLOBAL"
+#define K_SM_DIV_NAVIGATION_ISSUES "SM_DIV_NAVIGATION_ISSUES"
+#define K_SM_DIV_PROJECT_NAME "SM_DIV_PROJECT_NAME"
+#define K_SM_SCRIPT_UPDATE_CONFIG "SM_SCRIPT_UPDATE_CONFIG"
+#define K_SM_DIV_PREDEFINED_VIEWS "SM_DIV_PREDEFINED_VIEWS"
+#define K_SM_DIV_PROJECTS "SM_DIV_PROJECTS"
+
+class VariableNavigator {
+public:
+    VariableNavigator(const char *data, size_t len) {
+        buffer = data;
+        size = len;
+        dumpStart = buffer;
+        dumpEnd = buffer;
+        searchFromHere = buffer;
+    }
+    std::string getNextVariable() {
+
+        if (searchFromHere >= (buffer+size)) return "";
+
+        const char *p0 = strstr(searchFromHere, "SM_");
+        if (!p0) return "";
+
+        const char *p = p0;
+        while ( (p < buffer+size) && (isalnum(*p) || ('_' == *p)) ) p++;
+
+        std::string varname(p0, p-p0);
+        searchFromHere = p;
+        dumpEnd = p0;
+
+        return varname;
+    }
+
+    void dumpPrevious(struct mg_connection *conn) {
+        if (dumpEnd == dumpStart) {
+            LOG_ERROR("dumpPrevious: dumpEnd == dumpStart");
+            return;
+        }
+        mg_write(conn, dumpStart, dumpEnd-dumpStart);
+        dumpStart = searchFromHere;
+        dumpEnd = dumpStart;
+    }
+
+private:
+    const char *buffer;
+    size_t size;
+    const char * dumpStart;
+    const char * dumpEnd;
+    const char * searchFromHere;
+
+};
+
+
+
 void RHtml::printHeader(struct mg_connection *conn, const std::string &projectPath)
 {
     std::string path = projectPath + "/html/header.html";
@@ -353,19 +408,44 @@ void RHtml::printNavigationBar(struct mg_connection *conn, const ContextParamete
 
 void RHtml::printProjectList(struct mg_connection *conn, const ContextParameters &ctx, const std::list<std::pair<std::string, std::string> > &pList)
 {
+
     mg_printf(conn, "Content-Type: text/html\r\n\r\n");
-    printGlobalHeader(conn, ctx.pathToRepository);
 
-    std::list<std::pair<std::string, std::string> >::const_iterator p;
-    for (p=pList.begin(); p!=pList.end(); p++) {
-        std::string pname = htmlEscape(p->first.c_str());
-        mg_printf(conn, "<div class=\"sm_link_project\"><a href=\"/%s/issues/\">%s</a> (%s)",
-                  pname.c_str(), pname.c_str(), _(p->second.c_str()));
-        if (p->second == "admin") mg_printf(conn, " <a href=\"%s/config\">edit</a>", pname.c_str());
-        mg_printf(conn, "</div>\n");
+    std::string path = ctx.rootdir + "/public/projects.html";
+    char *data;
+    int n = loadFile(path.c_str(), &data);
+    if (n >= 0) {
+        VariableNavigator vn(data, n);
+        while (1) {
+            std::string varname = vn.getNextVariable();
+            if (varname.empty()) break;
+
+            if (varname == K_SM_DIV_NAVIGATION_GLOBAL) {
+                vn.dumpPrevious(conn);
+                printGlobalNavigation(conn, ctx);
+
+            } else if (varname == K_SM_DIV_PROJECTS) {
+                vn.dumpPrevious(conn);
+
+                std::list<std::pair<std::string, std::string> >::const_iterator p;
+                for (p=pList.begin(); p!=pList.end(); p++) {
+                    std::string pname = htmlEscape(p->first.c_str());
+                    mg_printf(conn, "<div class=\"sm_link_project\"><a href=\"/%s/issues/\">%s</a> (%s)",
+                              pname.c_str(), pname.c_str(), _(p->second.c_str()));
+                    if (p->second == "admin") mg_printf(conn, " <a href=\"%s/config\">edit</a>", pname.c_str());
+                    mg_printf(conn, "</div>\n");
+                }
+
+            } else {
+                // unknown variable name
+                mg_printf(conn, "%s", varname.c_str());
+            }
+        }
+        vn.dumpPrevious(conn);
+
+    } else {
+        LOG_ERROR("Could not load %s", path.c_str());
     }
-
-    printGlobalFooter(conn, ctx.pathToRepository);
 }
 
 /** Build a new query string based on the current one, and update the sorting part
@@ -521,60 +601,6 @@ void printScriptUpdateConfig(struct mg_connection *conn, const ContextParameters
     mg_printf(conn, "</script>\n");
 }
 
-#define K_SM_DIV_NAVIGATION_GLOBAL "SM_DIV_NAVIGATION_GLOBAL"
-#define K_SM_DIV_NAVIGATION_ISSUES "SM_DIV_NAVIGATION_ISSUES"
-#define K_SM_DIV_PROJECT_NAME "SM_DIV_PROJECT_NAME"
-#define K_SM_SCRIPT_UPDATE_CONFIG "SM_SCRIPT_UPDATE_CONFIG"
-#define K_SM_DIV_PREDEFINED_VIEWS "SM_DIV_PREDEFINED_VIEWS"
-#define K_SM_DIV_PROJECTS "SM_DIV_PROJECTS"
-
-#define IS_EQUAL(p, q) (0==strncmp(p, q, strlen(q)))
-
-
-class VariableNavigator {
-public:
-    VariableNavigator(const char *data, size_t len) {
-        buffer = data;
-        size = len;
-        dumpStart = buffer;
-        dumpEnd = buffer;
-        searchFromHere = buffer;
-    }
-    std::string getNextVariable() {
-
-        if (searchFromHere >= (buffer+size)) return "";
-
-        const char *p0 = strstr(searchFromHere, "SM_");
-        if (!p0) return "";
-
-        const char *p = p0;
-        while ( (p < buffer+size) && (isalnum(*p) || ('_' == *p)) ) p++;
-
-        std::string varname(p0, p-p0);
-        searchFromHere = p;
-        dumpEnd = p0;
-
-        return varname;
-    }
-
-    void dumpPrevious(struct mg_connection *conn) {
-        if (dumpEnd == dumpStart) {
-            LOG_ERROR("dumpPrevious: dumpEnd == dumpStart");
-            return;
-        }
-        mg_write(conn, dumpStart, dumpEnd-dumpStart);
-        dumpStart = searchFromHere;
-        dumpEnd = dumpStart;
-    }
-
-private:
-    const char *buffer;
-    size_t size;
-    const char * dumpStart;
-    const char * dumpEnd;
-    const char * searchFromHere;
-
-};
 
 void RHtml::printProjectConfig(struct mg_connection *conn, const ContextParameters &ctx)
 {
@@ -590,7 +616,9 @@ void RHtml::printProjectConfig(struct mg_connection *conn, const ContextParamete
             if (varname.empty()) break;
 
             if (varname == K_SM_DIV_PROJECT_NAME) {
+                // TODO, when creating new project, the project name goes here
                 vn.dumpPrevious(conn);
+
             } else if (varname == K_SM_DIV_NAVIGATION_GLOBAL) {
                 vn.dumpPrevious(conn);
                 printGlobalNavigation(conn, ctx);
@@ -616,15 +644,6 @@ void RHtml::printProjectConfig(struct mg_connection *conn, const ContextParamete
     } else {
         LOG_ERROR("Could not load %s", path.c_str());
     }
-}
-
-void RHtml::printProjectPage(struct mg_connection *conn, const ContextParameters &ctx)
-{
-    mg_printf(conn, "Content-Type: text/html\r\n\r\n");
-    printHeader(conn, ctx.getProject().getPath());
-    printGlobalNavigation(conn, ctx);
-    printNavigationBar(conn, ctx, true);
-    printFooter(conn, ctx.getProject().getName().c_str());
 }
 
 /** Get the property name that will be used for gouping

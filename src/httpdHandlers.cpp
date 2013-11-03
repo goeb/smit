@@ -325,6 +325,8 @@ void httpGetRoot(struct mg_connection *conn, User u)
     if (format == RENDERING_TEXT) RText::printProjectList(conn, pList);
     else {
         ContextParameters ctx = ContextParameters(u, Database::Db.pathToRepository);
+        ctx.rootdir = Rootdir;
+
         RHtml::printProjectList(conn, ctx, pList);
     }
 }
@@ -509,14 +511,6 @@ void httpGetProject(struct mg_connection *conn, Project &p, User u)
 {
     // redirect to list of issues
     return httpGetListOfIssues(conn, p, u);
-
-    // following code deactivated
-    enum RenderingFormat format = getFormat(conn);
-    sendHttpHeader200(conn);
-    if (format == RENDERING_HTML) {
-        ContextParameters ctx = ContextParameters(u, p);
-        RHtml::printProjectPage(conn, ctx);
-    }
 }
 
 
