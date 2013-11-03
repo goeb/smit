@@ -828,7 +828,7 @@ std::string convertToRichTextInline(const std::string &in, const char *begin, co
                 } else {
                     sizeBlock = i-block+sizeEnd;
                 }
-                i += sizeEnd;
+                i += sizeEnd-1;
                 std::ostringstream currentBlock;
 
                 if (0 == strcmp("a", htmlTag)) {

@@ -1,7 +1,7 @@
 
 addView "Open issues" \
     filterin status open \
-    sort -mtime
+    sort +target_version-mtime
 
 addView "All issues" sort -mtime
 
