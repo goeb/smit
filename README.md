@@ -70,6 +70,7 @@ Roadmap
 - v1.1
   - file upload
   - make it also run on Windows
+  - full-contents view (all tickets with their contents on a single page)
 
 - v2.0
   - i18n (gettext)
@@ -135,16 +136,13 @@ A typical file tree is:
     │   │   ├── 4eg
     │   │   ├── drl6
     │   │   └── etc. (other entries)
-    │   ├── html
-    │   │   ├── footer.html
-    │   │   └── header.html
     │   ├── project
     │   └── views
-    ├── project B
+    ├── project B ...
     ├── etc. (other projects)
     ├── public
-    │   ├── signin.html
-    │   ├── smit.js
+    │   ├── *.html
+    │   ├── *.js
     │   ├── logo.png
     │   ├── style.css
     │   └── etc.
