@@ -30,3 +30,4 @@ addUser fred \
     sha1 31017a722665e4afce586950f42944a6d331dabf \
     superadmin
 
+addUser Peter project "Project X" admin sha1 9c5c73b3c49d665d0607dd4b888b4c1677881be3

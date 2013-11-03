@@ -36,6 +36,29 @@ For the ones who want to experiment quickly:
     <web-browser> http://127.0.0.1:8080/things_to_do/issues
 
 
+In order to create a new project in $REPO:
+    
+    mkdir -p "$REPO/Project X/entries"
+
+    cat << EOF > "$REPO/Project X/project"
+    addProperty status select "open" "closed" "deleted"
+    EOF
+
+    cat << EOF > "$REPO/Project X/views"
+    addView "All Issues" sort +status-mtime
+    addView "Open Issues" filterin status open sort -mtime
+    EOF
+    
+And to add a user 'Peter' for that project:
+
+    echo -n PeterPW | sha1sum
+    (copy-paste the SHA1 to the next step...)
+
+    cat << EOF >> $REPO/users
+    addUser Peter project "Project X" admin sha1 9c5c73b3c49d665d0607dd4b888b4c1677881be3
+    EOF
+
+    
 
 Roadmap
 ---
