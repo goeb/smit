@@ -28,7 +28,7 @@ ContextParameters::ContextParameters(User u, const std::string &repo)
 
 const Project &ContextParameters::getProject() const
 {
-    if (!project){
+    if (!project) {
         LOG_ERROR("Invalid null project. Expect crash...");
     }
     return *project;
@@ -350,6 +350,7 @@ void RHtml::printNavigationBar(struct mg_connection *conn, const ContextParamete
     div.print(conn);
 }
 
+
 void RHtml::printProjectList(struct mg_connection *conn, const ContextParameters &ctx, const std::list<std::pair<std::string, std::string> > &pList)
 {
     mg_printf(conn, "Content-Type: text/html\r\n\r\n");
@@ -525,6 +526,55 @@ void printScriptUpdateConfig(struct mg_connection *conn, const ContextParameters
 #define K_SM_DIV_PROJECT_NAME "SM_DIV_PROJECT_NAME"
 #define K_SM_SCRIPT_UPDATE_CONFIG "SM_SCRIPT_UPDATE_CONFIG"
 #define K_SM_DIV_PREDEFINED_VIEWS "SM_DIV_PREDEFINED_VIEWS"
+#define K_SM_DIV_PROJECTS "SM_DIV_PROJECTS"
+
+#define IS_EQUAL(p, q) (0==strncmp(p, q, strlen(q)))
+
+
+class VariableNavigator {
+public:
+    VariableNavigator(const char *data, size_t len) {
+        buffer = data;
+        size = len;
+        dumpStart = buffer;
+        dumpEnd = buffer;
+        searchFromHere = buffer;
+    }
+    std::string getNextVariable() {
+
+        if (searchFromHere >= (buffer+size)) return "";
+
+        const char *p0 = strstr(searchFromHere, "SM_");
+        if (!p0) return "";
+
+        const char *p = p0;
+        while ( (p < buffer+size) && (isalnum(*p) || ('_' == *p)) ) p++;
+
+        std::string varname(p0, p-p0);
+        searchFromHere = p;
+        dumpEnd = p0;
+
+        return varname;
+    }
+
+    void dumpPrevious(struct mg_connection *conn) {
+        if (dumpEnd == dumpStart) {
+            LOG_ERROR("dumpPrevious: dumpEnd == dumpStart");
+            return;
+        }
+        mg_write(conn, dumpStart, dumpEnd-dumpStart);
+        dumpStart = searchFromHere;
+        dumpEnd = dumpStart;
+    }
+
+private:
+    const char *buffer;
+    size_t size;
+    const char * dumpStart;
+    const char * dumpEnd;
+    const char * searchFromHere;
+
+};
 
 void RHtml::printProjectConfig(struct mg_connection *conn, const ContextParameters &ctx)
 {
@@ -534,57 +584,34 @@ void RHtml::printProjectConfig(struct mg_connection *conn, const ContextParamete
     char *data;
     int n = loadFile(path.c_str(), &data);
     if (n >= 0) {
-        // replace SM_ variables
-        int dumpFromHere = 0;
-        int searchFromHere = 0;
-        // locate next possible variable
-        char *p = 0;
-        while ( (p = strstr(data + searchFromHere, "SM_")) &&
-                (searchFromHere < n) ) {
-            size_t offset = p - data;
-            // print previous HTML
-            if (0 == strncmp(p, K_SM_DIV_PROJECT_NAME, strlen(K_SM_DIV_PROJECT_NAME))) {
-                // print this, only for new project
-                // TODO
-                data[offset] = 0;
-                mg_printf(conn, "%s", data + dumpFromHere); // print preceding raw HTML
-                dumpFromHere = offset + strlen(K_SM_DIV_PROJECT_NAME);
-                searchFromHere = dumpFromHere;
+        VariableNavigator vn(data, n);
+        while (1) {
+            std::string varname = vn.getNextVariable();
+            if (varname.empty()) break;
 
-            } else if (0 == strncmp(p, K_SM_DIV_NAVIGATION_GLOBAL, strlen(K_SM_DIV_NAVIGATION_GLOBAL))) {
-                data[offset] = 0;
-                mg_printf(conn, "%s", data + dumpFromHere); // print preceding raw HTML
-                printGlobalNavigation(conn, ctx); // print dynamic contents
-                dumpFromHere = offset + strlen(K_SM_DIV_NAVIGATION_GLOBAL);
-                searchFromHere = dumpFromHere;
+            if (varname == K_SM_DIV_PROJECT_NAME) {
+                vn.dumpPrevious(conn);
+            } else if (varname == K_SM_DIV_NAVIGATION_GLOBAL) {
+                vn.dumpPrevious(conn);
+                printGlobalNavigation(conn, ctx);
 
-            } else if (0 == strncmp(p, K_SM_DIV_NAVIGATION_ISSUES, strlen(K_SM_DIV_NAVIGATION_ISSUES))) {
-                data[offset] = 0;
-                mg_printf(conn, "%s", data + dumpFromHere); // print preceding raw HTML
-                printNavigationBar(conn, ctx, false); // print dynamic contents
-                dumpFromHere = offset + strlen(K_SM_DIV_NAVIGATION_ISSUES);
-                searchFromHere = dumpFromHere;
+            } else if (varname == K_SM_DIV_NAVIGATION_ISSUES) {
+                vn.dumpPrevious(conn);
+                printNavigationBar(conn, ctx, false);
 
-            } else if (0 == strncmp(p, K_SM_SCRIPT_UPDATE_CONFIG, strlen(K_SM_SCRIPT_UPDATE_CONFIG))) {
-                data[offset] = 0;
-                mg_printf(conn, "%s", data + dumpFromHere); // print preceding raw HTML
-                printScriptUpdateConfig(conn, ctx); // print dynamic contents
-                dumpFromHere = offset + strlen(K_SM_SCRIPT_UPDATE_CONFIG);
-                searchFromHere = dumpFromHere;
+            } else if (varname == K_SM_SCRIPT_UPDATE_CONFIG) {
+                vn.dumpPrevious(conn);
+                printScriptUpdateConfig(conn, ctx);
 
-            } else if (0 == strncmp(p, K_SM_DIV_PREDEFINED_VIEWS, strlen(K_SM_DIV_PREDEFINED_VIEWS))) {
-                data[offset] = 0;
-                mg_printf(conn, "%s", data + dumpFromHere); // print preceding raw HTML
+            } else if (varname == K_SM_DIV_PREDEFINED_VIEWS) {
+                vn.dumpPrevious(conn);
                 printLinksToPredefinedViews(conn, ctx);
-                dumpFromHere = offset + strlen(K_SM_SCRIPT_UPDATE_CONFIG);
-                searchFromHere = dumpFromHere;
-
             } else {
-                // unrecognized variable
-                searchFromHere = offset+1;
+                // unknown variable name
+                mg_printf(conn, "%s", varname.c_str());
             }
         }
-        mg_printf(conn, "%s", data + dumpFromHere); // print preceding raw HTML
+        vn.dumpPrevious(conn);
 
     } else {
         LOG_ERROR("Could not load %s", path.c_str());
