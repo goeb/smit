@@ -156,4 +156,27 @@ std::string getProperty(const std::map<std::string, std::list<std::string> > &pr
     return propertyValue;
 }
 
+/** Replace all occurrences of the given character by a string
+  *
+  * Example: replaceAll(in, '"', "&quot;")
+  * Replace all " by &quot;
+  */
+std::string replaceAll(const std::string &in, char c, const char *replaceBy)
+{
+    std::string out;
+    size_t len = in.size();
+    size_t i = 0;
+    size_t savedOffset = 0;
+    while (i < len) {
+        if (in[i] == c) {
+            if (savedOffset < i) out += in.substr(savedOffset, i-savedOffset);
+            out += replaceBy;
+            savedOffset = i+1;
+        }
+        i++;
+    }
+    if (savedOffset < i) out += in.substr(savedOffset, i-savedOffset);
+    return out;
+}
+
 

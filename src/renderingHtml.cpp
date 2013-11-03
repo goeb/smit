@@ -111,36 +111,14 @@ void RHtml::printPageSignin(struct mg_connection *conn, const char *redirect)
     }
 }
 
-/** Replace a character by a string
-  *
-  * Example: replaceAll(in, '"', "&quot;")
-  * Replace all " by &quot;
-  */
-std::string replaceHtmlEntity(const std::string &in, char c, const char *replaceBy)
-{
-    std::string out;
-    size_t len = in.size();
-    size_t i = 0;
-    size_t savedOffset = 0;
-    while (i < len) {
-        if (in[i] == c) {
-            if (savedOffset < i) out += in.substr(savedOffset, i-savedOffset);
-            out += replaceBy;
-            savedOffset = i+1;
-        }
-        i++;
-    }
-    if (savedOffset < i) out += in.substr(savedOffset, i-savedOffset);
-    return out;
-}
 
 std::string htmlEscape(const std::string &value)
 {
-    std::string result = replaceHtmlEntity(value, '&', "&amp;");
-    result = replaceHtmlEntity(result, '"', "&quot;");
-    result = replaceHtmlEntity(result, '<', "&lt;");
-    result = replaceHtmlEntity(result, '>', "&gt;");
-    result = replaceHtmlEntity(result, '\'', "&apos;");
+    std::string result = replaceAll(value, '&', "&amp;");
+    result = replaceAll(result, '"', "&quot;");
+    result = replaceAll(result, '<', "&lt;");
+    result = replaceAll(result, '>', "&gt;");
+    result = replaceAll(result, '\'', "&apos;");
     return result;
 }
 
@@ -522,8 +500,9 @@ void printScriptUpdateConfig(struct mg_connection *conn, const ContextParameters
     std::list<std::string> reserved = ctx.getProject().getReservedProperties();
     std::list<std::string>::iterator r;
     FOREACH(r, reserved) {
+        std::string x = replaceAll(ctx.getProject().getLabelOfProperty(*r), '\'', "\\\'");
         mg_printf(conn, "addProperty('%s', '%s', 'reserved', '');\n", r->c_str(),
-                  ctx.getProject().getLabelOfProperty(*r).c_str());
+                  x.c_str());
     }
 
     // other properties
@@ -539,9 +518,12 @@ void printScriptUpdateConfig(struct mg_connection *conn, const ContextParameters
         case F_SELECT_USER: type = "selectUser"; break;
         }
 
+        std::string property = replaceAll(ctx.getProject().getLabelOfProperty(p->first), '\'', "\\\'");
+        std::string value = replaceAll(toString(pspec.selectOptions, "\\n"), '\'', "\\\'");
+
         mg_printf(conn, "addProperty('%s', '%s', '%s', '%s');\n", p->first.c_str(),
-                  ctx.getProject().getLabelOfProperty(p->first).c_str(),
-                  type, toString(pspec.selectOptions, "\\n").c_str());
+                  property.c_str(),
+                  type, value.c_str());
 
     }
 

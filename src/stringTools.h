@@ -15,6 +15,6 @@ std::string urlDecode(const std::string &src, int is_form_url_encoded=true);
 std::string urlEncode(const std::string &src);
 std::string pop(std::list<std::string> & L);
 std::string getProperty(const std::map<std::string, std::list<std::string> > &properties, const std::string &name);
-
+std::string replaceAll(const std::string &in, char c, const char *replaceBy);
 
 #endif
