@@ -20,10 +20,9 @@ ContextParameters::ContextParameters(User u, const Project &p) : project(&p)
     userRole = u.getRole(p.getName());
 }
 
-ContextParameters::ContextParameters(User u, const std::string &repo)
+ContextParameters::ContextParameters(User u)
 {
     username = u.username;
-    pathToRepository = repo;
 }
 
 const Project &ContextParameters::getProject() const
@@ -37,10 +36,13 @@ const Project &ContextParameters::getProject() const
 
 #define K_SM_DIV_NAVIGATION_GLOBAL "SM_DIV_NAVIGATION_GLOBAL"
 #define K_SM_DIV_NAVIGATION_ISSUES "SM_DIV_NAVIGATION_ISSUES"
-#define K_SM_DIV_PROJECT_NAME "SM_DIV_PROJECT_NAME"
+#define K_SM_RAW_PROJECT_NAME "SM_RAW_PROJECT_NAME"
+#define K_SM_RAW_ISSUE_ID "SM_RAW_ISSUE_ID"
 #define K_SM_SCRIPT_UPDATE_CONFIG "SM_SCRIPT_UPDATE_CONFIG"
 #define K_SM_DIV_PREDEFINED_VIEWS "SM_DIV_PREDEFINED_VIEWS"
 #define K_SM_DIV_PROJECTS "SM_DIV_PROJECTS"
+#define K_SM_DIV_ISSUES "SM_DIV_ISSUES"
+#define K_SM_DIV_ISSUE "SM_DIV_ISSUE"
 
 class VariableNavigator {
 public:
@@ -87,8 +89,6 @@ private:
 
 };
 
-
-
 void RHtml::printHeader(struct mg_connection *conn, const std::string &projectPath)
 {
     std::string path = projectPath + "/html/header.html";
@@ -102,26 +102,12 @@ void RHtml::printHeader(struct mg_connection *conn, const std::string &projectPa
     }
 }
 
-void RHtml::printGlobalHeader(struct mg_connection *conn, const std::string &repo)
-{
-    std::string path = repo + "/public/global_header.html";
-    char *data;
-    int r = loadFile(path.c_str(), &data);
-    if (r >= 0) {
-        mg_printf(conn, "%s", data);
-        free(data);
-    } else {
-        LOG_ERROR("Could not load global header: %s", path.c_str());
-    }
-}
-
-void RHtml::printSigninPage(struct mg_connection *conn, const char *pathToRepository, const char *redirect)
+void RHtml::printSigninPage(struct mg_connection *conn, const char *redirect)
 {
 
     mg_printf(conn, "Content-Type: text/html\r\n\r\n");
 
-    std::string path = pathToRepository;
-    path += "/public/signin.html";
+    std::string path = Database::Db.getRootDir() + "/public/signin.html";
     char *data;
     int r = loadFile(path.c_str(), &data);
     if (r >= 0) {
@@ -144,19 +130,6 @@ void RHtml::printFooter(struct mg_connection *conn, const std::string &projectPa
         free(data);
     } else {
         LOG_ERROR("Could not load footer.html for project %s", projectPath.c_str());
-    }
-}
-
-void RHtml::printGlobalFooter(struct mg_connection *conn, const std::string &repo)
-{
-    std::string path = repo + "/public/global_footer.html";
-    char *data;
-    int r = loadFile(path.c_str(), &data);
-    if (r >= 0) {
-        mg_printf(conn, "%s", data);
-        free(data);
-    } else {
-        LOG_ERROR("Could not load global footer: %s", path.c_str());
     }
 }
 
@@ -406,12 +379,24 @@ void RHtml::printNavigationBar(struct mg_connection *conn, const ContextParamete
 }
 
 
-void RHtml::printProjectList(struct mg_connection *conn, const ContextParameters &ctx, const std::list<std::pair<std::string, std::string> > &pList)
+void printProjects(struct mg_connection *conn, const std::list<std::pair<std::string, std::string> > &pList)
+{
+    std::list<std::pair<std::string, std::string> >::const_iterator p;
+    for (p=pList.begin(); p!=pList.end(); p++) {
+        std::string pname = htmlEscape(p->first.c_str());
+        mg_printf(conn, "<div class=\"sm_link_project\"><a href=\"/%s/issues/\">%s</a> (%s)",
+                  pname.c_str(), pname.c_str(), _(p->second.c_str()));
+        if (p->second == "admin") mg_printf(conn, " <a href=\"%s/config\">edit</a>", pname.c_str());
+        mg_printf(conn, "</div>\n");
+    }
+}
+
+void RHtml::printPageProjectList(struct mg_connection *conn, const ContextParameters &ctx, const std::list<std::pair<std::string, std::string> > &pList)
 {
 
     mg_printf(conn, "Content-Type: text/html\r\n\r\n");
 
-    std::string path = ctx.rootdir + "/public/projects.html";
+    std::string path = Database::Db.getRootDir() + "/public/projects.html";
     char *data;
     int n = loadFile(path.c_str(), &data);
     if (n >= 0) {
@@ -426,15 +411,7 @@ void RHtml::printProjectList(struct mg_connection *conn, const ContextParameters
 
             } else if (varname == K_SM_DIV_PROJECTS) {
                 vn.dumpPrevious(conn);
-
-                std::list<std::pair<std::string, std::string> >::const_iterator p;
-                for (p=pList.begin(); p!=pList.end(); p++) {
-                    std::string pname = htmlEscape(p->first.c_str());
-                    mg_printf(conn, "<div class=\"sm_link_project\"><a href=\"/%s/issues/\">%s</a> (%s)",
-                              pname.c_str(), pname.c_str(), _(p->second.c_str()));
-                    if (p->second == "admin") mg_printf(conn, " <a href=\"%s/config\">edit</a>", pname.c_str());
-                    mg_printf(conn, "</div>\n");
-                }
+                printProjects(conn, pList);
 
             } else {
                 // unknown variable name
@@ -606,7 +583,7 @@ void RHtml::printProjectConfig(struct mg_connection *conn, const ContextParamete
 {
     mg_printf(conn, "Content-Type: text/html\r\n\r\n");
 
-    std::string path = ctx.rootdir + "/public/pconfig.html";
+    std::string path = Database::Db.getRootDir() + "/public/pconfig.html";
     char *data;
     int n = loadFile(path.c_str(), &data);
     if (n >= 0) {
@@ -615,7 +592,7 @@ void RHtml::printProjectConfig(struct mg_connection *conn, const ContextParamete
             std::string varname = vn.getNextVariable();
             if (varname.empty()) break;
 
-            if (varname == K_SM_DIV_PROJECT_NAME) {
+            if (varname == K_SM_RAW_PROJECT_NAME) {
                 // TODO, when creating new project, the project name goes here
                 vn.dumpPrevious(conn);
 
@@ -676,13 +653,10 @@ std::string getPropertyForGrouping(const ProjectConfig &pconfig, const std::stri
     return property;
 }
 
-void RHtml::printIssueList(struct mg_connection *conn, const ContextParameters &ctx,
-                           std::list<struct Issue*> issueList, std::list<std::string> colspec)
+void printIssueList(struct mg_connection *conn, const ContextParameters &ctx,
+                    std::list<struct Issue*> issueList, std::list<std::string> colspec)
 {
-    mg_printf(conn, "Content-Type: text/html\r\n\r\n");
-    printHeader(conn, ctx.getProject().getPath());
-    printGlobalNavigation(conn, ctx);
-    printNavigationBar(conn, ctx, true);
+    mg_printf(conn, "<div class=\"sm_issues\">\n");
 
     // print chosen filters and search parameters
     if (!ctx.search.empty() || !ctx.filterin.empty() || !ctx.filterout.empty()) {
@@ -762,7 +736,50 @@ void RHtml::printIssueList(struct mg_connection *conn, const ContextParameters &
         mg_printf(conn, "</tr>\n");
     }
     mg_printf(conn, "</table>\n");
-    printFooter(conn, ctx.getProject().getName().c_str());
+    mg_printf(conn, "</div\n");
+
+}
+
+void RHtml::printPageIssueList(struct mg_connection *conn, const ContextParameters &ctx,
+                           std::list<struct Issue*> issueList, std::list<std::string> colspec)
+{
+    mg_printf(conn, "Content-Type: text/html\r\n\r\n");
+
+
+    std::string path = Database::Db.getRootDir() + "/public/issues.html";
+    char *data;
+    int n = loadFile(path.c_str(), &data);
+    if (n >= 0) {
+        VariableNavigator vn(data, n);
+        while (1) {
+            std::string varname = vn.getNextVariable();
+            if (varname.empty()) break;
+
+            if (varname == K_SM_DIV_NAVIGATION_GLOBAL) {
+                vn.dumpPrevious(conn);
+                printGlobalNavigation(conn, ctx);
+
+            } else if (varname == K_SM_DIV_NAVIGATION_ISSUES) {
+                vn.dumpPrevious(conn);
+                printNavigationBar(conn, ctx, true);
+
+            } else if (varname == K_SM_DIV_ISSUES) {
+                vn.dumpPrevious(conn);
+                printIssueList(conn, ctx, issueList, colspec);
+
+            } else if (varname == K_SM_RAW_PROJECT_NAME) {
+                vn.dumpPrevious(conn);
+                mg_printf(conn, "%s", htmlEscape(ctx.project->getName()).c_str());
+            } else {
+                // unknown variable name
+                mg_printf(conn, "%s", varname.c_str());
+            }
+        }
+        vn.dumpPrevious(conn);
+
+    } else {
+        LOG_ERROR("Could not load %s", path.c_str());
+    }
 }
 
 
@@ -925,15 +942,8 @@ std::string convertToRichText(const std::string &raw)
 
 }
 
-void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx, const Issue &issue, const std::list<Entry*> &entries)
+void printIssue(struct mg_connection *conn, const ContextParameters &ctx, const Issue &issue, const std::list<Entry*> &entries)
 {
-    LOG_DEBUG("printIssue...");
-
-    mg_printf(conn, "Content-Type: text/html\r\n\r\n");
-    printHeader(conn, ctx.getProject().getPath().c_str());
-    printGlobalNavigation(conn, ctx);
-    printNavigationBar(conn, ctx, true);
-
     mg_printf(conn, "<div class=\"sm_issue\">");
 
     // issue header
@@ -1067,10 +1077,49 @@ void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx,
     // print the form
     // -------------------------------------------------
     if (ctx.userRole == ROLE_ADMIN || ctx.userRole == ROLE_RW) {
-        printIssueForm(conn, ctx, issue, false);
+        RHtml::printIssueForm(conn, ctx, issue, false);
+    }
+}
+
+void RHtml::printPageIssue(struct mg_connection *conn, const ContextParameters &ctx, const Issue &issue, const std::list<Entry*> &entries)
+{
+    mg_printf(conn, "Content-Type: text/html\r\n\r\n");
+    std::string path = Database::Db.getRootDir() + "/public/issue.html";
+    char *data;
+    int n = loadFile(path.c_str(), &data);
+    if (n >= 0) {
+        VariableNavigator vn(data, n);
+        while (1) {
+            std::string varname = vn.getNextVariable();
+            if (varname.empty()) break;
+
+            if (varname == K_SM_DIV_NAVIGATION_GLOBAL) {
+                vn.dumpPrevious(conn);
+                printGlobalNavigation(conn, ctx);
+
+            } else if (varname == K_SM_DIV_NAVIGATION_ISSUES) {
+                vn.dumpPrevious(conn);
+                printNavigationBar(conn, ctx, false);
+
+            } else if (varname == K_SM_RAW_ISSUE_ID) {
+                vn.dumpPrevious(conn);
+                mg_printf(conn, "%s", issue.id.c_str());
+
+            } else if (varname == K_SM_DIV_ISSUE) {
+                vn.dumpPrevious(conn);
+                printIssue(conn, ctx, issue, entries);
+
+            } else {
+                // unknown variable name
+                mg_printf(conn, "%s", varname.c_str());
+            }
+        }
+        vn.dumpPrevious(conn);
+
+    } else {
+        LOG_ERROR("Could not load %s", path.c_str());
     }
 
-    printFooter(conn, ctx.getProject().getPath().c_str());
 }
 
 

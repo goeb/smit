@@ -126,6 +126,7 @@ public:
     std::map<std::string, Project*> projects;
     static Project *getProject(const std::string &projectName);
     std::string pathToRepository;
+    inline static std::string getRootDir() { return Db.pathToRepository; }
 };
 
 

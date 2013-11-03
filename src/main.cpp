@@ -74,7 +74,6 @@ int main(int argc, const char **argv)
     // Load all projects
     dbLoad(repo);
     UserBase::load(repo);
-    Rootdir = repo;
     struct mg_context *ctx;
     const char *options[] = {"listening_ports", listenPort, "document_root", repo, NULL};
     struct mg_callbacks callbacks;

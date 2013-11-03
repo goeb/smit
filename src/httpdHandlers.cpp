@@ -31,8 +31,6 @@ typedef __int64 int64_t;
 
 
 // static members
-std::string Rootdir;
-
 
 std::string request2string(struct mg_connection *conn)
 {
@@ -267,7 +265,7 @@ void httpPostSignin(struct mg_connection *conn)
 void redirectToSignin(struct mg_connection *conn, const std::string &resource)
 {
     sendHttpHeader200(conn);
-    RHtml::printSigninPage(conn, Rootdir.c_str(), resource.c_str());
+    RHtml::printSigninPage(conn, resource.c_str());
 }
 
 
@@ -324,10 +322,8 @@ void httpGetRoot(struct mg_connection *conn, User u)
 
     if (format == RENDERING_TEXT) RText::printProjectList(conn, pList);
     else {
-        ContextParameters ctx = ContextParameters(u, Database::Db.pathToRepository);
-        ctx.rootdir = Rootdir;
-
-        RHtml::printProjectList(conn, ctx, pList);
+        ContextParameters ctx = ContextParameters(u);
+        RHtml::printPageProjectList(conn, ctx, pList);
     }
 }
 
@@ -360,7 +356,6 @@ void httpGetProjectConfig(struct mg_connection *conn, Project &p, User u)
     sendHttpHeader200(conn);
     if (format == RENDERING_HTML) {
         ContextParameters ctx = ContextParameters(u, p);
-        ctx.rootdir = Rootdir;
         RHtml::printProjectConfig(conn, ctx);
     }
 
@@ -502,7 +497,7 @@ void httpGetListOfIssues(struct mg_connection *conn, Project &p, User u)
         ctx.search = fulltextSearch;
         ctx.sort = sorting;
 
-        RHtml::printIssueList(conn, ctx, issueList, cols);
+        RHtml::printPageIssueList(conn, ctx, issueList, cols);
     }
 
 }
@@ -552,7 +547,7 @@ void httpGetIssue(struct mg_connection *conn, Project &p, const std::string & is
         if (format == RENDERING_TEXT) RText::printIssue(conn, issue, Entries);
         else {
             ContextParameters ctx = ContextParameters(u, p);
-            RHtml::printIssue(conn, ctx, issue, Entries);
+            RHtml::printPageIssue(conn, ctx, issue, Entries);
         }
 
     }
