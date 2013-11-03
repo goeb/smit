@@ -93,20 +93,7 @@ private:
 
 };
 
-void RHtml::printHeader(struct mg_connection *conn, const std::string &projectPath)
-{
-    std::string path = projectPath + "/html/header.html";
-    char *data;
-    int r = loadFile(path.c_str(), &data);
-    if (r >= 0) {
-        mg_printf(conn, "%s", data);
-        free(data);
-    } else {
-        LOG_ERROR("Could not load header.html for project %s", projectPath.c_str());
-    }
-}
-
-void RHtml::printSigninPage(struct mg_connection *conn, const char *redirect)
+void RHtml::printPageSignin(struct mg_connection *conn, const char *redirect)
 {
 
     mg_printf(conn, "Content-Type: text/html\r\n\r\n");
@@ -121,19 +108,6 @@ void RHtml::printSigninPage(struct mg_connection *conn, const char *redirect)
         free(data);
     } else {
         LOG_ERROR("Could not load %s", path.c_str());
-    }
-}
-
-void RHtml::printFooter(struct mg_connection *conn, const std::string &projectPath)
-{
-    std::string path = projectPath + "/html/footer.html";
-    char *data;
-    int r = loadFile(path.c_str(), &data);
-    if (r >= 0) {
-        mg_printf(conn, "%s", data);
-        free(data);
-    } else {
-        LOG_ERROR("Could not load footer.html for project %s", projectPath.c_str());
     }
 }
 
@@ -290,7 +264,7 @@ std::string makeQueryString(const PredefinedView &pv)
   * - link to modify project (if admin)
   * - signed-in user indication and link to signout
   */
-void RHtml::printGlobalNavigation(struct mg_connection *conn, const ContextParameters &ctx)
+void RHtml::printNavigationGlobal(struct mg_connection *conn, const ContextParameters &ctx)
 {
     HtmlNode div("div");
     div.addAttribute("class", "sm_navigation_global");
@@ -344,7 +318,7 @@ void RHtml::printGlobalNavigation(struct mg_connection *conn, const ContextParam
   * - predefined views
   * - quick search form
   */
-void RHtml::printNavigationBar(struct mg_connection *conn, const ContextParameters &ctx, bool autofocus)
+void RHtml::printNavigationIssues(struct mg_connection *conn, const ContextParameters &ctx, bool autofocus)
 {
     HtmlNode div("div");
     div.addAttribute("class", "sm_navigation_project");
@@ -411,7 +385,7 @@ void RHtml::printPageProjectList(struct mg_connection *conn, const ContextParame
             if (varname.empty()) break;
 
             if (varname == K_SM_DIV_NAVIGATION_GLOBAL) {
-                printGlobalNavigation(conn, ctx);
+                printNavigationGlobal(conn, ctx);
 
             } else if (varname == K_SM_DIV_PROJECTS) {
                 printProjects(conn, pList);
@@ -599,10 +573,10 @@ void RHtml::printProjectConfig(struct mg_connection *conn, const ContextParamete
                 // TODO, when creating new project, the project name goes here
 
             } else if (varname == K_SM_DIV_NAVIGATION_GLOBAL) {
-                printGlobalNavigation(conn, ctx);
+                printNavigationGlobal(conn, ctx);
 
             } else if (varname == K_SM_DIV_NAVIGATION_ISSUES) {
-                printNavigationBar(conn, ctx, false);
+                printNavigationIssues(conn, ctx, false);
 
             } else if (varname == K_SM_SCRIPT_UPDATE_CONFIG) {
                 printScriptUpdateConfig(conn, ctx);
@@ -754,10 +728,10 @@ void RHtml::printPageIssueList(struct mg_connection *conn, const ContextParamete
             if (varname.empty()) break;
 
             if (varname == K_SM_DIV_NAVIGATION_GLOBAL) {
-                printGlobalNavigation(conn, ctx);
+                printNavigationGlobal(conn, ctx);
 
             } else if (varname == K_SM_DIV_NAVIGATION_ISSUES) {
-                printNavigationBar(conn, ctx, true);
+                printNavigationIssues(conn, ctx, true);
 
             } else if (varname == K_SM_DIV_ISSUES) {
                 printIssueList(conn, ctx, issueList, colspec);
@@ -1090,10 +1064,10 @@ void RHtml::printPageIssue(struct mg_connection *conn, const ContextParameters &
             if (varname.empty()) break;
 
             if (varname == K_SM_DIV_NAVIGATION_GLOBAL) {
-                printGlobalNavigation(conn, ctx);
+                printNavigationGlobal(conn, ctx);
 
             } else if (varname == K_SM_DIV_NAVIGATION_ISSUES) {
-                printNavigationBar(conn, ctx, false);
+                printNavigationIssues(conn, ctx, false);
 
             } else if (varname == K_SM_RAW_ISSUE_ID) {
                 mg_printf(conn, "%s", issue.id.c_str());
@@ -1113,20 +1087,41 @@ void RHtml::printPageIssue(struct mg_connection *conn, const ContextParameters &
 }
 
 
-void RHtml::printNewIssuePage(struct mg_connection *conn, const ContextParameters &ctx)
+
+void RHtml::printPageNewIssue(struct mg_connection *conn, const ContextParameters &ctx)
 {
-    LOG_DEBUG("printNewPage...");
-
     mg_printf(conn, "Content-Type: text/html\r\n\r\n");
-    printHeader(conn, ctx.getProject().getPath().c_str());
-    printGlobalNavigation(conn, ctx);
-    printNavigationBar(conn, ctx, false);
+    std::string path = Database::Db.getRootDir() + "/public/newIssue.html";
+    char *data;
+    int n = loadFile(path.c_str(), &data);
+    if (n >= 0) {
+        VariableNavigator vn(data, n);
+        while (1) {
+            std::string varname = vn.getNextVariable();
 
-    mg_printf(conn, "<div class=\"sm_issue\">");
+            vn.dumpPrevious(conn);
 
-    Issue issue;
-    printIssueForm(conn, ctx, issue, true);
-    printFooter(conn, ctx.getProject().getPath().c_str());
+            if (varname.empty()) break;
+
+            if (varname == K_SM_DIV_NAVIGATION_GLOBAL) {
+                printNavigationGlobal(conn, ctx);
+
+            } else if (varname == K_SM_DIV_NAVIGATION_ISSUES) {
+                printNavigationIssues(conn, ctx, false);
+
+            } else if (varname == K_SM_DIV_ISSUE) {
+                Issue issue;
+                printIssueForm(conn, ctx, issue, true);
+
+            } else {
+                // unknown variable name
+                mg_printf(conn, "%s", varname.c_str());
+            }
+        }
+
+    } else {
+        LOG_ERROR("Could not load %s", path.c_str());
+    }
 }
 
 

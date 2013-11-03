@@ -265,7 +265,7 @@ void httpPostSignin(struct mg_connection *conn)
 void redirectToSignin(struct mg_connection *conn, const std::string &resource)
 {
     sendHttpHeader200(conn);
-    RHtml::printSigninPage(conn, resource.c_str());
+    RHtml::printPageSignin(conn, resource.c_str());
 }
 
 
@@ -522,7 +522,7 @@ void httpGetNewIssueForm(struct mg_connection *conn, const Project &p, User u)
     ContextParameters ctx = ContextParameters(u, p);
 
     // only HTML format is needed
-    RHtml::printNewIssuePage(conn, ctx);
+    RHtml::printPageNewIssue(conn, ctx);
 }
 
 void httpGetIssue(struct mg_connection *conn, Project &p, const std::string & issueId, User u)

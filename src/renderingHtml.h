@@ -35,20 +35,18 @@ public:
 
 class RHtml {
 public:
-    static void printHeader(struct mg_connection *conn, const std::string &projectPath);
-    static void printFooter(struct mg_connection *conn, const std::string &projectPath);
-    static void printGlobalNavigation(struct mg_connection *conn, const ContextParameters &ctx);
-    static void printNavigationBar(struct mg_connection *conn, const ContextParameters &ctx, bool autofocus);
+    static void printNavigationGlobal(struct mg_connection *conn, const ContextParameters &ctx);
+    static void printNavigationIssues(struct mg_connection *conn, const ContextParameters &ctx, bool autofocus);
 
     static void printPageProjectList(struct mg_connection *conn, const ContextParameters &ctx, const std::list<std::pair<std::string, std::string> > &pList);
     static void printProjectConfig(struct mg_connection *conn, const ContextParameters &ctx);
     static void printPageIssueList(struct mg_connection *conn, const ContextParameters &ctx, std::list<Issue*> issueList, std::list<std::string> colspec);
     static void printPageIssue(struct mg_connection *conn, const ContextParameters &ctx, const Issue &issue, const std::list<Entry*> &entries);
-    static void printNewIssuePage(struct mg_connection *conn, const ContextParameters &ctx);
+    static void printPageNewIssue(struct mg_connection *conn, const ContextParameters &ctx);
 
     static bool inList(const std::list<std::string> &listOfValues, const std::string &value);
     static void printIssueForm(struct mg_connection *conn, const ContextParameters &ctx, const Issue &issue, bool autofocus);
-    static void printSigninPage(struct mg_connection *conn, const char *redirect);
+    static void printPageSignin(struct mg_connection *conn, const char *redirect);
 
 
 };
