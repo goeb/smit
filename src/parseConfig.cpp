@@ -167,7 +167,7 @@ int loadFile(const char *filepath, char **data)
 
     rewind(f);
     char *buffer = (char *)malloc(filesize+1); // allow +1 for terminating null char
-    size_t n = fread(buffer, 1, filesize, f);
+    long n = fread(buffer, 1, filesize, f);
     if (n != filesize) {
         LOG_ERROR("fread(%s): short read. feof=%d, ferror=%d", filepath, feof(f), ferror(f));
         fclose(f);
