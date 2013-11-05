@@ -12,5 +12,5 @@ addView "Issues with \"hello world\"" \
     colspec id+mtime+summary+status+tags \
     search "hello world" 
 
-
+addView "All issues" sort +status-mtime 
     
