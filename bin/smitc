@@ -10,6 +10,7 @@ usage() {
     echo "Examples:"
     echo "    smitc signin http://127.0.0.1:8080 john johnpasswd"
     echo "    smitc get http://localhost:8080/smit/issues?colspec=id+title"
+    echo "    smitc post http://localhost:8080 project newi summary=testxxx"
 
     exit 1
 }
@@ -29,19 +30,29 @@ args="$@"
 if [ "$command" = "" ]; then usage; fi
 
 signin() {
-    echo "signin... args=$args"
-    url="$1"
+    echo "signin... args=$@"
+    serverurl="$1"
     username="$2"
     passwd="$3"
 
-    curl -d "username=$username&password=$passwd" -c $SMITC_COOKIE "$url?format=text"
+    curl -d "username=$username&password=$passwd" -c $SMITC_COOKIE "$serverurl/signin?format=text"
 }
 
 get() {
     url="$1"
     if [ `echo "$url" | grep "\?"` ]; then q="&";
     else q="?"; fi
+    set -x
     curl -b $SMITC_COOKIE "$url${q}format=text"
+}
+
+post() {
+    echo "post... args=$@" 
+    server=$1
+    project=$2
+    issue=$3
+    data=$4
+    curl -d "$data" -b $SMITC_COOKIE "$server/$project/issues/$issue?format=text"
 }
 
 eval $command $args
