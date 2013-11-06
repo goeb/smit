@@ -31,8 +31,18 @@ DEPENDS = $(SRCS:%.c=$(BUILD_DIR)/%.d) $(SRCS_CPP:%.cpp=$(BUILD_DIR)/%.d)
 
 CFLAGS = -g -Wall
 CFLAGS += -I mongoose
-
 LDFLAGS = -ldl -pthread -lcrypto
+
+ifeq ($(GCOV),1)
+	CFLAGS += -fprofile-arcs -ftest-coverage
+	LDFLAGS += -lgcov
+endif
+
+ifeq ($(GPROF),1)
+	CFLAGS += -pg -fprofile-arcs
+	LDFLAGS += -pg -lgcov
+endif
+
 
 
 all: smit

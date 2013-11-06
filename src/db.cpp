@@ -775,7 +775,7 @@ std::list<Issue*> Project::search(const char *fulltextSearch,
   * @return
   *     true or false
   */
-bool Issue::lessThan(Issue* other, const std::list<std::pair<bool, std::string> > &sortingSpec)
+bool Issue::lessThan(const Issue* other, const std::list<std::pair<bool, std::string> > &sortingSpec)
 {
     if (!other) return false;
 

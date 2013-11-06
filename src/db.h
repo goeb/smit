@@ -46,7 +46,7 @@ struct Issue {
     // of its entries. For a given key, the most recent value has priority.
     void loadHead(const std::string &issuePath);
     std::string getSummary() const;
-    bool lessThan(Issue* other, const std::list<std::pair<bool, std::string> > &sortingSpec);
+    bool lessThan(const Issue *other, const std::list<std::pair<bool, std::string> > &sortingSpec);
     bool filter(const std::map<std::string, std::list<std::string> > &filterIn,
                 const std::map<std::string, std::list<std::string> > &filterOut);
 

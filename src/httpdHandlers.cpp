@@ -697,8 +697,9 @@ void httpPostEntry(struct mg_connection *conn, Project &p, const std::string & i
   * /any/other/file         GET        user              any existing file (relatively to the repository)
   */
 
-int begin_request_handler(struct mg_connection *conn) {
-
+int begin_request_handler(struct mg_connection *conn)
+{
+    LOG_FUNC();
     LOG_DEBUG("begin_request_handler");
 
     // check acces rights

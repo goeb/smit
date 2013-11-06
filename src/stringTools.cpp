@@ -72,16 +72,16 @@ void trimBlanks(std::string &s)
   */
 std::string toString(const std::list<std::string> &values, const char *sep)
 {
-    std::ostringstream text;
+    std::string text;
     std::list<std::string>::const_iterator v;
     for (v=values.begin(); v!=values.end(); v++) {
         if (v != values.begin()) {
-            if (sep) text << sep;
-            else text << ", ";
+            if (sep) text += sep;
+            else text += ", ";
         }
-        text << v->c_str();
+        text += v->c_str();
     }
-    return text.str();
+    return text;
 }
 
 /** Decode an URL
