@@ -23,7 +23,7 @@ function updateFields()
 }
 
 function changeWrapping(){
-    var msg = document.getElementsByName('message')[0];
+    var msg = document.getElementsByName('+message')[0];
     if (msg.wrap != "off") msg.wrap = "off";
     else msg.wrap = "hard";
 }
