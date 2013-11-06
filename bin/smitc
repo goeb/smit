@@ -42,7 +42,6 @@ get() {
     url="$1"
     if [ `echo "$url" | grep "\?"` ]; then q="&";
     else q="?"; fi
-    set -x
     curl -b $SMITC_COOKIE "$url${q}format=text"
 }
 
