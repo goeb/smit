@@ -768,6 +768,38 @@ std::list<Issue*> Project::search(const char *fulltextSearch,
     return result;
 }
 
+/** Compare two values of the given property
+  * @return -1, 0, +1
+  */
+int compareProperties(const std::map<std::string, std::list<std::string> > &plist1,
+					   const std::map<std::string, std::list<std::string> > &plist2,
+					   const std::string &name)
+{
+    std::map<std::string, std::list<std::string> >::const_iterator p1 = plist1.find(name);
+    std::map<std::string, std::list<std::string> >::const_iterator p2 = plist2.find(name);
+	
+	if (p1 == plist1.end() && p2 == plist2.end()) return 0;
+	else if (p1 == plist1.end()) return -1; // arbitrary choice
+	else if (p2 == plist2.end()) return +1; // arbitrary choice
+	else {
+		std::list<std::string>::const_iterator v1 = p1->second.begin();
+		std::list<std::string>::const_iterator v2 = p2->second.begin();
+		while (v1 != p1->second.end() && v2	!= p2->second.end()) {
+			int lt = v1->compare(*v2);
+			if (lt < 0) return -1;
+			else if (lt > 0) return +1;
+			// else continue
+			v1++;
+			v2++;
+		}
+		if (v1 == p1->second.end() && v2 == p2->second.end()) {
+			return 0; // they are equal
+		} else if (v1 == p1->second.end()) return -1; // arbitrary choice
+		else return +1; // arbitrary choice
+	}
+    return 0; // not reached normally
+}
+
 /** Compare 2 issues after sortingSpec.
   *
   * sortingSpec: a list of pairs (ascending-order, property-name)
@@ -794,9 +826,8 @@ bool Issue::lessThan(const Issue* other, const std::list<std::pair<bool, std::st
             else result = 0;
         } else {
             // the other properties
-            std::string local = getProperty(properties, s->second);
-            std::string otherProperty = getProperty(other->properties, s->second);
-            result = local.compare(otherProperty);
+			
+            result = compareProperties(properties, other->properties, s->second);
         }
         if (!s->first) result = -result; // descending order
         s++;
