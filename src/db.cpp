@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <time.h>
+#include <algorithm>
 
 #include "db.h"
 #include "parseConfig.h"
@@ -620,40 +621,24 @@ std::list<std::pair<bool, std::string> > parseSortingSpec(const char *sortingSpe
     return result;
 }
 
+class IssueComparator {
+public:
+    IssueComparator(const std::list<std::pair<bool, std::string> > &sSpec) : sortingSpec(sSpec) { }
+    bool operator() (const Issue* i, const Issue* j) { return i->lessThan(j, sortingSpec); }
+private:
+    const std::list<std::pair<bool, std::string> > &sortingSpec;
+};
+
 /**
   * sortingSpec: a list of pairs (ascending-order, property-name)
   *
   */
-void sort(std::list<Issue*> &inout, const std::list<std::pair<bool, std::string> > &sortingSpec)
+void sort(std::vector<Issue*> &inout, const std::list<std::pair<bool, std::string> > &sortingSpec)
 {
     if (sortingSpec.size()==0) return;
 
-    std::list<Issue*> workingList = inout; // make a copy
-    inout.clear();
-    Issue* maxIssue = 0;
-    // headsort algorithm is used
-    std::list<Issue*>::iterator i;
-    std::list<Issue*>::iterator imax; // iterator on position of the max element
-    while (workingList.size() > 0) {
-        // get the max of workingList
-        i = workingList.begin();
-        imax = i;
-        maxIssue = 0;
-        while (i != workingList.end()) {
-            if (!maxIssue) maxIssue = *i;
-            else {
-                if (maxIssue->lessThan(*i, sortingSpec)) {
-                    maxIssue = *i;
-                    imax = i;
-                }
-            }
-            i++;
-        }
-        // put maxIssue in the result
-        inout.push_back(maxIssue);
-        // erase max issue from working list
-        workingList.erase(imax);
-    }
+    IssueComparator ic(sortingSpec);
+    std::sort(inout.begin(), inout.end(), ic);
 }
 
 enum FilterSearch {
@@ -728,7 +713,7 @@ bool Issue::filter(const std::map<std::string, std::list<std::string> > &filterI
   * filterIn=propA:valueA1, filterOut=propA:valueA1
   *     => filterOut takes precedence, valueA1 is excluded from the result
   */
-std::list<Issue*> Project::search(const char *fulltextSearch,
+std::vector<Issue*> Project::search(const char *fulltextSearch,
                                   const std::map<std::string, std::list<std::string> > &filterIn,
                                   const std::map<std::string, std::list<std::string> > &filterOut,
                                   const char *sortingSpec)
@@ -741,7 +726,7 @@ std::list<Issue*> Project::search(const char *fulltextSearch,
     //     2. then, if fulltext is not null, walk through these issues and their
     //        related messages and keep those that contain <fulltext>
     //     3. then, do the sorting according to <sortingSpec>
-    std::list<struct Issue*> result;
+    std::vector<struct Issue*> result;
 
     std::map<std::string, Issue*>::iterator i;
     for (i=issues.begin(); i!=issues.end(); i++) {
@@ -806,13 +791,15 @@ int compareProperties(const std::map<std::string, std::list<std::string> > &plis
   *
   * @return
   *     true or false
+  *     If they are equal, false is returned.
   */
-bool Issue::lessThan(const Issue* other, const std::list<std::pair<bool, std::string> > &sortingSpec)
+bool Issue::lessThan(const Issue* other, const std::list<std::pair<bool, std::string> > &sortingSpec) const
 {
     if (!other) return false;
 
     int result = 0; // 0 means equal, <0 means less-than, >0 means greater-than
-    std::list<std::pair<bool, std::string> >::const_iterator s = sortingSpec.begin() ;
+    std::list<std::pair<bool, std::string> >::const_iterator s = sortingSpec.begin();
+
     while ( (result == 0) && (s != sortingSpec.end()) ) {
         // case of id, ctime, mtime
         if (s->second == "id") result = id.compare(other->id);
@@ -832,8 +819,8 @@ bool Issue::lessThan(const Issue* other, const std::list<std::pair<bool, std::st
         if (!s->first) result = -result; // descending order
         s++;
     }
-    if (result<0) return false;
-    else return true;
+    if (result<0) return true;
+    else return false;
 }
 
 

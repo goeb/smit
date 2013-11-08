@@ -607,7 +607,7 @@ std::string getPropertyForGrouping(const ProjectConfig &pconfig, const std::stri
 }
 
 void printIssueList(struct mg_connection *conn, const ContextParameters &ctx,
-                    std::list<struct Issue*> issueList, std::list<std::string> colspec)
+                    std::vector<struct Issue*> issueList, std::list<std::string> colspec)
 {
     mg_printf(conn, "<div class=\"sm_issues\">\n");
 
@@ -643,7 +643,7 @@ void printIssueList(struct mg_connection *conn, const ContextParameters &ctx,
     }
     mg_printf(conn, "</tr>\n");
 
-    std::list<struct Issue*>::iterator i;
+    std::vector<struct Issue*>::iterator i;
     for (i=issueList.begin(); i!=issueList.end(); i++) {
 
         if (! group.empty() &&
@@ -694,7 +694,7 @@ void printIssueList(struct mg_connection *conn, const ContextParameters &ctx,
 }
 
 void RHtml::printPageIssueList(struct mg_connection *conn, const ContextParameters &ctx,
-                           std::list<struct Issue*> issueList, std::list<std::string> colspec)
+                           std::vector<struct Issue*> issueList, std::list<std::string> colspec)
 {
     mg_printf(conn, "Content-Type: text/html\r\n\r\n");
 

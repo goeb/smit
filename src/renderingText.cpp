@@ -16,7 +16,7 @@ void RText::printProjectList(struct mg_connection *conn, const std::list<std::pa
 }
 
 
-void RText::printIssueList(struct mg_connection *conn, std::list<struct Issue*> issueList, std::list<std::string> colspec)
+void RText::printIssueList(struct mg_connection *conn, std::vector<struct Issue*> issueList, std::list<std::string> colspec)
 {
     mg_printf(conn, "Content-Type: text/plain\r\n\r\n");
 
@@ -28,7 +28,7 @@ void RText::printIssueList(struct mg_connection *conn, std::list<struct Issue*> 
     mg_printf(conn, "\n");
 
     // list of issues
-    std::list<struct Issue*>::iterator i;
+    std::vector<struct Issue*>::iterator i;
     for (i=issueList.begin(); i!=issueList.end(); i++) {
 
         std::list<std::string>::iterator c;

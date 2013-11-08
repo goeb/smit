@@ -474,7 +474,7 @@ void httpGetListOfIssues(struct mg_connection *conn, Project &p, User u)
 
     std::string sorting = getFirstParamFromQueryString(q, "sort");
 
-    std::list<struct Issue*> issueList = p.search(fulltextSearch.c_str(), filterIn, filterOut, sorting.c_str());
+    std::vector<struct Issue*> issueList = p.search(fulltextSearch.c_str(), filterIn, filterOut, sorting.c_str());
 
 
     std::string colspec = getFirstParamFromQueryString(q, "colspec");

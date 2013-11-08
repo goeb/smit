@@ -4,6 +4,7 @@
 #include <string>
 #include <map>
 #include <list>
+#include <vector>
 #include <set>
 #include <pthread.h>
 #include <stdint.h>
@@ -46,7 +47,7 @@ struct Issue {
     // of its entries. For a given key, the most recent value has priority.
     void loadHead(const std::string &issuePath);
     std::string getSummary() const;
-    bool lessThan(const Issue *other, const std::list<std::pair<bool, std::string> > &sortingSpec);
+    bool lessThan(const Issue *other, const std::list<std::pair<bool, std::string> > &sortingSpec) const;
     bool filter(const std::map<std::string, std::list<std::string> > &filterIn,
                 const std::map<std::string, std::list<std::string> > &filterOut);
 
@@ -88,7 +89,7 @@ public:
     void loadPredefinedViews(const char *path);
 
     void consolidateIssues();
-    std::list<Issue*> search(const char *fulltextSearch,
+    std::vector<Issue*> search(const char *fulltextSearch,
                              const std::map<std::string, std::list<std::string> > &filterIn,
                              const std::map<std::string, std::list<std::string> > &filterOut,
                              const char *sortingSpec);

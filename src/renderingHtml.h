@@ -40,7 +40,7 @@ public:
 
     static void printPageProjectList(struct mg_connection *conn, const ContextParameters &ctx, const std::list<std::pair<std::string, std::string> > &pList);
     static void printProjectConfig(struct mg_connection *conn, const ContextParameters &ctx);
-    static void printPageIssueList(struct mg_connection *conn, const ContextParameters &ctx, std::list<Issue*> issueList, std::list<std::string> colspec);
+    static void printPageIssueList(struct mg_connection *conn, const ContextParameters &ctx, std::vector<Issue *> issueList, std::list<std::string> colspec);
     static void printPageIssue(struct mg_connection *conn, const ContextParameters &ctx, const Issue &issue, const std::list<Entry*> &entries);
     static void printPageNewIssue(struct mg_connection *conn, const ContextParameters &ctx);
 
