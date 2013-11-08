@@ -38,6 +38,7 @@ td {
     border-collapse:collapse;
 }
 .sm_properties {
+    margin-top: 50px;
     width: 50em;
     margin-bottom: 2em;
     font-size: small;
@@ -88,13 +89,15 @@ input {
     padding-right: 6em;
 }
 .sm_issue {
+    margin-top: 90px;
     vertical-align: top;
     padding: 10px;
     font-size: 10pt;
     border-radius: 5px 5px 5px 5px;
 }
 .sm_issue_header {
-    margin: 8px 0px;
+    position: fixed;
+    width: 60em;
     padding: 0.3em;
     background-color: #E0E0E0;
     border-radius: 0.5em 0.5em 0.5em 0.5em;
@@ -149,6 +152,7 @@ table.sm_issues_table tr:hover {
     border-top: solid 1px rgb(200, 200, 186);
     border-bottom: solid 1px rgb(200, 200, 186);
     font-size: small;
+    font-weight: bold;    
     text-align: center;
 }
 /*

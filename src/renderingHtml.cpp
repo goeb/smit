@@ -326,6 +326,7 @@ void RHtml::printNavigationIssues(struct mg_connection *conn, const ContextParam
 
     HtmlNode input("input");
     input.addAttribute("class", "sm_searchbox");
+    input.addAttribute("placeholder", htmlEscape(_("Search text...")).c_str());
     input.addAttribute("type", "text");
     input.addAttribute("name", "search");
     if (autofocus) input.addAttribute("autofocus", "autofocus");
@@ -651,7 +652,9 @@ void printIssueList(struct mg_connection *conn, const ContextParameters &ctx,
                 // insert group bar if relevant
             mg_printf(conn, "<tr class=\"sm_group\">\n");
             currentGroup = getProperty((*i)->properties, group);
-            mg_printf(conn, "<td class=\"sm_group\" colspan=\"%d\">%s</td>\n", colspec.size(), htmlEscape(currentGroup).c_str());
+            mg_printf(conn, "<td class=\"sm_group\" colspan=\"%d\"><span class=\"sm_group_label\">%s: </span>",
+                      colspec.size(), htmlEscape(ctx.getProject().getLabelOfProperty(group)).c_str());
+            mg_printf(conn, "<span class=\"sm_group\">%s</span></td>\n", htmlEscape(currentGroup).c_str());
             mg_printf(conn, "</tr>\n");
         }
 
