@@ -974,6 +974,7 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
         const int SIZ = 25;
         char buffer[SIZ];
         int newId = maxIssueId+1;
+        maxIssueId ++;
         snprintf(buffer, SIZ, "%d", newId);
         issueId = buffer;
 
