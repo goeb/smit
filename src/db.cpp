@@ -658,47 +658,69 @@ enum FilterSearch {
     PROPERTY_FILTERED_NOT_FOUND
 };
 
-/** Look if the given property name/value is present in the given list
+/** Look if the given multi-valued property is present in the given list
   */
-FilterSearch filterProperty(const std::string &propertyName, const std::string &propertyValue,
-          const std::map<std::string, std::list<std::string> > &filter)
+bool isPropertyInFilter(const std::list<std::string> &propertyValue,
+                        const std::list<std::string> &filteredValues)
 {
-    std::map<std::string, std::list<std::string> >::const_iterator p;
-    p = filter.find(propertyName);
-    if (p == filter.end()) return PROPERTY_NOT_FILTERED;
-
+    std::list<std::string>::const_iterator fv;
     std::list<std::string>::const_iterator v;
-    for (v = p->second.begin(); v != p->second.end(); v++) {
-        if (*v == propertyValue) return PROPERTY_FILTERED_FOUND;
+
+    FOREACH (fv, filteredValues) {
+        FOREACH (v, propertyValue) {
+            if (*v == *fv) return PROPERTY_FILTERED_FOUND;
+        }
+        if (fv->empty() && propertyValue.empty()) {
+            // allow filtering for empty values
+            return true;
+        }
     }
-    return PROPERTY_FILTERED_NOT_FOUND; // not found
+    return false; // not found
 }
+
+/** Look if the given property is present in the given list
+  */
+bool isPropertyInFilter(const std::string &propertyValue,
+                        const std::list<std::string> &filteredValues)
+{
+    std::list<std::string>::const_iterator fv;
+
+    FOREACH (fv, filteredValues) if (propertyValue == *fv) return true;
+
+    return false; // not found
+}
+
 
 /**
   * @return
   *    true, if the issue should be kept
   *    false, if the issue should be excluded
   */
-bool Issue::filter(const std::map<std::string, std::list<std::string> > &filterIn,
-                   const std::map<std::string, std::list<std::string> > &filterOut)
+bool Issue::isInFilter(const std::map<std::string, std::list<std::string> > &filter)
 {
-    if (filterIn.size() == 0 && filterOut.size() == 0) return true;
+    if (filter.empty()) return false;
 
     // look for each property of the issue (except ctime and mtime)
-    // id
-    if (PROPERTY_FILTERED_FOUND == filterProperty(K_ISSUE_ID, id, filterOut)) return false;
-    if (PROPERTY_FILTERED_NOT_FOUND == filterProperty(K_ISSUE_ID, id, filterIn)) return false;
 
-    // other properties
-    std::map<std::string, std::list<std::string> >::const_iterator p;
-    for (p = properties.begin(); p != properties.end();  p++) {
-        std::list<std::string>::const_iterator v;
-        for (v = p->second.begin(); v != p->second.end(); v++) {
-            if (PROPERTY_FILTERED_FOUND == filterProperty(p->first, *v, filterOut)) return false;
-            if (PROPERTY_FILTERED_NOT_FOUND == filterProperty(p->first, *v, filterIn)) return false;
+    std::map<std::string, std::list<std::string> >::const_iterator f;
+    FOREACH(f, filter) {
+        std::string filteredProperty = f->first;
+
+        if (filteredProperty == K_ISSUE_ID) {
+            // id
+            if (isPropertyInFilter(id, f->second)) return true;
+
+        } else {
+            std::map<std::string, std::list<std::string> >::const_iterator p;
+            p = properties.find(filteredProperty);
+            bool fs;
+            if (p == properties.end()) fs = isPropertyInFilter("", f->second);
+            else fs = isPropertyInFilter(p->second, f->second);
+
+            if (fs) return true;
         }
     }
-    return true;
+    return false;
 }
 
 /** search
@@ -744,7 +766,8 @@ std::vector<Issue*> Project::search(const char *fulltextSearch,
 
         Issue* issue = i->second;
         // 1. TODO
-        if (!issue->filter(filterIn, filterOut)) continue;
+        if (!filterIn.empty() && !issue->isInFilter(filterIn)) continue;
+        if (!filterOut.empty() && issue->isInFilter(filterOut)) continue;
 
         // 2. search full text
         if (! searchFullText(issue, fulltextSearch)) {

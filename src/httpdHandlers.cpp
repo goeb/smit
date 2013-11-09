@@ -28,7 +28,7 @@ typedef __int64 int64_t;
 #include "parseConfig.h"
 #include "stringTools.h"
 #include "session.h"
-
+#include "global.h"
 
 // static members
 
@@ -455,6 +455,26 @@ void httpPostProjectConfig(struct mg_connection *conn, Project &p, User u)
     }
 }
 
+#define K_ME "me"
+void replaceUserMe(std::map<std::string, std::list<std::string> > &filters, const Project &p, const std::string &username)
+{
+    ProjectConfig pconfig = p.getConfig();
+    std::map<std::string, PropertySpec> propertiesSpec = pconfig.properties;
+    std::map<std::string, std::list<std::string> >::iterator filter;
+    FOREACH(filter, filters) {
+        std::map<std::string, PropertySpec>::const_iterator ps = propertiesSpec.find(filter->first);
+        if ( (ps != pconfig.properties.end()) && (ps->second.type == F_SELECT_USER) ) {
+            std::list<std::string>::iterator v;
+            FOREACH(v, filter->second) {
+                if ((*v) == K_ME) {
+                    // replace with username
+                    *v = username;
+                }
+            }
+        }
+    }
+}
+
 void httpGetListOfIssues(struct mg_connection *conn, Project &p, User u)
 {
     // get query string parameters:
@@ -466,10 +486,14 @@ void httpGetListOfIssues(struct mg_connection *conn, Project &p, User u)
     std::string q;
     if (req->query_string) q = req->query_string;
 
-    std::list<std::string> filterin = getParamListFromQueryString(q, "filterin");
-    std::list<std::string> filterout = getParamListFromQueryString(q, "filterout");
-    std::map<std::string, std::list<std::string> > filterIn = parseFilter(filterin);
-    std::map<std::string, std::list<std::string> > filterOut = parseFilter(filterout);
+    std::list<std::string> filterinRaw = getParamListFromQueryString(q, "filterin");
+    std::list<std::string> filteroutRaw = getParamListFromQueryString(q, "filterout");
+    std::map<std::string, std::list<std::string> > filterIn = parseFilter(filterinRaw);
+    std::map<std::string, std::list<std::string> > filterOut = parseFilter(filteroutRaw);
+    // replace user "me" if any...
+    replaceUserMe(filterIn, p, u.username);
+    replaceUserMe(filterOut, p, u.username);
+
     std::string fulltextSearch = getFirstParamFromQueryString(q, "search");
 
     std::string sorting = getFirstParamFromQueryString(q, "sort");
@@ -493,8 +517,8 @@ void httpGetListOfIssues(struct mg_connection *conn, Project &p, User u)
     if (format == RENDERING_TEXT) RText::printIssueList(conn, issueList, cols);
     else {
         ContextParameters ctx = ContextParameters(u, p);
-        ctx.filterin = filterin;
-        ctx.filterout = filterout;
+        ctx.filterin = filterinRaw;
+        ctx.filterout = filteroutRaw;
         ctx.search = fulltextSearch;
         ctx.sort = sorting;
 

@@ -41,14 +41,13 @@ struct Issue {
     int ctime; // creation time (the one of the first entry)
     int mtime; // modification time (the one of the last entry)
     std::map<std::string, std::list<std::string> > properties;
-    Issue() : ctime(0), mtime(0) {};
+    Issue() : ctime(0), mtime(0) {}
 
     // the properties of the issue is the consolidation of all the properties
     // of its entries. For a given key, the most recent value has priority.
     std::string getSummary() const;
     bool lessThan(const Issue *other, const std::list<std::pair<bool, std::string> > &sortingSpec) const;
-    bool filter(const std::map<std::string, std::list<std::string> > &filterIn,
-                const std::map<std::string, std::list<std::string> > &filterOut);
+    bool isInFilter(const std::map<std::string, std::list<std::string> > &filter);
 
 
 };

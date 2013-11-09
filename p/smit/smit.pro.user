@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE QtCreatorProject>
-<!-- Written by Qt Creator 2.4.1, 2013-11-09T15:05:51. -->
+<!-- Written by Qt Creator 2.4.1, 2013-11-09T20:53:47. -->
 <qtcreator>
  <data>
   <variable>ProjectExplorer.Project.ActiveTarget</variable>
@@ -303,7 +303,7 @@
     </valuelist>
     <value type="QString" key="ProjectExplorer.CustomExecutableRunConfiguration.Arguments">demo</value>
     <value type="int" key="ProjectExplorer.CustomExecutableRunConfiguration.BaseEnvironmentBase">2</value>
-    <value type="QString" key="ProjectExplorer.CustomExecutableRunConfiguration.Executable">SMIT_DEBUG=1 %{buildDir}/../../smit</value>
+    <value type="QString" key="ProjectExplorer.CustomExecutableRunConfiguration.Executable">%{buildDir}/../../smit</value>
     <value type="bool" key="ProjectExplorer.CustomExecutableRunConfiguration.UseTerminal">false</value>
     <valuelist type="QVariantList" key="ProjectExplorer.CustomExecutableRunConfiguration.UserEnvironmentChanges"/>
     <value type="QString" key="ProjectExplorer.CustomExecutableRunConfiguration.WorkingDirectory">%{buildDir}/../..</value>

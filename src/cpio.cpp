@@ -152,7 +152,7 @@ int cpioExtract(FILE* f, long end, const char *basedir)
         uint32_t contentsSize = dataToRead;
         LOG_DEBUG("cpioExtract: dataToRead=%u", dataToRead);
         while (dataToRead > 0) {
-            const int SIZ = 2048;
+            const size_t SIZ = 2048;
             char buffer[SIZ];
             size_t nToRead;
             if (dataToRead > SIZ) nToRead = SIZ;
