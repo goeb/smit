@@ -558,7 +558,7 @@ void httpGetIssue(struct mg_connection *conn, Project &p, const std::string & is
 
 /** Used for deleting an entry
   * @param details
-  *     should be of the form: XYZ/delete
+  *     should be of the form: iid/eid/delete
   *
   * @return
   *     0, let Mongoose handle static file
@@ -568,6 +568,7 @@ int httpDeleteEntry(struct mg_connection *conn, Project &p, std::string details,
 {
     LOG_DEBUG("httpPostEntry: project=%s, details=%s", p.getName().c_str(), details.c_str());
 
+    std::string issueId = popToken(details, '/');
     std::string entryId = popToken(details, '/');
     if (details != "delete") return 0; // let Mongoose handle static file
 
@@ -577,7 +578,7 @@ int httpDeleteEntry(struct mg_connection *conn, Project &p, std::string details,
         return 1; // request fully handled
     }
 
-    int r = p.deleteEntry(entryId, u.username);
+    int r = p.deleteEntry(issueId, entryId, u.username);
     if (r < 0) {
         // failure
         LOG_INFO("deleteEntry returned %d", r);
@@ -693,7 +694,7 @@ void httpPostEntry(struct mg_connection *conn, Project &p, const std::string & i
   * /myp/issues             GET/POST   user              issues of the project / add new issue
   * /myp/issues/new         GET        user              page with a form for submitting new issue
   * /myp/issues/XYZ         GET/POST   user              a particular issue: get all entries or add a new entry
-  * /myp/entries/XYZ/delete POST       user              delete an entry
+  * /myp/entries/x/y/delete POST       user              delete an entry y of issue x
   * /any/other/file         GET        user              any existing file (relatively to the repository)
   */
 

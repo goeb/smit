@@ -45,7 +45,6 @@ struct Issue {
 
     // the properties of the issue is the consolidation of all the properties
     // of its entries. For a given key, the most recent value has priority.
-    void loadHead(const std::string &issuePath);
     std::string getSummary() const;
     bool lessThan(const Issue *other, const std::list<std::pair<bool, std::string> > &sortingSpec) const;
     bool filter(const std::map<std::string, std::list<std::string> > &filterIn,
@@ -104,7 +103,7 @@ public:
     inline std::string getPath() const { return path; }
     inline ProjectConfig getConfig() const { return config; }
     int writeHead(const std::string &issueId, const std::string &entryId);
-    int deleteEntry(std::string entryId, const std::string &username);
+    int deleteEntry(const std::string &issueId, const std::string &entryId, const std::string &username);
     std::list<std::string> getReservedProperties() const;
     std::list<std::string> getPropertiesNames();
     int modifyConfig(std::list<std::list<std::string> > &tokens);
@@ -118,6 +117,7 @@ private:
     Locker locker;
     std::string name;
     std::string path;
+    int maxIssueId;
 };
 
 

@@ -1,0 +1,9 @@
++parent 07d
++author fred
++ctime 1383770517
++message < -----------endofmsg---
+xyz
+
+-----------endofmsg---
+due_date "as soon as possible"
+in_charge "John Smith"

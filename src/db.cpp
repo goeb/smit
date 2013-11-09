@@ -64,16 +64,18 @@ int dbLoad(const char * pathToRepository)
     }
     return Database::Db.projects.size();
 }
-void Issue::loadHead(const std::string &issuePath)
+std::string loadRef(const std::string &issuePath, const std::string &refname)
 {
-    std::string headPath = issuePath + '/' + HEAD;
+    std::string refvalue;
+    std::string headPath = issuePath + '/' + refname;
     char *buf = 0;
     int n = loadFile(headPath.c_str(), &buf);
 
-    if (n <= 0) return; // error or empty file
+    if (n <= 0) return refvalue; // error or empty file
 
-    head.assign(buf, n);
+    refvalue.assign(buf, n);
     free(buf);
+    return refvalue;
 }
 
 
@@ -99,6 +101,7 @@ int Project::load(const char *path, char *name)
 
     p->name = name;
     p->path = path;
+    p->maxIssueId = 0;
 
     int r = p->loadConfig(path);
     if (r == -1) {
@@ -240,11 +243,12 @@ int Project::loadEntries(const char *path)
 {
     // load files path/entries/*/*
     // The tree of entries is as follows:
-    // myproject/entries/XXX/XXX (XXX is the issue id)
+    // myproject/entries/XXX/ (XXX is the issue id)
     // myproject/entries/XXX/ABCDEF012345
     // myproject/entries/XXX/123356AF
     // myproject/entries/XXX/_HEAD
-    // myproject/entries/YYYYYY/YYYYYY (YYYYYY is another issue id)
+    // myproject/entries/YYYYYY/ (YYYYYY is another issue id)
+    // myproject/entries/YYYYYY/aeiou
     // myproject/entries/YYYYYY/_HEAD
     // etc.
     std::string pathToEntries = path;
@@ -253,46 +257,53 @@ int Project::loadEntries(const char *path)
     if ((entriesDirHandle = opendir(pathToEntries.c_str())) == NULL) {
         LOG_ERROR("Cannot open directory '%s'", pathToEntries.c_str());
         return -1;
+    }
 
-    } else {
-        struct dirent *issueDir;
+    struct dirent *issueDir;
 
-        while ((issueDir = readdir(entriesDirHandle)) != NULL) {
-            if (0 == strcmp(issueDir->d_name, ".")) continue;
-            if (0 == strcmp(issueDir->d_name, "..")) continue;
+    while ((issueDir = readdir(entriesDirHandle)) != NULL) {
+        if (0 == strcmp(issueDir->d_name, ".")) continue;
+        if (0 == strcmp(issueDir->d_name, "..")) continue;
 
-            std::string issuePath = pathToEntries;
-            issuePath = issuePath + '/' + issueDir->d_name;
-            // open this subdir and look for all files of this subdir
-            DIR *issueDirHandle;
-            if ((issueDirHandle = opendir(issuePath.c_str())) == NULL) continue; // not a directory
-            else {
-                // we are in a issue directory
-                Issue *issue = new Issue();
-                issue->id.assign(issueDir->d_name);
-                issues[issue->id] = issue;
+        std::string issuePath = pathToEntries;
+        issuePath = issuePath + '/' + issueDir->d_name;
+        // open this subdir and look for all files of this subdir
+        DIR *issueDirHandle;
+        if ((issueDirHandle = opendir(issuePath.c_str())) == NULL) continue; // not a directory
+        else {
+            // we are in a issue directory
+            Issue *issue = new Issue();
+            issue->id.assign(issueDir->d_name);
 
-                struct dirent *entryFile;
-                while ((entryFile = readdir(issueDirHandle)) != NULL) {
-                    if (0 == strcmp(entryFile->d_name, ".")) continue;
-                    if (0 == strcmp(entryFile->d_name, "..")) continue;
-                    if (0 == strcmp(entryFile->d_name, HEAD)) {
-                        // this is the HEAD, ie: the lastest entry.
-                        issue->loadHead(issuePath);
-                        continue;
-                    }
-                    std::string filePath = issuePath + '/' + entryFile->d_name;
-                    Entry *e = loadEntry(issuePath, entryFile->d_name);
-                    if (e) entries[e->id] = e;
-                    else LOG_ERROR("Cannot load entry '%s'", filePath.c_str());
+            // check the maximum id
+            int intId = atoi(issueDir->d_name);
+            if (intId > maxIssueId) maxIssueId = intId;
+
+            issues[issue->id] = issue;
+
+            struct dirent *entryFile;
+            while ((entryFile = readdir(issueDirHandle)) != NULL) {
+                if (0 == strcmp(entryFile->d_name, ".")) continue;
+                if (0 == strcmp(entryFile->d_name, "..")) continue;
+                if (0 == strcmp(entryFile->d_name, HEAD)) {
+                    // this is the HEAD, ie: the lastest entry.
+                    issue->head = loadRef(issuePath, HEAD);
+                    continue;
                 }
-
-                closedir(issueDirHandle);
+                // regular entry
+                std::string filePath = issuePath + '/' + entryFile->d_name;
+                Entry *e = loadEntry(issuePath, entryFile->d_name);
+                if (e) entries[e->id] = e;
+                else LOG_ERROR("Cannot load entry '%s'", filePath.c_str());
             }
 
+            closedir(issueDirHandle);
         }
-        closedir(entriesDirHandle);
+
     }
+    closedir(entriesDirHandle);
+
+    LOG_DEBUG("Max issue id: %d", maxIssueId);
     return 0;
 }
 Issue *Project::getIssue(const std::string &id) const
@@ -802,8 +813,12 @@ bool Issue::lessThan(const Issue* other, const std::list<std::pair<bool, std::st
 
     while ( (result == 0) && (s != sortingSpec.end()) ) {
         // case of id, ctime, mtime
-        if (s->second == "id") result = id.compare(other->id);
-        else if (s->second == "ctime") {
+        if (s->second == "id") {
+            if (id == other->id) result = 0;
+            else if (atoi(id.c_str()) < atoi(other->id.c_str())) result = -1;
+            else result = +1;
+
+        } else if (s->second == "ctime") {
             if (ctime < other->ctime) result = -1;
             else if (ctime > other->ctime) result = +1;
             else result = 0;
@@ -870,6 +885,8 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
 
     Issue *i = 0;
     if (issueId.size()>0) {
+        // adding an entry to an existing issue
+
         i = getIssue(issueId);
         if (!i) {
             LOG_INFO("Cannot add new entry to unknown issue: %s", issueId.c_str());
@@ -947,49 +964,43 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
     LOG_DEBUG("new entry: %s", id.c_str());
 
     std::string pathOfNewEntry;
+    std::string pathOfIssue;
 
     // write this entry to disk, update _HEAD
     // if issueId is empty, generate a new issueId
     if (issueId.empty()) {
         // create new directory for this issue
 
-        // in order to have a short id, keep only the first characters
-        // and if another issue exists with this id, then increase the length.
-        size_t len = 3;
-        while (len < id.size() && getIssue(id.substr(0, len))) len++;
-        if (len > id.size()) {
-            // another issue with same id exists. Cannot proceed.
-            LOG_ERROR("Cannot store issue '%s': another exists with same id", id.c_str());
-            return -1;
-        }
+        const int SIZ = 25;
+        char buffer[SIZ];
+        int newId = maxIssueId+1;
+        snprintf(buffer, SIZ, "%d", newId);
+        issueId = buffer;
 
-        id = id.substr(0, len); // shorten the issue here
-        pathOfNewEntry = path + '/' + ENTRIES + '/' + id;
+        pathOfIssue = path + '/' + ENTRIES + '/' + issueId;
 
-        int r = mkdir(pathOfNewEntry.c_str(), S_IRUSR | S_IXUSR | S_IWUSR);
+        int r = mkdir(pathOfIssue.c_str(), S_IRUSR | S_IXUSR | S_IWUSR);
         if (r != 0) {
-            LOG_ERROR("Could not create dir '%s': %s", pathOfNewEntry.c_str(), strerror(errno));
+            LOG_ERROR("Could not create dir '%s': %s", pathOfIssue.c_str(), strerror(errno));
 
             return -1;
         }
         i = new Issue();
         i->ctime = e->ctime;
-        i->id = id;
-        issueId = id; // set the new issue ID
+        i->id = issueId;
 
         // add it to the internal memory
-        issues[id] = i;
+        issues[issueId] = i;
 
     } else {
-        pathOfNewEntry = path + '/' + ENTRIES + '/' + issueId;
+        pathOfIssue = path + '/' + ENTRIES + '/' + issueId;
     }
-    pathOfNewEntry += '/';
-    pathOfNewEntry += id;
+
+    pathOfNewEntry = pathOfIssue + '/' + id;
     int r = writeToFile(pathOfNewEntry.c_str(), data);
     if (r != 0) {
         // error.
         LOG_ERROR("Could not write new entry to disk");
-
         return r;
     }
 
@@ -1052,7 +1063,7 @@ std::list<std::string> Project::getPropertiesNames()
   *
   */
 
-int Project::deleteEntry(std::string entryId, const std::string &username)
+int Project::deleteEntry(const std::string &issueId, const std::string &entryId, const std::string &username)
 {
     ScopeLocker(locker, LOCK_READ_WRITE);
 
@@ -1075,7 +1086,7 @@ int Project::deleteEntry(std::string entryId, const std::string &username)
 
         if (!e2) return -5; // could not find parent issue
 
-        i = getIssue(e2->id);
+        i = getIssue(issueId);
         if (!i) return -6;
 
         if (i->head != e->id) return -7;
