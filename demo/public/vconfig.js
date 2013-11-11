@@ -60,6 +60,8 @@ function setUrl(value) {
     a.innerHTML = value;
 }
 function hideAdminZone() {
-    var div = document.getElementById('sm_view_admin_zone');
-    div.style.display = 'none';
+    var divs = document.getElementsByClassName('sm_view_admin_zone');
+    for(var i=0; i<divs.length; i++) { 
+          divs[i].style.display='none';
+    }
 }

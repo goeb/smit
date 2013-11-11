@@ -14,7 +14,7 @@
     <body>
         <form action="" method="POST">
             <h1>Advanced Search / Predefined View</h1>
-            <div id="sm_view_admin_zone">
+            <div class="sm_view_admin_zone">
                 Current configuration of this view: 
                 <a id="sm_view_current_url" href="/myproject/issues/?filterin=status:open&sort=-mtime">filterin=status:open&sort=-mtime</a>
                 <h2>Name</h2>
@@ -60,13 +60,17 @@
 
             <br>
             <br>
-            <input type="submit" value="Apply Configuration">
+            <input type="submit" value="Validate">
         </form>
-        <form>
+        <form class="sm_view_admin_zone">
             <input type="submit" value="Delete Predefined view">
         </form>
         <hr>
+        <div class="sm_view_admin_zone">
             <a href="../config">Back to the configuration of the project</a>
+            <br>
+        </div>
+            <a href="../issues/">Back to the project</a>
         <br>
         <br>
 </body></html>

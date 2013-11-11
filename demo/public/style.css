@@ -29,11 +29,10 @@ td {
 #sm_config_properties th {
     font-weight: bold;
     text-align: left;
-    padding-left: 1em;
+    padding-left: 0.5em;
 }
 #sm_config_properties td {
-    padding-bottom: 1em;
-    padding-left: 1em;
+    padding-left: 0.5em;
     font-size: small;
     border-collapse:collapse;
 }
