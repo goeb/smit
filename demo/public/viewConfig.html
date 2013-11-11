@@ -23,6 +23,7 @@
                 <br>
                 (you may rename a view)
                 <br>
+                <label>Set as default<input name="default" type="checkbox"></label>
             </div>
             
             <h2>Search text</h2>
@@ -62,7 +63,8 @@
             <br>
             <input type="submit" value="Validate">
         </form>
-        <form class="sm_view_admin_zone">
+        <form class="sm_view_admin_zone" onsubmit="return confirm('Really delete this view?');" method="post">
+            <input type="hidden" name="delete" value="1">
             <input type="submit" value="Delete Predefined view">
         </form>
         <hr>

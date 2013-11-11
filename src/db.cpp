@@ -602,6 +602,21 @@ int Project::setPredefinedView(const std::string &name, const PredefinedView &pv
     return writeToFile(path.c_str(), fileContents);
 }
 
+int Project::deletePredefinedView(const std::string &name)
+{
+    if (name.empty()) return -1;
+    ScopeLocker scopeLocker(lockerForConfig, LOCK_READ_WRITE);
+
+    std::map<std::string, PredefinedView>::iterator i = config.predefinedViews.find(name);
+    if (i != config.predefinedViews.end()) {
+        config.predefinedViews.erase(i);
+        return 0;
+    } else {
+        LOG_ERROR("Cannot delete view: %s", name.c_str());
+        return -1;
+    }
+}
+
 
 void Project::loadPredefinedViews(const char *projectPath)
 {

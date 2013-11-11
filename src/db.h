@@ -114,6 +114,7 @@ public:
     int modifyConfig(std::list<std::list<std::string> > &tokens);
     PredefinedView getPredefinedView(const std::string &name);
     int setPredefinedView(const std::string &name, const PredefinedView &pv);
+    int deletePredefinedView(const std::string &name);
 
 private:
     void consolidateIssue(Issue *i);

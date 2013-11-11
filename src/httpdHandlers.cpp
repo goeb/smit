@@ -593,6 +593,20 @@ void httpPostView(struct mg_connection *conn, Project &p, const std::string &nam
     }
     LOG_DEBUG("postData=%s\n<br>", postData.c_str());
 
+    std::string deleteMark = getFirstParamFromQueryString(postData, "delete");
+    enum Role role = u.getRole(p.getName());
+    if (deleteMark == "1") {
+        if (role != ROLE_ADMIN) {
+            sendHttpHeader403(conn);
+            return;
+        } else {
+            // delete the view
+            p.deletePredefinedView(name);
+            std::string redirectUrl = "/" + urlEncode(p.getName()) + "/issues/";
+            sendHttpRedirect(conn, redirectUrl.c_str(), 0);
+        }
+    }
+
     // parse the parameters
     PredefinedView pv;
 
@@ -645,7 +659,6 @@ void httpPostView(struct mg_connection *conn, Project &p, const std::string &nam
 
     std::string redirectUrl = "/" + urlEncode(p.getName()) + "/issues/?" + pv.generateQueryString();
 
-    enum Role role = u.getRole(p.getName());
     if (pv.name.empty()) {
         // unnamed view
         if (role != ROLE_ADMIN && role != ROLE_RO && role != ROLE_RW) {
