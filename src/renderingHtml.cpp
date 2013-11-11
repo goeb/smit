@@ -111,6 +111,12 @@ void RHtml::printPageSignin(struct mg_connection *conn, const char *redirect)
     }
 }
 
+std::string enquoteJs(const std::string &in)
+{
+    std::string out = replaceAll(in, '\'', "\\'");
+    return out;
+}
+
 void RHtml::printPageView(struct mg_connection *conn, const ContextParameters &ctx, const PredefinedView &pv)
 {
     mg_printf(conn, "Content-Type: text/html\r\n\r\n");
@@ -122,18 +128,53 @@ void RHtml::printPageView(struct mg_connection *conn, const ContextParameters &c
         mg_write(conn, data, r);
         // add javascript for updating the inputs
         mg_printf(conn, "<script>\n");
+
         std::list<std::string> properties = ctx.project->getPropertiesNames();
         mg_printf(conn, "Properties = %s;\n", toJavascriptArray(properties).c_str());
+        mg_printf(conn, "init();\n");
+        mg_printf(conn, "setName('%s');\n", enquoteJs(pv.name).c_str());
+        mg_printf(conn, "setSearch('%s');\n", enquoteJs(pv.search).c_str());
+        mg_printf(conn, "setUrl('/%s/issues/?%s');\n", urlEncode(ctx.project->getName()).c_str(),
+                  pv.generateQueryString().c_str());
 
-        mg_printf(conn, "document.getElementById(\"sm_predefined_view_name\").value = \"%s\";\n", pv.name.c_str());
+        // filter in and out
+        std::map<std::string, std::list<std::string> >::const_iterator f;
+        std::list<std::string>::const_iterator v;
+        FOREACH(f, pv.filterin) {
+            FOREACH(v, f->second) {
+                mg_printf(conn, "addFilter('filterin', '%s', '%s');\n",
+                          enquoteJs(f->first).c_str(),
+                          enquoteJs(*v).c_str());
+            }
+        }
+        FOREACH(f, pv.filterout) {
+            FOREACH(v, f->second) {
+                mg_printf(conn, "addFilter('filterout', '%s', '%s');\n",
+                          enquoteJs(f->first).c_str(),
+                          enquoteJs(*v).c_str());
+            }
+        }
+
+        // Colums specification
         if (pv.colspec.empty()) mg_printf(conn, "addAllColspec();\n");
         else {
             std::vector<std::string> items = split(pv.colspec, " +");
             std::vector<std::string>::iterator i;
             FOREACH(i, items) {
-                mg_printf(conn, "addColspec('%s');\n", replaceAll(*i, '\'', "\\'").c_str());
+                mg_printf(conn, "addColspec('%s');\n", enquoteJs(*i).c_str());
             }
         }
+
+        // sort
+        std::list<std::pair<bool, std::string> > sSpec = parseSortingSpec(pv.sort.c_str());
+        std::list<std::pair<bool, std::string> >::iterator s;
+        FOREACH(s, sSpec) {
+            std::string direction = PredefinedView::getDirectionName(s->first);
+            mg_printf(conn, "addSort('%s', '%s');\n", enquoteJs(direction).c_str(),
+                      enquoteJs(s->second).c_str());
+        }
+
+
         mg_printf(conn, "</script>\n");
 
         free(data);
@@ -522,7 +563,7 @@ void printLinksToPredefinedViews(struct mg_connection *conn, const ContextParame
     ProjectConfig c = ctx.getProject().getConfig();
     std::map<std::string, PredefinedView>::iterator pv;
     FOREACH(pv, c.predefinedViews) {
-        mg_printf(conn, "<a href=\"views\">%s</a><br>\n", htmlEscape(pv->first).c_str());
+        mg_printf(conn, "<a href=\"views/%s\">%s</a><br>\n", urlEncode(pv->first).c_str(), htmlEscape(pv->first).c_str());
     }
 }
 

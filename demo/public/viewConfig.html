@@ -4,58 +4,56 @@
         <meta content="text/html;charset=UTF-8" http-equiv="Content-Type">
         <script src="/public/vconfig.js"></script>
         <style>
-            h2 { font-size: normal; margin:0; padding:0; }
+            h2 { font-size: normal; margin:0; padding-top:0.5em; }
             .sm_view_properties {
                     border-right: solid 1px rgb(200, 200, 186);
                     border-bottom: solid 1px rgb(200, 200, 186);
                 }
         </style>
     </head>
-    <body onload="init();">
+    <body>
         <form action="" method="POST">
-            <h1>Predefined View</h1>
-            <h2>Name</h2>
-            Choose, modify or leave blank the name of your custom search.<br>
-            If you give it a name, then it will be stored and displayed in the navigation bar.
-            <br>
-            <br>
-            <input id="sm_predefined_view_name" name="name" type="text">
-            <br>
+            <h1>Advanced Search / Predefined View</h1>
             Current configuration of this view: 
             <a id="sm_view_current_url" href="/myproject/issues/?filterin=status:open&sort=-mtime">filterin=status:open&sort=-mtime</a>
+            <h2>Name</h2>
+            If you give it a name, then the view will be stored and displayed in the navigation bar: 
+            <input id="sm_predefined_view_name" name="name" type="text">
+            <br>
+            (you cannot rename a view)
             <br>
             
             <h2>Search text</h2>
-            <input name="search" type="text">
+            <input id="search" name="search" type="text">
             (text to look for through all the properties and text of the issues)
             <br>
             <br>
+            <table><tr><td style="padding-right: 2em; border-right: solid grey 1px;">
             <h2>Filter-In</h2>
-            Select here the properties for which the issues shall be returned.
+            Select the properties/values for which the issues shall be returned.
             <br>
             <br>
 
             <div id="filterin"></div>
-            <div onclick="addFilter('filterin', ['id', 'mtime', 'status', 'summary'], 'xxx');" class="sm_clickable">+ Click for more...</div>
+            <div onclick="addFilter('filterin', '', '');" class="sm_clickable">+ Click for more...</div>
 
+                </td><td style="padding-left:1em;">
             <h2>Filter-Out</h2>
-            Select here the properties for which the issues will <b>not</b> be returned.
+            Select the properties/values for which the issues will <b>not</b> be returned.
             <br>
             <br>
             <div id="filterout"></div>
-            <div onclick="addFilter('filterout', ['id', 'mtime', 'status', 'summary'], 'xxx');" class="sm_clickable">+ Click for more...</div>
+            <div onclick="addFilter('filterout', '', '');" class="sm_clickable">+ Click for more...</div>
 
-
+            </td></tr></table>
             <h2>Columns Specification</h2>
-            Select here the properties that you want to display in the columns.<br>
+            Select here the properties that you want to display in the columns (none means all).<br>
             <br>
             <div id="colspec"></div>
-            <br>
             <div onclick="addColspec('');" class="sm_clickable">+ Click for more...</div>
             <h2>Sort</h2>
 
             <div id="sort"></div>
-            <br>
             <div onclick="addSort();" class="sm_clickable">+ Click for more...</div>
 
             <br>
@@ -65,14 +63,9 @@
         <form>
             <input type="submit" value="Delete Predefined view">
         </form>
-
-            <h3>Properties</h3>
-            List of the properties and associated types:<br>
-            <table style="border-collapse:collapse;">
-                <tr><th></th><th></th></tr>
-                <tr><td class="sm_view_properties">id</td><td class="sm_view_properties">text</td></tr>
-                <tr><td class="sm_view_properties">status</td><td class="sm_view_properties">select</td></tr>
-                <tr><td class="sm_view_properties">owner</td><td class="sm_view_properties">selectUser</td><td class="sm_view_properties">John<br>Fred<br>Mr. X</td></tr>
-            </table>
-
+        <hr>
+            <h3>Project Configuration</h3>
+            <a href="../config">Back to the configuration of the project</a>
+        <br>
+        <br>
 </body></html>

@@ -8,3 +8,5 @@ addView "All issues" sort -mtime
 addView "Closed issues" filterin status closed colspec id+summary
 
 addView "Deleted issues" filterin status deleted
+
+addView "Test View" filterin status closed filterin status open filterout target_version v1.xxx search "toto tutu"

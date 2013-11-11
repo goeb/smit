@@ -66,6 +66,8 @@ struct PredefinedView {
     std::string colspec;
     std::string sort;
     std::string search;
+    static std::string getDirectionName(bool d);
+    std::string generateQueryString() const;
 };
 
 struct ProjectConfig {

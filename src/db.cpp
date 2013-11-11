@@ -1182,3 +1182,28 @@ Project *Database::getProject(const std::string & projectName)
     else return p->second;
 }
 
+std::string PredefinedView::getDirectionName(bool d)
+{
+    return d?_("Ascending"):_("Descending");
+}
+/** Generate a query string
+  *
+  * Example: filterin=x:y&filterout=a:b&search=ss&sort=s22&colspec=a+b+c
+  */
+std::string PredefinedView::generateQueryString() const
+{
+    std::string qs = "";
+    if (!search.empty()) qs += "search=" + urlEncode(search) + '&';
+    if (!sort.empty()) qs += "sort=" + sort + '&';
+    if (!colspec.empty()) qs += "colspec=" + colspec + '&';
+    std::map<std::string, std::list<std::string> > ::const_iterator f;
+    FOREACH(f, filterin) {
+        std::list<std::string>::const_iterator v;
+        FOREACH(v, f->second) {
+            qs += "filterin=" + urlEncode(f->first) + ':' + urlEncode(*v) + '&';
+        }
+    }
+    // remove latest &
+    if (!qs.empty() && qs[qs.size()-1] == '&') qs = qs.substr(0, qs.size()-1);
+    return qs;
+}
