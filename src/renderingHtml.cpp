@@ -102,7 +102,7 @@ void RHtml::printPageSignin(struct mg_connection *conn, const char *redirect)
     char *data;
     int r = loadFile(path.c_str(), &data);
     if (r >= 0) {
-        mg_printf(conn, "%s", data);
+        mg_write(conn, data, r);
         // add javascript for updating the redirect URL
         mg_printf(conn, "<script>document.getElementById(\"redirect\").value = \"%s\"</script>", redirect);
         free(data);
@@ -110,6 +110,39 @@ void RHtml::printPageSignin(struct mg_connection *conn, const char *redirect)
         LOG_ERROR("Could not load %s", path.c_str());
     }
 }
+
+void RHtml::printPageView(struct mg_connection *conn, const ContextParameters &ctx, const PredefinedView &pv)
+{
+    mg_printf(conn, "Content-Type: text/html\r\n\r\n");
+
+    std::string path = Database::Db.getRootDir() + "/public/viewConfig.html";
+    char *data;
+    int r = loadFile(path.c_str(), &data);
+    if (r >= 0) {
+        mg_write(conn, data, r);
+        // add javascript for updating the inputs
+        mg_printf(conn, "<script>\n");
+        std::list<std::string> properties = ctx.project->getPropertiesNames();
+        mg_printf(conn, "Properties = %s;\n", toJavascriptArray(properties).c_str());
+
+        mg_printf(conn, "document.getElementById(\"sm_predefined_view_name\").value = \"%s\";\n", pv.name.c_str());
+        if (pv.colspec.empty()) mg_printf(conn, "addAllColspec();\n");
+        else {
+            std::vector<std::string> items = split(pv.colspec, " +");
+            std::vector<std::string>::iterator i;
+            FOREACH(i, items) {
+                mg_printf(conn, "addColspec('%s');\n", replaceAll(*i, '\'', "\\'").c_str());
+            }
+        }
+        mg_printf(conn, "</script>\n");
+
+        free(data);
+    } else {
+        LOG_ERROR("Could not load %s", path.c_str());
+    }
+
+}
+
 
 
 std::string htmlEscape(const std::string &value)

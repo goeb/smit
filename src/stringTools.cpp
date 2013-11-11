@@ -2,7 +2,9 @@
 #include <sstream>
 #include <string.h>
 
+
 #include "stringTools.h"
+#include "global.h"
 
 /** take first token name out of uri
   * /a/b/c -> a and b/c
@@ -179,4 +181,39 @@ std::string replaceAll(const std::string &in, char c, const char *replaceBy)
     return out;
 }
 
+std::string toJavascriptArray(const std::list<std::string> &items)
+{
+    std::string jarray = "[";
+    std::list<std::string>::const_iterator v;
+    FOREACH(v, items) {
+        if (v != items.begin()) {
+            jarray += ", ";
+        }
+        jarray += '\'' + replaceAll(*v, '\'', "\\'") + '\'';
+    }
+    jarray += "]";
+    return jarray;
+
+}
+
+std::vector<std::string> split(const std::string &s, const char *c, int limit)
+{
+    // use limit = -1 for no limit (almost)
+    std::vector<std::string> tokens;
+    size_t found;
+
+    int index = 0;
+    found = s.find_first_of(c, index);
+    while ( (found != std::string::npos) && (limit != 0) )
+    {
+        tokens.push_back(s.substr(index, found-index));
+
+        index = found + 1;
+        found = s.find_first_of(c, index);
+        limit --;
+    }
+    tokens.push_back(s.substr(index));
+
+    return tokens;
+}
 

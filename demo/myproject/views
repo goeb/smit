@@ -2,5 +2,13 @@
 addView "Open issues" filterin status open sort mtime 
 addView "Deleted issues" filterin status deleted 
 
+addView "test xxx" search "toto" \
+    filterin status open \
+    filterin status closed \
+    filterout owner "" \
+    colspec id+mtime+summary \
+    sort -mtime+id \
+    default
+
 
 

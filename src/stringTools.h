@@ -4,6 +4,8 @@
 #include <string>
 #include <list>
 #include <map>
+#include <vector>
+
 
 std::string popToken(std::string & uri, char separator);
 void trimLeft(std::string & s, const char *c);
@@ -16,5 +18,7 @@ std::string urlEncode(const std::string &src);
 std::string pop(std::list<std::string> & L);
 std::string getProperty(const std::map<std::string, std::list<std::string> > &properties, const std::string &name);
 std::string replaceAll(const std::string &in, char c, const char *replaceBy);
+std::string toJavascriptArray(const std::list<std::string> &items);
+std::vector<std::string> split(const std::string &s, const char *c, int limit = -1);
 
 #endif

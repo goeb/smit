@@ -2,181 +2,77 @@
         <title>Configuration of Predefined Views</title>
         <link href="/public/style.css" type="text/css" rel="stylesheet">
         <meta content="text/html;charset=UTF-8" http-equiv="Content-Type">
-        <script src="/public/smit.js"></script>
-        <script src="/public/pconfig.js"></script>
+        <script src="/public/vconfig.js"></script>
+        <style>
+            h2 { font-size: normal; margin:0; padding:0; }
+            .sm_view_properties {
+                    border-right: solid 1px rgb(200, 200, 186);
+                    border-bottom: solid 1px rgb(200, 200, 186);
+                }
+        </style>
     </head>
     <body onload="init();">
         <form action="" method="POST">
+            <h1>Predefined View</h1>
             <h2>Name</h2>
-            <input name="name" type="text">
-
+            Choose, modify or leave blank the name of your custom search.<br>
+            If you give it a name, then it will be stored and displayed in the navigation bar.
+            <br>
+            <br>
+            <input id="sm_predefined_view_name" name="name" type="text">
+            <br>
+            Current configuration of this view: 
+            <a id="sm_view_current_url" href="/myproject/issues/?filterin=status:open&sort=-mtime">filterin=status:open&sort=-mtime</a>
+            <br>
+            
             <h2>Search text</h2>
             <input name="search" type="text">
+            (text to look for through all the properties and text of the issues)
+            <br>
+            <br>
             <h2>Filter-In</h2>
+            Select here the properties for which the issues shall be returned.
+            <br>
+            <br>
 
-            <select name="filterin">
-                <option></option>
-                <option>id</option>
-                <option>mtime</option>
-                <option>ctime</option>
-                <option>summary</option>
-                <option>target_version</option>
-            </select>
-            <input name="propname" type="text">
-            <br>
-            <select name="filterin">
-                <option></option>
-                <option>id</option>
-                <option>mtime</option>
-                <option>ctime</option>
-                <option>summary</option>
-                <option>target_version</option>
-            </select>
-            <input name="propname" type="text">
-            <br>
-            <select name="filterin">
-                <option></option>
-                <option>id</option>
-                <option>mtime</option>
-                <option>ctime</option>
-                <option>summary</option>
-                <option>target_version</option>
-            </select>
-            <input name="propname" type="text">
-            <br>
+            <div id="filterin"></div>
+            <div onclick="addFilter('filterin', ['id', 'mtime', 'status', 'summary'], 'xxx');" class="sm_clickable">+ Click for more...</div>
 
             <h2>Filter-Out</h2>
-            <select name="filterin">
-                <option></option>
-                <option>id</option>
-                <option>mtime</option>
-                <option>ctime</option>
-                <option>summary</option>
-                <option>target_version</option>
-            </select>
-            <input name="propname" type="text">
+            Select here the properties for which the issues will <b>not</b> be returned.
             <br>
-            <select name="filterin">
-                <option></option>
-                <option>id</option>
-                <option>mtime</option>
-                <option>ctime</option>
-                <option>summary</option>
-                <option>target_version</option>
-            </select>
-            <input name="propname" type="text">
             <br>
-            <select name="filterin">
-                <option></option>
-                <option>id</option>
-                <option>mtime</option>
-                <option>ctime</option>
-                <option>summary</option>
-                <option>target_version</option>
-            </select>
-            <input name="propname" type="text">
-            <br>
+            <div id="filterout"></div>
+            <div onclick="addFilter('filterout', ['id', 'mtime', 'status', 'summary'], 'xxx');" class="sm_clickable">+ Click for more...</div>
+
 
             <h2>Columns Specification</h2>
-            <select name="colspec">
-                <option selected="selected">id</option>
-                <option>mtime</option>
-                <option>ctime</option>
-                <option>summary</option>
-                <option>target_version</option>
-            </select>
-            <select name="colspec">
-                <option>id</option>
-                <option selected="selected">mtime</option>
-                <option>ctime</option>
-                <option>summary</option>
-                <option>target_version</option>
-            </select>
-            <select name="colspec">
-                <option>id</option>
-                <option>mtime</option>
-                <option selected="selected">ctime</option>
-                <option>summary</option>
-                <option>target_version</option>
-            </select>
-            <select name="colspec">
-                <option>id</option>
-                <option>mtime</option>
-                <option>ctime</option>
-                <option selected="selected">summary</option>
-                <option>target_version</option>
-            </select>
-            <select name="colspec">
-                <option>id</option>
-                <option>mtime</option>
-                <option>ctime</option>
-                <option>summary</option>
-                <option selected="selected">target_version</option>
-            </select>
-            <select name="colspec">
-                <option></option>
-                <option>id</option>
-                <option>mtime</option>
-                <option>ctime</option>
-                <option>summary</option>
-                <option>target_version</option>
-            </select>
-
+            Select here the properties that you want to display in the columns.<br>
+            <br>
+            <div id="colspec"></div>
+            <br>
+            <div onclick="addColspec('');" class="sm_clickable">+ Click for more...</div>
             <h2>Sort</h2>
-            <select name="direction">
-                <option>ascending</option>
-                <option>descending</option>
-            </select>
-            <select name="colspec">
-                <option></option>
-                <option>id</option>
-                <option>mtime</option>
-                <option>ctime</option>
-                <option>summary</option>
-                <option>target_version</option>
-            </select>
-            <br>
-            <select name="direction">
-                <option>ascending</option>
-                <option>descending</option>
-            </select>
-            <select name="colspec">
-                <option></option>
-                <option>id</option>
-                <option>mtime</option>
-                <option>ctime</option>
-                <option>summary</option>
-                <option>target_version</option>
-            </select>
-            <br>
-            <select name="direction">
-                <option>ascending</option>
-                <option>descending</option>
-            </select>
-            <select name="colspec">
-                <option></option>
-                <option>id</option>
-                <option>mtime</option>
-                <option>ctime</option>
-                <option>summary</option>
-                <option>target_version</option>
-            </select>
-            <br>
-            <select name="direction">
-                <option>ascending</option>
-                <option>descending</option>
-            </select>
-            <select name="colspec">
-                <option></option>
-                <option>id</option>
-                <option>mtime</option>
-                <option>ctime</option>
-                <option>summary</option>
-                <option>target_version</option>
-            </select>
-            <br>
 
+            <div id="sort"></div>
+            <br>
+            <div onclick="addSort();" class="sm_clickable">+ Click for more...</div>
+
+            <br>
+            <br>
+            <input type="submit" value="Apply Configuration">
+        </form>
+        <form>
+            <input type="submit" value="Delete Predefined view">
         </form>
 
+            <h3>Properties</h3>
+            List of the properties and associated types:<br>
+            <table style="border-collapse:collapse;">
+                <tr><th></th><th></th></tr>
+                <tr><td class="sm_view_properties">id</td><td class="sm_view_properties">text</td></tr>
+                <tr><td class="sm_view_properties">status</td><td class="sm_view_properties">select</td></tr>
+                <tr><td class="sm_view_properties">owner</td><td class="sm_view_properties">selectUser</td><td class="sm_view_properties">John<br>Fred<br>Mr. X</td></tr>
+            </table>
 
 </body></html>

@@ -5,6 +5,6 @@ addView "Open issues" \
 
 addView "All issues" sort -mtime
 
-addView "Closed issues" filterin status closed
+addView "Closed issues" filterin status closed colspec id+summary
 
 addView "Deleted issues" filterin status deleted

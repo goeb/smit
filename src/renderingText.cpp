@@ -58,5 +58,14 @@ void RText::printIssue(struct mg_connection *conn, const Issue &issue, const std
 {
     LOG_DEBUG("RText::printIssue...");
     mg_printf(conn, "Content-Type: text/plain\r\n\r\n");
+    mg_printf(conn, "not implemented\r\n");
 
 }
+void RText::printView(struct mg_connection *conn, const PredefinedView &pv)
+{
+    LOG_FUNC();
+    mg_printf(conn, "Content-Type: text/plain\r\n\r\n");
+    mg_printf(conn, "not implemented\r\n");
+
+}
+

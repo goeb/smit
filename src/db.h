@@ -104,8 +104,9 @@ public:
     int writeHead(const std::string &issueId, const std::string &entryId);
     int deleteEntry(const std::string &issueId, const std::string &entryId, const std::string &username);
     std::list<std::string> getReservedProperties() const;
-    std::list<std::string> getPropertiesNames();
+    std::list<std::string> getPropertiesNames() const;
     int modifyConfig(std::list<std::list<std::string> > &tokens);
+    PredefinedView getPredefinedView(const std::string &name);
 
 private:
     void consolidateIssue(Issue *i);
@@ -132,6 +133,7 @@ public:
 
 // Functions
 int dbLoad(const char * pathToRepository); // initialize the given repository
+std::list<std::pair<bool, std::string> > parseSortingSpec(const char *sortingSpec);
 
 
 #endif

@@ -480,15 +480,15 @@ std::map<std::string, PredefinedView> parsePredefinedViews(std::list<std::list<s
                 } else if (token == "sort") {
                     pv.sort = pop(*line);
                     if (pv.sort.empty()) {
-                        LOG_ERROR("parsePredefinedViews: Empty property or value for filterin/out");
+                        LOG_ERROR("parsePredefinedViews: Empty property or value for 'sort'");
                         pv.name.clear(); // invalidate this line
                         break;
                     }
 
                 } else if (token == "search") {
                     pv.search = pop(*line);
-                    if (pv.sort.empty()) {
-                        LOG_ERROR("parsePredefinedViews: Empty property or value for filterin/out");
+                    if (pv.search.empty()) {
+                        LOG_ERROR("parsePredefinedViews: Empty property or value for 'search'");
                         pv.name.clear(); // invalidate this line
                         break;
                     }
@@ -557,6 +557,21 @@ int Project::modifyConfig(std::list<std::list<std::string> > &tokens)
 
     return 0;
 }
+
+/** get a predefined view
+  * @return
+  * if not found an object PredefinedView with empty name is returned
+  */
+PredefinedView Project::getPredefinedView(const std::string &name)
+{
+    ScopeLocker scopeLocker(locker, LOCK_READ_ONLY);
+
+    std::map<std::string, PredefinedView>::const_iterator pv;
+    pv = config.predefinedViews.find(name);
+    if (pv == config.predefinedViews.end()) return PredefinedView();
+    else return pv->second;
+}
+
 
 void Project::loadPredefinedViews(const char *projectPath)
 {
@@ -1066,7 +1081,7 @@ std::list<std::string> Project::getReservedProperties() const
 
 /** Get the list of all properties
   */
-std::list<std::string> Project::getPropertiesNames()
+std::list<std::string> Project::getPropertiesNames() const
 {
     std::list<std::string> colspec = config.orderedProperties;
     // add mandatory properties that are not included in orderedProperties

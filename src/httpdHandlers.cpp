@@ -69,6 +69,12 @@ void sendHttpHeader403(struct mg_connection *conn)
     mg_printf(conn, "HTTP/1.1 403 Forbidden\r\n\r\n");
     mg_printf(conn, "403 Forbidden\r\n");
 }
+void sendHttpHeader404(struct mg_connection *conn)
+{
+    mg_printf(conn, "HTTP/1.1 404 Not Found\r\n\r\n");
+    mg_printf(conn, "404 Not Found\r\n");
+}
+
 void sendHttpHeader500(struct mg_connection *conn)
 {
     mg_printf(conn, "HTTP/1.1 500 Forbidden\r\n\r\n");
@@ -551,8 +557,34 @@ void httpGetNewIssueForm(struct mg_connection *conn, const Project &p, User u)
     // only HTML format is needed
     RHtml::printPageNewIssue(conn, ctx);
 }
+void httpGetView(struct mg_connection *conn, Project &p, const std::string &view, User u)
+{
+    LOG_FUNC();
+    enum Role role = u.getRole(p.getName());
+    if (role != ROLE_ADMIN) {
+        sendHttpHeader403(conn);
+        return;
+    }
 
-void httpGetIssue(struct mg_connection *conn, Project &p, const std::string & issueId, User u)
+    std::string viewName = urlDecode(view);
+    PredefinedView pv = p.getPredefinedView(viewName);
+    if (pv.name.empty()) {
+        // no such view
+        sendHttpHeader404(conn);
+        return;
+    }
+
+    sendHttpHeader200(conn);
+
+    enum RenderingFormat format = getFormat(conn);
+    if (RENDERING_TEXT == format) RText::printView(conn, pv);
+    else {
+        ContextParameters ctx = ContextParameters(u, p);
+        RHtml::printPageView(conn, ctx, pv);
+    }
+}
+
+void httpGetIssue(struct mg_connection *conn, Project &p, const std::string &issueId, User u)
 {
     LOG_DEBUG("httpGetIssue: project=%s, issue=%s", p.getName().c_str(), issueId.c_str());
 
@@ -768,7 +800,7 @@ int begin_request_handler(struct mg_connection *conn)
             handleUnauthorizedAccess(conn, resource);
 
         } else {
-
+            // ressources inside a project
             Project *p = Database::Db.getProject(project);
             LOG_DEBUG("project %s, %p", project.c_str(), p);
             if (p) {
@@ -781,6 +813,7 @@ int begin_request_handler(struct mg_connection *conn)
                 else if ( (resource == "entries") && (method == "POST") ) return httpDeleteEntry(conn, *p, uri, user);
                 else if ( (resource == "config") && (method == "GET") ) httpGetProjectConfig(conn, *p, user);
                 else if ( (resource == "config") && (method == "POST") ) httpPostProjectConfig(conn, *p, user);
+                else if ( (resource == "views") && (!uri.empty()) && (method == "GET") ) httpGetView(conn, *p, uri, user);
                 else handled = false;
 
 

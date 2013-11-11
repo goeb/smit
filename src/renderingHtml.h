@@ -48,7 +48,7 @@ public:
     static void printIssueForm(struct mg_connection *conn, const ContextParameters &ctx, const Issue &issue, bool autofocus);
     static void printPageSignin(struct mg_connection *conn, const char *redirect);
 
-
+    static void printPageView(struct mg_connection *conn, const ContextParameters &ctx, const PredefinedView &pv);
 };
 
 
