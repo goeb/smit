@@ -492,20 +492,30 @@ void httpGetListOfIssues(struct mg_connection *conn, Project &p, User u)
     std::string q;
     if (req->query_string) q = req->query_string;
 
+    std::string defaultView = getFirstParamFromQueryString(q, "defaultView");
+    if (defaultView == "1") {
+        // redirect
+        PredefinedView pv = p.getDefaultView();
+        if (!pv.name.empty()) {
+            std::string redirectUrl = "/" + urlEncode(p.getName()) + "/issues/?" + pv.generateQueryString();
+            sendHttpRedirect(conn, redirectUrl.c_str(), 0);
+            return;
+        }
+    }
+
     std::list<std::string> filterinRaw = getParamListFromQueryString(q, "filterin");
     std::list<std::string> filteroutRaw = getParamListFromQueryString(q, "filterout");
     std::map<std::string, std::list<std::string> > filterIn = parseFilter(filterinRaw);
     std::map<std::string, std::list<std::string> > filterOut = parseFilter(filteroutRaw);
+    std::string fulltextSearch = getFirstParamFromQueryString(q, "search");
+    std::string sorting = getFirstParamFromQueryString(q, "sort");
+
     // replace user "me" if any...
     replaceUserMe(filterIn, p, u.username);
     replaceUserMe(filterOut, p, u.username);
 
-    std::string fulltextSearch = getFirstParamFromQueryString(q, "search");
-
-    std::string sorting = getFirstParamFromQueryString(q, "sort");
 
     std::vector<struct Issue*> issueList = p.search(fulltextSearch.c_str(), filterIn, filterOut, sorting.c_str());
-
 
     std::string colspec = getFirstParamFromQueryString(q, "colspec");
     std::list<std::string> cols;
@@ -514,6 +524,7 @@ void httpGetListOfIssues(struct mg_connection *conn, Project &p, User u)
     if (colspec.size() > 0) {
         cols = parseColspec(colspec.c_str(), allCols);
     } else {
+        // prevent having no columns, by forcing all of them
         cols = allCols;
     }
     enum RenderingFormat format = getFormat(conn);
@@ -614,7 +625,7 @@ void httpPostView(struct mg_connection *conn, Project &p, const std::string &nam
     // postData=name=Test+View&search=toto+tutu&filterin=status&filter_value=closed&
     // filterin=status&filter_value=open&filterout=target_version&filter_value=v1.xxx&
     // colspec=id&colspec=ctime&colspec=mtime&colspec=summary&colspec=status&colspec=target_version&
-    // colspec=owner&sort_direction=Ascending&sort_property=id
+    // colspec=owner&sort_direction=Ascending&sort_property=id&default=on
 
     std::string sortDirection, sortProperty;
     std::string filterinPropname, filteroutPropname, filterValue;
@@ -634,6 +645,8 @@ void httpPostView(struct mg_connection *conn, Project &p, const std::string &nam
         else if (key == "filter_value") filterValue = value;
         else if (key == "sort_direction") sortDirection = value;
         else if (key == "sort_property") sortProperty = value;
+        else if (key == "default" && value == "on") pv.isDefault = true;
+
         else continue; // ignore invalid keys
 
         if (sortDirection.empty()) sortProperty.clear();

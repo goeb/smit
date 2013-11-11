@@ -9,6 +9,7 @@ addView "Deleted issues" \
     filterin status deleted \
 
 addView "Open issues" \
+    default \
     filterin status open \
     sort +target_version-mtime \
 

@@ -492,6 +492,9 @@ std::map<std::string, PredefinedView> PredefinedView::parsePredefinedViews(std::
                         pv.name.clear(); // invalidate this line
                         break;
                     }
+                } else if (token == "default") {
+                    pv.isDefault = true;
+
                 } else {
                     LOG_ERROR("parsePredefinedViews: Unexpected token %s", token.c_str());
                     pv.name.clear();
@@ -583,6 +586,15 @@ int Project::setPredefinedView(const std::string &name, const PredefinedView &pv
 
     ScopeLocker scopeLocker(lockerForConfig, LOCK_READ_WRITE);
 
+    // update default view
+    if (pv.isDefault) {
+        // set all others to non-default
+        std::map<std::string, PredefinedView>::iterator i;
+        FOREACH(i, config.predefinedViews) {
+            i->second.isDefault = false;
+        }
+    }
+
     config.predefinedViews[pv.name] = pv;
 
     if (!name.empty() && name != pv.name) {
@@ -592,7 +604,7 @@ int Project::setPredefinedView(const std::string &name, const PredefinedView &pv
         else LOG_ERROR("Cannot remove old name of renamed view: %s -> %s", name.c_str(), pv.name.c_str());
     }
 
-    // store on disk
+    // store to file
     std::string fileContents;
     std::map<std::string, PredefinedView>::const_iterator i;
     FOREACH(i, config.predefinedViews) {
@@ -615,6 +627,17 @@ int Project::deletePredefinedView(const std::string &name)
         LOG_ERROR("Cannot delete view: %s", name.c_str());
         return -1;
     }
+}
+
+
+PredefinedView Project::getDefaultView()
+{
+    ScopeLocker scopeLocker(lockerForConfig, LOCK_READ_ONLY);
+    std::map<std::string, PredefinedView>::const_iterator i = config.predefinedViews.find(name);
+    FOREACH(i, config.predefinedViews) {
+        if (i->second.isDefault) return i->second;
+    }
+    return PredefinedView(); // empty name indicates no default view found
 }
 
 
@@ -1273,6 +1296,8 @@ std::string PredefinedView::serialize() const
     std::string out;
 
     out += "addView " + serializeSimpleToken(name) + " \\\n";
+    if (isDefault) out += "    default \\\n";
+
     std::map<std::string, std::list<std::string> >::const_iterator f;
     FOREACH(f, filterin) {
         std::list<std::string>::const_iterator i;

@@ -66,6 +66,9 @@ struct PredefinedView {
     std::string colspec;
     std::string sort;
     std::string search;
+    bool isDefault; // indicate if this view should be chosen by default when query string is empty
+
+    PredefinedView() : isDefault(false) {}
     static std::string getDirectionName(bool d);
     static std::string getDirectionSign(const std::string &text);
     std::string generateQueryString() const;
@@ -115,6 +118,7 @@ public:
     PredefinedView getPredefinedView(const std::string &name);
     int setPredefinedView(const std::string &name, const PredefinedView &pv);
     int deletePredefinedView(const std::string &name);
+    PredefinedView getDefaultView();
 
 private:
     void consolidateIssue(Issue *i);
