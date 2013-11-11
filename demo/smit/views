@@ -1,12 +1,21 @@
+addView "All issues" \
+    sort -mtime \
+
+addView "Closed issues" \
+    filterin status closed \
+    colspec id+summary \
+
+addView "Deleted issues" \
+    filterin status deleted \
 
 addView "Open issues" \
     filterin status open \
-    sort +target_version-mtime
+    sort +target_version-mtime \
 
-addView "All issues" sort -mtime
+addView "Test View2" \
+    filterin status open \
+    filterout ctime 1212 \
+    filterout target_version open \
+    sort -mtime \
+    colspec id+summary+status+mtime \
 
-addView "Closed issues" filterin status closed colspec id+summary
-
-addView "Deleted issues" filterin status deleted
-
-addView "Test View" filterin status closed filterin status open filterout target_version v1.xxx search "toto tutu"

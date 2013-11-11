@@ -67,7 +67,11 @@ struct PredefinedView {
     std::string sort;
     std::string search;
     static std::string getDirectionName(bool d);
+    static std::string getDirectionSign(const std::string &text);
     std::string generateQueryString() const;
+    std::string serialize() const;
+    static std::map<std::string, PredefinedView> parsePredefinedViews(std::list<std::list<std::string> > lines);
+
 };
 
 struct ProjectConfig {
@@ -109,6 +113,7 @@ public:
     std::list<std::string> getPropertiesNames() const;
     int modifyConfig(std::list<std::list<std::string> > &tokens);
     PredefinedView getPredefinedView(const std::string &name);
+    int setPredefinedView(const std::string &name, const PredefinedView &pv);
 
 private:
     void consolidateIssue(Issue *i);
@@ -117,6 +122,7 @@ private:
     std::map<std::string, Issue*> issues;
     std::map<std::string, Entry*> entries;
     Locker locker;
+    Locker lockerForConfig;
     std::string name;
     std::string path;
     int maxIssueId;

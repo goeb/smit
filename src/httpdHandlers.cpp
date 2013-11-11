@@ -77,8 +77,8 @@ void sendHttpHeader404(struct mg_connection *conn)
 
 void sendHttpHeader500(struct mg_connection *conn)
 {
-    mg_printf(conn, "HTTP/1.1 500 Forbidden\r\n\r\n");
-    mg_printf(conn, "500 Internal Error\r\n");
+    mg_printf(conn, "HTTP/1.1 500 Internal Server Error\r\n\r\n");
+    mg_printf(conn, "500 Internal Server Error\r\n");
 }
 
 /**
@@ -584,13 +584,113 @@ void httpGetView(struct mg_connection *conn, Project &p, const std::string &view
     }
 }
 
+/** Handle the POST of a view
+  *
+  * All user can post these as an advanced search (with no name).
+  * But only admin users can post predefined views (with a name).
+  */
+void httpPostView(struct mg_connection *conn, Project &p, const std::string &name, User u)
+{
+    LOG_FUNC();
+
+    std::string postData;
+    const char *contentType = mg_get_header(conn, "Content-Type");
+    if (0 == strcmp("application/x-www-form-urlencoded", contentType)) {
+        // application/x-www-form-urlencoded
+        // post_data is "var1=val1&var2=val2...".
+        postData = readMgConn(conn, 10*1024*1024);
+    }
+    LOG_DEBUG("postData=%s\n<br>", postData.c_str());
+
+    // parse the parameters
+    PredefinedView pv;
+
+    // parse the filterin. Eg:
+    // postData=name=Test+View&search=toto+tutu&filterin=status&filter_value=closed&
+    // filterin=status&filter_value=open&filterout=target_version&filter_value=v1.xxx&
+    // colspec=id&colspec=ctime&colspec=mtime&colspec=summary&colspec=status&colspec=target_version&
+    // colspec=owner&sort_direction=Ascending&sort_property=id
+
+    std::string sortDirection, sortProperty;
+    std::string filterinPropname, filteroutPropname, filterValue;
+
+    while (postData.size() > 0) {
+        std::string tokenPair = popToken(postData, '&');
+        std::string key = popToken(tokenPair, '=');
+        std::string value = urlDecode(tokenPair);
+
+        if (key == "name") pv.name = value;
+        else if (key == "colspec" && !value.empty()) {
+            if (! pv.colspec.empty()) pv.colspec += "+";
+            pv.colspec += value;
+        } else if (key == "search" && !value.empty()) pv.search += "+" + value;
+        else if (key == "filterin") filterinPropname = value;
+        else if (key == "filterout") filteroutPropname = value;
+        else if (key == "filter_value") filterValue = value;
+        else if (key == "sort_direction") sortDirection = value;
+        else if (key == "sort_property") sortProperty = value;
+        else continue; // ignore invalid keys
+
+        if (sortDirection.empty()) sortProperty.clear();
+        else if (!sortProperty.empty()) {
+            pv.sort += PredefinedView::getDirectionSign(sortDirection);
+            pv.sort += sortProperty;
+            sortDirection.clear();
+            sortProperty.clear();
+        }
+        if (filterinPropname.empty() && filteroutPropname.empty()) filterValue.clear();
+
+        if (!filterinPropname.empty() && !filterValue.empty()) {
+            pv.filterin[filterinPropname].push_back(filterValue);
+            filterinPropname.clear();
+            filterValue.clear();
+        }
+        if (!filteroutPropname.empty() && !filterValue.empty()) {
+            pv.filterout[filteroutPropname].push_back(filterValue);
+            filteroutPropname.clear();
+            filterValue.clear();
+        }
+    }
+
+    std::string redirectUrl = "/" + urlEncode(p.getName()) + "/issues/?" + pv.generateQueryString();
+
+    enum Role role = u.getRole(p.getName());
+    if (pv.name.empty()) {
+        // unnamed view
+        if (role != ROLE_ADMIN && role != ROLE_RO && role != ROLE_RW) {
+            sendHttpHeader403(conn);
+            return;
+        }
+        // do nothing, just redirect
+
+    } else { // named view
+        if (role != ROLE_ADMIN) {
+            sendHttpHeader403(conn);
+            return;
+        }
+        // store the view
+        int r = p.setPredefinedView(name, pv);
+        if (r < 0) {
+            LOG_ERROR("Cannot set predefined view");
+            sendHttpHeader500(conn);
+            return;
+        }
+    }
+
+    enum RenderingFormat format = getFormat(conn);
+    if (RENDERING_TEXT == format) {
+        sendHttpHeader200(conn);
+
+    } else {
+        // redirect to the result of the search
+        sendHttpRedirect(conn, redirectUrl.c_str(), 0);
+    }
+}
+
+
 void httpGetIssue(struct mg_connection *conn, Project &p, const std::string &issueId, User u)
 {
     LOG_DEBUG("httpGetIssue: project=%s, issue=%s", p.getName().c_str(), issueId.c_str());
-
-    const struct mg_request_info *req = mg_get_request_info(conn);
-    std::string q;
-    if (req->query_string) q = req->query_string;
 
     Issue issue;
     std::list<Entry*> Entries;
@@ -813,7 +913,8 @@ int begin_request_handler(struct mg_connection *conn)
                 else if ( (resource == "entries") && (method == "POST") ) return httpDeleteEntry(conn, *p, uri, user);
                 else if ( (resource == "config") && (method == "GET") ) httpGetProjectConfig(conn, *p, user);
                 else if ( (resource == "config") && (method == "POST") ) httpPostProjectConfig(conn, *p, user);
-                else if ( (resource == "views") && (!uri.empty()) && (method == "GET") ) httpGetView(conn, *p, uri, user);
+                else if ( (resource == "views") && (method == "GET") ) httpGetView(conn, *p, uri, user);
+                else if ( (resource == "views") && (method == "POST") ) httpPostView(conn, *p, uri, user);
                 else handled = false;
 
 

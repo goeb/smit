@@ -440,7 +440,7 @@ ProjectConfig parseProjectConfig(std::list<std::list<std::string> > &lines)
     return config;
 }
 
-std::map<std::string, PredefinedView> parsePredefinedViews(std::list<std::list<std::string> > lines)
+std::map<std::string, PredefinedView> PredefinedView::parsePredefinedViews(std::list<std::list<std::string> > lines)
 {
     std::map<std::string, PredefinedView> pvs;
     std::list<std::list<std::string> >::iterator line;
@@ -564,12 +564,42 @@ int Project::modifyConfig(std::list<std::list<std::string> > &tokens)
   */
 PredefinedView Project::getPredefinedView(const std::string &name)
 {
-    ScopeLocker scopeLocker(locker, LOCK_READ_ONLY);
+    ScopeLocker scopeLocker(lockerForConfig, LOCK_READ_ONLY);
 
     std::map<std::string, PredefinedView>::const_iterator pv;
     pv = config.predefinedViews.find(name);
     if (pv == config.predefinedViews.end()) return PredefinedView();
     else return pv->second;
+}
+
+/** create a new or modify an existing predefined view
+  * @param name
+  *     empty if creating a new view
+  *     non-empty if modifying or renaming an existing view
+  */
+int Project::setPredefinedView(const std::string &name, const PredefinedView &pv)
+{
+    if (pv.name.empty()) return -3;
+
+    ScopeLocker scopeLocker(lockerForConfig, LOCK_READ_WRITE);
+
+    config.predefinedViews[pv.name] = pv;
+
+    if (!name.empty() && name != pv.name) {
+        // it was a rename. remove old name
+        std::map<std::string, PredefinedView>::iterator i = config.predefinedViews.find(name);
+        if (i != config.predefinedViews.end()) config.predefinedViews.erase(i);
+        else LOG_ERROR("Cannot remove old name of renamed view: %s -> %s", name.c_str(), pv.name.c_str());
+    }
+
+    // store on disk
+    std::string fileContents;
+    std::map<std::string, PredefinedView>::const_iterator i;
+    FOREACH(i, config.predefinedViews) {
+        fileContents += i->second.serialize() + "\n";
+    }
+    std::string path = getPath() + '/' + VIEWS_FILE;
+    return writeToFile(path.c_str(), fileContents);
 }
 
 
@@ -590,7 +620,7 @@ void Project::loadPredefinedViews(const char *projectPath)
 
         free(buf); // not needed any longer
 
-        config.predefinedViews = parsePredefinedViews(lines);
+        config.predefinedViews = PredefinedView::parsePredefinedViews(lines);
     } // else error of empty file
 
     LOG_DEBUG("predefined views loaded: %d", config.predefinedViews.size());
@@ -1186,6 +1216,14 @@ std::string PredefinedView::getDirectionName(bool d)
 {
     return d?_("Ascending"):_("Descending");
 }
+
+std::string PredefinedView::getDirectionSign(const std::string &text)
+{
+    if (text == _("Ascending")) return "+";
+    else return "-";
+}
+
+
 /** Generate a query string
   *
   * Example: filterin=x:y&filterout=a:b&search=ss&sort=s22&colspec=a+b+c
@@ -1203,7 +1241,43 @@ std::string PredefinedView::generateQueryString() const
             qs += "filterin=" + urlEncode(f->first) + ':' + urlEncode(*v) + '&';
         }
     }
+    FOREACH(f, filterout) {
+        std::list<std::string>::const_iterator v;
+        FOREACH(v, f->second) {
+            qs += "filterout=" + urlEncode(f->first) + ':' + urlEncode(*v) + '&';
+        }
+    }
+
     // remove latest &
     if (!qs.empty() && qs[qs.size()-1] == '&') qs = qs.substr(0, qs.size()-1);
     return qs;
+}
+
+std::string PredefinedView::serialize() const
+{
+    std::string out;
+
+    out += "addView " + serializeSimpleToken(name) + " \\\n";
+    std::map<std::string, std::list<std::string> >::const_iterator f;
+    FOREACH(f, filterin) {
+        std::list<std::string>::const_iterator i;
+        FOREACH(i, f->second) {
+            out += "    filterin " + serializeSimpleToken(f->first) + " ";
+            out += serializeSimpleToken(*i) + " \\\n";
+        }
+    }
+
+    FOREACH(f, filterout) {
+        std::list<std::string>::const_iterator i;
+        FOREACH(i, f->second) {
+            out += "    filterout " + serializeSimpleToken(f->first) + " ";
+            out += serializeSimpleToken(*i) + " \\\n";
+        }
+    }
+
+    if (!sort.empty()) out += "    sort " + serializeSimpleToken(sort) + " \\\n";
+    if (!colspec.empty()) out += "    colspec " + serializeSimpleToken(colspec) + " \\\n";
+    if (!search.empty()) out += "    search " + serializeSimpleToken(search) + "\n";
+
+    return out;
 }

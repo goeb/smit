@@ -131,7 +131,6 @@ void RHtml::printPageView(struct mg_connection *conn, const ContextParameters &c
 
         std::list<std::string> properties = ctx.project->getPropertiesNames();
         mg_printf(conn, "Properties = %s;\n", toJavascriptArray(properties).c_str());
-        mg_printf(conn, "init();\n");
         mg_printf(conn, "setName('%s');\n", enquoteJs(pv.name).c_str());
         mg_printf(conn, "setSearch('%s');\n", enquoteJs(pv.search).c_str());
         mg_printf(conn, "setUrl('/%s/issues/?%s');\n", urlEncode(ctx.project->getName()).c_str(),
@@ -147,6 +146,8 @@ void RHtml::printPageView(struct mg_connection *conn, const ContextParameters &c
                           enquoteJs(*v).c_str());
             }
         }
+        mg_printf(conn, "addFilter('filterin', '', '');\n");
+
         FOREACH(f, pv.filterout) {
             FOREACH(v, f->second) {
                 mg_printf(conn, "addFilter('filterout', '%s', '%s');\n",
@@ -154,16 +155,17 @@ void RHtml::printPageView(struct mg_connection *conn, const ContextParameters &c
                           enquoteJs(*v).c_str());
             }
         }
+        mg_printf(conn, "addFilter('filterout', '', '');\n");
 
         // Colums specification
-        if (pv.colspec.empty()) mg_printf(conn, "addAllColspec();\n");
-        else {
+        if (!pv.colspec.empty()) {
             std::vector<std::string> items = split(pv.colspec, " +");
             std::vector<std::string>::iterator i;
             FOREACH(i, items) {
                 mg_printf(conn, "addColspec('%s');\n", enquoteJs(*i).c_str());
             }
         }
+        mg_printf(conn, "addColspec('');\n");
 
         // sort
         std::list<std::pair<bool, std::string> > sSpec = parseSortingSpec(pv.sort.c_str());
@@ -173,6 +175,7 @@ void RHtml::printPageView(struct mg_connection *conn, const ContextParameters &c
             mg_printf(conn, "addSort('%s', '%s');\n", enquoteJs(direction).c_str(),
                       enquoteJs(s->second).c_str());
         }
+        mg_printf(conn, "addSort('', '');\n");
 
 
         mg_printf(conn, "</script>\n");
