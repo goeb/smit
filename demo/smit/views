@@ -19,3 +19,9 @@ addView "Test View2" \
     sort -mtime \
     colspec id+summary+status+mtime \
 
+addView new1 \
+    filterin status open \
+    colspec id+ctime+summary+status \
+
+addView ttoo \
+

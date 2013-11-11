@@ -59,3 +59,7 @@ function setUrl(value) {
     a.href = value;
     a.innerHTML = value;
 }
+function hideAdminZone() {
+    var div = document.getElementById('sm_view_admin_zone');
+    div.style.display = 'none';
+}

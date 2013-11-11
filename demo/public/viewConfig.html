@@ -14,14 +14,16 @@
     <body>
         <form action="" method="POST">
             <h1>Advanced Search / Predefined View</h1>
-            Current configuration of this view: 
-            <a id="sm_view_current_url" href="/myproject/issues/?filterin=status:open&sort=-mtime">filterin=status:open&sort=-mtime</a>
-            <h2>Name</h2>
-            Give it a name if you want to get it stored and displayed in the navigation bar (you must be admin for that): 
-            <input id="name" name="name" type="text">
-            <br>
-            (you may rename a view)
-            <br>
+            <div id="sm_view_admin_zone">
+                Current configuration of this view: 
+                <a id="sm_view_current_url" href="/myproject/issues/?filterin=status:open&sort=-mtime">filterin=status:open&sort=-mtime</a>
+                <h2>Name</h2>
+                Give it a name if you want to get it stored and displayed in the navigation bar (you must be admin for that): 
+                <input id="name" name="name" type="text">
+                <br>
+                (you may rename a view)
+                <br>
+            </div>
             
             <h2>Search text</h2>
             <input id="search" name="search" type="text">

@@ -557,22 +557,13 @@ void httpGetNewIssueForm(struct mg_connection *conn, const Project &p, User u)
     // only HTML format is needed
     RHtml::printPageNewIssue(conn, ctx);
 }
+
 void httpGetView(struct mg_connection *conn, Project &p, const std::string &view, User u)
 {
     LOG_FUNC();
-    enum Role role = u.getRole(p.getName());
-    if (role != ROLE_ADMIN) {
-        sendHttpHeader403(conn);
-        return;
-    }
 
     std::string viewName = urlDecode(view);
     PredefinedView pv = p.getPredefinedView(viewName);
-    if (pv.name.empty()) {
-        // no such view
-        sendHttpHeader404(conn);
-        return;
-    }
 
     sendHttpHeader200(conn);
 
@@ -623,7 +614,7 @@ void httpPostView(struct mg_connection *conn, Project &p, const std::string &nam
         else if (key == "colspec" && !value.empty()) {
             if (! pv.colspec.empty()) pv.colspec += "+";
             pv.colspec += value;
-        } else if (key == "search" && !value.empty()) pv.search += "+" + value;
+        } else if (key == "search") pv.search = value;
         else if (key == "filterin") filterinPropname = value;
         else if (key == "filterout") filteroutPropname = value;
         else if (key == "filter_value") filterValue = value;

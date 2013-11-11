@@ -125,13 +125,18 @@ void RHtml::printPageView(struct mg_connection *conn, const ContextParameters &c
     char *data;
     int r = loadFile(path.c_str(), &data);
     if (r >= 0) {
-        mg_write(conn, data, r);
+        mg_write(conn, data, r); // send the HTML
         // add javascript for updating the inputs
         mg_printf(conn, "<script>\n");
 
+        if (ctx.userRole != ROLE_ADMIN) {
+            // hide what is reserved to admin
+            mg_printf(conn, "hideAdminZone();\n");
+        } else {
+            mg_printf(conn, "setName('%s');\n", enquoteJs(pv.name).c_str());
+        }
         std::list<std::string> properties = ctx.project->getPropertiesNames();
         mg_printf(conn, "Properties = %s;\n", toJavascriptArray(properties).c_str());
-        mg_printf(conn, "setName('%s');\n", enquoteJs(pv.name).c_str());
         mg_printf(conn, "setSearch('%s');\n", enquoteJs(pv.search).c_str());
         mg_printf(conn, "setUrl('/%s/issues/?%s');\n", urlEncode(ctx.project->getName()).c_str(),
                   pv.generateQueryString().c_str());
@@ -409,6 +414,15 @@ void RHtml::printNavigationIssues(struct mg_connection *conn, const ContextParam
     if (autofocus) input.addAttribute("autofocus", "autofocus");
     form.addContents(input);
     div.addContents(form);
+
+    // advanced search
+    HtmlNode a("a");
+    a.addAttribute("href", "/%s/views", htmlEscape(ctx.project->getName()).c_str());
+    a.addAttribute("class", "sm_advanced_search");
+    a.addContents(_("Advanced Search"));
+    div.addContents(a);
+
+
     div.print(conn);
 }
 
