@@ -922,7 +922,7 @@ std::string convertToRichTextInline(const std::string &in, const char *begin, co
                 } else {
                     sizeBlock = i-block+sizeEnd;
                 }
-                i += sizeEnd-1;
+                i += sizeEnd-1; // -1 because i++ below...
                 std::ostringstream currentBlock;
 
                 if (0 == strcmp("a", htmlTag)) {
@@ -950,6 +950,7 @@ std::string convertToRichTextInline(const std::string &in, const char *begin, co
             // beginning of new block
             insideBlock = true;
             block = i;
+            i += sizeBeginning-1; // -1 because i++ below
 
         } else result += c;
         i++;
