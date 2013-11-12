@@ -5,8 +5,9 @@ addView "Closed issues" \
     filterin status closed \
     colspec id+summary \
 
-addView "Deleted issues" \
-    filterin status deleted \
+addView "My issues" \
+    filterin owner me \
+    sort +status-mtime \
 
 addView "Open issues" \
     default \

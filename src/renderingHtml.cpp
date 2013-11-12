@@ -135,6 +135,7 @@ void RHtml::printPageView(struct mg_connection *conn, const ContextParameters &c
         } else {
             mg_printf(conn, "setName('%s');\n", enquoteJs(pv.name).c_str());
         }
+        if (pv.isDefault) mg_printf(conn, "setDefaultCheckbox();\n");
         std::list<std::string> properties = ctx.project->getPropertiesNames();
         mg_printf(conn, "Properties = %s;\n", toJavascriptArray(properties).c_str());
         mg_printf(conn, "setSearch('%s');\n", enquoteJs(pv.search).c_str());
@@ -432,7 +433,7 @@ void printProjects(struct mg_connection *conn, const std::list<std::pair<std::st
     std::list<std::pair<std::string, std::string> >::const_iterator p;
     for (p=pList.begin(); p!=pList.end(); p++) {
         std::string pname = htmlEscape(p->first.c_str());
-        mg_printf(conn, "<div class=\"sm_link_project\"><a href=\"/%s/issues/\">%s</a> (%s)",
+        mg_printf(conn, "<div class=\"sm_link_project\"><a href=\"/%s/issues/?defaultView=1\">%s</a> (%s)",
                   pname.c_str(), pname.c_str(), _(p->second.c_str()));
         if (p->second == "admin") mg_printf(conn, " <a href=\"%s/config\">edit</a>", pname.c_str());
         mg_printf(conn, "</div>\n");

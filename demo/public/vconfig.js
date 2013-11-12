@@ -65,3 +65,7 @@ function hideAdminZone() {
           divs[i].style.display='none';
     }
 }
+function setDefaultCheckbox() {
+    var input = document.getElementById('sm_default_view');
+    input.checked = true;
+}
