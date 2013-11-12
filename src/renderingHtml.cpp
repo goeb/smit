@@ -897,6 +897,8 @@ std::string convertToRichTextWholeline(const std::string &in, const char *start,
   * @param dropBlockSeparators
   *    If true, the begin and end separators a removed from the final HTML
   *
+  * {{{ ... }}}  surround verbatim blocks (no rich text is done inside)
+  *
   */
 std::string convertToRichTextInline(const std::string &in, const char *begin, const char *end,
                                    bool dropDelimiters, const char *htmlTag, const char *htmlClass)
@@ -908,6 +910,10 @@ std::string convertToRichTextInline(const std::string &in, const char *begin, co
     size_t sizeEnd = strlen(end);
     size_t sizeBeginning = strlen(begin);
     bool insideBlock = false;
+    const char *verbatimBegin = "{{{";
+    const char *verbatimEnd = "}}}";
+    const size_t VerbatimSize = 3;
+    bool insideVerbatim = false;
     while (i<len) {
         char c = in[i];
 
@@ -946,11 +952,21 @@ std::string convertToRichTextInline(const std::string &in, const char *begin, co
                 result += in.substr(block, i-block+1);
                 insideBlock = false;
             }
-        } else if ( (i <= len-sizeBeginning) && (0 == strncmp(begin, in.c_str()+i, sizeBeginning)) ) {
+        } else if ( !insideVerbatim && (i <= len-sizeBeginning) && (0 == strncmp(begin, in.c_str()+i, sizeBeginning)) ) {
             // beginning of new block
             insideBlock = true;
             block = i;
             i += sizeBeginning-1; // -1 because i++ below
+
+        } else if ( (i <= len-VerbatimSize) && (0 == strncmp(verbatimBegin, in.c_str()+i, VerbatimSize)) ) {
+            // beginning of verbatim block
+            insideVerbatim = true;
+            i += VerbatimSize-1; // -1 because i++ below
+
+        } else if ( insideVerbatim && (i <= len-VerbatimSize) && (0 == strncmp(verbatimEnd, in.c_str()+i, VerbatimSize)) ) {
+            // end of verbatim block
+            insideVerbatim = false;
+            i += VerbatimSize-1; // -1 because i++ below
 
         } else result += c;
         i++;
