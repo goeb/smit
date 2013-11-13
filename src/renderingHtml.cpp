@@ -117,6 +117,17 @@ std::string enquoteJs(const std::string &in)
     return out;
 }
 
+std::string htmlEscape(const std::string &value)
+{
+    std::string result = replaceAll(value, '&', "&amp;");
+    result = replaceAll(result, '"', "&quot;");
+    result = replaceAll(result, '<', "&lt;");
+    result = replaceAll(result, '>', "&gt;");
+    result = replaceAll(result, '\'', "&apos;");
+    return result;
+}
+
+
 void RHtml::printPageView(struct mg_connection *conn, const ContextParameters &ctx, const PredefinedView &pv)
 {
     mg_printf(conn, "Content-Type: text/html\r\n\r\n");
@@ -193,18 +204,59 @@ void RHtml::printPageView(struct mg_connection *conn, const ContextParameters &c
 
 }
 
-
-
-std::string htmlEscape(const std::string &value)
+void printLinksToPredefinedViews(struct mg_connection *conn, const ContextParameters &ctx)
 {
-    std::string result = replaceAll(value, '&', "&amp;");
-    result = replaceAll(result, '"', "&quot;");
-    result = replaceAll(result, '<', "&lt;");
-    result = replaceAll(result, '>', "&gt;");
-    result = replaceAll(result, '\'', "&apos;");
-    return result;
+    ProjectConfig c = ctx.getProject().getConfig();
+    std::map<std::string, PredefinedView>::iterator pv;
+    mg_printf(conn, "<table class=\"sm_views\">");
+    mg_printf(conn, "<tr><th>%s</th><th>%s</th></tr>\n", _("Name"), _("Associated Url"));
+    FOREACH(pv, c.predefinedViews) {
+        mg_printf(conn, "<tr><td class=\"sm_views_name\">");
+        mg_printf(conn, "<a href=\"%s\">%s</a>", urlEncode(pv->first).c_str(), htmlEscape(pv->first).c_str());
+        mg_printf(conn, "</td><td class=\"sm_views_link\">");
+        std::string qs = pv->second.generateQueryString();
+        mg_printf(conn, "<a href=\"../issues/?%s\">%s</a>", qs.c_str(), htmlEscape(qs).c_str());
+        mg_printf(conn, "</td></tr>\n");
+    }
+    mg_printf(conn, "<table>\n");
 }
 
+void RHtml::printPageListOfViews(struct mg_connection *conn, const ContextParameters &ctx)
+{
+    mg_printf(conn, "Content-Type: text/html\r\n\r\n");
+
+    std::string path = Database::Db.getRootDir() + "/public/views.html";
+    char *data;
+    int n = loadFile(path.c_str(), &data);
+    if (n >= 0) {
+        VariableNavigator vn(data, n);
+        while (1) {
+            std::string varname = vn.getNextVariable();
+            vn.dumpPrevious(conn);
+            if (varname.empty()) break;
+
+            if (varname == K_SM_RAW_PROJECT_NAME) {
+                mg_printf(conn, "%s", htmlEscape(ctx.project->getName()).c_str());
+
+            } else if (varname == K_SM_DIV_NAVIGATION_GLOBAL) {
+                printNavigationGlobal(conn, ctx);
+
+            } else if (varname == K_SM_DIV_NAVIGATION_ISSUES) {
+                printNavigationIssues(conn, ctx, false);
+
+            } else if (varname == K_SM_DIV_PREDEFINED_VIEWS) {
+                printLinksToPredefinedViews(conn, ctx);
+
+            } else {
+                // unknown variable name
+                mg_printf(conn, "%s", varname.c_str());
+            }
+        }
+
+    } else {
+        LOG_ERROR("Could not load %s", path.c_str());
+    }
+}
 
 #define LOCAL_SIZE 512
 class HtmlNode {
@@ -343,6 +395,15 @@ void RHtml::printNavigationGlobal(struct mg_connection *conn, const ContextParam
         linkToModify.addContents("%s", _("Project configuration"));
         div.addContents(" ");
         div.addContents(linkToModify);
+
+        // link to config of predefined views
+        HtmlNode linkToViews("a");
+        linkToViews.addAttribute("class", "sm_link_views");
+        linkToViews.addAttribute("href", "/%s/views/", htmlEscape(ctx.project->getName()).c_str());
+        linkToViews.addContents("%s", _("Predefined Views"));
+        div.addContents(" ");
+        div.addContents(linkToViews);
+
     }
 
     // signed-in
@@ -576,14 +637,6 @@ std::string getNewSortingSpec(struct mg_connection *conn, const std::string prop
     return result;
 }
 
-void printLinksToPredefinedViews(struct mg_connection *conn, const ContextParameters &ctx)
-{
-    ProjectConfig c = ctx.getProject().getConfig();
-    std::map<std::string, PredefinedView>::iterator pv;
-    FOREACH(pv, c.predefinedViews) {
-        mg_printf(conn, "<a href=\"views/%s\">%s</a><br>\n", urlEncode(pv->first).c_str(), htmlEscape(pv->first).c_str());
-    }
-}
 
 void printScriptUpdateConfig(struct mg_connection *conn, const ContextParameters &ctx)
 {

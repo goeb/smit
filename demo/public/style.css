@@ -245,7 +245,7 @@ a.sm_sort_exclusive { }
     /*background-color: #E0E0E0;*/
     box-shadow: 2px 2px 4px #888888;
 }
-.sm_link_projects, .sm_link_modify_project {
+.sm_link_projects, .sm_link_modify_project, .sm_link_views {
     padding: 3px;
     margin: 0.5em;
     background-color: #E8E8E8;
@@ -255,4 +255,16 @@ a.sm_sort_exclusive { }
     padding: 1em;
 }
 .sm_navigation_global {
+}
+table.sm_views th {
+    text-align: left;
+}
+table.sm_views td {
+    font-size: small;
+    padding-right: 3em;
+}
+.sm_views_name {
+}
+.sm_views_link {
+
 }

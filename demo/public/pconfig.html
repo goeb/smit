@@ -8,14 +8,20 @@
         <script src="/public/pconfig.js"></script>
     </head>
     <body onload="init();">
-        <div style="float: left; margin:1em;">
-            <img src="/public/logo.png" width="120px" alt="Small Issue Tracker Logo">
-        </div>
+        <div style="position: fixed; top: 0; padding-top: 15px; width: 100%; background: white;">
+
+            <div style="float: left; margin:1em;">
+                <img src="/public/logo.png" height="60px" alt="Small Issue Tracker Logo">
+            </div>
 SM_DIV_NAVIGATION_GLOBAL
 SM_DIV_NAVIGATION_ISSUES
+        </div>
         <br>
         <br>
         <br>
+        <br>
+        <br>
+
 <h1>Configuration of project 'SM_RAW_PROJECT_NAME'</h1>
 
         <form method="POST" action="">
@@ -55,11 +61,7 @@ SM_SCRIPT_UPDATE_CONFIG
             <input type="submit" value="Apply Configuration">
             <br>
             <br>
-            <h2>Predefined views</h2>
-SM_DIV_PREDEFINED_VIEWS
-            <a href="views/">Add a new predefined view</a>
             <br>
-
         </form>
     </body>
 </html>

@@ -49,6 +49,7 @@ public:
     static void printPageSignin(struct mg_connection *conn, const char *redirect);
 
     static void printPageView(struct mg_connection *conn, const ContextParameters &ctx, const PredefinedView &pv);
+    static void printPageListOfViews(struct mg_connection *conn, const ContextParameters &ctx);
 };
 
 

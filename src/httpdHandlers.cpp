@@ -82,11 +82,13 @@ void sendHttpHeader500(struct mg_connection *conn)
 }
 
 /**
+  * @redirectUrl
+  *    Must be an absolute path (starting with /)
   * @param otherHeader
   *    Must not include the line-terminating \r\n
   *    May be NULL
   */
-void sendHttpRedirect(struct mg_connection *conn, const char *redirectUrl, const char *otherHeader)
+void sendHttpRedirect(struct mg_connection *conn, const std::string &redirectUrl, const char *otherHeader)
 {
     mg_printf(conn, "HTTP/1.1 303 See Other\r\n");
     const char *scheme = 0;
@@ -99,8 +101,7 @@ void sendHttpRedirect(struct mg_connection *conn, const char *redirectUrl, const
         host ="";
     }
 
-    if (redirectUrl[0] == '/') redirectUrl++;
-    mg_printf(conn, "Location: %s://%s/%s", scheme, host, redirectUrl);
+    mg_printf(conn, "Location: %s://%s%s", scheme, host, redirectUrl.c_str());
 
     if (otherHeader) mg_printf(conn, "\r\n%s", otherHeader);
     mg_printf(conn, "\r\n\r\n");
@@ -572,17 +573,26 @@ void httpGetNewIssueForm(struct mg_connection *conn, const Project &p, User u)
 void httpGetView(struct mg_connection *conn, Project &p, const std::string &view, User u)
 {
     LOG_FUNC();
-
-    std::string viewName = urlDecode(view);
-    PredefinedView pv = p.getPredefinedView(viewName);
-
+    enum RenderingFormat format = getFormat(conn);
     sendHttpHeader200(conn);
 
-    enum RenderingFormat format = getFormat(conn);
-    if (RENDERING_TEXT == format) RText::printView(conn, pv);
-    else {
-        ContextParameters ctx = ContextParameters(u, p);
-        RHtml::printPageView(conn, ctx, pv);
+    if (view.empty()) {
+        // print the list of all views
+        if (RENDERING_TEXT == format) RText::printListOfViews(conn, p);
+        else {
+            ContextParameters ctx = ContextParameters(u, p);
+            RHtml::printPageListOfViews(conn, ctx);
+        }
+    } else {
+        // print the form of the given view
+        std::string viewName = urlDecode(view);
+        PredefinedView pv = p.getPredefinedView(viewName);
+
+        if (RENDERING_TEXT == format) RText::printView(conn, pv);
+        else {
+            ContextParameters ctx = ContextParameters(u, p);
+            RHtml::printPageView(conn, ctx, pv);
+        }
     }
 }
 
@@ -862,11 +872,14 @@ void httpPostEntry(struct mg_connection *conn, Project &p, const std::string & i
   * /public/...             GET        all               public pages, javascript, CSS, logo
   * /signin                 POST       all               sign-in
   * /users                             superadmin        management of users for all projects
-  * /myp/config             GET/POST   project-admin     configuration of the project
-  * /myp/views              GET/POST   user              configuration of predefined views
+  * /myp/config             GET/POST   admin             configuration of the project
+  * /myp/views              GET/POST   admin             list predefined views / create new view
+  * /myp/views/_            GET        admin             form for advanced search / new predefined view
+  * /myp/views/xyz          GET/POST   admin             display / update / rename predefined view
+  * /myp/views/xyz?delete=1 POST       admin             delete predefined view
   * /myp/issues             GET/POST   user              issues of the project / add new issue
   * /myp/issues/new         GET        user              page with a form for submitting new issue
-  * /myp/issues/XYZ         GET/POST   user              a particular issue: get all entries or add a new entry
+  * /myp/issues/123         GET/POST   user              a particular issue: get all entries or add a new entry
   * /myp/entries/x/y/delete POST       user              delete an entry y of issue x
   * /any/other/file         GET        user              any existing file (relatively to the repository)
   */
@@ -908,7 +921,8 @@ int begin_request_handler(struct mg_connection *conn)
     else if ( (resource == "users") && (method == "POST") ) httPostUsers(conn, user);
     else {
         // check if it is a valid project resource such as /myp/issues, /myp/users, /myp/config
-        std::string project = resource;
+        std::string projectUrl = resource;
+        std::string project = urlDecode(projectUrl);
 
         // check if user has at lest read access
         enum Role r = user.getRole(project);
@@ -921,6 +935,9 @@ int begin_request_handler(struct mg_connection *conn)
             Project *p = Database::Db.getProject(project);
             LOG_DEBUG("project %s, %p", project.c_str(), p);
             if (p) {
+                bool isdir = false;
+                if (!uri.empty() && uri[uri.size()-1] == '/') isdir = true;
+
                 resource = popToken(uri, '/');
                 if      ( resource.empty()       && (method == "GET") ) httpGetProject(conn, *p, user);
                 else if ( (resource == "issues") && (method == "GET") && uri.empty() ) httpGetListOfIssues(conn, *p, user);
@@ -930,10 +947,10 @@ int begin_request_handler(struct mg_connection *conn)
                 else if ( (resource == "entries") && (method == "POST") ) return httpDeleteEntry(conn, *p, uri, user);
                 else if ( (resource == "config") && (method == "GET") ) httpGetProjectConfig(conn, *p, user);
                 else if ( (resource == "config") && (method == "POST") ) httpPostProjectConfig(conn, *p, user);
-                else if ( (resource == "views") && (method == "GET") ) httpGetView(conn, *p, uri, user);
+                else if ( (resource == "views") && (method == "GET") && !isdir && uri.empty()) sendHttpRedirect(conn, "/" + projectUrl + "/views/", 0);
+                else if ( (resource == "views") && (method == "GET")) httpGetView(conn, *p, uri, user);
                 else if ( (resource == "views") && (method == "POST") ) httpPostView(conn, *p, uri, user);
                 else handled = false;
-
 
             } else handled = false; // the resource is not a project
         }

@@ -13,6 +13,7 @@ public:
     static void printIssueList(struct mg_connection *conn, std::vector<struct Issue*> issueList, std::list<std::string> colspec);
     static void printIssue(struct mg_connection *conn, const Issue &issue, const std::list<Entry*> &Entries);
     static void printView(struct mg_connection *conn, const PredefinedView &pv);
+    static void printListOfViews(struct mg_connection *conn, const Project &pv);
 };
 
 #endif

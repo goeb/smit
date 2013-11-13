@@ -68,4 +68,10 @@ void RText::printView(struct mg_connection *conn, const PredefinedView &pv)
     mg_printf(conn, "not implemented\r\n");
 
 }
+void RText::printListOfViews(struct mg_connection *conn, const Project &pv)
+{
+    LOG_FUNC();
+    mg_printf(conn, "Content-Type: text/plain\r\n\r\n");
+    mg_printf(conn, "not implemented\r\n");
 
+}
