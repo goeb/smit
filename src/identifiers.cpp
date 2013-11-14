@@ -34,7 +34,7 @@ std::string computeIdBase34(uint8_t *buffer, size_t length)
     sha1sum.assign(md, SHA_DIGEST_LENGTH);
     LOG_DEBUG("sha1=%s", (char*)bin2hex(sha1sum).c_str());
 
-    std::string idBase34 = convert2base34(md, SHA_DIGEST_LENGTH, true);
+    std::string idBase34 = convert2base34(md, SHA_DIGEST_LENGTH);
 
     return idBase34;
 }
@@ -42,7 +42,7 @@ std::string computeIdBase34(uint8_t *buffer, size_t length)
 // vector that for each of 256^0, 256^1, 256^2, ... 256^20
 // gives the decomposition in base 34
 
-const int BASE_34_VECTOR_SIZE = 32;
+const size_t BASE_34_VECTOR_SIZE = 32;
 const int BASE_34 = 34;
 // note that the least significant value is first
 static const int BASE_256_TO_34_VECTOR[SHA_DIGEST_LENGTH+1][BASE_34_VECTOR_SIZE] = {
@@ -94,7 +94,7 @@ void multiply(const int* vector256, int *currentVector, int size, int factor)
     }
 }
 
-std::string convert2base34(const uint8_t *buffer, size_t length, bool skip_io)
+std::string convert2base34(const uint8_t *buffer, size_t length)
 {
     // length must be SHA_DIGEST_LENGTH
 
@@ -113,12 +113,6 @@ std::string convert2base34(const uint8_t *buffer, size_t length, bool skip_io)
     std::string base34result;
     for (i=0; i<BASE_34_VECTOR_SIZE; i++) {
         uint8_t c = alphabet[result[i]];
-        if (skip_io) {
-            // skip letters 'I' and 'O' because they look like
-            // 1 (one) and 0 (zero)
-            if (c >= 'I') c = alphabet[result[i]+1];
-            if (c >= 'O') c = alphabet[result[i]+2];
-        }
         base34result.push_back(c);
     }
     return base34result;
