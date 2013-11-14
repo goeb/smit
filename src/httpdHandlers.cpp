@@ -101,6 +101,8 @@ void sendHttpRedirect(struct mg_connection *conn, const std::string &redirectUrl
         host ="";
     }
 
+    if (redirectUrl[0] != '/') LOG_ERROR("Invalid redirect URL (missing first /): %s", redirectUrl.c_str());
+
     mg_printf(conn, "Location: %s://%s%s", scheme, host, redirectUrl.c_str());
 
     if (otherHeader) mg_printf(conn, "\r\n%s", otherHeader);
@@ -453,7 +455,7 @@ void httpPostProjectConfig(struct mg_connection *conn, Project &p, User u)
         int r = p.modifyConfig(tokens);
         if (r == 0) {
             // success, redirect to
-            std::string redirectUrl = p.getName() + "/config";
+            std::string redirectUrl = "/" + p.getName() + "/config";
             sendHttpRedirect(conn, redirectUrl.c_str(), 0);
 
         } else { // error
@@ -680,7 +682,6 @@ void httpPostView(struct mg_connection *conn, Project &p, const std::string &nam
         }
     }
 
-    std::string redirectUrl = "/" + urlEncode(p.getName()) + "/issues/?" + pv.generateQueryString();
 
     if (pv.name.empty()) {
         // unnamed view
@@ -710,6 +711,7 @@ void httpPostView(struct mg_connection *conn, Project &p, const std::string &nam
 
     } else {
         // redirect to the result of the search
+        std::string redirectUrl = "/" + urlEncode(p.getName()) + "/issues/?" + pv.generateQueryString();
         sendHttpRedirect(conn, redirectUrl.c_str(), 0);
     }
 }
@@ -853,7 +855,7 @@ void httpPostEntry(struct mg_connection *conn, Project &p, const std::string & i
             // error
         } else {
             // HTTP redirect
-            std::string redirectUrl = p.getName() + "/issues/" + id;
+            std::string redirectUrl = "/" + p.getName() + "/issues/" + id;
             sendHttpRedirect(conn, redirectUrl.c_str(), 0);
         }
 
@@ -910,7 +912,7 @@ int begin_request_handler(struct mg_connection *conn)
     else if (user.username.size() == 0) {
 
         // user not logged in
-        if (getFormat(conn) == RENDERING_HTML) redirectToSignin(conn, resource + "/" + uri);
+        if (getFormat(conn) == RENDERING_HTML) redirectToSignin(conn, "/" + resource + "/" + uri);
         else handleUnauthorizedAccess(conn, resource);
 
     }
