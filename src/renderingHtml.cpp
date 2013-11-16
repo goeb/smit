@@ -127,16 +127,40 @@ std::string htmlEscape(const std::string &value)
     return result;
 }
 
+/** Load a page for a specific project
+  *
+  * By default pages (typically HTML pages) are loaded from $REPO/public/ directory.
+  * But the administrator may override this by pages located in $REPO/$PROJECT/html/ directory.
+  *
+  * The caller is responsible for calling 'free' on the returned pointer (if not null).
+  */
+int loadProjectPage(struct mg_connection *conn, const std::string &projectPath, const std::string &page, char **data)
+{
+    // first look for the page in $REPO/$PROJECT/html/
+    std::string path = projectPath + "/html/" + page;
+    int n = loadFile(path.c_str(), data);
+    if (n >= 0) return n;
+
+    // secondly, look at $REPO/public/
+    path = Database::Db.getRootDir() + "/public/" + page;
+    n = loadFile(path.c_str(), data);
+
+    if (n >= 0) return n;
+
+    // no page found. This is an error
+    LOG_ERROR("Page not found: %s", page.c_str());
+    mg_printf(conn, "Missing page: %s", htmlEscape(page).c_str());
+    return n;
+}
 
 void RHtml::printPageView(struct mg_connection *conn, const ContextParameters &ctx, const PredefinedView &pv)
 {
     mg_printf(conn, "Content-Type: text/html\r\n\r\n");
 
-    std::string path = Database::Db.getRootDir() + "/public/viewConfig.html";
     char *data;
-    int r = loadFile(path.c_str(), &data);
-    if (r >= 0) {
-        mg_write(conn, data, r); // send the HTML
+    int n = loadProjectPage(conn, ctx.project->getPath(), "viewConfig.html", &data);
+    if (n >= 0) {
+        mg_write(conn, data, n); // send the HTML
         // add javascript for updating the inputs
         mg_printf(conn, "<script>\n");
 
@@ -198,10 +222,7 @@ void RHtml::printPageView(struct mg_connection *conn, const ContextParameters &c
         mg_printf(conn, "</script>\n");
 
         free(data);
-    } else {
-        LOG_ERROR("Could not load %s", path.c_str());
     }
-
 }
 
 void printLinksToPredefinedViews(struct mg_connection *conn, const ContextParameters &ctx)
@@ -225,9 +246,9 @@ void RHtml::printPageListOfViews(struct mg_connection *conn, const ContextParame
 {
     mg_printf(conn, "Content-Type: text/html\r\n\r\n");
 
-    std::string path = Database::Db.getRootDir() + "/public/views.html";
     char *data;
-    int n = loadFile(path.c_str(), &data);
+    int n = loadProjectPage(conn, ctx.project->getPath(), "views.html", &data);
+
     if (n >= 0) {
         VariableNavigator vn(data, n);
         while (1) {
@@ -252,9 +273,7 @@ void RHtml::printPageListOfViews(struct mg_connection *conn, const ContextParame
                 mg_printf(conn, "%s", varname.c_str());
             }
         }
-
-    } else {
-        LOG_ERROR("Could not load %s", path.c_str());
+        free(data);
     }
 }
 
@@ -501,13 +520,15 @@ void printProjects(struct mg_connection *conn, const std::list<std::pair<std::st
     }
 }
 
+
 void RHtml::printPageProjectList(struct mg_connection *conn, const ContextParameters &ctx, const std::list<std::pair<std::string, std::string> > &pList)
 {
 
     mg_printf(conn, "Content-Type: text/html\r\n\r\n");
 
-    std::string path = Database::Db.getRootDir() + "/public/projects.html";
     char *data;
+    const char *subpath = "/public/projects.html";
+    std::string path = Database::Db.getRootDir() + subpath;
     int n = loadFile(path.c_str(), &data);
     if (n >= 0) {
         VariableNavigator vn(data, n);
@@ -527,9 +548,10 @@ void RHtml::printPageProjectList(struct mg_connection *conn, const ContextParame
                 mg_printf(conn, "%s", varname.c_str());
             }
         }
-
+        free(data);
     } else {
-        LOG_ERROR("Could not load %s", path.c_str());
+        LOG_ERROR("Page not found: %s", subpath);
+        mg_printf(conn, "Missing page: %s", htmlEscape(subpath).c_str());
     }
 }
 
@@ -687,9 +709,9 @@ void RHtml::printProjectConfig(struct mg_connection *conn, const ContextParamete
 {
     mg_printf(conn, "Content-Type: text/html\r\n\r\n");
 
-    std::string path = Database::Db.getRootDir() + "/public/pconfig.html";
     char *data;
-    int n = loadFile(path.c_str(), &data);
+    int n = loadProjectPage(conn, ctx.project->getPath(), "pconfig.html", &data);
+
     if (n >= 0) {
         VariableNavigator vn(data, n);
         while (1) {
@@ -716,9 +738,7 @@ void RHtml::printProjectConfig(struct mg_connection *conn, const ContextParamete
                 mg_printf(conn, "%s", varname.c_str());
             }
         }
-
-    } else {
-        LOG_ERROR("Could not load %s", path.c_str());
+        free(data);
     }
 }
 
@@ -846,10 +866,8 @@ void RHtml::printPageIssueList(struct mg_connection *conn, const ContextParamete
 {
     mg_printf(conn, "Content-Type: text/html\r\n\r\n");
 
-
-    std::string path = Database::Db.getRootDir() + "/public/issues.html";
     char *data;
-    int n = loadFile(path.c_str(), &data);
+    int n = loadProjectPage(conn, ctx.project->getPath(), "issues.html", &data);
     if (n >= 0) {
         VariableNavigator vn(data, n);
         while (1) {
@@ -873,9 +891,7 @@ void RHtml::printPageIssueList(struct mg_connection *conn, const ContextParamete
                 mg_printf(conn, "%s", varname.c_str());
             }
         }
-
-    } else {
-        LOG_ERROR("Could not load %s", path.c_str());
+        free(data);
     }
 }
 
@@ -1199,9 +1215,8 @@ void printIssue(struct mg_connection *conn, const ContextParameters &ctx, const 
 void RHtml::printPageIssue(struct mg_connection *conn, const ContextParameters &ctx, const Issue &issue, const std::list<Entry*> &entries)
 {
     mg_printf(conn, "Content-Type: text/html\r\n\r\n");
-    std::string path = Database::Db.getRootDir() + "/public/issue.html";
     char *data;
-    int n = loadFile(path.c_str(), &data);
+    int n = loadProjectPage(conn, ctx.project->getPath(), "issue.html", &data);
     if (n >= 0) {
         VariableNavigator vn(data, n);
         while (1) {
@@ -1231,9 +1246,7 @@ void RHtml::printPageIssue(struct mg_connection *conn, const ContextParameters &
                 mg_printf(conn, "%s", varname.c_str());
             }
         }
-
-    } else {
-        LOG_ERROR("Could not load %s", path.c_str());
+        free(data);
     }
 }
 
@@ -1242,9 +1255,8 @@ void RHtml::printPageIssue(struct mg_connection *conn, const ContextParameters &
 void RHtml::printPageNewIssue(struct mg_connection *conn, const ContextParameters &ctx)
 {
     mg_printf(conn, "Content-Type: text/html\r\n\r\n");
-    std::string path = Database::Db.getRootDir() + "/public/newIssue.html";
     char *data;
-    int n = loadFile(path.c_str(), &data);
+    int n = loadProjectPage(conn, ctx.project->getPath(), "newIssue.html", &data);
     if (n >= 0) {
         VariableNavigator vn(data, n);
         while (1) {
@@ -1272,9 +1284,7 @@ void RHtml::printPageNewIssue(struct mg_connection *conn, const ContextParameter
                 mg_printf(conn, "%s", varname.c_str());
             }
         }
-
-    } else {
-        LOG_ERROR("Could not load %s", path.c_str());
+        free(data);
     }
 }
 

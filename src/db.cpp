@@ -99,7 +99,7 @@ int Project::load(const char *path, char *name)
     Project *p = new Project;
     LOG_INFO("Loading project %s (%p)...", path, p);
 
-    p->name = name;
+    p->name = urlDecode(name);
     p->path = path;
     p->maxIssueId = 0;
 
