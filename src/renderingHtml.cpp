@@ -1031,13 +1031,11 @@ std::string convertToRichTextInline(const std::string &in, const char *begin, co
         } else if ( (i <= len-VerbatimSize) && (0 == strncmp(verbatimBegin, in.c_str()+i, VerbatimSize)) ) {
             // beginning of verbatim block
             insideVerbatim = true;
-            i += VerbatimSize-1; // -1 because i++ below
-
+            result += c;
         } else if ( insideVerbatim && (i <= len-VerbatimSize) && (0 == strncmp(verbatimEnd, in.c_str()+i, VerbatimSize)) ) {
             // end of verbatim block
             insideVerbatim = false;
-            i += VerbatimSize-1; // -1 because i++ below
-
+            result += c;
         } else result += c;
         i++;
     }
@@ -1414,10 +1412,10 @@ void RHtml::printIssueForm(struct mg_connection *conn, const ContextParameters &
         mg_printf(conn, "<td></td></tr>\n");
     }
     mg_printf(conn, "<tr>\n");
-    mg_printf(conn, "<td class=\"sm_plabel sm_plabel_message\" >%s: </td>\n", ctx.getProject().getLabelOfProperty(K_MESSAGE).c_str());
+    mg_printf(conn, "<td class=\"sm_plabel sm_plabel_message\" >%s: </td>\n", _("Message"));
     mg_printf(conn, "<td colspan=\"3\">\n");
     mg_printf(conn, "<textarea class=\"sm_pinput sm_pinput_message\" placeholder=\"%s\" name=\"%s\" wrap=\"hard\" cols=\"80\">\n",
-              "Enter a message", K_MESSAGE); // remove the '+' of K_MESSAGE
+              _("Enter a message"), K_MESSAGE);
     mg_printf(conn, "</textarea>\n");
     mg_printf(conn, "</td></tr>\n");
 
@@ -1425,7 +1423,7 @@ void RHtml::printIssueForm(struct mg_connection *conn, const ContextParameters &
     mg_printf(conn, "<tr><td></td>\n");
     mg_printf(conn, "<td class=\"sm_longlines\" colspan=\"3\">\n");
     mg_printf(conn, "<label><input type=\"checkbox\" onclick=\"changeWrapping();\">\n");
-    mg_printf(conn, "%s\n", ctx.getProject().getLabelOfProperty("long-line-break-message").c_str());
+    mg_printf(conn, "%s\n", _("Enable long lines"));
     mg_printf(conn, "</label></td></tr>\n");
 
     mg_printf(conn, "<tr><td></td>\n");
