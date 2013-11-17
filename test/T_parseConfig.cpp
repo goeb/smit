@@ -24,6 +24,7 @@ main()
     ASSERT(f!=0);
     char buffer[1000];
     size_t n = fread(buffer, 1, 1000, f);
+    fclose(f);
 
     std::list<std::list<std::string> > tokens = parseConfigTokens(buffer, n);
 
@@ -39,7 +40,7 @@ main()
     }
 
     // check result
-    ASSERT(tokens.size() == 7);
+    ASSERT(tokens.size() == 8);
     std::list<std::list<std::string> >::iterator line;
     line = tokens.begin();
     ASSERT(line->size() == 1);
@@ -64,7 +65,11 @@ main()
 
     line++;
     ASSERT(line->size() == 2);
-    fclose(f);
+
+    line++;
+    ASSERT(line->size() == 2);
+    ASSERT(line->front() == "one-void-value");
+    ASSERT(line->back() == "");
 
     // step 2: parse "parseConfig2.txt"
     f = fopen("parseConfig2.txt", "r");

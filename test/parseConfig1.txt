@@ -20,4 +20,4 @@ multi-line-double-quote "1
 2
 3"
 
-
+one-void-value ""

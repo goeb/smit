@@ -456,7 +456,7 @@ void httpPostProjectConfig(struct mg_connection *conn, Project &p, User u)
         int r = p.modifyConfig(tokens);
         if (r == 0) {
             // success, redirect to
-            std::string redirectUrl = "/" + p.getName() + "/config";
+            std::string redirectUrl = "/" + urlEncode(p.getName()) + "/config";
             sendHttpRedirect(conn, redirectUrl.c_str(), 0);
 
         } else { // error
@@ -553,7 +553,7 @@ void httpGetProject(struct mg_connection *conn, Project &p, User u)
 {
     // redirect to list of issues
     std::string url = "/";
-    url += p.getName() + "/issues";
+    url += urlEncode(p.getName()) + "/issues";
     sendHttpRedirect(conn, url.c_str(), 0);
 }
 
@@ -858,7 +858,7 @@ void httpPostEntry(struct mg_connection *conn, Project &p, const std::string & i
             // error
         } else {
             // HTTP redirect
-            std::string redirectUrl = "/" + p.getName() + "/issues/" + id;
+            std::string redirectUrl = "/" + urlEncode(p.getName()) + "/issues/" + id;
             sendHttpRedirect(conn, redirectUrl.c_str(), 0);
         }
 

@@ -654,7 +654,7 @@ int Project::deletePredefinedView(const std::string &name)
 PredefinedView Project::getDefaultView()
 {
     ScopeLocker scopeLocker(lockerForConfig, LOCK_READ_ONLY);
-    std::map<std::string, PredefinedView>::const_iterator i = config.predefinedViews.find(name);
+    std::map<std::string, PredefinedView>::const_iterator i;
     FOREACH(i, config.predefinedViews) {
         if (i->second.isDefault) return i->second;
     }

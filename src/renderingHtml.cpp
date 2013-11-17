@@ -531,9 +531,9 @@ void printProjects(struct mg_connection *conn, const std::list<std::pair<std::st
 {
     std::list<std::pair<std::string, std::string> >::const_iterator p;
     for (p=pList.begin(); p!=pList.end(); p++) {
-        std::string pname = htmlEscape(p->first.c_str());
+        std::string pname = p->first.c_str();
         mg_printf(conn, "<div class=\"sm_link_project\"><a href=\"/%s/issues/?defaultView=1\">%s</a> (%s)",
-                  pname.c_str(), pname.c_str(), _(p->second.c_str()));
+                  urlEncode(pname).c_str(), htmlEscape(pname).c_str(), _(p->second.c_str()));
         if (p->second == "admin") mg_printf(conn, " <a href=\"%s/config\">edit</a>", pname.c_str());
         mg_printf(conn, "</div>\n");
     }
@@ -864,7 +864,7 @@ void printIssueList(struct mg_connection *conn, const ContextParameters &ctx,
             std::string href_rhs = "";
             if ( (column == "id") || (column == "summary") ) {
                 href_lhs = "<a href=\"";
-                href_lhs = href_lhs + "/" + ctx.getProject().getName() + "/issues/";
+                href_lhs = href_lhs + "/" + urlEncode(ctx.getProject().getName()) + "/issues/";
                 href_lhs = href_lhs + (char*)(*i)->id.c_str() + "\">";
                 href_rhs = "</a>";
             }
@@ -1160,7 +1160,7 @@ void printIssue(struct mg_connection *conn, const ContextParameters &ctx, const 
             // entry was created less than 10 minutes ago, and by same user, and is latest in the issue
             mg_printf(conn, "<a href=\"#\" class=\"sm_delete\" title=\"Delete this entry (at most %d minutes after posting)\" ", (DELETE_DELAY_S/60));
             mg_printf(conn, " onclick=\"deleteEntry('/%s/entries/%s', '%s');return false;\">\n",
-                      ctx.getProject().getName().c_str(), issue.id.c_str(), ee.id.c_str());
+                      urlEncode(ctx.getProject().getName()).c_str(), issue.id.c_str(), ee.id.c_str());
             mg_printf(conn, "&#10008; delete");
             mg_printf(conn, "</a>\n");
         }

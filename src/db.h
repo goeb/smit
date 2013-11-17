@@ -129,8 +129,8 @@ private:
     std::map<std::string, Entry*> entries;
     Locker locker;
     Locker lockerForConfig;
-    std::string name;
-    std::string path;
+    std::string name; //< name of the project, plain text
+    std::string path; //< path to the project, in which the basename is the urlencoded name
     int maxIssueId;
 };
 

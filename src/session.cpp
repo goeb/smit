@@ -6,6 +6,7 @@
 #include "logging.h"
 #include "identifiers.h"
 #include "parseConfig.h"
+#include "global.h"
 
 // static members
 SessionBase SessionBase::SessionDb;
@@ -111,8 +112,7 @@ void UserBase::addUser(User newUser)
     // fill the usersByProject table
     std::map<std::string, enum Role>::iterator r;
     r = newUser.rolesOnProjects.begin();
-    for (r = newUser.rolesOnProjects.begin(); r != newUser.rolesOnProjects.end(); r++) {
-
+    FOREACH(r, newUser.rolesOnProjects) {
         UserDb.usersByProject[r->first].insert(newUser.username);
     }
 }

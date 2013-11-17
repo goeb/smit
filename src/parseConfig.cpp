@@ -40,6 +40,8 @@ std::list<std::list<std::string> > parseConfigTokens(const char *buf, size_t len
     std::list<std::string> line; // current line
     std::string boundary;
     std::string boundedText;
+    bool tokenPending = false;
+
     for (i=0; i<len; i++) {
         char c = buf[i];
         switch (state) {
@@ -49,10 +51,12 @@ std::list<std::list<std::string> > parseConfigTokens(const char *buf, size_t len
                 state = P_READY;
             }
             break;
+
         case P_IN_BACKSLASH:
             if (c == '\n') { // new line escaped
                 // nothing particular here
             } else {
+                tokenPending = true;
                 token += c;
             }
             state = P_READY;
@@ -62,7 +66,9 @@ std::list<std::list<std::string> > parseConfigTokens(const char *buf, size_t len
             if (c == '\\') {
                 state = P_IN_BACKSLASH_IN_DOUBLE_QUOTES;
             } else if (c == '"') {
-                state = P_READY; // end of double-quoted string
+                // end of double-quoted string
+
+                state = P_READY;
             } else token += c;
             break;
         case P_IN_BACKSLASH_IN_DOUBLE_QUOTES:
@@ -93,6 +99,7 @@ std::list<std::list<std::string> > parseConfigTokens(const char *buf, size_t len
                     boundedText.clear();
                     linesOftokens.push_back(line);
                     line.clear();
+                    tokenPending = false;
                 }
             }
             // accumulate character if still in same state
@@ -102,29 +109,32 @@ std::list<std::list<std::string> > parseConfigTokens(const char *buf, size_t len
         case P_READY:
         default:
             if (c == '\n') {
-                if (token.size() > 0) { line.push_back(token); token.clear(); }
+                if (tokenPending) { line.push_back(token); token.clear(); tokenPending = false;}
                 if (line.size() > 0) { linesOftokens.push_back(line); line.clear(); }
             } else if (c == ' ' || c == '\t' || c == '\r') {
                 // current toke is done (because c is a token delimiter)
-                if (token.size() > 0) { line.push_back(token); token.clear(); }
+                if (tokenPending) { line.push_back(token); token.clear(); tokenPending = false;}
             } else if (c == '#') {
-                if (token.size() > 0) { line.push_back(token); token.clear(); }
+                if (tokenPending) { line.push_back(token); token.clear(); tokenPending = false;}
                 state = P_IN_COMMENT;
             } else if (c == '\\') {
                 state = P_IN_BACKSLASH;
             } else if (c == '"') {
+                tokenPending = true;
                 state = P_IN_DOUBLE_QUOTES;
             } else if (c == '<') {
+                tokenPending = true;
                 state = P_IN_BOUNDARY_HEADER;
                 boundary.clear();
             } else {
+                tokenPending = true;
                 token += c;
             }
             break;
         }
     }
     // purge remaininig token and line
-    if (token.size() > 0) line.push_back(token);
+    if (tokenPending) line.push_back(token);
     if (line.size() > 0) linesOftokens.push_back(line);
 
     return linesOftokens;
