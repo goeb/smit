@@ -75,10 +75,11 @@ void sendHttpHeader404(struct mg_connection *conn)
     mg_printf(conn, "404 Not Found\r\n");
 }
 
-void sendHttpHeader500(struct mg_connection *conn)
+void sendHttpHeader500(struct mg_connection *conn, const char *msg)
 {
     mg_printf(conn, "HTTP/1.1 500 Internal Server Error\r\n\r\n");
     mg_printf(conn, "500 Internal Server Error\r\n");
+    mg_printf(conn, "%s\r\n", msg);
 }
 
 /**
@@ -459,7 +460,8 @@ void httpPostProjectConfig(struct mg_connection *conn, Project &p, User u)
             sendHttpRedirect(conn, redirectUrl.c_str(), 0);
 
         } else { // error
-            sendHttpHeader500(conn);
+            LOG_ERROR("Cannot modify project config");
+            sendHttpHeader500(conn, "Cannot modify project config");
         }
     }
 }
@@ -700,7 +702,7 @@ void httpPostView(struct mg_connection *conn, Project &p, const std::string &nam
         int r = p.setPredefinedView(name, pv);
         if (r < 0) {
             LOG_ERROR("Cannot set predefined view");
-            sendHttpHeader500(conn);
+            sendHttpHeader500(conn, "Cannot set predefined view");
             return;
         }
     }

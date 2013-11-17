@@ -101,13 +101,13 @@ void RHtml::printPageSignin(struct mg_connection *conn, const char *redirect)
     std::string path = Database::Db.getRootDir() + "/public/signin.html";
     char *data;
     int r = loadFile(path.c_str(), &data);
-    if (r >= 0) {
+    if (r > 0) {
         mg_write(conn, data, r);
         // add javascript for updating the redirect URL
         mg_printf(conn, "<script>document.getElementById(\"redirect\").value = \"%s\"</script>", redirect);
         free(data);
     } else {
-        LOG_ERROR("Could not load %s", path.c_str());
+        LOG_ERROR("Could not load %s (or empty file)", path.c_str());
     }
 }
 
@@ -139,17 +139,17 @@ int loadProjectPage(struct mg_connection *conn, const std::string &projectPath, 
     // first look for the page in $REPO/$PROJECT/html/
     std::string path = projectPath + "/html/" + page;
     int n = loadFile(path.c_str(), data);
-    if (n >= 0) return n;
+    if (n > 0) return n;
 
     // secondly, look at $REPO/public/
     path = Database::Db.getRootDir() + "/public/" + page;
     n = loadFile(path.c_str(), data);
 
-    if (n >= 0) return n;
+    if (n > 0) return n;
 
     // no page found. This is an error
-    LOG_ERROR("Page not found: %s", page.c_str());
-    mg_printf(conn, "Missing page: %s", htmlEscape(page).c_str());
+    LOG_ERROR("Page not found (or empty): %s", page.c_str());
+    mg_printf(conn, "Missing page (or empty): %s", htmlEscape(page).c_str());
     return n;
 }
 
@@ -158,8 +158,8 @@ void RHtml::printPageView(struct mg_connection *conn, const ContextParameters &c
     mg_printf(conn, "Content-Type: text/html\r\n\r\n");
 
     char *data;
-    int n = loadProjectPage(conn, ctx.project->getPath(), "viewConfig.html", &data);
-    if (n >= 0) {
+    int n = loadProjectPage(conn, ctx.project->getPath(), "view.html", &data);
+    if (n > 0) {
         mg_write(conn, data, n); // send the HTML
         // add javascript for updating the inputs
         mg_printf(conn, "<script>\n");
@@ -249,7 +249,7 @@ void RHtml::printPageListOfViews(struct mg_connection *conn, const ContextParame
     char *data;
     int n = loadProjectPage(conn, ctx.project->getPath(), "views.html", &data);
 
-    if (n >= 0) {
+    if (n > 0) {
         VariableNavigator vn(data, n);
         while (1) {
             std::string varname = vn.getNextVariable();
@@ -530,7 +530,7 @@ void RHtml::printPageProjectList(struct mg_connection *conn, const ContextParame
     const char *subpath = "/public/projects.html";
     std::string path = Database::Db.getRootDir() + subpath;
     int n = loadFile(path.c_str(), &data);
-    if (n >= 0) {
+    if (n > 0) {
         VariableNavigator vn(data, n);
         while (1) {
             std::string varname = vn.getNextVariable();
@@ -550,8 +550,8 @@ void RHtml::printPageProjectList(struct mg_connection *conn, const ContextParame
         }
         free(data);
     } else {
-        LOG_ERROR("Page not found: %s", subpath);
-        mg_printf(conn, "Missing page: %s", htmlEscape(subpath).c_str());
+        LOG_ERROR("Page not found (or empty file): %s", subpath);
+        mg_printf(conn, "Missing page (or empty file): %s", htmlEscape(subpath).c_str());
     }
 }
 
@@ -712,7 +712,7 @@ void RHtml::printProjectConfig(struct mg_connection *conn, const ContextParamete
     char *data;
     int n = loadProjectPage(conn, ctx.project->getPath(), "pconfig.html", &data);
 
-    if (n >= 0) {
+    if (n > 0) {
         VariableNavigator vn(data, n);
         while (1) {
             std::string varname = vn.getNextVariable();
@@ -868,7 +868,7 @@ void RHtml::printPageIssueList(struct mg_connection *conn, const ContextParamete
 
     char *data;
     int n = loadProjectPage(conn, ctx.project->getPath(), "issues.html", &data);
-    if (n >= 0) {
+    if (n > 0) {
         VariableNavigator vn(data, n);
         while (1) {
             std::string varname = vn.getNextVariable();
@@ -1215,7 +1215,7 @@ void RHtml::printPageIssue(struct mg_connection *conn, const ContextParameters &
     mg_printf(conn, "Content-Type: text/html\r\n\r\n");
     char *data;
     int n = loadProjectPage(conn, ctx.project->getPath(), "issue.html", &data);
-    if (n >= 0) {
+    if (n > 0) {
         VariableNavigator vn(data, n);
         while (1) {
             std::string varname = vn.getNextVariable();
@@ -1255,7 +1255,7 @@ void RHtml::printPageNewIssue(struct mg_connection *conn, const ContextParameter
     mg_printf(conn, "Content-Type: text/html\r\n\r\n");
     char *data;
     int n = loadProjectPage(conn, ctx.project->getPath(), "newIssue.html", &data);
-    if (n >= 0) {
+    if (n > 0) {
         VariableNavigator vn(data, n);
         while (1) {
             std::string varname = vn.getNextVariable();

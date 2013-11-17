@@ -577,14 +577,24 @@ PredefinedView Project::getPredefinedView(const std::string &name)
 
 /** create a new or modify an existing predefined view
   * @param name
-  *     empty if creating a new view
+  *     empty or '_' if creating a new view
   *     non-empty if modifying or renaming an existing view
+  * @return
+  *     <0 error
+  * When creating a new view, setting the name of an existing view is forbidden.
   */
 int Project::setPredefinedView(const std::string &name, const PredefinedView &pv)
 {
+    LOG_DEBUG("setPredefinedView: %s -> %s", name.c_str(), pv.name.c_str());
     if (pv.name.empty()) return -3;
+    if (pv.name == "_") return -2; // '_' is reserved
 
     ScopeLocker scopeLocker(lockerForConfig, LOCK_READ_WRITE);
+
+    if (name == "_" && config.predefinedViews.count(pv.name)) {
+        // reject creating a new view with the name of an existing view
+        return -1;
+    }
 
     // update default view
     if (pv.isDefault) {
@@ -605,6 +615,16 @@ int Project::setPredefinedView(const std::string &name, const PredefinedView &pv
     }
 
     // store to file
+    return storeViewsToFile();
+}
+
+
+/**
+  * No mutex handled in here.
+  * Must be called from a mutexed scope (lockerForConfig)
+  */
+int Project::storeViewsToFile()
+{
     std::string fileContents;
     std::map<std::string, PredefinedView>::const_iterator i;
     FOREACH(i, config.predefinedViews) {
@@ -622,7 +642,8 @@ int Project::deletePredefinedView(const std::string &name)
     std::map<std::string, PredefinedView>::iterator i = config.predefinedViews.find(name);
     if (i != config.predefinedViews.end()) {
         config.predefinedViews.erase(i);
-        return 0;
+        return storeViewsToFile();
+
     } else {
         LOG_ERROR("Cannot delete view: %s", name.c_str());
         return -1;

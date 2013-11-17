@@ -122,6 +122,7 @@ public:
 
 private:
     void consolidateIssue(Issue *i);
+    int storeViewsToFile();
 
     ProjectConfig config;
     std::map<std::string, Issue*> issues;
