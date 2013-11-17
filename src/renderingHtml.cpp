@@ -429,7 +429,7 @@ void RHtml::printNavigationGlobal(struct mg_connection *conn, const ContextParam
         // link for modifying project structure
         HtmlNode linkToModify("a");
         linkToModify.addAttribute("class", "sm_link_modify_project");
-        linkToModify.addAttribute("href", "/%s/config", htmlEscape(ctx.project->getName()).c_str());
+        linkToModify.addAttribute("href", "/%s/config", urlEncode(ctx.project->getName()).c_str());
         linkToModify.addContents("%s", _("Project configuration"));
         div.addContents(" ");
         div.addContents(linkToModify);
@@ -437,7 +437,7 @@ void RHtml::printNavigationGlobal(struct mg_connection *conn, const ContextParam
         // link to config of predefined views
         HtmlNode linkToViews("a");
         linkToViews.addAttribute("class", "sm_link_views");
-        linkToViews.addAttribute("href", "/%s/views/", htmlEscape(ctx.project->getName()).c_str());
+        linkToViews.addAttribute("href", "/%s/views/", urlEncode(ctx.project->getName()).c_str());
         linkToViews.addContents("%s", _("Predefined Views"));
         div.addContents(" ");
         div.addContents(linkToViews);
@@ -484,7 +484,7 @@ void RHtml::printNavigationIssues(struct mg_connection *conn, const ContextParam
     div.addAttribute("class", "sm_navigation_project");
     if (ctx.userRole == ROLE_ADMIN || ctx.userRole == ROLE_RW) {
         HtmlNode a("a");
-        a.addAttribute("href", "/%s/issues/new", htmlEscape(ctx.project->getName()).c_str());
+        a.addAttribute("href", "/%s/issues/new", urlEncode(ctx.project->getName()).c_str());
         a.addAttribute("class", "sm_link_new_issue");
         a.addContents("%s", _("Create new issue"));
         div.addContents(a);
@@ -494,7 +494,7 @@ void RHtml::printNavigationIssues(struct mg_connection *conn, const ContextParam
     ProjectConfig config = ctx.project->getConfig();
     FOREACH (pv, config.predefinedViews) {
         HtmlNode a("a");
-        a.addAttribute("href", "/%s/issues/?%s", htmlEscape(ctx.project->getName()).c_str(),
+        a.addAttribute("href", "/%s/issues/?%s", urlEncode(ctx.project->getName()).c_str(),
                        makeQueryString(pv->second).c_str());
         a.addAttribute("class", "sm_predefined_view");
         a.addContents("%s", pv->first.c_str());
@@ -503,7 +503,7 @@ void RHtml::printNavigationIssues(struct mg_connection *conn, const ContextParam
 
     HtmlNode form("form");
     form.addAttribute("class", "sm_searchbox");
-    form.addAttribute("action", "/%s/issues", htmlEscape(ctx.project->getName()).c_str());
+    form.addAttribute("action", "/%s/issues", urlEncode(ctx.project->getName()).c_str());
     form.addAttribute("method", "get");
 
     HtmlNode input("input");
@@ -1167,7 +1167,7 @@ void printIssue(struct mg_connection *conn, const ContextParameters &ctx, const 
 
         // link to raw entry
         mg_printf(conn, "(<a href=\"/%s/entries/%s/%s\" class=\"sm_raw_entry\">%s</a>)\n",
-                  htmlEscape(ctx.getProject().getName()).c_str(),
+                  urlEncode(ctx.getProject().getName()).c_str(),
                   issue.id.c_str(), ee.id.c_str(), _("raw"));
 
 
