@@ -160,7 +160,28 @@ void RHtml::printPageView(struct mg_connection *conn, const ContextParameters &c
     char *data;
     int n = loadProjectPage(conn, ctx.project->getPath(), "view.html", &data);
     if (n > 0) {
-        mg_write(conn, data, n); // send the HTML
+        VariableNavigator vn(data, n);
+        while (1) {
+            std::string varname = vn.getNextVariable();
+            vn.dumpPrevious(conn);
+            if (varname.empty()) break;
+
+            if (varname == K_SM_RAW_PROJECT_NAME) {
+                mg_printf(conn, "%s", htmlEscape(ctx.project->getName()).c_str());
+
+            } else if (varname == K_SM_DIV_NAVIGATION_GLOBAL) {
+                printNavigationGlobal(conn, ctx);
+
+            } else if (varname == K_SM_DIV_NAVIGATION_ISSUES) {
+                printNavigationIssues(conn, ctx, false);
+
+            } else {
+                // unknown variable name
+                mg_printf(conn, "%s", varname.c_str());
+            }
+        }
+        free(data);
+
         // add javascript for updating the inputs
         mg_printf(conn, "<script>\n");
 
@@ -220,8 +241,6 @@ void RHtml::printPageView(struct mg_connection *conn, const ContextParameters &c
 
 
         mg_printf(conn, "</script>\n");
-
-        free(data);
     }
 }
 

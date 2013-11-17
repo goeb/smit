@@ -815,6 +815,7 @@ void parseQueryString(const std::string & queryString, std::map<std::string, std
             std::string key, value;
             parseQueryStringVar(var, key, value);
             if (key.size() > 0) {
+                trimBlanks(value);
                 if (vars.count(key) == 0) {
                     std::list<std::string> L;
                     L.push_back(value);
@@ -863,6 +864,7 @@ void httpPostEntry(struct mg_connection *conn, Project &p, const std::string & i
 
     } else {
         // multipart/form-data
+        // TODO
         LOG_ERROR("Content-Type '%s' not supported", contentType);
     }
 }

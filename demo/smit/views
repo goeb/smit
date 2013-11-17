@@ -1,5 +1,5 @@
 addView "All issues" \
-    sort -mtime \
+    sort -mtime+id \
 
 addView "Closed issues" \
     filterin status closed \
