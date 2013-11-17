@@ -517,7 +517,7 @@ void RHtml::printNavigationIssues(struct mg_connection *conn, const ContextParam
 
     // advanced search
     HtmlNode a("a");
-    a.addAttribute("href", "/%s/views/_", htmlEscape(ctx.project->getName()).c_str());
+    a.addAttribute("href", "/%s/views/_", urlEncode(ctx.project->getName()).c_str());
     a.addAttribute("class", "sm_advanced_search");
     a.addContents(_("Advanced Search"));
     div.addContents(a);

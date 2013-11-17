@@ -100,6 +100,8 @@ int Project::load(const char *path, char *name)
     LOG_INFO("Loading project %s (%p)...", path, p);
 
     p->name = urlDecode(name);
+    LOG_DEBUG("Project name: '%s'", p->name.c_str());
+
     p->path = path;
     p->maxIssueId = 0;
 
@@ -123,7 +125,7 @@ int Project::load(const char *path, char *name)
     p->consolidateIssues();
 
     // store the project in memory
-    Database::Db.projects[name] = p;
+    Database::Db.projects[p->name] = p;
     return 0;
 }
 
@@ -460,40 +462,32 @@ std::map<std::string, PredefinedView> PredefinedView::parsePredefinedViews(std::
             while (! line->empty()) {
                 token = pop(*line);
                 if (token == "filterin" || token == "filterout") {
-                    std::string property = pop(*line);
-                    std::string value = pop(*line);
-                    if (property.empty() || value.empty()) {
+                    if (line->size() < 2) {
                         LOG_ERROR("parsePredefinedViews: Empty property or value for filterin/out");
                         pv.name.clear(); // invalidate this line
                         break;
                     }
+                    std::string property = pop(*line);
+                    std::string value = pop(*line);
                     if (token == "filterin") pv.filterin[property].push_back(value);
                     else pv.filterout[property].push_back(value);
 
+                } else if (token == "default") {
+                    pv.isDefault = true;
+
+                } else if (line->size() == 0) {
+                    LOG_ERROR("parsePredefinedViews: missing parameter after %s", token.c_str());
+                    pv.name.clear(); // invalidate this line
+                    break;
+
                 } else if (token == "colspec") {
                     pv.colspec = pop(*line);
-                    if (pv.colspec.empty()) {
-                        LOG_ERROR("parsePredefinedViews: Empty property or value for filterin/out");
-                        pv.name.clear(); // invalidate this line
-                        break;
-                    }
+
                 } else if (token == "sort") {
                     pv.sort = pop(*line);
-                    if (pv.sort.empty()) {
-                        LOG_ERROR("parsePredefinedViews: Empty property or value for 'sort'");
-                        pv.name.clear(); // invalidate this line
-                        break;
-                    }
 
                 } else if (token == "search") {
                     pv.search = pop(*line);
-                    if (pv.search.empty()) {
-                        LOG_ERROR("parsePredefinedViews: Empty property or value for 'search'");
-                        pv.name.clear(); // invalidate this line
-                        break;
-                    }
-                } else if (token == "default") {
-                    pv.isDefault = true;
 
                 } else {
                     LOG_ERROR("parsePredefinedViews: Unexpected token %s", token.c_str());

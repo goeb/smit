@@ -672,12 +672,12 @@ void httpPostView(struct mg_connection *conn, Project &p, const std::string &nam
         }
         if (filterinPropname.empty() && filteroutPropname.empty()) filterValue.clear();
 
-        if (!filterinPropname.empty() && !filterValue.empty()) {
+        if (!filterinPropname.empty()) {
             pv.filterin[filterinPropname].push_back(filterValue);
             filterinPropname.clear();
             filterValue.clear();
         }
-        if (!filteroutPropname.empty() && !filterValue.empty()) {
+        if (!filteroutPropname.empty()) {
             pv.filterout[filteroutPropname].push_back(filterValue);
             filteroutPropname.clear();
             filterValue.clear();
