@@ -98,7 +98,9 @@ int addProject(int argc, const char **args)
     }
 
     if (!projectName) usage();
-    // TODO
+
+    int r = Project::createProject(repo, projectName);
+    if (r < 0) return 1;
     return 0;
 }
 

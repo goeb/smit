@@ -119,6 +119,7 @@ public:
     int setPredefinedView(const std::string &name, const PredefinedView &pv);
     int deletePredefinedView(const std::string &name);
     PredefinedView getDefaultView();
+    static int createProject(const char *repositoryPath, const char *projectName);
 
 private:
     void consolidateIssue(Issue *i);

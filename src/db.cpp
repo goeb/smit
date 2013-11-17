@@ -64,6 +64,9 @@ int dbLoad(const char * pathToRepository)
     }
     return Database::Db.projects.size();
 }
+
+/** Load an identifier from a file
+  */
 std::string loadRef(const std::string &issuePath, const std::string &refname)
 {
     std::string refvalue;
@@ -655,6 +658,60 @@ PredefinedView Project::getDefaultView()
     return PredefinedView(); // empty name indicates no default view found
 }
 
+/** Create the directory and files for a new project
+  */
+int Project::createProject(const char *repositoryPath, const char *projectName)
+{
+    std::string path = std::string(repositoryPath) + "/" + urlEncode(projectName);
+    int r = mkdir(path.c_str(), S_IRUSR | S_IXUSR | S_IWUSR);
+    if (r != 0) {
+        LOG_ERROR("Could not create directory '%s': %s", path.c_str(), strerror(errno));
+        return -1;
+    }
+
+    // create file 'project'
+    const char* config =
+            "setPropertyLabel id \"#\"\n"
+            "addProperty status select open closed deleted\n"
+            "addProperty owner selectUser\n"
+            ;
+    std::string subpath = path  + "/" + PROJECT_FILE;
+    r = writeToFile(subpath.c_str(), config);
+    if (r != 0) {
+        LOG_ERROR("Could not create file '%s': %s", subpath.c_str(), strerror(errno));
+        return r;
+    }
+
+    // create file 'views'
+    const char* views =
+            "addView \"All Issues\" sort status-mtime+id\n"
+            "addView \"My Issues\" filterin owner me sort status-mtime+id\n"
+            ;
+    subpath = path  + "/" + VIEWS_FILE;
+    r = writeToFile(subpath.c_str(), views);
+    if (r != 0) {
+        LOG_ERROR("Could not create file '%s': %s", subpath.c_str(), strerror(errno));
+        return r;
+    }
+
+    // create directory 'entries'
+    subpath = path + "/" + ENTRIES;
+    r = mkdir(subpath.c_str(), S_IRUSR | S_IXUSR | S_IWUSR);
+    if (r != 0) {
+        LOG_ERROR("Could not create directory '%s': %s", subpath.c_str(), strerror(errno));
+        return -1;
+    }
+
+    // create directory 'html'
+    subpath = path + "/html";
+    r = mkdir(subpath.c_str(), S_IRUSR | S_IXUSR | S_IWUSR);
+    if (r != 0) {
+        LOG_ERROR("Could not create directory '%s': %s", subpath.c_str(), strerror(errno));
+        return -1;
+    }
+
+    return 0;
+}
 
 void Project::loadPredefinedViews(const char *projectPath)
 {
