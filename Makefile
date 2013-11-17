@@ -80,10 +80,12 @@ $(BUILD_DIR)/%.d: %.cpp
 smit: $(OBJS)
 	g++ -o $@ $^ $(LDFLAGS)
 
+CPIO_ARCHIVE = embedded.cpio
+cpio: embedcpio
 embedcpio:
-	find repositories | cpio -o > repositories.cpio
-	cat repositories.cpio >> smit
-	size=`stat -c %s repositories.cpio`; \
+	cd demo && find public | cpio -o > ../$(CPIO_ARCHIVE)
+	cat $(CPIO_ARCHIVE) >> smit
+	size=`stat -c %s $(CPIO_ARCHIVE)`; \
 	python -c "import struct; import sys; sys.stdout.write(struct.pack('I', $$size))" >> smit
 
 

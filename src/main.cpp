@@ -52,7 +52,7 @@ int main(int argc, const char **argv)
     if (argc < 2) usage();
 
     if (0 == strcmp(argv[1], "extract")) {
-        cpioExtractFile(argv[0], ".");
+        cpioExtractFile(argv[0], argv[2], argv[3]);
         exit(0);
     }
 

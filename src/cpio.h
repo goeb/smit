@@ -1,4 +1,4 @@
 #include <stdio.h>
 
-int cpioExtract(FILE *f, long end, const char *basedir);
-int cpioExtractFile(const char *exe, const char *basedir);
+int cpioExtract(FILE *f, const char *src, const char *dst);
+int cpioExtractFile(const char *exe, const char *src, const char *dst);

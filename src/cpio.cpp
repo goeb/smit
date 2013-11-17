@@ -28,10 +28,13 @@ struct header_old_cpio {
 };
 
 /** Extract a cpio archive starting at the given file pointer
-  * @param basedir
+  * @param src
+  *     The source file or directory to extract
+  *
+  * @param dst
   *     The destination directory where the archive shall be extracted.
   */
-int cpioExtract(FILE* f, long end, const char *basedir)
+int cpioExtract(FILE* f, const char *src, const char *dst)
 {
     struct header_old_cpio header;
     while (1) {
@@ -95,10 +98,25 @@ int cpioExtract(FILE* f, long end, const char *basedir)
         LOG_DEBUG("cpioExtract: filepath=%s", filepath);
         if (0 == strcmp(filepath, "TRAILER!!!")) return 0; // end of archive
 
-        // now begins the contents of the size
+        uint32_t contentsSize = (header.c_filesize[0] << 8) + header.c_filesize[1];
+
+        // if file does not match src, then skip this file
+        if (src && strlen(src) && 0 != strncmp(src, filepath, strlen(src))) {
+            if (contentsSize % 2 == 1) contentsSize++; // padding of 1 null byte
+            int r = fseek(f, contentsSize, SEEK_CUR);
+            if (r != 0) {
+                LOG_ERROR("fseek error (file=%s contentsSize=%u): %s", filepath, contentsSize, strerror(errno));
+                return -1;
+            }
+            LOG_DEBUG("Skip: %s", filepath);
+
+            continue;
+        }
+
+        // now begins the contents of the file
 
         // create intermediate directories if needed
-        std::string incrementalDir = basedir;
+        std::string incrementalDir = dst;
         std::string destinationFile = filepath;
         while (destinationFile.size() > 0) {
             size_t i = destinationFile.find_first_of('/');
@@ -132,8 +150,10 @@ int cpioExtract(FILE* f, long end, const char *basedir)
             // we are done with this file.
             // it is a directory, do not proceed below with file contents
             // continue to next file in the archive
+            LOG_DEBUG("Directory done: %s", filepath);
             continue;
         }
+        LOG_DEBUG("Creating file: %s", filepath);
 
         // create the file
         // destinationFile contains the basename of the file
@@ -148,8 +168,7 @@ int cpioExtract(FILE* f, long end, const char *basedir)
         }
 
         // read the data and dump it to the file
-        uint32_t dataToRead = (header.c_filesize[0] << 8) + header.c_filesize[1];
-        uint32_t contentsSize = dataToRead;
+        uint32_t dataToRead = contentsSize;
         LOG_DEBUG("cpioExtract: dataToRead=%u", dataToRead);
         while (dataToRead > 0) {
             const size_t SIZ = 2048;
@@ -173,15 +192,15 @@ int cpioExtract(FILE* f, long end, const char *basedir)
             }
             dataToRead -= n;
             // write to file
-            size_t written = write(extractedFile, buffer, n);
-            if (written != n) {
-                if (written == -1) {
-                    LOG_ERROR("cpioExtract: Cannot write to file '%s': %s", destinationFile.c_str(), strerror((errno)));
+            ssize_t written = write(extractedFile, buffer, n);
 
-                } else {
-                    LOG_ERROR("cpioExtract: short write to file '%s': n=%d, written=%d", destinationFile.c_str(), n, written);
+            if (written == -1) {
+                LOG_ERROR("cpioExtract: Cannot write to file '%s': %s", destinationFile.c_str(), strerror((errno)));
+                close(extractedFile);
+                return -1;
 
-                }
+            } else if ((size_t)written != n) {
+                LOG_ERROR("cpioExtract: short write to file '%s': n=%d, written=%d", destinationFile.c_str(), n, written);
                 close(extractedFile);
                 return -1;
             }
@@ -208,7 +227,7 @@ int cpioExtract(FILE* f, long end, const char *basedir)
   * is found starting from the end.
   */
 
-int cpioExtractFile(const char *file, const char *basedir)
+int cpioExtractFile(const char *file, const char *src, const char *dst)
 {
     LOG_INFO("Extracting archive from %s...", file);
     FILE *f = fopen(file, "rb");
@@ -235,7 +254,7 @@ int cpioExtractFile(const char *file, const char *basedir)
         return -1;
     }
 
-    r = cpioExtract(f, size, basedir);
+    r = cpioExtract(f, src, dst);
     LOG_DEBUG("cpioExtract: result=%d", r);
     fclose(f);
     return r;
