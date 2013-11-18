@@ -18,10 +18,37 @@ User::User()
 {
     superadmin = false;
 }
+std::string User::serialize()
+{
+    std::string result = "addUser ";
+    result += serializeSimpleToken(username) + " ";
+    if (superadmin) result += "superadmin \\\n";
+    if (!hashType.empty()) {
+        result += serializeSimpleToken(hashType) + " ";
+        result += serializeSimpleToken(hashValue) + " \\\n";
+    }
+
+    std::map<std::string, enum Role>::const_iterator role;
+    FOREACH(role, rolesOnProjects) {
+        std::string p = "    " + serializeSimpleToken(role->first) + " ";
+        switch(role->second) {
+        case ROLE_ADMIN: p += "admin"; break;
+        case ROLE_RW: p += "rw"; break;
+        case ROLE_RO: p += "ro"; break;
+        case ROLE_REFERENCED: p += "ref"; break;
+        default:
+            LOG_ERROR("Cannot serialize invalid role for user '%s': %d", username.c_str(), role->second);
+            break;
+        }
+        result += p + " \\\n";
+    }
+    result += "\n\n";
+    return result;
+}
 
 /** Load the users from file storage
   */
-void UserBase::load(const char *repository)
+int UserBase::load(const char *repository)
 {
     std::string file = repository;
     file += "/";
@@ -30,7 +57,7 @@ void UserBase::load(const char *repository)
     int n = loadFile(file.c_str(), &data);
     if (n < 0) {
         LOG_ERROR("Could not load user file.");
-        return;
+        return -1;
     }
 
     std::list<std::list<std::string> > lines = parseConfigTokens(data, n);
@@ -65,7 +92,7 @@ void UserBase::load(const char *repository)
                     else if (role == "rw") u.rolesOnProjects[project] = ROLE_RW;
                     else if (role == "admin") u.rolesOnProjects[project] = ROLE_ADMIN;
                     else {
-                        LOG_ERROR("Invalid role '%s' on project 'project '%s'", role.c_str(), project.c_str());
+                        LOG_ERROR("Invalid role '%s' on project '%s'", role.c_str(), project.c_str());
                         error = true;
                         break; // abort line
                     }
@@ -88,7 +115,33 @@ void UserBase::load(const char *repository)
             }
         }
     }
+    return 0;
 }
+
+int UserBase::initUsersFile(const char *repository)
+{
+    std::string path = repository;
+    path += "/";
+    path += FILE_USERS;
+
+    return writeToFile(path.c_str(), "");
+}
+
+
+int UserBase::store(const char *repository)
+{
+    ScopeLocker(UserDb.locker, LOCK_READ_WRITE);
+    std::string result;
+    std::map<std::string, User*>::iterator uit;
+    FOREACH(uit, UserDb.configuredUsers) {
+        result += uit->second->serialize();
+    }
+    std::string path = repository;
+    path += "/";
+    path += FILE_USERS;
+    return writeToFile(path.c_str(), result);
+}
+
 
 User* UserBase::getUser(const std::string &username)
 {
@@ -105,13 +158,17 @@ void UserBase::addUser(User newUser)
     ScopeLocker(UserDb.locker, LOCK_READ_WRITE);
     User *u = new User;
     *u = newUser;
+
+    // delete old user with same name, if any
+    std::map<std::string, User*>::iterator uit = UserDb.configuredUsers.find(u->username);
+    if (uit != UserDb.configuredUsers.end()) delete uit->second;
+
     UserDb.configuredUsers[u->username] = u;
 
     // add in table usersByProject
 
     // fill the usersByProject table
     std::map<std::string, enum Role>::iterator r;
-    r = newUser.rolesOnProjects.begin();
     FOREACH(r, newUser.rolesOnProjects) {
         UserDb.usersByProject[r->first].insert(newUser.username);
     }

@@ -28,12 +28,15 @@ struct User {
     std::list<std::pair<std::string, std::string> > getProjects();
     bool superadmin;
     User();
+    std::string serialize();
 
 };
 
 class UserBase {
 public:
-    static void load(const char *repository);
+    static int load(const char *repository);
+    static int store(const char *repository);
+    static int initUsersFile(const char *repository);
     static User* getUser(const std::string &username);
     static void addUser(User u);
     static void addUserByProject(std::string project, std::string username);

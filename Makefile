@@ -46,7 +46,7 @@ endif
 
 
 
-all: smit
+all: embedcpio
 
 print:
 	@echo SRCS=$(SRCS)
@@ -82,7 +82,7 @@ smit: $(OBJS)
 
 CPIO_ARCHIVE = embedded.cpio
 cpio: embedcpio
-embedcpio:
+embedcpio: smit demo/public/*
 	cd demo && find public | cpio -o > ../$(CPIO_ARCHIVE)
 	cat $(CPIO_ARCHIVE) >> smit
 	size=`stat -c %s $(CPIO_ARCHIVE)`; \

@@ -14,7 +14,8 @@
 #include "db.h"
 #include "cpio.h"
 #include "session.h"
-
+#include "global.h"
+#include "identifiers.h"
 
 void usage()
 {
@@ -30,9 +31,12 @@ void usage()
            "        Add a new project, with a default structure. The structure\n"
            "        may be modified online by an admin user.\n"
            "\n"
-           "    adduser <user-name> [--passwd <password>] [--project <project-name> <role>] [--superadmin] \\\n"
-           "                        [-d <repository>]\n"
-           "        Add a user on one or several projects. The role must be one of: admin, rw, ro, ref.\n"
+           "    adduser <user-name> [--passwd <password>] [--project <project-name> <role>]\n"
+           "                        [--superadmin] [-d <repository>]\n"
+           "        Add a user on one or several projects.\n"
+           "        The role must be one of: admin, rw, ro, ref.\n"
+           "        --project options are cumulative with previously defined projects roles\n"
+           "        for the same user.\n"
            "\n"
            "    serve [<repository>] [--listen-port <port>]\n"
            "\n"
@@ -74,6 +78,12 @@ int initRepository(const char *exec, const char *directory)
         LOG_ERROR("Error while extracting files. r=%d", r);
         return 3;
     }
+
+    r = UserBase::initUsersFile(directory);
+    if (r < 0) {
+        LOG_ERROR("Abort.");
+        return 1;
+    }
     LOG_INFO("Done.");
     return 0;
 }
@@ -86,8 +96,10 @@ int addProject(int argc, const char **args)
     while (i<argc) {
         const char *arg = args[i]; i++;
         if (0 == strcmp(arg, "-d")) {
-            if (i<argc) repo = args[i];
-            else usage();
+            if (i<argc) {
+                repo = args[i];
+                i++;
+            } else usage();
 
         } else if (!projectName) {
             projectName = arg;
@@ -108,31 +120,91 @@ int addUser(int argc, const char **args)
 {
     int i = 0;
     const char *repo = ".";
-    const char *userName = 0;
+    const char *username = 0;
+    const char *passwd = 0;
+    User u;
+
     while (i<argc) {
         const char *arg = args[i]; i++;
         if (0 == strcmp(arg, "-d")) {
-            if (i<argc) repo = args[i];
-            else usage();
+            if (i<argc) {
+                repo = args[i];
+                i++;
+            } else usage();
 
-        } else if (!userName) {
-            userName = arg;
+        } else if (0 == strcmp(arg, "--passwd")) {
+            if (i<argc) {
+                passwd = args[i];
+                i++;
+            } else usage();
+
+        } else if (0 == strcmp(arg, "--superadmin")) {
+            u.superadmin = true;
+
+        } else if (0 == strcmp(arg, "--project")) {
+            if (i+1<argc) {
+                std::string project = args[i];
+                std::string role = args[i+1];
+                if (role == "ref") u.rolesOnProjects[project] = ROLE_REFERENCED;
+                else if (role == "ro") u.rolesOnProjects[project] = ROLE_RO;
+                else if (role == "rw") u.rolesOnProjects[project] = ROLE_RW;
+                else if (role == "admin") u.rolesOnProjects[project] = ROLE_ADMIN;
+                else if (role == "none") u.rolesOnProjects[project] = ROLE_NONE; // role to be erase below
+                else {
+                    LOG_ERROR("Invalid role '%s' for project '%s'", role.c_str(), project.c_str());
+                    usage();
+                }
+                i += 2;
+            } else usage();
+
+        } else if (!username) {
+            username = arg;
 
         } else {
             usage();
         }
     }
 
-    if (!userName) usage();
-    // TODO
-    return 0;
+    if (!username) usage();
+    u.username = username;
 
+    int r = UserBase::load(repo);
+    if (r < 0) {
+        LOG_ERROR("Cannot loads users of repository '%s'. Aborting.", repo);
+        exit(1);
+    }
+
+    User *old = UserBase::getUser(username);
+    if (old) {
+        old->superadmin = u.superadmin;
+        if (passwd) {
+            old->hashType = "sha1";
+            old->hashValue = getSha1(passwd);
+        }
+        // update modified roles (and keep the others unchanged)
+        std::map<std::string, enum Role>::iterator newRole;
+        FOREACH(newRole, u.rolesOnProjects) {
+            if (newRole->second == ROLE_NONE) old->rolesOnProjects.erase(newRole->first);
+            else old->rolesOnProjects[newRole->first] = newRole->second;
+        }
+        UserBase::addUser(*old);
+
+    } else {
+        UserBase::addUser(u);
+    }
+    r = UserBase::store(repo);
+    if (r < 0) {
+        LOG_ERROR("Abort.");
+        return 1;
+    }
+
+    return 0;
 }
 int serveRepository(int argc, const char **args)
 {
     int i = 0;
     const char *listenPort = "8080";
-    const char *repo = ".";
+    const char *repo = 0;
     while (i<argc) {
         const char *arg = args[i]; i++;
         if (0 == strcmp(arg, "--listen-port")) {
@@ -144,10 +216,20 @@ int serveRepository(int argc, const char **args)
             usage();
         }
     }
+    if (!repo) repo = ".";
 
     // Load all projects
-    dbLoad(repo);
-    UserBase::load(repo);
+    int r = dbLoad(repo);
+    if (r < 0) {
+        LOG_ERROR("Cannot serve repository '%s'. Aborting.", repo);
+        exit(1);
+    }
+    r = UserBase::load(repo);
+    if (r < 0) {
+        LOG_ERROR("Cannot loads users of repository '%s'. Aborting.", repo);
+        exit(1);
+    }
+
     struct mg_context *ctx;
     const char *options[] = {"listening_ports", listenPort, "document_root", repo, NULL};
     struct mg_callbacks callbacks;
