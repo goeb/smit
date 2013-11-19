@@ -32,6 +32,27 @@ typedef __int64 int64_t;
 
 // static members
 
+std::string readMgConn(struct mg_connection *conn, size_t maxSize)
+{
+    std::string postData;
+    const int SIZ = 4096;
+    char postFragment[SIZ+1];
+    int n; // number of bytes read
+
+    while ( (n = mg_read(conn, postFragment, SIZ)) ) {
+        postFragment[n] = 0;
+        LOG_DEBUG("postFragment=%s", postFragment);
+        if (postData.size() > maxSize) {
+            // 10 MByte is too much. overflow. abort.
+            LOG_ERROR("Too much POST data. Abort.");
+            break;
+        }
+        postData += postFragment;
+    }
+    return postData;
+}
+
+
 std::string request2string(struct mg_connection *conn)
 {
     const struct mg_request_info *request_info = mg_get_request_info(conn);
@@ -53,9 +74,13 @@ std::string request2string(struct mg_connection *conn)
         struct mg_request_info::mg_header H = request_info->http_headers[i];
         L += snprintf(content+L, SIZEX-L, "header: %30s = %s\n", H.name, H.value);
     }
+
+
     L += snprintf(content+L, SIZEX-L, "</pre>");
 
-    return std::string(content);
+    std::string postData = readMgConn(conn, 10*1024*1024);
+
+    return std::string(content) + postData;
 
 }
 
@@ -412,26 +437,6 @@ std::list<std::list<std::string> > convertPostToTokens(std::string &postData)
     }
     return tokens;
 }
-std::string readMgConn(struct mg_connection *conn, size_t maxSize)
-{
-    std::string postData;
-    const int SIZ = 4096;
-    char postFragment[SIZ+1];
-    int n; // number of bytes read
-
-    while ( (n = mg_read(conn, postFragment, SIZ)) ) {
-        postFragment[n] = 0;
-        LOG_DEBUG("postFragment=%s", postFragment);
-        if (postData.size() > maxSize) {
-            // 10 MByte is too much. overflow. abort.
-            LOG_ERROR("Too much POST data. Abort.");
-            break;
-        }
-        postData += postFragment;
-    }
-    return postData;
-}
-
 
 void httpPostProjectConfig(struct mg_connection *conn, Project &p, User u)
 {
@@ -753,7 +758,7 @@ void httpGetIssue(struct mg_connection *conn, Project &p, const std::string &iss
   */
 int httpDeleteEntry(struct mg_connection *conn, Project &p, std::string details, User u)
 {
-    LOG_DEBUG("httpPostEntry: project=%s, details=%s", p.getName().c_str(), details.c_str());
+    LOG_DEBUG("httpDeleteEntry: project=%s, details=%s", p.getName().c_str(), details.c_str());
 
     std::string issueId = popToken(details, '/');
     std::string entryId = popToken(details, '/');
@@ -796,8 +801,138 @@ void parseQueryStringVar(const std::string &var, std::string &key, std::string &
     value = urlDecode(value);
 }
 
+void parseMultipartAndStoreUploadedFiles(const std::string &data, std::string boundary,
+                                         std::map<std::string, std::list<std::string> > &vars,
+                                         const std::string &tmpDirectory)
+{
+    const char *p = data.data();
+    size_t len = data.size();
+    const char *end = p + len;
 
-void parseQueryString(const std::string & queryString, std::map<std::string, std::list<std::string> > &vars)
+    boundary = "--" + boundary; // prefix with --
+
+    // normally, data starts with boundary
+    if ((p+2<=end) && (0 == strncmp(p, "\r\n", 2)) ) p += 2;
+    if ((p+boundary.size()<=end) && (0 == strncmp(p, boundary.c_str(), boundary.size())) ) {
+        p += boundary.size();
+    }
+
+    boundary.insert(0, "\r\n"); // add CRLF in the prefix
+
+    while (1) {
+        if ((p+2<=end) &&  (0 == strncmp(p, "\r\n", 2)) ) p += 2; // skip CRLF
+        // line expected:
+        // Content-Disposition: form-data; name="summary"
+        // or
+        // Content-Disposition: form-data; name="file"; filename="accum.png"
+        // Content-Type: image/png
+
+        // get end of line
+        const char *endOfLine = p;
+        while ( (endOfLine+2<=end) && (0 != strncmp(endOfLine, "\r\n", 2)) ) endOfLine++;
+        if (endOfLine+2>end) {
+            LOG_ERROR("Malformed multipart (0). Abort.");
+            return;
+        }
+        std::string line(p, endOfLine-p); // get the line
+        LOG_DEBUG("line=%s", line.c_str());
+
+        // get name
+        const char *nameToken = "name=\"";
+        size_t namePos = line.find(nameToken);
+        if (namePos == std::string::npos) {
+            LOG_ERROR("Malformed multipart. Missing name.");
+            return;
+        }
+        std::string name = line.substr(namePos+strlen(nameToken));
+        // remove ".*
+        size_t quotePos = name.find('"');
+        if (quotePos == std::string::npos) {
+            LOG_ERROR("Malformed multipart. Missing quote after name.");
+            return;
+        }
+        name = name.substr(0, quotePos);
+
+        // get filename (optional)
+        // filename containing " (double-quote) is not supported
+        const char *filenameToken = "filename=\"";
+        size_t filenamePos = line.find(filenameToken);
+        std::string filename;
+        if (filenamePos != std::string::npos) {
+            filename = line.substr(filenamePos+strlen(filenameToken));
+            // remove ".*
+            quotePos = filename.find('"');
+            if (quotePos == std::string::npos) {
+                LOG_ERROR("Malformed multipart. Missing quote after name.");
+                return;
+            }
+            filename = filename.substr(0, quotePos);
+        }
+
+        p = endOfLine;
+        if ((p+2<=end) &&  (0 == strncmp(p, "\r\n", 2)) ) p += 2; // skip CRLF
+
+        // get contents
+        const char *endOfPart = strstr(p, boundary.c_str());
+        if (endOfPart >= end) {
+            LOG_ERROR("Malformed multipart. Premature end.");
+            return;
+        }
+        if (filename.empty()) {
+            std::string value(p, endOfPart-p);
+            trimBlanks(value);
+            vars[name].push_back(value);
+
+            LOG_DEBUG("name=%s, value=%s", name.c_str(), value.c_str());
+        } else {
+            // skip line Content-Type
+            endOfLine = p;
+            while ( (endOfLine+2<=end) && (0 != strncmp(endOfLine, "\r\n", 2)) ) endOfLine++;
+            if (endOfLine+2>end) {
+                LOG_ERROR("Malformed multipart (0). Abort.");
+                return;
+            }
+            p = endOfLine;
+            if ((p+2<=end) &&  (0 == strncmp(p, "\r\n", 2)) ) p += 2; // skip CRLF
+            if ((p+2<=end) &&  (0 == strncmp(p, "\r\n", 2)) ) p += 2; // skip CRLF
+
+            size_t size = endOfPart-p;
+            // get the file extension
+            size_t extPos = filename.find_last_of('.');
+            std::string extension;
+            if (extPos != std::string::npos) extension = filename.substr(extPos);
+
+            std::string sha1 = getSha1(p, size);
+            std::string basename = sha1 + extension;
+
+            // store to tmpDirectory
+            std::string path = tmpDirectory;
+            path += "/";
+            path += basename;
+            int r = writeToFile(path.c_str(), p, size);
+            if (r < 0) {
+                LOG_ERROR("Could not store uploaded file.");
+                return;
+            }
+
+            vars[name].push_back(basename);
+            LOG_DEBUG("name=%s, basename=%s, size=%d", name.c_str(), basename.c_str(), size);
+        }
+
+        p = endOfPart;
+        p += boundary.size();
+        if (p >= end) {
+            LOG_ERROR("Malformed multipart. (4).");
+            return;
+        }
+        if ( (p+4<=end) && (0 == strncmp(p, "--\r\n", 4)) ) {
+            // end of multipart
+            break;
+        }
+    }
+}
+
+void parseQueryString(const std::string &queryString, std::map<std::string, std::list<std::string> > &vars)
 {
     size_t n = queryString.size();
     size_t i;
@@ -829,6 +964,7 @@ void parseQueryString(const std::string & queryString, std::map<std::string, std
 }
 
 
+#define MAX_SIZE_UPLOAD (10*1024*1024)
 
 /** Handle the posting of an entry
   * If issueId is empty, then a new issue is created.
@@ -840,6 +976,8 @@ void httpPostEntry(struct mg_connection *conn, Project &p, const std::string & i
         sendHttpHeader403(conn);
         return;
     }
+    const char *multipart = "multipart/form-data";
+    std::map<std::string, std::list<std::string> > vars;
 
     const char *contentType = mg_get_header(conn, "Content-Type");
     if (0 == strcmp("application/x-www-form-urlencoded", contentType)) {
@@ -847,26 +985,46 @@ void httpPostEntry(struct mg_connection *conn, Project &p, const std::string & i
         // post_data is "var1=val1&var2=val2...".
         // multiselect is like: "tags=v4.1&tags=v5.0" (same var repeated)
 
-        std::string postData = readMgConn(conn, 10*1024*1024);
-        std::map<std::string, std::list<std::string> > vars;
+        std::string postData = readMgConn(conn, MAX_SIZE_UPLOAD);
         parseQueryString(postData, vars);
 
-        std::string id = issueId;
-        if (id == "new") id = ""; // TODO check if conflict between "new" and issue ids.
-        int r = p.addEntry(vars, id, u.username);
-        if (r != 0) {
-            // error
-        } else {
-            // HTTP redirect
-            std::string redirectUrl = "/" + urlEncode(p.getName()) + "/issues/" + id;
-            sendHttpRedirect(conn, redirectUrl.c_str(), 0);
+    } else if (0 == strncmp(multipart, contentType, strlen(multipart))) {
+        //std::string x = request2string(conn);
+        //mg_printf(conn, "%s", x.c_str());
+
+        // extract the boundary
+        const char *b = "boundary=";
+        const char *p = strcasestr(contentType, b);
+        if (!p) {
+            LOG_ERROR("Missing boundary in multipart form data");
+            return;
         }
+        p += strlen(b);
+        std::string boundary = p;
+        LOG_DEBUG("Boundary: %s", boundary.c_str());
+
+        std::string postData = readMgConn(conn, MAX_SIZE_UPLOAD);
+        parseMultipartAndStoreUploadedFiles(postData, boundary, vars, "/tmp"); // TODO /tmp
 
     } else {
         // multipart/form-data
         // TODO
         LOG_ERROR("Content-Type '%s' not supported", contentType);
     }
+
+    std::string id = issueId;
+    if (id == "new") id = ""; // TODO check if conflict between "new" and issue ids.
+    int status = p.addEntry(vars, id, u.username);
+    if (status != 0) {
+        // error
+        sendHttpHeader500(conn, "Cannot add entry");
+
+    } else {
+        // HTTP redirect
+        std::string redirectUrl = "/" + urlEncode(p.getName()) + "/issues/" + id;
+        sendHttpRedirect(conn, redirectUrl.c_str(), 0);
+    }
+
 }
 
 

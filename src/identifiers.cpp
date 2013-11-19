@@ -117,12 +117,17 @@ std::string convert2base34(const uint8_t *buffer, size_t length)
     }
     return base34result;
 }
-std::string getSha1(const std::string &data)
+
+std::string getSha1(const char *data, size_t len)
 {
     unsigned char md[SHA_DIGEST_LENGTH];
-    SHA1((uint8_t*)data.c_str(), data.size(), md);
-
+    SHA1((uint8_t*)data, len, md);
     ustring sha1sum;
     sha1sum.assign(md, SHA_DIGEST_LENGTH);
     return bin2hex(sha1sum);
+}
+
+std::string getSha1(const std::string &data)
+{
+    return getSha1(data.data(), data.size());
 }

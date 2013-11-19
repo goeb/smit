@@ -1313,7 +1313,7 @@ void RHtml::printIssueForm(struct mg_connection *conn, const ContextParameters &
     // TODO if access rights granted
 
     // enctype=\"multipart/form-data\"
-    mg_printf(conn, "<form method=\"post\"  class=\"sm_issue_form\" id=\"edit_form\">");
+    mg_printf(conn, "<form enctype=\"multipart/form-data\" method=\"post\"  class=\"sm_issue_form\" id=\"edit_form\">");
     // print the fields of the issue in a two-column table
 
     // The form is made over a table with 4 columns.
@@ -1444,6 +1444,14 @@ void RHtml::printIssueForm(struct mg_connection *conn, const ContextParameters &
     mg_printf(conn, "<label><input type=\"checkbox\" onclick=\"changeWrapping();\">\n");
     mg_printf(conn, "%s\n", _("Enable long lines"));
     mg_printf(conn, "</label></td></tr>\n");
+
+
+    // add file upload input
+    mg_printf(conn, "<tr>\n");
+    mg_printf(conn, "<td class=\"sm_plabel sm_plabel_file\" >%s: </td>\n", _("File Upload"));
+    mg_printf(conn, "<td colspan=\"3\">\n");
+    mg_printf(conn, "<input type=\"file\" name=\"+file\">\n");
+    mg_printf(conn, "</td></tr>\n");
 
     mg_printf(conn, "<tr><td></td>\n");
     mg_printf(conn, "<td colspan=\"3\">\n");

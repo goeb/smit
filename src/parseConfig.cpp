@@ -198,6 +198,11 @@ int loadFile(const char *filepath, char **data)
   */
 int writeToFile(const char *filepath, const std::string &data)
 {
+    return writeToFile(filepath, data.data(), data.size());
+}
+
+int writeToFile(const char *filepath, const char *data, size_t len)
+{
     int result = 0;
     mode_t mode = O_CREAT | O_TRUNC | O_WRONLY;
     int flags = S_IRUSR;
@@ -210,8 +215,8 @@ int writeToFile(const char *filepath, const std::string &data)
         return -1;
     }
 
-    size_t n = write(f, data.c_str(), data.size());
-    if (n != data.size()) {
+    size_t n = write(f, data, len);
+    if (n != len) {
         LOG_ERROR("Could not write all data, incomplete file '%s': (%d) %s",
                   filepath, errno, strerror(errno));
         return -1;
