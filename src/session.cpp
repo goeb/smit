@@ -30,7 +30,7 @@ std::string User::serialize()
 
     std::map<std::string, enum Role>::const_iterator role;
     FOREACH(role, rolesOnProjects) {
-        std::string p = "    " + serializeSimpleToken(role->first) + " ";
+        std::string p = "    project " + serializeSimpleToken(role->first) + " ";
         switch(role->second) {
         case ROLE_ADMIN: p += "admin"; break;
         case ROLE_RW: p += "rw"; break;
