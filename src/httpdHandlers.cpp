@@ -40,15 +40,16 @@ std::string readMgConn(struct mg_connection *conn, size_t maxSize)
     int n; // number of bytes read
 
     while ( (n = mg_read(conn, postFragment, SIZ)) ) {
-        postFragment[n] = 0;
-        LOG_DEBUG("postFragment=%s", postFragment);
+        LOG_DEBUG("postFragment size=%d", n);
         if (postData.size() > maxSize) {
             // 10 MByte is too much. overflow. abort.
             LOG_ERROR("Too much POST data. Abort.");
             break;
         }
-        postData += postFragment;
+        postData.append(std::string(postFragment, n));
     }
+    LOG_DEBUG("postData size=%d", postData.size());
+
     return postData;
 }
 
@@ -873,8 +874,16 @@ void parseMultipartAndStoreUploadedFiles(const std::string &data, std::string bo
         if ((p+2<=end) &&  (0 == strncmp(p, "\r\n", 2)) ) p += 2; // skip CRLF
 
         // get contents
-        const char *endOfPart = strstr(p, boundary.c_str());
-        if (endOfPart >= end) {
+        // search the end
+        const char *endOfPart = p;
+        while (endOfPart <= end-boundary.size()) {
+            if (0 == memcmp(endOfPart, boundary.data(), boundary.size())) {
+                // boundary found
+                break;
+            }
+            endOfPart++;
+        }
+        if (endOfPart > end-boundary.size()) {
             LOG_ERROR("Malformed multipart. Premature end.");
             return;
         }
