@@ -1206,6 +1206,7 @@ void printIssue(struct mg_connection *conn, const ContextParameters &ctx, const 
             mg_printf(conn, "<div class=\"sm_entry_files\">\n");
             std::list<std::string>::iterator f;
             FOREACH(f, files->second) {
+                if (f->size()>29) std::string shortName = f->substr(29); // 29 fist characters are the sha1 prefix
                 mg_printf(conn, "<div class=\"sm_entry_file\">\n");
                 mg_printf(conn, "<a href=\"../%s/%s\" class=\"sm_entry_file\">", K_UPLOADED_FILES_DIR, urlEncode(*f).c_str());
                 if (isImage(*f)) {
@@ -1490,7 +1491,7 @@ void RHtml::printIssueForm(struct mg_connection *conn, const ContextParameters &
     mg_printf(conn, "<tr>\n");
     mg_printf(conn, "<td class=\"sm_plabel sm_plabel_file\" >%s: </td>\n", _("File Upload"));
     mg_printf(conn, "<td colspan=\"3\">\n");
-    mg_printf(conn, "<input type=\"file\" name=\"%s\">\n", K_FILE);
+    mg_printf(conn, "<input type=\"file\" name=\"%s\" class=\"sm_input_file\" onchange=\"updateFileInput('sm_input_file');\">\n", K_FILE);
     mg_printf(conn, "</td></tr>\n");
 
     mg_printf(conn, "<tr><td></td>\n");

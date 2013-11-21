@@ -887,15 +887,18 @@ void parseMultipartAndStoreUploadedFiles(const std::string &data, std::string bo
             LOG_ERROR("Malformed multipart. Premature end.");
             return;
         }
-        if (filename.empty()) {
+        if (filenamePos == std::string::npos) {
+            // regular property of the form
             std::string value(p, endOfPart-p);
             trimBlanks(value);
             vars[name].push_back(value);
 
             LOG_DEBUG("name=%s, value=%s", name.c_str(), value.c_str());
+
         } else {
+            // uploaded file
             // skip line Content-Type
-            endOfLine = p;
+            endOfLine = p; // initialize pointer
             while ( (endOfLine+2<=end) && (0 != strncmp(endOfLine, "\r\n", 2)) ) endOfLine++;
             if (endOfLine+2>end) {
                 LOG_ERROR("Malformed multipart (0). Abort.");
@@ -905,28 +908,31 @@ void parseMultipartAndStoreUploadedFiles(const std::string &data, std::string bo
             if ((p+2<=end) &&  (0 == strncmp(p, "\r\n", 2)) ) p += 2; // skip CRLF
             if ((p+2<=end) &&  (0 == strncmp(p, "\r\n", 2)) ) p += 2; // skip CRLF
 
-            size_t size = endOfPart-p;
-            // get the file extension
-            size_t lastSlash = filename.find_last_of("\\/");
-            if (lastSlash != std::string::npos) filename = filename.substr(lastSlash);
+            size_t size = endOfPart-p; // size of the file
+            if (size) {
+                // get the file extension
+                size_t lastSlash = filename.find_last_of("\\/");
+                if (lastSlash != std::string::npos) filename = filename.substr(lastSlash);
 
-            std::string id = getBase64Id((uint8_t*)p, size);
-            std::string basename = id + "." + filename;
+                std::string id = getBase64Id((uint8_t*)p, size);
+                std::string basename = id + "." + filename;
 
-            LOG_DEBUG("New filename: %s", basename.c_str());
+                LOG_DEBUG("New filename: %s", basename.c_str());
 
-            // store to tmpDirectory
-            std::string path = tmpDirectory;
-            path += "/";
-            path += basename;
-            int r = writeToFile(path.c_str(), p, size);
-            if (r < 0) {
-                LOG_ERROR("Could not store uploaded file.");
-                return;
-            }
+                // store to tmpDirectory
+                std::string path = tmpDirectory;
+                path += "/";
+                path += basename;
+                int r = writeToFile(path.c_str(), p, size);
+                if (r < 0) {
+                    LOG_ERROR("Could not store uploaded file.");
+                    return;
+                }
 
-            vars[name].push_back(basename);
-            LOG_DEBUG("name=%s, basename=%s, size=%d", name.c_str(), basename.c_str(), size);
+                vars[name].push_back(basename);
+                LOG_DEBUG("name=%s, basename=%s, size=%d", name.c_str(), basename.c_str(), size);
+
+            } // else: empty file, ignore.
         }
 
         p = endOfPart;

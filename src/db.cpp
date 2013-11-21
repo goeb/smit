@@ -1137,7 +1137,7 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
 
     // generate a id for this entry
     std::string id;
-    id = computeIdBase34((uint8_t*)data.c_str(), data.size());
+    id = getBase64Id((uint8_t*)data.c_str(), data.size());
 
     LOG_DEBUG("new entry: %s", id.c_str());
 

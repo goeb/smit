@@ -1,27 +1,3 @@
-
-// The HTML page must include the smit_data
-// <script id="smit_data" type="application/json">
-//      {"smit_user": "Mr. John", "smit_issueNumber": 34}
-// </script>
-// 
-// and where to display this information:
-// Logged in as <span class="smit_user">nobody</span>
-
-function update(classname, value)
-{
-    var els = document.getElementsByClassName(classname);
-    for(var i=0; i<els.length; i++) els[i].innerHTML = value;
-}
-
-function updateFields()
-{
-    var data = document.getElementById("sm_data");
-    if (data) {
-        var data = JSON.parse(data.innerHTML);
-        for(var key in data) update(key, data[key]);
-    }
-}
-
 function changeWrapping(){
     var msg = document.getElementsByName('+message')[0];
     if (msg.wrap != "off") msg.wrap = "off";
@@ -45,4 +21,25 @@ function deleteEntry(urlPrefix, entryId)
     }
 }
 
-window.onload = updateFields;
+function updateFileInput(classname) {
+    alert("updateFileInput");
+    var els = document.getElementsByClassName(classname);
+    alert("length(els)="+length(els));
+    if (length(els) > 0) {
+        var i;
+        var oneSlotFree = false;
+        for (i=0; i<length, i++) {
+            if (length(els[i].value) == 0) oneSlotFree = true;
+        }
+    alert("oneSlotFree="+oneSlotFree);
+        if (!oneSlotFree) {
+            cell = els[0].parent;
+            input = document.createElement('input');
+            input.type = 'file';
+            input.class = 'sm_input_file';
+            input.onchange = "updateFileInput('sm_input_file')";
+            input.name = '+file'; // same as C++ K_FILE
+            cell.appendChild(input);
+        }
+    }
+}
