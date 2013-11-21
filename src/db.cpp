@@ -1082,9 +1082,9 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
         while (entryProperty != properties.end()) {
             bool doErase = false;
 
-            if (entryProperty->first == K_MESSAGE) {
+            if ( (entryProperty->first == K_MESSAGE) || (entryProperty->first == K_FILE) )  {
                 if (entryProperty->second.size() && entryProperty->second.front().empty()) {
-                    // erase if message is emtpy
+                    // erase if message or file is emtpy
                     doErase = true;
                 }
             } else {
@@ -1195,6 +1195,20 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
     // update _HEAD
     r = writeHead(issueId, id);
 
+    // move the uploaded files (if any)
+    std::map<std::string, std::list<std::string> >::iterator files = e->properties.find(K_FILE);
+    if (files != e->properties.end()) {
+        std::list<std::string>::iterator f;
+        FOREACH(f, files->second) {
+            std::string oldpath = path + "/tmp/" + *f;
+            std::string newpath = path + "/" + K_UPLOADED_FILES_DIR + "/" + *f;
+            int r = rename(oldpath.c_str(), newpath.c_str());
+            if (r != 0) {
+                LOG_ERROR("Cannot move file '%s' -> '%s': %s", oldpath.c_str(), newpath.c_str(), strerror(errno));
+            }
+        }
+    }
+
     return r;
 }
 
@@ -1239,6 +1253,8 @@ std::list<std::string> Project::getPropertiesNames() const
   * @return
   *     0 if success
   *     <0 in case of error
+  *
+  * Uploaded files are not deleted.
   *
   */
 

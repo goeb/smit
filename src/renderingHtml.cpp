@@ -1089,6 +1089,25 @@ std::string convertToRichText(const std::string &raw)
 
 }
 
+/** return if a file is an image, based on the file extension
+  *
+  * Supported extensions: gif, jpg, jpeg, png, svg
+  *
+  */
+bool isImage(const std::string &filename)
+{
+    std::string extension;
+    size_t p = filename.find_last_of('.');
+    if (p == std::string::npos) return false;
+    extension = filename.substr(p);
+    if (extension == ".gif") return true;
+    if (extension == ".png") return true;
+    if (extension == ".jpg") return true;
+    if (extension == ".jpeg") return true;
+    if (extension == ".svg") return true;
+    return false;
+}
+
 void printIssue(struct mg_connection *conn, const ContextParameters &ctx, const Issue &issue, const std::list<Entry*> &entries)
 {
     mg_printf(conn, "<div class=\"sm_issue\">");
@@ -1181,6 +1200,27 @@ void printIssue(struct mg_connection *conn, const ContextParameters &ctx, const 
         mg_printf(conn, "</div>\n"); // end message
 
 
+        // uploaded files
+        std::map<std::string, std::list<std::string> >::iterator files = ee.properties.find(K_FILE);
+        if (files != ee.properties.end()) {
+            mg_printf(conn, "<div class=\"sm_entry_files\">\n");
+            std::list<std::string>::iterator f;
+            FOREACH(f, files->second) {
+                mg_printf(conn, "<div class=\"sm_entry_file\">\n");
+                mg_printf(conn, "<a href=\"../%s/%s\" class=\"sm_entry_file\">", K_UPLOADED_FILES_DIR, urlEncode(*f).c_str());
+                if (isImage(*f)) {
+                    mg_printf(conn, "<img src=\"../files/%s\" class=\"sm_entry_file\"> ", urlEncode(*f).c_str());
+                }
+                mg_printf(conn, "%s", htmlEscape(*f).c_str());
+                mg_printf(conn, "</a>");
+                mg_printf(conn, "</div>\n"); // end file
+            }
+            mg_printf(conn, "</div>\n"); // end files
+        }
+
+
+
+
         // print other modified properties
         // -------------------------------------------------
         std::ostringstream otherProperties;
@@ -1196,9 +1236,9 @@ void printIssue(struct mg_connection *conn, const ContextParameters &ctx, const 
             firstInList = false;
         }
 
+        // other properties
         FOREACH(f, orderedProperties) {
             std::string pname = *f;
-//            if (pname == K_MESSAGE) continue; // already processed
 
             std::map<std::string, std::list<std::string> >::const_iterator p = ee.properties.find(pname);
             if (p != ee.properties.end()) {
@@ -1450,7 +1490,7 @@ void RHtml::printIssueForm(struct mg_connection *conn, const ContextParameters &
     mg_printf(conn, "<tr>\n");
     mg_printf(conn, "<td class=\"sm_plabel sm_plabel_file\" >%s: </td>\n", _("File Upload"));
     mg_printf(conn, "<td colspan=\"3\">\n");
-    mg_printf(conn, "<input type=\"file\" name=\"+file\">\n");
+    mg_printf(conn, "<input type=\"file\" name=\"%s\">\n", K_FILE);
     mg_printf(conn, "</td></tr>\n");
 
     mg_printf(conn, "<tr><td></td>\n");

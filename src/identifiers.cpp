@@ -120,14 +120,55 @@ std::string convert2base34(const uint8_t *buffer, size_t length)
 
 std::string getSha1(const char *data, size_t len)
 {
-    unsigned char md[SHA_DIGEST_LENGTH];
-    SHA1((uint8_t*)data, len, md);
+    unsigned char sha[SHA_DIGEST_LENGTH];
+    SHA1((uint8_t*)data, len, sha);
     ustring sha1sum;
-    sha1sum.assign(md, SHA_DIGEST_LENGTH);
+    sha1sum.assign(sha, SHA_DIGEST_LENGTH);
     return bin2hex(sha1sum);
 }
 
 std::string getSha1(const std::string &data)
 {
     return getSha1(data.data(), data.size());
+}
+
+/** not really base64, as .- are used instead of +/
+  * and the trailing = are not added.
+  */
+std::string base64(const ustring &src)
+{
+    static const char *b64 =
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.-";
+
+    size_t i;
+    int a, b, c;
+    size_t srcLen = src.size();
+    std::string dst;
+    for (i = 0; i < srcLen; i += 3) {
+        a = src[i];
+        b = i + 1 >= srcLen ? 0 : src[i + 1];
+        c = i + 2 >= srcLen ? 0 : src[i + 2];
+
+        dst += b64[a >> 2];
+        dst += b64[((a & 3) << 4) | (b >> 4)];
+        if (i + 1 < srcLen) {
+            dst += b64[(b & 15) << 2 | (c >> 6)];
+        }
+        if (i + 2 < srcLen) {
+            dst += b64[c & 63];
+        }
+    }
+    return dst;
+}
+
+
+std::string getBase64Id(const uint8_t *data, size_t len)
+{
+    unsigned char sha[SHA_DIGEST_LENGTH+1]; // + 1 for aligning on 3 bytes
+    SHA1(data, len, sha);
+    sha[SHA_DIGEST_LENGTH] = 0;
+
+    ustring sha1sum(sha, SHA_DIGEST_LENGTH+1);
+    std::string id = base64(sha1sum);
+    return id;
 }

@@ -907,12 +907,13 @@ void parseMultipartAndStoreUploadedFiles(const std::string &data, std::string bo
 
             size_t size = endOfPart-p;
             // get the file extension
-            size_t extPos = filename.find_last_of('.');
-            std::string extension;
-            if (extPos != std::string::npos) extension = filename.substr(extPos);
+            size_t lastSlash = filename.find_last_of("\\/");
+            if (lastSlash != std::string::npos) filename = filename.substr(lastSlash);
 
-            std::string sha1 = getSha1(p, size);
-            std::string basename = sha1 + extension;
+            std::string id = getBase64Id((uint8_t*)p, size);
+            std::string basename = id + "." + filename;
+
+            LOG_DEBUG("New filename: %s", basename.c_str());
 
             // store to tmpDirectory
             std::string path = tmpDirectory;
@@ -978,9 +979,9 @@ void parseQueryString(const std::string &queryString, std::map<std::string, std:
 /** Handle the posting of an entry
   * If issueId is empty, then a new issue is created.
   */
-void httpPostEntry(struct mg_connection *conn, Project &p, const std::string & issueId, User u)
+void httpPostEntry(struct mg_connection *conn, Project &pro, const std::string & issueId, User u)
 {
-    enum Role r = u.getRole(p.getName());
+    enum Role r = u.getRole(pro.getName());
     if (r != ROLE_RW && r != ROLE_ADMIN) {
         sendHttpHeader403(conn);
         return;
@@ -1013,7 +1014,8 @@ void httpPostEntry(struct mg_connection *conn, Project &p, const std::string & i
         LOG_DEBUG("Boundary: %s", boundary.c_str());
 
         std::string postData = readMgConn(conn, MAX_SIZE_UPLOAD);
-        parseMultipartAndStoreUploadedFiles(postData, boundary, vars, "/tmp"); // TODO /tmp
+        std::string tmpDir = pro.getPath() + "/tmp";
+        parseMultipartAndStoreUploadedFiles(postData, boundary, vars, tmpDir);
 
     } else {
         // multipart/form-data
@@ -1023,14 +1025,14 @@ void httpPostEntry(struct mg_connection *conn, Project &p, const std::string & i
 
     std::string id = issueId;
     if (id == "new") id = ""; // TODO check if conflict between "new" and issue ids.
-    int status = p.addEntry(vars, id, u.username);
+    int status = pro.addEntry(vars, id, u.username);
     if (status != 0) {
         // error
         sendHttpHeader500(conn, "Cannot add entry");
 
     } else {
         // HTTP redirect
-        std::string redirectUrl = "/" + urlEncode(p.getName()) + "/issues/" + id;
+        std::string redirectUrl = "/" + urlEncode(pro.getName()) + "/issues/" + id;
         sendHttpRedirect(conn, redirectUrl.c_str(), 0);
     }
 
