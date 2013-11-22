@@ -462,7 +462,7 @@ void httpPostProjectConfig(struct mg_connection *conn, Project &p, User u)
         int r = p.modifyConfig(tokens);
         if (r == 0) {
             // success, redirect to
-            std::string redirectUrl = "/" + urlEncode(p.getName()) + "/config";
+            std::string redirectUrl = "/" + p.getUrlName() + "/config";
             sendHttpRedirect(conn, redirectUrl.c_str(), 0);
 
         } else { // error
@@ -508,7 +508,7 @@ void httpGetListOfIssues(struct mg_connection *conn, Project &p, User u)
         // redirect
         PredefinedView pv = p.getDefaultView();
         if (!pv.name.empty()) {
-            std::string redirectUrl = "/" + urlEncode(p.getName()) + "/issues/?" + pv.generateQueryString();
+            std::string redirectUrl = "/" + p.getUrlName() + "/issues/?" + pv.generateQueryString();
             sendHttpRedirect(conn, redirectUrl.c_str(), 0);
             return;
         }
@@ -559,7 +559,7 @@ void httpGetProject(struct mg_connection *conn, Project &p, User u)
 {
     // redirect to list of issues
     std::string url = "/";
-    url += urlEncode(p.getName()) + "/issues";
+    url += p.getUrlName() + "/issues";
     sendHttpRedirect(conn, url.c_str(), 0);
 }
 
@@ -633,7 +633,7 @@ void httpPostView(struct mg_connection *conn, Project &p, const std::string &nam
         } else {
             // delete the view
             p.deletePredefinedView(name);
-            std::string redirectUrl = "/" + urlEncode(p.getName()) + "/issues/";
+            std::string redirectUrl = "/" + p.getUrlName() + "/issues/";
             sendHttpRedirect(conn, redirectUrl.c_str(), 0);
         }
     }
@@ -719,7 +719,7 @@ void httpPostView(struct mg_connection *conn, Project &p, const std::string &nam
 
     } else {
         // redirect to the result of the search
-        std::string redirectUrl = "/" + urlEncode(p.getName()) + "/issues/?" + pv.generateQueryString();
+        std::string redirectUrl = "/" + p.getUrlName() + "/issues/?" + pv.generateQueryString();
         sendHttpRedirect(conn, redirectUrl.c_str(), 0);
     }
 }
@@ -1038,7 +1038,7 @@ void httpPostEntry(struct mg_connection *conn, Project &pro, const std::string &
 
     } else {
         // HTTP redirect
-        std::string redirectUrl = "/" + urlEncode(pro.getName()) + "/issues/" + id;
+        std::string redirectUrl = "/" + pro.getUrlName() + "/issues/" + id;
         sendHttpRedirect(conn, redirectUrl.c_str(), 0);
     }
 
@@ -1103,7 +1103,7 @@ int begin_request_handler(struct mg_connection *conn)
     else {
         // check if it is a valid project resource such as /myp/issues, /myp/users, /myp/config
         std::string projectUrl = resource;
-        std::string project = urlDecode(projectUrl);
+        std::string project = Project::urlNameDecode(projectUrl);
 
         // check if user has at lest read access
         enum Role r = user.getRole(project);

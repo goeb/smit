@@ -270,4 +270,5 @@ table.sm_views td {
 }
 img.sm_entry_file {
     width: 100px;
+    border: 0;
 }

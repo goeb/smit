@@ -11,6 +11,7 @@
 
 #include "ustring.h"
 #include "mutexTools.h"
+#include "stringTools.h"
 
 #define K_MESSAGE "+message" // keyword used for the message. Could be changed to _message ? TODO ?
 #define K_FILE "+file" // keyword used for the message. Could be changed to _message ? TODO ?
@@ -92,7 +93,7 @@ struct ProjectConfig {
 
 class Project {
 public:
-    static int load(const char *path, char *name); // load a project
+    static int load(const char *path, char *basename); // load a project
     int loadConfig(const char *path);
     int loadEntries(const char *path);
     void loadPredefinedViews(const char *path);
@@ -110,6 +111,9 @@ public:
     std::string getLabelOfProperty(const std::string &propertyName) const;
 
     inline std::string getName() const { return name; }
+    inline std::string getUrlName() const { return urlNameEncode(name); }
+    inline static std::string urlNameEncode(const std::string &name) { return urlEncode(name, '=', "._-"); }
+    inline static std::string urlNameDecode(const std::string &name) { return urlDecode(name, false, '='); }
     inline std::string getPath() const { return path; }
     inline ProjectConfig getConfig() const { return config; }
     int writeHead(const std::string &issueId, const std::string &entryId);

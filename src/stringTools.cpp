@@ -91,14 +91,14 @@ std::string toString(const std::list<std::string> &values, const char *sep)
   * Example: Hello+World%20And%2FMore
   * => Hello World And/More
   */
-std::string urlDecode(const std::string &src, int is_form_url_encoded)
+std::string urlDecode(const std::string &src, int is_form_url_encoded, char mark)
 {
     size_t i, a, b;
     std::string dst;
 #define HEXTOI(x) (isdigit(x) ? x - '0' : x - 'W')
     size_t n = src.size();
     for (i = 0; i < n; i++) {
-        if (src[i] == '%' && i < n - 2 &&
+        if (src[i] == mark && i < n - 2 &&
                 isxdigit((const unsigned char)src[i+1]) &&
                 isxdigit((const unsigned char)src[i+2])) {
             a = tolower((const unsigned char)src[i+1]);
@@ -120,9 +120,8 @@ std::string urlDecode(const std::string &src, int is_form_url_encoded)
   * Used typically for a parameter in the query string.
   * Also used for file names than may originally cause conflicts with slashes, etc.
   */
-std::string urlEncode(const std::string &src)
+std::string urlEncode(const std::string &src, char mark, const char *dontEscape)
 {
-    static const char *dontEscape = "._-$,;~()";
     static const char *hex = "0123456789abcdef";
     std::string dst;
     size_t n = src.size();
@@ -131,7 +130,7 @@ std::string urlEncode(const std::string &src)
         if (isalnum((unsigned char) src[i]) ||
                 strchr(dontEscape, (unsigned char) src[i]) != NULL) dst += src[i];
         else {
-            dst += '%';
+            dst += mark;
             dst += hex[((const unsigned char) src[i]) >> 4];
             dst += hex[((const unsigned char) src[i]) & 0xf];
         }

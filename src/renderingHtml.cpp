@@ -195,7 +195,7 @@ void RHtml::printPageView(struct mg_connection *conn, const ContextParameters &c
         std::list<std::string> properties = ctx.project->getPropertiesNames();
         mg_printf(conn, "Properties = %s;\n", toJavascriptArray(properties).c_str());
         mg_printf(conn, "setSearch('%s');\n", enquoteJs(pv.search).c_str());
-        mg_printf(conn, "setUrl('/%s/issues/?%s');\n", urlEncode(ctx.project->getName()).c_str(),
+        mg_printf(conn, "setUrl('/%s/issues/?%s');\n", ctx.project->getUrlName().c_str(),
                   pv.generateQueryString().c_str());
 
         // filter in and out
@@ -429,7 +429,7 @@ void RHtml::printNavigationGlobal(struct mg_connection *conn, const ContextParam
         // link for modifying project structure
         HtmlNode linkToModify("a");
         linkToModify.addAttribute("class", "sm_link_modify_project");
-        linkToModify.addAttribute("href", "/%s/config", urlEncode(ctx.project->getName()).c_str());
+        linkToModify.addAttribute("href", "/%s/config", ctx.project->getUrlName().c_str());
         linkToModify.addContents("%s", _("Project configuration"));
         div.addContents(" ");
         div.addContents(linkToModify);
@@ -437,7 +437,7 @@ void RHtml::printNavigationGlobal(struct mg_connection *conn, const ContextParam
         // link to config of predefined views
         HtmlNode linkToViews("a");
         linkToViews.addAttribute("class", "sm_link_views");
-        linkToViews.addAttribute("href", "/%s/views/", urlEncode(ctx.project->getName()).c_str());
+        linkToViews.addAttribute("href", "/%s/views/", ctx.project->getUrlName().c_str());
         linkToViews.addContents("%s", _("Predefined Views"));
         div.addContents(" ");
         div.addContents(linkToViews);
@@ -484,7 +484,7 @@ void RHtml::printNavigationIssues(struct mg_connection *conn, const ContextParam
     div.addAttribute("class", "sm_navigation_project");
     if (ctx.userRole == ROLE_ADMIN || ctx.userRole == ROLE_RW) {
         HtmlNode a("a");
-        a.addAttribute("href", "/%s/issues/new", urlEncode(ctx.project->getName()).c_str());
+        a.addAttribute("href", "/%s/issues/new", ctx.project->getUrlName().c_str());
         a.addAttribute("class", "sm_link_new_issue");
         a.addContents("%s", _("Create new issue"));
         div.addContents(a);
@@ -494,7 +494,7 @@ void RHtml::printNavigationIssues(struct mg_connection *conn, const ContextParam
     ProjectConfig config = ctx.project->getConfig();
     FOREACH (pv, config.predefinedViews) {
         HtmlNode a("a");
-        a.addAttribute("href", "/%s/issues/?%s", urlEncode(ctx.project->getName()).c_str(),
+        a.addAttribute("href", "/%s/issues/?%s", ctx.project->getUrlName().c_str(),
                        makeQueryString(pv->second).c_str());
         a.addAttribute("class", "sm_predefined_view");
         a.addContents("%s", pv->first.c_str());
@@ -503,7 +503,7 @@ void RHtml::printNavigationIssues(struct mg_connection *conn, const ContextParam
 
     HtmlNode form("form");
     form.addAttribute("class", "sm_searchbox");
-    form.addAttribute("action", "/%s/issues", urlEncode(ctx.project->getName()).c_str());
+    form.addAttribute("action", "/%s/issues", ctx.project->getUrlName().c_str());
     form.addAttribute("method", "get");
 
     HtmlNode input("input");
@@ -517,7 +517,7 @@ void RHtml::printNavigationIssues(struct mg_connection *conn, const ContextParam
 
     // advanced search
     HtmlNode a("a");
-    a.addAttribute("href", "/%s/views/_", urlEncode(ctx.project->getName()).c_str());
+    a.addAttribute("href", "/%s/views/_", ctx.project->getUrlName().c_str());
     a.addAttribute("class", "sm_advanced_search");
     a.addContents(_("Advanced Search"));
     div.addContents(a);
@@ -533,8 +533,8 @@ void printProjects(struct mg_connection *conn, const std::list<std::pair<std::st
     for (p=pList.begin(); p!=pList.end(); p++) {
         std::string pname = p->first.c_str();
         mg_printf(conn, "<div class=\"sm_link_project\"><a href=\"/%s/issues/?defaultView=1\">%s</a> (%s)",
-                  urlEncode(pname).c_str(), htmlEscape(pname).c_str(), _(p->second.c_str()));
-        if (p->second == "admin") mg_printf(conn, " <a href=\"%s/config\">edit</a>", pname.c_str());
+                  Project::urlNameEncode(pname).c_str(), htmlEscape(pname).c_str(), _(p->second.c_str()));
+        if (p->second == "admin") mg_printf(conn, " <a href=\"%s/config\">edit</a>", Project::urlNameEncode(pname).c_str());
         mg_printf(conn, "</div>\n");
     }
 }

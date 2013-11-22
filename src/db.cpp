@@ -95,14 +95,22 @@ std::string Issue::getSummary() const
   *    Name of the project (generally the same as the basename of the path)
   *
   * @return 0 if success, -1 if failure
+  *
+  * Project names are encoded on the filesystem because we we want to
+  * allow / and any other characters in project names.
+  * We use a modified url-encoding, because:
+  *   - url-encoding principle is simple
+  *   - but with standard url-encoding, some browsers (eg: firefox)
+  *     do a url-decoding when clicking on a href, and servers do another
+  *     url-decoding, so that a double url-encoding would not be enough.
   */
 
-int Project::load(const char *path, char *name)
+int Project::load(const char *path, char *basename)
 {
     Project *p = new Project;
     LOG_INFO("Loading project %s (%p)...", path, p);
 
-    p->name = urlDecode(name);
+    p->name = urlNameDecode(basename);
     LOG_DEBUG("Project name: '%s'", p->name.c_str());
 
     p->path = path;
