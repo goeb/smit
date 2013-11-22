@@ -1206,10 +1206,13 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
     // move the uploaded files (if any)
     std::map<std::string, std::list<std::string> >::iterator files = e->properties.find(K_FILE);
     if (files != e->properties.end()) {
+        std::string dir = path + "/" + K_UPLOADED_FILES_DIR;
+        mkdir(dir.c_str(), S_IRUSR | S_IWUSR | S_IXUSR); // create dir if needed
+
         std::list<std::string>::iterator f;
         FOREACH(f, files->second) {
             std::string oldpath = path + "/tmp/" + *f;
-            std::string newpath = path + "/" + K_UPLOADED_FILES_DIR + "/" + *f;
+            std::string newpath = dir + "/" + *f;
             int r = rename(oldpath.c_str(), newpath.c_str());
             if (r != 0) {
                 LOG_ERROR("Cannot move file '%s' -> '%s': %s", oldpath.c_str(), newpath.c_str(), strerror(errno));

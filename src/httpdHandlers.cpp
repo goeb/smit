@@ -5,6 +5,9 @@
 #include <string.h>
 #include <fcntl.h>
 #include <stdlib.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+
 #ifdef _WIN32
 #include <windows.h>
 #include <io.h>
@@ -921,6 +924,7 @@ void parseMultipartAndStoreUploadedFiles(const std::string &data, std::string bo
 
                 // store to tmpDirectory
                 std::string path = tmpDirectory;
+                mkdir(tmpDirectory.c_str(), S_IRUSR | S_IWUSR | S_IXUSR); // create dir if needed
                 path += "/";
                 path += basename;
                 int r = writeToFile(path.c_str(), p, size);
