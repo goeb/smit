@@ -36,7 +36,7 @@ For the ones who want to experiment quickly:
     <web-browser> http://127.0.0.1:8080/things_to_do/issues
 
 
-In order to create a new project in $REPO:
+In order to create a new project:
     
     mkdir myrepo
     smit init myrepo
@@ -69,6 +69,7 @@ Roadmap
 Customize the HTML pages
 ------------------------
 
+Soon coming...
 
 
 REST API
@@ -97,33 +98,4 @@ Examples:
 - format=text | html
 
     text PARTIALLY IMPLEMENTED
-
-
-Repository structure
---------------------
-
-A typical file tree is:
-
-    SMIT_REPO
-    ├── project A
-    │   ├── entries
-    │   │   ├── 4eg
-    │   │   ├── drl6
-    │   │   └── etc. (other entries)
-    │   ├── project
-    │   └── views
-    ├── project B ...
-    ├── etc. (other projects)
-    ├── public
-    │   ├── *.html
-    │   ├── *.js
-    │   ├── logo.png
-    │   ├── style.css
-    │   └── etc.
-    └── users
-
-
-HTML pages are built as follows:
-
-    To Be Completed
 
