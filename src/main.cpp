@@ -208,8 +208,10 @@ int serveRepository(int argc, const char **args)
     while (i<argc) {
         const char *arg = args[i]; i++;
         if (0 == strcmp(arg, "--listen-port")) {
-            if (i<argc) listenPort = args[i];
-            else usage();
+            if (i<argc) {
+                listenPort = args[i];
+                i++;
+            } else usage();
         } else if (!repo) {
             repo = arg;
         } else {
