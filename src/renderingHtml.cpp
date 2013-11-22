@@ -864,7 +864,7 @@ void printIssueList(struct mg_connection *conn, const ContextParameters &ctx,
             std::string href_rhs = "";
             if ( (column == "id") || (column == "summary") ) {
                 href_lhs = "<a href=\"";
-                href_lhs = href_lhs + "/" + urlEncode(ctx.getProject().getName()) + "/issues/";
+                href_lhs = href_lhs + "/" + ctx.getProject().getUrlName() + "/issues/";
                 href_lhs = href_lhs + (char*)(*i)->id.c_str() + "\">";
                 href_rhs = "</a>";
             }
@@ -1179,14 +1179,14 @@ void printIssue(struct mg_connection *conn, const ContextParameters &ctx, const 
             // entry was created less than 10 minutes ago, and by same user, and is latest in the issue
             mg_printf(conn, "<a href=\"#\" class=\"sm_delete\" title=\"Delete this entry (at most %d minutes after posting)\" ", (DELETE_DELAY_S/60));
             mg_printf(conn, " onclick=\"deleteEntry('/%s/entries/%s', '%s');return false;\">\n",
-                      urlEncode(ctx.getProject().getName()).c_str(), issue.id.c_str(), ee.id.c_str());
+                      ctx.getProject().getUrlName().c_str(), issue.id.c_str(), ee.id.c_str());
             mg_printf(conn, "&#10008; delete");
             mg_printf(conn, "</a>\n");
         }
 
         // link to raw entry
         mg_printf(conn, "(<a href=\"/%s/entries/%s/%s\" class=\"sm_raw_entry\">%s</a>)\n",
-                  urlEncode(ctx.getProject().getName()).c_str(),
+                  ctx.getProject().getUrlName().c_str(),
                   issue.id.c_str(), ee.id.c_str(), _("raw"));
 
 
@@ -1202,17 +1202,19 @@ void printIssue(struct mg_connection *conn, const ContextParameters &ctx, const 
 
         // uploaded files
         std::map<std::string, std::list<std::string> >::iterator files = ee.properties.find(K_FILE);
-        if (files != ee.properties.end()) {
+        if (files != ee.properties.end() && files->second.size() > 0) {
             mg_printf(conn, "<div class=\"sm_entry_files\">\n");
             std::list<std::string>::iterator f;
             FOREACH(f, files->second) {
-                if (f->size()>29) std::string shortName = f->substr(29); // 29 fist characters are the sha1 prefix
+                std::string shortName = *f;
+                if (shortName.size()>29) shortName = shortName.substr(29); // 29 fist characters are the sha1 prefix
                 mg_printf(conn, "<div class=\"sm_entry_file\">\n");
-                mg_printf(conn, "<a href=\"../%s/%s\" class=\"sm_entry_file\">", K_UPLOADED_FILES_DIR, urlEncode(*f).c_str());
+                mg_printf(conn, "<a href=\"../%s/%s\" class=\"sm_entry_file\">", K_UPLOADED_FILES_DIR,
+                          urlEncode(*f).c_str());
                 if (isImage(*f)) {
                     mg_printf(conn, "<img src=\"../files/%s\" class=\"sm_entry_file\"> ", urlEncode(*f).c_str());
                 }
-                mg_printf(conn, "%s", htmlEscape(*f).c_str());
+                mg_printf(conn, "%s", htmlEscape(shortName).c_str());
                 mg_printf(conn, "</a>");
                 mg_printf(conn, "</div>\n"); // end file
             }

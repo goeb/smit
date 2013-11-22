@@ -272,3 +272,12 @@ img.sm_entry_file {
     width: 100px;
     border: 0;
 }
+div.sm_entry_files {
+    color: #444;
+    background-color: #E0E0E0;
+    padding: 7px;
+    border-radius: 5px 5px 5px 5px;
+    width: 60em;
+    font-size: 100%;
+    margin-bottom: 10px;
+}
