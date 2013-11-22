@@ -121,7 +121,6 @@ int addUser(int argc, const char **args)
     int i = 0;
     const char *repo = ".";
     const char *username = 0;
-    const char *passwd = 0;
     User u;
 
     while (i<argc) {
@@ -134,7 +133,8 @@ int addUser(int argc, const char **args)
 
         } else if (0 == strcmp(arg, "--passwd")) {
             if (i<argc) {
-                passwd = args[i];
+                u.hashType = "sha1";
+                u.hashValue = getSha1(args[i]);
                 i++;
             } else usage();
 
@@ -177,9 +177,9 @@ int addUser(int argc, const char **args)
     User *old = UserBase::getUser(username);
     if (old) {
         old->superadmin = u.superadmin;
-        if (passwd) {
-            old->hashType = "sha1";
-            old->hashValue = getSha1(passwd);
+        if (!u.hashType.empty()) {
+            old->hashType = u.hashType;
+            old->hashValue = u.hashValue;
         }
         // update modified roles (and keep the others unchanged)
         std::map<std::string, enum Role>::iterator newRole;

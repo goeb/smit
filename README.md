@@ -10,12 +10,12 @@ Features
 --------
 
 - Full text searching
-- Easy configuration of properties
+- Easy customization of properties
+- Simple, fast and light
 - Manage several projects
 - Easy to install locally, or on a server
-- Simple, fast and light
 - UTF-8
-- Can be used offline
+- Offline capability
 
 
 Getting Started
@@ -38,25 +38,15 @@ For the ones who want to experiment quickly:
 
 In order to create a new project in $REPO:
     
-    mkdir -p "$REPO/Project X/entries"
+    mkdir myrepo
+    smit init myrepo
+    smit addproject -d myrepo myproject1  
+    smit adduser homer -d myrepo --passwd homer --project myproject1 admin
+    smit serve myrepo --listen-port 9090
 
-    cat << EOF > "$REPO/Project X/project"
-    addProperty status select "open" "closed" "deleted"
-    EOF
+And with your browser, go to:
 
-    cat << EOF > "$REPO/Project X/views"
-    addView "All Issues" sort +status-mtime
-    addView "Open Issues" filterin status open sort -mtime
-    EOF
-    
-And to add a user 'Peter' for that project:
-
-    echo -n PeterPW | sha1sum
-    (copy-paste the SHA1 to the next step...)
-
-    cat << EOF >> $REPO/users
-    addUser Peter project "Project X" admin sha1 9c5c73b3c49d665d0607dd4b888b4c1677881be3
-    EOF
+    http://localhost:9090
 
     
 
@@ -68,7 +58,6 @@ Roadmap
   - web interface
 
 - v1.1
-  - file upload
   - make it also run on Windows
   - full-contents view (all tickets with their contents on a single page)
 
@@ -77,23 +66,8 @@ Roadmap
   - branch and merge repositories
 
 
-Command-Line
----
-This is a preview of what the command-line interface will look like:
-
-    # initialize a repository
-    mkdir repo && cd repo
-    smit init .
-
-    # add itialize a project
-    smit project create MySampleProject
-
-    # add a user
-    smit user add "John Smith" MySampleProject rw
-    Enter password:
-    
-    smit serve .
-
+Customize the HTML pages
+------------------------
 
 
 

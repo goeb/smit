@@ -718,6 +718,23 @@ int Project::createProject(const char *repositoryPath, const char *projectName)
         return -1;
     }
 
+    // create directory 'tmp'
+    subpath = path + "/tmp";
+    r = mkdir(subpath.c_str(), S_IRUSR | S_IXUSR | S_IWUSR);
+    if (r != 0) {
+        LOG_ERROR("Could not create directory '%s': %s", subpath.c_str(), strerror(errno));
+        return -1;
+    }
+
+    // create directory 'files'
+    subpath = path + "/files";
+    r = mkdir(subpath.c_str(), S_IRUSR | S_IXUSR | S_IWUSR);
+    if (r != 0) {
+        LOG_ERROR("Could not create directory '%s': %s", subpath.c_str(), strerror(errno));
+        return -1;
+    }
+
+
     return 0;
 }
 
