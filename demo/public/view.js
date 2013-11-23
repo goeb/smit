@@ -1,3 +1,7 @@
+/* Small Issue Tracker
+ * Copyright (C) 2013 Frederic Hoerni
+ * GNU General Public License v2
+ */
 function addFilter(divname, selected, value) {
     var div = document.getElementById(divname);
     var select = createSelect(Properties, selected);

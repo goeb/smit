@@ -1,3 +1,7 @@
+/* Small Issue Tracker
+ * Copyright (C) 2013 Frederic Hoerni
+ * GNU General Public License v2
+ */
 function changeWrapping() {
     var msg = document.getElementsByName('+message')[0];
     if (msg.wrap != "off") msg.wrap = "off";

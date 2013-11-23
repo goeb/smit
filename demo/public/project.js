@@ -1,3 +1,7 @@
+/* Small Issue Tracker
+ * Copyright (C) 2013 Frederic Hoerni
+ * GNU General Public License v2
+ */
 
 function addMoreProperties(n) {
     // add 3 more properties on page

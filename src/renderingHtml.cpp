@@ -742,7 +742,7 @@ void RHtml::printProjectConfig(struct mg_connection *conn, const ContextParamete
     mg_printf(conn, "Content-Type: text/html\r\n\r\n");
 
     char *data;
-    int n = loadProjectPage(conn, ctx.project->getPath(), "pconfig.html", &data);
+    int n = loadProjectPage(conn, ctx.project->getPath(), "project.html", &data);
 
     if (n > 0) {
         VariableNavigator vn(data, n);
