@@ -739,7 +739,7 @@ void httpPostView(struct mg_connection *conn, Project &p, const std::string &nam
 }
 
 
-void httpGetIssue(struct mg_connection *conn, Project &p, const std::string &issueId, User u)
+int httpGetIssue(struct mg_connection *conn, Project &p, const std::string &issueId, User u)
 {
     LOG_DEBUG("httpGetIssue: project=%s, issue=%s", p.getName().c_str(), issueId.c_str());
 
@@ -748,7 +748,8 @@ void httpGetIssue(struct mg_connection *conn, Project &p, const std::string &iss
     int r = p.get(issueId.c_str(), issue, Entries);
     if (r < 0) {
         // issue not found or other error
-        sendHttpHeaderInvalidResource(conn);
+        return 0; // let mongoose handle it
+
     } else {
         enum RenderingFormat format = getFormat(conn);
 
@@ -759,7 +760,7 @@ void httpGetIssue(struct mg_connection *conn, Project &p, const std::string &iss
             ContextParameters ctx = ContextParameters(u, p);
             RHtml::printPageIssue(conn, ctx, issue, Entries);
         }
-
+        return 1; // done
     }
 }
 
@@ -771,18 +772,22 @@ void httpGetIssue(struct mg_connection *conn, Project &p, const std::string &iss
   *     0, let Mongoose handle static file
   *     1, do not.
   */
-int httpDeleteEntry(struct mg_connection *conn, Project &p, std::string details, User u)
+void httpDeleteEntry(struct mg_connection *conn, Project &p, const std::string &issueId,
+                    std::string details, User u)
 {
-    LOG_DEBUG("httpDeleteEntry: project=%s, details=%s", p.getName().c_str(), details.c_str());
+    LOG_DEBUG("httpDeleteEntry: project=%s, issueId=%s, details=%s", p.getName().c_str(),
+              issueId.c_str(), details.c_str());
 
-    std::string issueId = popToken(details, '/');
     std::string entryId = popToken(details, '/');
-    if (details != "delete") return 0; // let Mongoose handle static file
+    if (details != "delete") {
+        sendHttpHeader404(conn);
+        return;
+    }
 
     enum Role role = u.getRole(p.getName());
     if (role != ROLE_RW && role != ROLE_ADMIN) {
         sendHttpHeader403(conn);
-        return 1; // request fully handled
+        return;
     }
 
     int r = p.deleteEntry(issueId, entryId, u.username);
@@ -796,7 +801,7 @@ int httpDeleteEntry(struct mg_connection *conn, Project &p, std::string details,
         mg_printf(conn, "\r\n"); // no contents
     }
 
-    return 1; // request fully handled
+    return;
 }
 
 
@@ -1012,6 +1017,9 @@ void httpPostEntry(struct mg_connection *conn, Project &pro, const std::string &
 
     const char *contentType = mg_get_header(conn, "Content-Type");
     if (0 == strcmp("application/x-www-form-urlencoded", contentType)) {
+
+        // this branch is obsolete. It was the old code before file-upload capability
+
         // application/x-www-form-urlencoded
         // post_data is "var1=val1&var2=val2...".
         // multiselect is like: "tags=v4.1&tags=v5.0" (same var repeated)
@@ -1076,7 +1084,7 @@ void httpPostEntry(struct mg_connection *conn, Project &pro, const std::string &
   * /myp/issues             GET/POST   user              issues of the project / add new issue
   * /myp/issues/new         GET        user              page with a form for submitting new issue
   * /myp/issues/123         GET/POST   user              a particular issue: get all entries or add a new entry
-  * /myp/entries/x/y/delete POST       user              delete an entry y of issue x
+  * /myp/issues/x/y/delete  POST       user              delete an entry y of issue x
   * /any/other/file         GET        user              any existing file (relatively to the repository)
   */
 
@@ -1135,12 +1143,16 @@ int begin_request_handler(struct mg_connection *conn)
                 if (!uri.empty() && uri[uri.size()-1] == '/') isdir = true;
 
                 resource = popToken(uri, '/');
+                LOG_DEBUG("resource=%s", resource.c_str());
                 if      ( resource.empty()       && (method == "GET") ) httpGetProject(conn, *p, user);
                 else if ( (resource == "issues") && (method == "GET") && uri.empty() ) httpGetListOfIssues(conn, *p, user);
-                else if ( (resource == "issues") && (method == "POST") ) httpPostEntry(conn, *p, uri, user);
-                else if ( (resource == "issues") && (uri == "new") && (method == "GET") ) httpGetNewIssueForm(conn, *p, user);
-                else if ( (resource == "issues") && (method == "GET") ) httpGetIssue(conn, *p, uri, user);
-                else if ( (resource == "entries") && (method == "POST") ) return httpDeleteEntry(conn, *p, uri, user);
+                else if ( (resource == "issues") && (method == "POST") ) {
+                    std::string issueId = popToken(uri, '/');
+                    if (uri.empty()) httpPostEntry(conn, *p, issueId, user);
+                    else httpDeleteEntry(conn, *p, issueId, uri, user);
+
+                } else if ( (resource == "issues") && (uri == "new") && (method == "GET") ) httpGetNewIssueForm(conn, *p, user);
+                else if ( (resource == "issues") && (method == "GET") ) return httpGetIssue(conn, *p, uri, user);
                 else if ( (resource == "config") && (method == "GET") ) httpGetProjectConfig(conn, *p, user);
                 else if ( (resource == "config") && (method == "POST") ) httpPostProjectConfig(conn, *p, user);
                 else if ( (resource == "views") && (method == "GET") && !isdir && uri.empty()) sendHttpRedirect(conn, "/" + projectUrl + "/views/", 0);

@@ -1191,14 +1191,14 @@ void printIssue(struct mg_connection *conn, const ContextParameters &ctx, const 
         if ( (delta < DELETE_DELAY_S) && (ee.author == ctx.username) && (e == lastEntryIt) ) {
             // entry was created less than 10 minutes ago, and by same user, and is latest in the issue
             mg_printf(conn, "<a href=\"#\" class=\"sm_delete\" title=\"Delete this entry (at most %d minutes after posting)\" ", (DELETE_DELAY_S/60));
-            mg_printf(conn, " onclick=\"deleteEntry('/%s/entries/%s', '%s');return false;\">\n",
+            mg_printf(conn, " onclick=\"deleteEntry('/%s/issues/%s', '%s');return false;\">\n",
                       ctx.getProject().getUrlName().c_str(), issue.id.c_str(), ee.id.c_str());
             mg_printf(conn, "&#10008; delete");
             mg_printf(conn, "</a>\n");
         }
 
         // link to raw entry
-        mg_printf(conn, "(<a href=\"/%s/entries/%s/%s\" class=\"sm_raw_entry\">%s</a>)\n",
+        mg_printf(conn, "(<a href=\"/%s/issues/%s/%s\" class=\"sm_raw_entry\">%s</a>)\n",
                   ctx.getProject().getUrlName().c_str(),
                   issue.id.c_str(), ee.id.c_str(), _("raw"));
 

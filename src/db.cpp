@@ -34,7 +34,7 @@
 #include "stringTools.h"
 
 #define PROJECT_FILE "project"
-#define ENTRIES "entries" // sub-directory of a project where the entries are stored
+#define ISSUES "issues" // sub-directory of a project where the entries are stored
 #define HEAD "_HEAD"
 #define VIEWS_FILE "views"
 
@@ -52,7 +52,7 @@ int dbLoad(const char * pathToRepository)
 {
     // look for all files "pathToRepository/p/project"
     // and parse them
-    // then, load all pathToRepository/p/entries/*/*
+    // then, load all pathToRepository/p/issues/*/*
 
     Database::Db.pathToRepository = pathToRepository;
     DIR *dirp;
@@ -267,18 +267,9 @@ void Project::consolidateIssues()
 }
 int Project::loadEntries(const char *path)
 {
-    // load files path/entries/*/*
-    // The tree of entries is as follows:
-    // myproject/entries/XXX/ (XXX is the issue id)
-    // myproject/entries/XXX/ABCDEF012345
-    // myproject/entries/XXX/123356AF
-    // myproject/entries/XXX/_HEAD
-    // myproject/entries/YYYYYY/ (YYYYYY is another issue id)
-    // myproject/entries/YYYYYY/aeiou
-    // myproject/entries/YYYYYY/_HEAD
-    // etc.
+    // load files path/issues/*/*
     std::string pathToEntries = path;
-    pathToEntries = pathToEntries + '/' + ENTRIES;
+    pathToEntries = pathToEntries + '/' + ISSUES;
     DIR *entriesDirHandle;
     if ((entriesDirHandle = opendir(pathToEntries.c_str())) == NULL) {
         LOG_ERROR("Cannot open directory '%s'", pathToEntries.c_str());
@@ -715,8 +706,8 @@ int Project::createProject(const char *repositoryPath, const char *projectName)
         return r;
     }
 
-    // create directory 'entries'
-    subpath = path + "/" + ENTRIES;
+    // create directory 'issues'
+    subpath = path + "/" + ISSUES;
     r = mkdir(subpath.c_str(), S_IRUSR | S_IXUSR | S_IWUSR);
     if (r != 0) {
         LOG_ERROR("Could not create directory '%s': %s", subpath.c_str(), strerror(errno));
@@ -1194,7 +1185,7 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
         snprintf(buffer, SIZ, "%d", newId);
         issueId = buffer;
 
-        pathOfIssue = path + '/' + ENTRIES + '/' + issueId;
+        pathOfIssue = path + '/' + ISSUES + '/' + issueId;
 
         int r = mkdir(pathOfIssue.c_str(), S_IRUSR | S_IXUSR | S_IWUSR);
         if (r != 0) {
@@ -1210,7 +1201,7 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
         issues[issueId] = i;
 
     } else {
-        pathOfIssue = path + '/' + ENTRIES + '/' + issueId;
+        pathOfIssue = path + '/' + ISSUES + '/' + issueId;
     }
 
     pathOfNewEntry = pathOfIssue + '/' + id;
@@ -1255,7 +1246,7 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
 
 int Project::writeHead(const std::string &issueId, const std::string &entryId)
 {
-    std::string pathToHead = path + '/' + ENTRIES + '/' + issueId + '/' + HEAD;
+    std::string pathToHead = path + '/' + ISSUES + '/' + issueId + '/' + HEAD;
     int r = writeToFile(pathToHead.c_str(), entryId);
     if (r<0) {
         LOG_ERROR("Cannot write HEAD (%s/%s)", issueId.c_str(), entryId.c_str());
