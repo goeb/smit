@@ -6,7 +6,6 @@ SOURCES += \
     ../../mongoose/mongoose.c \
     ../../src/hello.c \
     ../../src/db.cpp \
-    ../../src/upload.cpp \
     ../../src/parseConfig.cpp \
     ../../src/identifiers.cpp \
     ../../test/T_identifiers.cpp \

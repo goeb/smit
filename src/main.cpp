@@ -1,3 +1,16 @@
+/*   Small Issue Tracker
+ *   Copyright (C) 2013 Frederic Hoerni
+ *
+ *   This program is free software; you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation; either version 2 of the License, or
+ *   (at your option) any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ */
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -17,9 +30,12 @@
 #include "global.h"
 #include "identifiers.h"
 
+#define VERSION "1.0.0"
+
 void usage()
 {
-    printf("Usage: smit <command> [<args>]\n"
+    printf("Usage: smit [--version] [--help]\n"
+           "            <command> [<args>]\n"
            "\n"
            "Commands:\n"
            "\n"
@@ -37,6 +53,8 @@ void usage()
            "        The role must be one of: admin, rw, ro, ref.\n"
            "        --project options are cumulative with previously defined projects roles\n"
            "        for the same user.\n"
+           "\n"
+           "    --version\n"
            "\n"
            "    serve [<repository>] [--listen-port <port>]\n"
            "\n"
@@ -249,6 +267,23 @@ int serveRepository(int argc, const char **args)
 
     return 0;
 }
+int showVersion()
+{
+    printf("Small Issue Tracker v%s\n"
+           "Copyright (C) 2013 Frederic Hoerni\n"
+           "\n"
+           "This program is free software; you can redistribute it and/or modify\n"
+           "it under the terms of the GNU General Public License as published by\n"
+           "the Free Software Foundation; either version 2 of the License, or\n"
+           "(at your option) any later version.\n"
+           "\n"
+           "This program is distributed in the hope that it will be useful,\n"
+           "but WITHOUT ANY WARRANTY; without even the implied warranty of\n"
+           "MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the\n"
+           "GNU General Public License for more details.\n"
+           , VERSION);
+    exit(1);
+}
 
 int main(int argc, const char **argv)
 {
@@ -265,6 +300,9 @@ int main(int argc, const char **argv)
             if (i < argc) dir = argv[i];
             return initRepository(argv[0], dir);
 
+        } else if (0 == strcmp(command, "--version")) {
+            return showVersion();
+
         } else if (0 == strcmp(command, "serve")) {
             return serveRepository(argc-2, argv+2);
 
@@ -274,12 +312,8 @@ int main(int argc, const char **argv)
         } else if (0 == strcmp(command, "adduser")) {
             return addUser(argc-2, argv+2);
 
-        }
+        } else usage();
 
-    }
-    if (0 == strcmp(argv[1], "extract")) {
-        cpioExtractFile(argv[0], argv[2], argv[3]);
-        exit(0);
     }
 
     return 0;
