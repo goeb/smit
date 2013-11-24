@@ -53,7 +53,8 @@ const Project &ContextParameters::getProject() const
 
 #define K_SM_DIV_NAVIGATION_GLOBAL "SM_DIV_NAVIGATION_GLOBAL"
 #define K_SM_DIV_NAVIGATION_ISSUES "SM_DIV_NAVIGATION_ISSUES"
-#define K_SM_RAW_PROJECT_NAME "SM_RAW_PROJECT_NAME"
+#define K_SM_HTML_PROJECT_NAME "SM_HTML_PROJECT_NAME"
+#define K_SM_URL_PROJECT_NAME "SM_URL_PROJECT_NAME"
 #define K_SM_RAW_ISSUE_ID "SM_RAW_ISSUE_ID"
 #define K_SM_SCRIPT_UPDATE_CONFIG "SM_SCRIPT_UPDATE_CONFIG"
 #define K_SM_DIV_PREDEFINED_VIEWS "SM_DIV_PREDEFINED_VIEWS"
@@ -184,8 +185,11 @@ public:
             dumpPrevious(ctx.conn);
             if (varname.empty()) break;
 
-            if (varname == K_SM_RAW_PROJECT_NAME && ctx.project) {
+            if (varname == K_SM_HTML_PROJECT_NAME && ctx.project) {
                 mg_printf(ctx.conn, "%s", htmlEscape(ctx.project->getName()).c_str());
+
+            } else if (varname == K_SM_URL_PROJECT_NAME && ctx.project) {
+                    mg_printf(ctx.conn, "%s", ctx.project->getUrlName().c_str());
 
             } else if (varname == K_SM_DIV_NAVIGATION_GLOBAL) {
                 RHtml::printNavigationGlobal(ctx.conn, ctx);
