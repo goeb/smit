@@ -119,14 +119,23 @@ SM_RAW_ISSUE_ID makes sense only when a single issue is displayed.
 
     &lt;img src="/public/logo.png" alt="logo"&gt;
 
-### Why cannot I create a project named 'public'
+### Why cannot I create a project named 'public'?
 
 'public' is reserved for holding HTML pages that are public, such as the signin page.
 
-The reserve keywords are:
+The reserve keywords that cannot be used as project names are:
     
     public
     users
+
+### How to set up different pages for two projects?
+
+HTML pages in $REPO/&lt;project&gt;/html/. are first looked after, and if not found Smit looks in the $REPO/public directory.
+
+So, for example, if you want to customize the 'issues' page for a project:
+
+- copy $REPO/public/issues.html to $REPO/project/html/issues.html
+- edit $REPO/project/html/issues.html to suit your needs
 
 
 REST API
