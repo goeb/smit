@@ -1282,6 +1282,8 @@ void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx,
     if (ctx.userRole == ROLE_ADMIN || ctx.userRole == ROLE_RW) {
         RHtml::printIssueForm(conn, ctx, issue, false);
     }
+    mg_printf(conn, "</div>\n");
+
 }
 
 void RHtml::printPageIssue(struct mg_connection *conn, const ContextParameters &ctx, const Issue &issue, const std::list<Entry*> &entries)

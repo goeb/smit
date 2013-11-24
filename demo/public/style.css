@@ -88,7 +88,7 @@ input {
     padding-right: 6em;
 }
 .sm_issue {
-    margin-top: 90px;
+    /*margin-top: 90px;*/
     vertical-align: top;
     padding: 10px;
     font-size: 10pt;

@@ -1075,6 +1075,16 @@ bool Project::searchFullText(const Issue* issue, const char *text) const
     std::string next = issue->head;
     while ( (e = getEntry(next)) ) {
         if (strcasestr(e->getMessage().c_str(), text)) return true; // found
+
+        // look through uploaded files
+        std::map<std::string, std::list<std::string> >::const_iterator files = e->properties.find(K_FILE);
+        if (files != e->properties.end()) {
+            std::list<std::string>::const_iterator f;
+            FOREACH(f, files->second) {
+                if (strcasestr(f->c_str(), text)) return true; // found
+            }
+        }
+
         next = e->parent;
     }
 
