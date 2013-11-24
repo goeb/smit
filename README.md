@@ -3,7 +3,7 @@ Smit
 
 Small Issue Tracker
 
-Smit is a generalist issue tracker, suitable for customer support, team issues, bug tracking, etc.
+Smit is an open-source issue tracker for general usages, such as customer support, hardware development, bug tracking, etc.
 
 
 Features
@@ -12,12 +12,12 @@ Features
 - Full text searching
 - Easy customization of properties
 - Simple, fast and light
-- Manage several projects
 - Easy to install locally, or on a server
 - UTF-8
-- Offline capability
 - full-contents view (all issues and their contents on a same page)
   suitable for HTML or PDF export
+- Manage several projects
+- Offline capability
 
 
 Getting Started
@@ -33,9 +33,9 @@ Getting Started
     git clone https://github.com/goeb/smit.git
     cd smit
     make
-    ./smit demo &
+    ./smit serve demo &
 
-    <web-browser> http://127.0.0.1:8080/things_to_do/issues
+    <web-browser> http://127.0.0.1:8090/things_to_do/issues
 
 
 ### Install Smit:
@@ -66,10 +66,9 @@ Roadmap
 ---
 
 - v1.0
-  - command-line interface
-  - web interface
 
 - v1.1
+  - SSL, TLS
   - make it also run on Windows
 
 - v2.0
@@ -118,13 +117,22 @@ SM_RAW_ISSUE_ID makes sense only when a single issue is displayed.
 * Copy your logo image in $REPO/public (eg: logo.png)
 * Refer this image in the HTML pages
 
-    <img src="/public/logo.png" alt="logo">
+    &lt;img src="/public/logo.png" alt="logo"&gt;
+
+### Why cannot I create a project named 'public'
+
+'public' is reserved for holding HTML pages that are public, such as the signin page.
+
+The reserve keywords are:
+    
+    public
+    users
 
 
 REST API
 --------
 
-Query string
+The request are driven by the Query String:
 
 Examples:
     
@@ -147,4 +155,9 @@ Examples:
 - format=text | html
 
     text PARTIALLY IMPLEMENTED
+
+- full=1
+
+    This makes sense only for the 'issues' pages, and makes the page display all issues and their contents on the page.
+
 

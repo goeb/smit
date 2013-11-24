@@ -376,7 +376,7 @@ FieldSpec parseFieldSpec(std::list<std::string> & tokens)
     // type = text | select | multiselect | selectUser
     FieldSpec field;
     if (tokens.size() < 2) {
-        LOG_ERROR("Not enough tokens");
+        LOG_DEBUG("Not enough tokens");
         return field; // error, indicated to caller by empty name of field
     }
 
@@ -449,7 +449,7 @@ ProjectConfig parseProjectConfig(std::list<std::list<std::string> > &lines)
                 config.propertyLabels[propName] = propLabel;
             }
         } else {
-            LOG_ERROR("Unknown function '%s'", token.c_str());
+            LOG_DEBUG("Unknown function '%s'", token.c_str());
             wellFormatedLines.pop_back(); // remove incorrect line
         }
     }

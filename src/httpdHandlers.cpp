@@ -304,6 +304,7 @@ void httpPostSignin(struct mg_connection *conn)
             return;
         }
 
+        if (redirect.empty()) redirect = "/";
         setCookieAndRedirect(conn, "sessid", sessionId.c_str(), redirect.c_str());
 
     } else {
@@ -1113,6 +1114,7 @@ int begin_request_handler(struct mg_connection *conn)
     LOG_DEBUG("uri=%s, method=%s", uri.c_str(), method.c_str());
 
     std::string resource = popToken(uri, '/');
+    LOG_DEBUG("resource=%s, method=%s", resource.c_str(), method.c_str());
 
     if      ( (resource == "public") && (method == "GET") ) return 0; // let Mongoose handle static file
     else if ( (resource == "signin") && (method == "POST") ) httpPostSignin(conn);

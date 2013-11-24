@@ -221,7 +221,7 @@ int addUser(int argc, const char **args)
 int serveRepository(int argc, const char **args)
 {
     int i = 0;
-    const char *listenPort = "8080";
+    const char *listenPort = "8090";
     const char *repo = 0;
     while (i<argc) {
         const char *arg = args[i]; i++;
