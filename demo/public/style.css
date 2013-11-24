@@ -95,7 +95,7 @@ input {
     border-radius: 5px 5px 5px 5px;
 }
 .sm_issue_header {
-    position: fixed;
+    /*position: fixed;*/
     width: 60em;
     padding: 0.3em;
     background-color: #E0E0E0;

@@ -823,9 +823,12 @@ void RHtml::printIssueListFullContents(struct mg_connection *conn, const Context
             // deactivate user role
             ContextParameters ctxCopy = ctx;
             ctxCopy.userRole = ROLE_RO;
-            printPageIssue(conn, ctxCopy, issue, entries);
+            printIssue(ctx.conn, ctxCopy, issue, entries);
+
         }
     }
+    mg_printf(conn, "</div>\n");
+
 }
 
 void RHtml::printIssueList(struct mg_connection *conn, const ContextParameters &ctx,
@@ -1233,9 +1236,6 @@ void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx,
             mg_printf(conn, "</div>\n"); // end files
         }
 
-
-
-
         // print other modified properties
         // -------------------------------------------------
         std::ostringstream otherProperties;
@@ -1305,7 +1305,6 @@ void RHtml::printPageNewIssue(struct mg_connection *conn, const ContextParameter
   */
 void RHtml::printIssueForm(struct mg_connection *conn, const ContextParameters &ctx, const Issue &issue, bool autofocus)
 {
-    // TODO if access rights granted
 
     // enctype=\"multipart/form-data\"
     mg_printf(conn, "<form enctype=\"multipart/form-data\" method=\"post\"  class=\"sm_issue_form\" id=\"edit_form\">");
