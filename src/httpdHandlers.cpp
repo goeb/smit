@@ -542,6 +542,9 @@ void httpGetListOfIssues(struct mg_connection *conn, Project &p, User u)
 
     std::vector<struct Issue*> issueList = p.search(fulltextSearch.c_str(), filterIn, filterOut, sorting.c_str());
 
+    std::string full = getFirstParamFromQueryString(q, "full"); // full-contents indicator
+
+
     std::string colspec = getFirstParamFromQueryString(q, "colspec");
     std::list<std::string> cols;
     std::list<std::string> allCols = p.getPropertiesNames();
@@ -553,9 +556,9 @@ void httpGetListOfIssues(struct mg_connection *conn, Project &p, User u)
         cols = allCols;
     }
     enum RenderingFormat format = getFormat(conn);
-    std::string full = getFirstParamFromQueryString(q, "full");
 
     sendHttpHeader200(conn);
+
 
     if (format == RENDERING_TEXT) RText::printIssueList(conn, issueList, cols);
     else {
@@ -565,10 +568,12 @@ void httpGetListOfIssues(struct mg_connection *conn, Project &p, User u)
         ctx.search = fulltextSearch;
         ctx.sort = sorting;
 
-        if (full == "1") RHtml::printPageIssuesFullContents(ctx, issueList, cols);
-        else RHtml::printPageIssueList(ctx, issueList, cols);
+        if (full == "1") {
+            RHtml::printPageIssuesFullContents(ctx, issueList);
+        } else {
+            RHtml::printPageIssueList(ctx, issueList, cols);
+        }
     }
-
 }
 
 void httpGetProject(struct mg_connection *conn, Project &p, User u)
@@ -580,7 +585,7 @@ void httpGetProject(struct mg_connection *conn, Project &p, User u)
 }
 
 
-void httpGetNewIssueForm(struct mg_connection *conn, const Project &p, User u)
+void httpGetNewIssueForm(struct mg_connection *conn, Project &p, User u)
 {
     enum Role role = u.getRole(p.getName());
     if (role != ROLE_RW && role != ROLE_ADMIN) {
@@ -746,8 +751,8 @@ int httpGetIssue(struct mg_connection *conn, Project &p, const std::string &issu
     LOG_DEBUG("httpGetIssue: project=%s, issue=%s", p.getName().c_str(), issueId.c_str());
 
     Issue issue;
-    std::list<Entry*> Entries;
-    int r = p.get(issueId.c_str(), issue, Entries);
+    std::list<Entry*> entries;
+    int r = p.get(issueId.c_str(), issue, entries);
     if (r < 0) {
         // issue not found or other error
         return 0; // let mongoose handle it
@@ -757,10 +762,10 @@ int httpGetIssue(struct mg_connection *conn, Project &p, const std::string &issu
 
         sendHttpHeader200(conn);
 
-        if (format == RENDERING_TEXT) RText::printIssue(conn, issue, Entries);
+        if (format == RENDERING_TEXT) RText::printIssue(conn, issue, entries);
         else {
             ContextParameters ctx = ContextParameters(conn, u, p);
-            RHtml::printPageIssue(conn, ctx, issue, Entries);
+            RHtml::printPageIssue(conn, ctx, issue, entries);
         }
         return 1; // done
     }

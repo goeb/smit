@@ -126,10 +126,10 @@ textarea.sm_pinput_message {
     width: 50em;
     height: 180px;
 }
-table.sm_issues_table {
+table.sm_issues {
     border-collapse:collapse;
 }
-.sm_issues_th, .sm_issues_td {
+th.sm_issues, td.sm_issues {
     padding-right: 1em;
     padding-left: 1em;
     padding-bottom: 0.2em;
@@ -137,13 +137,13 @@ table.sm_issues_table {
     border-right: solid 1px rgb(200, 200, 186);
     font-size: small;
 }
-.sm_issues_th {
+th.sm_issues {
     border-bottom: solid 1px rgb(200, 200, 186);
 }
-table.sm_issues_table tr {
+table.sm_issues tr {
     vertical-align:text-top;
 }
-table.sm_issues_table tr:hover {
+table.sm_issues tr:hover {
     background-color: #E8E8E8;
 }
 .sm_group {

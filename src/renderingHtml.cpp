@@ -27,7 +27,7 @@
 #include "global.h"
 
 
-ContextParameters::ContextParameters(struct mg_connection *cnx, User u, const Project &p)
+ContextParameters::ContextParameters(struct mg_connection *cnx, User u, Project &p)
 {
     project = &p;
     username = u.username;
@@ -204,6 +204,9 @@ public:
 
             } else if (varname == K_SM_DIV_ISSUES && issueList && colspec) {
                 RHtml::printIssueList(ctx.conn, ctx, *issueList, *colspec);
+
+            } else if (varname == K_SM_DIV_ISSUES && issueListFullContents) {
+                RHtml::printIssueListFullContents(ctx.conn, ctx, *issueListFullContents);
 
             } else if (varname == K_SM_DIV_ISSUE && currentIssue && entries) {
                 RHtml::printIssue(ctx.conn, ctx, *currentIssue, *entries);
@@ -777,36 +780,78 @@ std::string getPropertyForGrouping(const ProjectConfig &pconfig, const std::stri
     return property;
 }
 
+/** print chosen filters and search parameters
+  */
+void printFilters(const ContextParameters &ctx)
+{
+    struct mg_connection *conn = ctx.conn;
+    if (!ctx.search.empty() || !ctx.filterin.empty() || !ctx.filterout.empty()) {
+       mg_printf(conn, "<div class=\"sm_view_summary\">");
+       if (!ctx.search.empty()) mg_printf(conn, "search: %s<br>", ctx.search.c_str());
+       if (!ctx.filterin.empty()) mg_printf(conn, "filterin: %s<br>", toString(ctx.filterin).c_str());
+       if (!ctx.filterout.empty()) mg_printf(conn, "filterout: %s", toString(ctx.filterout).c_str());
+       mg_printf(conn, "</div>");
+   }
+}
+
+void RHtml::printIssueListFullContents(struct mg_connection *conn, const ContextParameters &ctx,
+                                   std::vector<struct Issue*> issueList)
+{
+    mg_printf(conn, "<div class=\"sm_issues\">\n");
+
+    printFilters(ctx);
+    // number of issues
+    mg_printf(conn, "<div class=\"sm_issues_count\">%s: <span class=\"sm_issues_count\">%d</span></div>\n",
+              _("Issues found"), issueList.size());
+
+
+    std::vector<struct Issue*>::iterator i;
+    if (!ctx.project) {
+        LOG_ERROR("Null project");
+        return;
+    }
+
+    FOREACH (i, issueList) {
+        Issue issue;
+        std::list<Entry*> entries;
+        int r = ctx.project->get((*i)->id.c_str(), issue, entries);
+        if (r < 0) {
+            // issue not found (or other error)
+            LOG_INFO("Issue disappeared: %s", (*i)->id.c_str());
+
+        } else {
+            // deactivate user role
+            ContextParameters ctxCopy = ctx;
+            ctxCopy.userRole = ROLE_RO;
+            printPageIssue(conn, ctxCopy, issue, entries);
+        }
+    }
+}
+
 void RHtml::printIssueList(struct mg_connection *conn, const ContextParameters &ctx,
                     std::vector<struct Issue*> issueList, std::list<std::string> colspec)
 {
     mg_printf(conn, "<div class=\"sm_issues\">\n");
 
-    // print chosen filters and search parameters
-    if (!ctx.search.empty() || !ctx.filterin.empty() || !ctx.filterout.empty()) {
-        mg_printf(conn, "<div class=\"sm_view_summary\">");
-        if (!ctx.search.empty()) mg_printf(conn, "search: %s<br>", ctx.search.c_str());
-        if (!ctx.filterin.empty()) mg_printf(conn, "filterin: %s<br>", toString(ctx.filterin).c_str());
-        if (!ctx.filterout.empty()) mg_printf(conn, "filterout: %s", toString(ctx.filterout).c_str());
-        mg_printf(conn, "</div>");
-    }
-    mg_printf(conn, "<div class=\"sm_issues_count\">%s: <span class=\"sm_number_of_issues\">%d</span></div>\n",
-              _("Issues found"), issueList.size());
+    printFilters(ctx);
 
+    // number of issues
+    mg_printf(conn, "<div class=\"sm_issues_count\">%s: <span class=\"sm_issues_count\">%d</span></div>\n",
+              _("Issues found"), issueList.size());
 
     std::string group = getPropertyForGrouping(ctx.project->getConfig(), ctx.sort);
     std::string currentGroup;
 
-    mg_printf(conn, "<table class=\"sm_issues_table\">\n");
+    mg_printf(conn, "<table class=\"sm_issues\">\n");
 
     // print header of the table
-    mg_printf(conn, "<tr class=\"sm_issues_tr\">\n");
+    mg_printf(conn, "<tr class=\"sm_issues\">\n");
     std::list<std::string>::iterator colname;
     for (colname = colspec.begin(); colname != colspec.end(); colname++) {
 
         std::string label = ctx.getProject().getLabelOfProperty(*colname);
         std::string newQueryString = getNewSortingSpec(conn, *colname, true);
-        mg_printf(conn, "<th class=\"sm_issues_th\"><a class=\"sm_sort_exclusive\" href=\"?%s\" title=\"Sort ascending\">%s</a>\n",
+        mg_printf(conn, "<th class=\"sm_issues\"><a class=\"sm_sort_exclusive\" href=\"?%s\" title=\"Sort ascending\">%s</a>\n",
                   newQueryString.c_str(), label.c_str());
         newQueryString = getNewSortingSpec(conn, *colname, false);
         mg_printf(conn, "\n<br><a href=\"?%s\" class=\"sm_sort_accumulate\" ", newQueryString.c_str());
@@ -855,26 +900,21 @@ void RHtml::printIssueList(struct mg_connection *conn, const ContextParameters &
                 href_rhs = "</a>";
             }
 
-            mg_printf(conn, "<td class=\"sm_issues_td\">%s%s%s</td>\n", href_lhs.c_str(), text.str().c_str(), href_rhs.c_str());
-
-
+            mg_printf(conn, "<td class=\"sm_issues\">%s%s%s</td>\n", href_lhs.c_str(), text.str().c_str(), href_rhs.c_str());
         }
         mg_printf(conn, "</tr>\n");
     }
     mg_printf(conn, "</table>\n");
     mg_printf(conn, "</div\n");
-
 }
 
 /** Print HTML page with the given issues and their full contents
   *
   */
-void RHtml::printPageIssuesFullContents(const ContextParameters &ctx,
-                                        std::vector<struct Issue*> issueList, std::list<std::string> colspec)
+void RHtml::printPageIssuesFullContents(const ContextParameters &ctx, std::vector<struct Issue*> issueList)
 {
     VariableNavigator vn("issues.html", ctx);
     vn.issueListFullContents = &issueList;
-    vn.colspec = &colspec;
     vn.printPage();
 }
 
@@ -894,7 +934,6 @@ bool RHtml::inList(const std::list<std::string> &listOfValues, const std::string
     for (v=listOfValues.begin(); v!=listOfValues.end(); v++) if (*v == value) return true;
 
     return false;
-
 }
 
 

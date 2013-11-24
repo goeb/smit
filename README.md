@@ -21,12 +21,12 @@ Features
 Getting Started
 ---------------
     
-Online demo:
+### Online demo:
 
     http://smit.herokuapp.com
 
     
-For the ones who want to experiment quickly:
+### For the ones who want to experiment quickly:
 
     git clone https://github.com/goeb/smit.git
     cd smit
@@ -36,7 +36,17 @@ For the ones who want to experiment quickly:
     <web-browser> http://127.0.0.1:8080/things_to_do/issues
 
 
-In order to create a new project:
+### Install Smit:
+    
+    git clone https://github.com/goeb/smit.git
+    cd smit
+    make
+    cp smit /usr/bin/.
+    # OR    
+    cp smit /somewhere/in/your/PATH
+
+
+### Create a new project:
     
     mkdir myrepo
     smit init myrepo
@@ -69,7 +79,36 @@ Roadmap
 Customize the HTML pages
 ------------------------
 
-Soon coming...
+### How to change the HTML pages?
+
+You may modify the html files in $REPO/public:
+
+    public/newIssue.html
+    public/view.html
+    public/project.html
+    public/issues.html
+    public/issue.html
+    public/views.html
+    public/projects.html
+    public/signin.html
+
+The dynamic contents is referred by SM_ variables:
+
+    SM_DIV_NAVIGATION_GLOBAL
+    SM_DIV_NAVIGATION_ISSUES
+    SM_RAW_PROJECT_NAME
+    SM_RAW_ISSUE_ID
+    SM_SCRIPT_UPDATE_CONFIG
+    SM_DIV_PREDEFINED_VIEWS
+    SM_DIV_PROJECTS
+    SM_DIV_ISSUES
+    SM_DIV_ISSUE
+    SM_DIV_ISSUE_FORM
+
+### How to set a logo?
+
+* Copy your logo image in $REPO/public (eg: logo.png)
+* Refer this image in the HTML pages
 
 
 REST API

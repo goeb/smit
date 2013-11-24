@@ -17,7 +17,7 @@
   */
 class ContextParameters {
 public:
-    ContextParameters(struct mg_connection *cnx, User u, const Project &p);
+    ContextParameters(struct mg_connection *cnx, User u, Project &p);
     ContextParameters(struct mg_connection *cnx, User u);
     const Project &getProject() const;
 
@@ -28,7 +28,7 @@ public:
     std::string sort;
     std::list<std::string> filterin;
     std::list<std::string> filterout;
-    const Project *project;
+    Project *project;
     std::list<std::pair<std::string, uint8_t> > htmlFieldDisplay;
     struct mg_connection *conn;
 };
@@ -40,7 +40,7 @@ public:
 
     static void printPageProjectList(struct mg_connection *conn, const ContextParameters &ctx, const std::list<std::pair<std::string, std::string> > &pList);
     static void printProjectConfig(struct mg_connection *conn, const ContextParameters &ctx);
-    static void printPageIssuesFullContents(const ContextParameters &ctx, std::vector<struct Issue*> issueList, std::list<std::string> colspec);
+    static void printPageIssuesFullContents(const ContextParameters &ctx, std::vector<struct Issue*> issueList);
     static void printPageIssueList(const ContextParameters &ctx, std::vector<struct Issue*> issueList, std::list<std::string> colspec);
     static void printPageIssue(struct mg_connection *conn, const ContextParameters &ctx, const Issue &issue, const std::list<Entry*> &entries);
     static void printPageNewIssue(struct mg_connection *conn, const ContextParameters &ctx);
@@ -55,6 +55,7 @@ public:
     static void printProjects(struct mg_connection *conn, const std::list<std::pair<std::string, std::string> > &pList);
     static void printScriptUpdateConfig(struct mg_connection *conn, const ContextParameters &ctx);
     static void printIssue(struct mg_connection *conn, const ContextParameters &ctx, const Issue &issue, const std::list<Entry*> &entries);
+    static void printIssueListFullContents(struct mg_connection *conn, const ContextParameters &ctx, std::vector<struct Issue*> issueList);
     static void printIssueList(struct mg_connection *conn, const ContextParameters &ctx,
                         std::vector<struct Issue*> issueList, std::list<std::string> colspec);
 
