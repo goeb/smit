@@ -669,7 +669,8 @@ void httpPostView(struct mg_connection *conn, Project &p, const std::string &nam
     // colspec=owner&sort_direction=Ascending&sort_property=id&default=on
 
     std::string sortDirection, sortProperty;
-    std::string filterinPropname, filteroutPropname, filterValue;
+    std::string filterinPropname, filteroutPropname;
+    const char *filterValue = 0; // pointer indicates if it has been encountered or not in the loop
 
     while (postData.size() > 0) {
         std::string tokenPair = popToken(postData, '&');
@@ -681,9 +682,9 @@ void httpPostView(struct mg_connection *conn, Project &p, const std::string &nam
             if (! pv.colspec.empty()) pv.colspec += "+";
             pv.colspec += value;
         } else if (key == "search") pv.search = value;
-        else if (key == "filterin") filterinPropname = value;
-        else if (key == "filterout") filteroutPropname = value;
-        else if (key == "filter_value") filterValue = value;
+        else if (key == "filterin") { filterinPropname = value; filterValue = 0; }
+        else if (key == "filterout") { filteroutPropname = value; filterValue = 0; }
+        else if (key == "filter_value") filterValue = value.c_str();
         else if (key == "sort_direction") sortDirection = value;
         else if (key == "sort_property") sortProperty = value;
         else if (key == "default" && value == "on") pv.isDefault = true;
@@ -697,17 +698,16 @@ void httpPostView(struct mg_connection *conn, Project &p, const std::string &nam
             sortDirection.clear();
             sortProperty.clear();
         }
-        if (filterinPropname.empty() && filteroutPropname.empty()) filterValue.clear();
 
-        if (!filterinPropname.empty()) {
+        if (!filterinPropname.empty() && filterValue) {
             pv.filterin[filterinPropname].push_back(filterValue);
             filterinPropname.clear();
-            filterValue.clear();
+            filterValue = 0;
         }
-        if (!filteroutPropname.empty()) {
+        if (!filteroutPropname.empty() && filterValue) {
             pv.filterout[filteroutPropname].push_back(filterValue);
             filteroutPropname.clear();
-            filterValue.clear();
+            filterValue = 0;
         }
     }
 
