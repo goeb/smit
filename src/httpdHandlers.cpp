@@ -373,7 +373,7 @@ void httpGetRoot(struct mg_connection *conn, User u)
 
     if (format == RENDERING_TEXT) RText::printProjectList(conn, pList);
     else {
-        ContextParameters ctx = ContextParameters(u);
+        ContextParameters ctx = ContextParameters(conn, u);
         RHtml::printPageProjectList(conn, ctx, pList);
     }
 }
@@ -406,7 +406,7 @@ void httpGetProjectConfig(struct mg_connection *conn, Project &p, User u)
     enum RenderingFormat format = getFormat(conn);
     sendHttpHeader200(conn);
     if (format == RENDERING_HTML) {
-        ContextParameters ctx = ContextParameters(u, p);
+        ContextParameters ctx = ContextParameters(conn, u, p);
         RHtml::printProjectConfig(conn, ctx);
     }
 
@@ -553,18 +553,20 @@ void httpGetListOfIssues(struct mg_connection *conn, Project &p, User u)
         cols = allCols;
     }
     enum RenderingFormat format = getFormat(conn);
+    std::string full = getFirstParamFromQueryString(q, "full");
 
     sendHttpHeader200(conn);
 
     if (format == RENDERING_TEXT) RText::printIssueList(conn, issueList, cols);
     else {
-        ContextParameters ctx = ContextParameters(u, p);
+        ContextParameters ctx = ContextParameters(conn, u, p);
         ctx.filterin = filterinRaw;
         ctx.filterout = filteroutRaw;
         ctx.search = fulltextSearch;
         ctx.sort = sorting;
 
-        RHtml::printPageIssueList(conn, ctx, issueList, cols);
+        if (full == "1") RHtml::printPageIssuesFullContents(ctx, issueList, cols);
+        else RHtml::printPageIssueList(ctx, issueList, cols);
     }
 
 }
@@ -588,7 +590,7 @@ void httpGetNewIssueForm(struct mg_connection *conn, const Project &p, User u)
 
     sendHttpHeader200(conn);
 
-    ContextParameters ctx = ContextParameters(u, p);
+    ContextParameters ctx = ContextParameters(conn, u, p);
 
     // only HTML format is needed
     RHtml::printPageNewIssue(conn, ctx);
@@ -604,7 +606,7 @@ void httpGetView(struct mg_connection *conn, Project &p, const std::string &view
         // print the list of all views
         if (RENDERING_TEXT == format) RText::printListOfViews(conn, p);
         else {
-            ContextParameters ctx = ContextParameters(u, p);
+            ContextParameters ctx = ContextParameters(conn, u, p);
             RHtml::printPageListOfViews(conn, ctx);
         }
     } else {
@@ -614,7 +616,7 @@ void httpGetView(struct mg_connection *conn, Project &p, const std::string &view
 
         if (RENDERING_TEXT == format) RText::printView(conn, pv);
         else {
-            ContextParameters ctx = ContextParameters(u, p);
+            ContextParameters ctx = ContextParameters(conn, u, p);
             RHtml::printPageView(conn, ctx, pv);
         }
     }
@@ -757,7 +759,7 @@ int httpGetIssue(struct mg_connection *conn, Project &p, const std::string &issu
 
         if (format == RENDERING_TEXT) RText::printIssue(conn, issue, Entries);
         else {
-            ContextParameters ctx = ContextParameters(u, p);
+            ContextParameters ctx = ContextParameters(conn, u, p);
             RHtml::printPageIssue(conn, ctx, issue, Entries);
         }
         return 1; // done
@@ -1165,12 +1167,5 @@ int begin_request_handler(struct mg_connection *conn)
     }
     if (handled) return 1;
     else return 0; // let Mongoose handle static file
-}
-
-void upload_handler(struct mg_connection *conn, const char *path) {
-    mg_printf(conn, "Saved [%s]", path);
-    std::string req = request2string(conn);
-    mg_printf(conn, "%s", req.c_str());
-
 }
 

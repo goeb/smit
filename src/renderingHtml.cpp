@@ -27,15 +27,19 @@
 #include "global.h"
 
 
-ContextParameters::ContextParameters(User u, const Project &p) : project(&p)
+ContextParameters::ContextParameters(struct mg_connection *cnx, User u, const Project &p)
 {
+    project = &p;
     username = u.username;
     userRole = u.getRole(p.getName());
+    conn = cnx;
 }
 
-ContextParameters::ContextParameters(User u)
+ContextParameters::ContextParameters(struct mg_connection *cnx, User u)
 {
+    project = 0;
     username = u.username;
+    conn = cnx;
 }
 
 const Project &ContextParameters::getProject() const
@@ -56,16 +60,90 @@ const Project &ContextParameters::getProject() const
 #define K_SM_DIV_PROJECTS "SM_DIV_PROJECTS"
 #define K_SM_DIV_ISSUES "SM_DIV_ISSUES"
 #define K_SM_DIV_ISSUE "SM_DIV_ISSUE"
+#define K_SM_DIV_ISSUE_FORM "SM_DIV_ISSUE_FORM"
+
+
+std::string enquoteJs(const std::string &in)
+{
+    std::string out = replaceAll(in, '\'', "\\'");
+    return out;
+}
+
+std::string htmlEscape(const std::string &value)
+{
+    std::string result = replaceAll(value, '&', "&amp;");
+    result = replaceAll(result, '"', "&quot;");
+    result = replaceAll(result, '<', "&lt;");
+    result = replaceAll(result, '>', "&gt;");
+    result = replaceAll(result, '\'', "&apos;");
+    return result;
+}
+
+
+/** Load a page for a specific project
+  *
+  * By default pages (typically HTML pages) are loaded from $REPO/public/ directory.
+  * But the administrator may override this by pages located in $REPO/$PROJECT/html/ directory.
+  *
+  * The caller is responsible for calling 'free' on the returned pointer (if not null).
+  */
+int loadProjectPage(struct mg_connection *conn, const std::string &projectPath, const std::string &page, const char **data)
+{
+    // first look for the page in $REPO/$PROJECT/html/
+    std::string path = projectPath + "/html/" + page;
+    int n = loadFile(path.c_str(), data);
+    if (n > 0) return n;
+
+    // secondly, look at $REPO/public/
+    path = Database::Db.getRootDir() + "/public/" + page;
+    n = loadFile(path.c_str(), data);
+
+    if (n > 0) return n;
+
+    // no page found. This is an error
+    LOG_ERROR("Page not found (or empty): %s", page.c_str());
+    mg_printf(conn, "Missing page (or empty): %s", htmlEscape(page).c_str());
+    return n;
+}
 
 class VariableNavigator {
 public:
-    VariableNavigator(const char *data, size_t len) {
-        buffer = data;
-        size = len;
-        dumpStart = buffer;
-        dumpEnd = buffer;
-        searchFromHere = buffer;
+    std::vector<struct Issue*> *issueList;
+    std::vector<struct Issue*> *issueListFullContents;
+    std::list<std::string> *colspec;
+    const ContextParameters &ctx;
+    const std::list<std::pair<std::string, std::string> > *projectList;
+    const Issue *currentIssue;
+    const std::list<Entry*> *entries;
+
+    VariableNavigator(const std::string basename, const ContextParameters &context) : ctx(context) {
+        buffer = 0;
+        issueList = 0;
+        issueListFullContents = 0;
+        colspec = 0;
+        projectList = 0;
+        currentIssue = 0;
+        entries = 0;
+
+        int n;
+        if (ctx.project) n = loadProjectPage(ctx.conn, ctx.project->getPath(), basename, &buffer);
+        else {
+            std::string path = Database::Db.getRootDir() + "/public/" + basename;
+            n = loadFile(path.c_str(), &buffer);
+        }
+
+        if (n > 0) {
+            size = n;
+            dumpStart = buffer;
+            dumpEnd = buffer;
+            searchFromHere = buffer;
+        } else buffer = 0;
     }
+
+    ~VariableNavigator() {
+        if (buffer) free((void*)buffer);
+    }
+
     std::string getNextVariable() {
 
         if (searchFromHere >= (buffer+size)) return "";
@@ -97,6 +175,54 @@ public:
         dumpEnd = dumpStart;
     }
 
+    void printPage() {
+        if (!buffer) return;
+        mg_printf(ctx.conn, "Content-Type: text/html\r\n\r\n");
+
+        while (1) {
+            std::string varname = getNextVariable();
+            dumpPrevious(ctx.conn);
+            if (varname.empty()) break;
+
+            if (varname == K_SM_RAW_PROJECT_NAME && ctx.project) {
+                mg_printf(ctx.conn, "%s", htmlEscape(ctx.project->getName()).c_str());
+
+            } else if (varname == K_SM_DIV_NAVIGATION_GLOBAL) {
+                RHtml::printNavigationGlobal(ctx.conn, ctx);
+
+            } else if (varname == K_SM_DIV_NAVIGATION_ISSUES && ctx.project) {
+                RHtml::printNavigationIssues(ctx.conn, ctx, false);
+
+            } else if (varname == K_SM_DIV_PROJECTS && projectList) {
+                RHtml::printProjects(ctx.conn, *projectList);
+
+            } else if (varname == K_SM_SCRIPT_UPDATE_CONFIG) {
+                RHtml::printScriptUpdateConfig(ctx.conn, ctx);
+
+            } else if (varname == K_SM_RAW_ISSUE_ID && currentIssue) {
+                mg_printf(ctx.conn, "%s", currentIssue->id.c_str());
+
+            } else if (varname == K_SM_DIV_ISSUES && issueList && colspec) {
+                RHtml::printIssueList(ctx.conn, ctx, *issueList, *colspec);
+
+            } else if (varname == K_SM_DIV_ISSUE && currentIssue && entries) {
+                RHtml::printIssue(ctx.conn, ctx, *currentIssue, *entries);
+
+            } else if (varname == K_SM_DIV_ISSUE_FORM) {
+                Issue issue;
+                RHtml::printIssueForm(ctx.conn, ctx, issue, true);
+
+            } else if (varname == K_SM_DIV_PREDEFINED_VIEWS) {
+                RHtml::printLinksToPredefinedViews(ctx.conn, ctx);
+
+            } else {
+                // unknown variable name
+                mg_printf(ctx.conn, "%s", varname.c_str());
+            }
+        }
+
+    }
+
 private:
     const char *buffer;
     size_t size;
@@ -112,152 +238,86 @@ void RHtml::printPageSignin(struct mg_connection *conn, const char *redirect)
     mg_printf(conn, "Content-Type: text/html\r\n\r\n");
 
     std::string path = Database::Db.getRootDir() + "/public/signin.html";
-    char *data;
+    const char *data;
     int r = loadFile(path.c_str(), &data);
     if (r > 0) {
         mg_write(conn, data, r);
         // add javascript for updating the redirect URL
         mg_printf(conn, "<script>document.getElementById(\"redirect\").value = \"%s\"</script>", redirect);
-        free(data);
+        free((void*)data);
     } else {
         LOG_ERROR("Could not load %s (or empty file)", path.c_str());
     }
 }
 
-std::string enquoteJs(const std::string &in)
-{
-    std::string out = replaceAll(in, '\'', "\\'");
-    return out;
-}
-
-std::string htmlEscape(const std::string &value)
-{
-    std::string result = replaceAll(value, '&', "&amp;");
-    result = replaceAll(result, '"', "&quot;");
-    result = replaceAll(result, '<', "&lt;");
-    result = replaceAll(result, '>', "&gt;");
-    result = replaceAll(result, '\'', "&apos;");
-    return result;
-}
-
-/** Load a page for a specific project
-  *
-  * By default pages (typically HTML pages) are loaded from $REPO/public/ directory.
-  * But the administrator may override this by pages located in $REPO/$PROJECT/html/ directory.
-  *
-  * The caller is responsible for calling 'free' on the returned pointer (if not null).
-  */
-int loadProjectPage(struct mg_connection *conn, const std::string &projectPath, const std::string &page, char **data)
-{
-    // first look for the page in $REPO/$PROJECT/html/
-    std::string path = projectPath + "/html/" + page;
-    int n = loadFile(path.c_str(), data);
-    if (n > 0) return n;
-
-    // secondly, look at $REPO/public/
-    path = Database::Db.getRootDir() + "/public/" + page;
-    n = loadFile(path.c_str(), data);
-
-    if (n > 0) return n;
-
-    // no page found. This is an error
-    LOG_ERROR("Page not found (or empty): %s", page.c_str());
-    mg_printf(conn, "Missing page (or empty): %s", htmlEscape(page).c_str());
-    return n;
-}
-
 void RHtml::printPageView(struct mg_connection *conn, const ContextParameters &ctx, const PredefinedView &pv)
 {
-    mg_printf(conn, "Content-Type: text/html\r\n\r\n");
-
-    char *data;
-    int n = loadProjectPage(conn, ctx.project->getPath(), "view.html", &data);
-    if (n > 0) {
-        VariableNavigator vn(data, n);
-        while (1) {
-            std::string varname = vn.getNextVariable();
-            vn.dumpPrevious(conn);
-            if (varname.empty()) break;
-
-            if (varname == K_SM_RAW_PROJECT_NAME) {
-                mg_printf(conn, "%s", htmlEscape(ctx.project->getName()).c_str());
-
-            } else if (varname == K_SM_DIV_NAVIGATION_GLOBAL) {
-                printNavigationGlobal(conn, ctx);
-
-            } else if (varname == K_SM_DIV_NAVIGATION_ISSUES) {
-                printNavigationIssues(conn, ctx, false);
-
-            } else {
-                // unknown variable name
-                mg_printf(conn, "%s", varname.c_str());
-            }
-        }
-        free(data);
-
-        // add javascript for updating the inputs
-        mg_printf(conn, "<script>\n");
-
-        if (ctx.userRole != ROLE_ADMIN) {
-            // hide what is reserved to admin
-            mg_printf(conn, "hideAdminZone();\n");
-        } else {
-            mg_printf(conn, "setName('%s');\n", enquoteJs(pv.name).c_str());
-        }
-        if (pv.isDefault) mg_printf(conn, "setDefaultCheckbox();\n");
-        std::list<std::string> properties = ctx.project->getPropertiesNames();
-        mg_printf(conn, "Properties = %s;\n", toJavascriptArray(properties).c_str());
-        mg_printf(conn, "setSearch('%s');\n", enquoteJs(pv.search).c_str());
-        mg_printf(conn, "setUrl('/%s/issues/?%s');\n", ctx.project->getUrlName().c_str(),
-                  pv.generateQueryString().c_str());
-
-        // filter in and out
-        std::map<std::string, std::list<std::string> >::const_iterator f;
-        std::list<std::string>::const_iterator v;
-        FOREACH(f, pv.filterin) {
-            FOREACH(v, f->second) {
-                mg_printf(conn, "addFilter('filterin', '%s', '%s');\n",
-                          enquoteJs(f->first).c_str(),
-                          enquoteJs(*v).c_str());
-            }
-        }
-        mg_printf(conn, "addFilter('filterin', '', '');\n");
-
-        FOREACH(f, pv.filterout) {
-            FOREACH(v, f->second) {
-                mg_printf(conn, "addFilter('filterout', '%s', '%s');\n",
-                          enquoteJs(f->first).c_str(),
-                          enquoteJs(*v).c_str());
-            }
-        }
-        mg_printf(conn, "addFilter('filterout', '', '');\n");
-
-        // Colums specification
-        if (!pv.colspec.empty()) {
-            std::vector<std::string> items = split(pv.colspec, " +");
-            std::vector<std::string>::iterator i;
-            FOREACH(i, items) {
-                mg_printf(conn, "addColspec('%s');\n", enquoteJs(*i).c_str());
-            }
-        }
-        mg_printf(conn, "addColspec('');\n");
-
-        // sort
-        std::list<std::pair<bool, std::string> > sSpec = parseSortingSpec(pv.sort.c_str());
-        std::list<std::pair<bool, std::string> >::iterator s;
-        FOREACH(s, sSpec) {
-            std::string direction = PredefinedView::getDirectionName(s->first);
-            mg_printf(conn, "addSort('%s', '%s');\n", enquoteJs(direction).c_str(),
-                      enquoteJs(s->second).c_str());
-        }
-        mg_printf(conn, "addSort('', '');\n");
+    VariableNavigator vn("view.html", ctx);
+    vn.printPage();
 
 
-        mg_printf(conn, "</script>\n");
+    // add javascript for updating the inputs
+    mg_printf(conn, "<script>\n");
+
+    if (ctx.userRole != ROLE_ADMIN) {
+        // hide what is reserved to admin
+        mg_printf(conn, "hideAdminZone();\n");
+    } else {
+        mg_printf(conn, "setName('%s');\n", enquoteJs(pv.name).c_str());
     }
+    if (pv.isDefault) mg_printf(conn, "setDefaultCheckbox();\n");
+    std::list<std::string> properties = ctx.project->getPropertiesNames();
+    mg_printf(conn, "Properties = %s;\n", toJavascriptArray(properties).c_str());
+    mg_printf(conn, "setSearch('%s');\n", enquoteJs(pv.search).c_str());
+    mg_printf(conn, "setUrl('/%s/issues/?%s');\n", ctx.project->getUrlName().c_str(),
+              pv.generateQueryString().c_str());
+
+    // filter in and out
+    std::map<std::string, std::list<std::string> >::const_iterator f;
+    std::list<std::string>::const_iterator v;
+    FOREACH(f, pv.filterin) {
+        FOREACH(v, f->second) {
+            mg_printf(conn, "addFilter('filterin', '%s', '%s');\n",
+                      enquoteJs(f->first).c_str(),
+                      enquoteJs(*v).c_str());
+        }
+    }
+    mg_printf(conn, "addFilter('filterin', '', '');\n");
+
+    FOREACH(f, pv.filterout) {
+        FOREACH(v, f->second) {
+            mg_printf(conn, "addFilter('filterout', '%s', '%s');\n",
+                      enquoteJs(f->first).c_str(),
+                      enquoteJs(*v).c_str());
+        }
+    }
+    mg_printf(conn, "addFilter('filterout', '', '');\n");
+
+    // Colums specification
+    if (!pv.colspec.empty()) {
+        std::vector<std::string> items = split(pv.colspec, " +");
+        std::vector<std::string>::iterator i;
+        FOREACH(i, items) {
+            mg_printf(conn, "addColspec('%s');\n", enquoteJs(*i).c_str());
+        }
+    }
+    mg_printf(conn, "addColspec('');\n");
+
+    // sort
+    std::list<std::pair<bool, std::string> > sSpec = parseSortingSpec(pv.sort.c_str());
+    std::list<std::pair<bool, std::string> >::iterator s;
+    FOREACH(s, sSpec) {
+        std::string direction = PredefinedView::getDirectionName(s->first);
+        mg_printf(conn, "addSort('%s', '%s');\n", enquoteJs(direction).c_str(),
+                  enquoteJs(s->second).c_str());
+    }
+    mg_printf(conn, "addSort('', '');\n");
+
+
+    mg_printf(conn, "</script>\n");
 }
 
-void printLinksToPredefinedViews(struct mg_connection *conn, const ContextParameters &ctx)
+void RHtml::printLinksToPredefinedViews(struct mg_connection *conn, const ContextParameters &ctx)
 {
     ProjectConfig c = ctx.getProject().getConfig();
     std::map<std::string, PredefinedView>::iterator pv;
@@ -276,37 +336,8 @@ void printLinksToPredefinedViews(struct mg_connection *conn, const ContextParame
 
 void RHtml::printPageListOfViews(struct mg_connection *conn, const ContextParameters &ctx)
 {
-    mg_printf(conn, "Content-Type: text/html\r\n\r\n");
-
-    char *data;
-    int n = loadProjectPage(conn, ctx.project->getPath(), "views.html", &data);
-
-    if (n > 0) {
-        VariableNavigator vn(data, n);
-        while (1) {
-            std::string varname = vn.getNextVariable();
-            vn.dumpPrevious(conn);
-            if (varname.empty()) break;
-
-            if (varname == K_SM_RAW_PROJECT_NAME) {
-                mg_printf(conn, "%s", htmlEscape(ctx.project->getName()).c_str());
-
-            } else if (varname == K_SM_DIV_NAVIGATION_GLOBAL) {
-                printNavigationGlobal(conn, ctx);
-
-            } else if (varname == K_SM_DIV_NAVIGATION_ISSUES) {
-                printNavigationIssues(conn, ctx, false);
-
-            } else if (varname == K_SM_DIV_PREDEFINED_VIEWS) {
-                printLinksToPredefinedViews(conn, ctx);
-
-            } else {
-                // unknown variable name
-                mg_printf(conn, "%s", varname.c_str());
-            }
-        }
-        free(data);
-    }
+    VariableNavigator vn("views.html", ctx);
+    vn.printPage();
 }
 
 #define LOCAL_SIZE 512
@@ -540,7 +571,7 @@ void RHtml::printNavigationIssues(struct mg_connection *conn, const ContextParam
 }
 
 
-void printProjects(struct mg_connection *conn, const std::list<std::pair<std::string, std::string> > &pList)
+void RHtml::printProjects(struct mg_connection *conn, const std::list<std::pair<std::string, std::string> > &pList)
 {
     std::list<std::pair<std::string, std::string> >::const_iterator p;
     for (p=pList.begin(); p!=pList.end(); p++) {
@@ -555,36 +586,9 @@ void printProjects(struct mg_connection *conn, const std::list<std::pair<std::st
 
 void RHtml::printPageProjectList(struct mg_connection *conn, const ContextParameters &ctx, const std::list<std::pair<std::string, std::string> > &pList)
 {
-
-    mg_printf(conn, "Content-Type: text/html\r\n\r\n");
-
-    char *data;
-    const char *subpath = "/public/projects.html";
-    std::string path = Database::Db.getRootDir() + subpath;
-    int n = loadFile(path.c_str(), &data);
-    if (n > 0) {
-        VariableNavigator vn(data, n);
-        while (1) {
-            std::string varname = vn.getNextVariable();
-            vn.dumpPrevious(conn);
-            if (varname.empty()) break;
-
-            if (varname == K_SM_DIV_NAVIGATION_GLOBAL) {
-                printNavigationGlobal(conn, ctx);
-
-            } else if (varname == K_SM_DIV_PROJECTS) {
-                printProjects(conn, pList);
-
-            } else {
-                // unknown variable name
-                mg_printf(conn, "%s", varname.c_str());
-            }
-        }
-        free(data);
-    } else {
-        LOG_ERROR("Page not found (or empty file): %s", subpath);
-        mg_printf(conn, "Missing page (or empty file): %s", htmlEscape(subpath).c_str());
-    }
+    VariableNavigator vn("projects.html", ctx);
+    vn.projectList = &pList;
+    vn.printPage();
 }
 
 /** Build a new query string based on the current one, and update the sorting part
@@ -692,7 +696,7 @@ std::string getNewSortingSpec(struct mg_connection *conn, const std::string prop
 }
 
 
-void printScriptUpdateConfig(struct mg_connection *conn, const ContextParameters &ctx)
+void RHtml::printScriptUpdateConfig(struct mg_connection *conn, const ContextParameters &ctx)
 {
     mg_printf(conn, "<script>\n");
 
@@ -739,39 +743,8 @@ void printScriptUpdateConfig(struct mg_connection *conn, const ContextParameters
 
 void RHtml::printProjectConfig(struct mg_connection *conn, const ContextParameters &ctx)
 {
-    mg_printf(conn, "Content-Type: text/html\r\n\r\n");
-
-    char *data;
-    int n = loadProjectPage(conn, ctx.project->getPath(), "project.html", &data);
-
-    if (n > 0) {
-        VariableNavigator vn(data, n);
-        while (1) {
-            std::string varname = vn.getNextVariable();
-            vn.dumpPrevious(conn);
-            if (varname.empty()) break;
-
-            if (varname == K_SM_RAW_PROJECT_NAME) {
-                mg_printf(conn, "%s", htmlEscape(ctx.project->getName()).c_str());
-
-            } else if (varname == K_SM_DIV_NAVIGATION_GLOBAL) {
-                printNavigationGlobal(conn, ctx);
-
-            } else if (varname == K_SM_DIV_NAVIGATION_ISSUES) {
-                printNavigationIssues(conn, ctx, false);
-
-            } else if (varname == K_SM_SCRIPT_UPDATE_CONFIG) {
-                printScriptUpdateConfig(conn, ctx);
-
-            } else if (varname == K_SM_DIV_PREDEFINED_VIEWS) {
-                printLinksToPredefinedViews(conn, ctx);
-            } else {
-                // unknown variable name
-                mg_printf(conn, "%s", varname.c_str());
-            }
-        }
-        free(data);
-    }
+    VariableNavigator vn("project.html", ctx);
+    vn.printPage();
 }
 
 /** Get the property name that will be used for gouping
@@ -804,7 +777,7 @@ std::string getPropertyForGrouping(const ProjectConfig &pconfig, const std::stri
     return property;
 }
 
-void printIssueList(struct mg_connection *conn, const ContextParameters &ctx,
+void RHtml::printIssueList(struct mg_connection *conn, const ContextParameters &ctx,
                     std::vector<struct Issue*> issueList, std::list<std::string> colspec)
 {
     mg_printf(conn, "<div class=\"sm_issues\">\n");
@@ -893,38 +866,25 @@ void printIssueList(struct mg_connection *conn, const ContextParameters &ctx,
 
 }
 
-void RHtml::printPageIssueList(struct mg_connection *conn, const ContextParameters &ctx,
+/** Print HTML page with the given issues and their full contents
+  *
+  */
+void RHtml::printPageIssuesFullContents(const ContextParameters &ctx,
+                                        std::vector<struct Issue*> issueList, std::list<std::string> colspec)
+{
+    VariableNavigator vn("issues.html", ctx);
+    vn.issueListFullContents = &issueList;
+    vn.colspec = &colspec;
+    vn.printPage();
+}
+
+void RHtml::printPageIssueList(const ContextParameters &ctx,
                            std::vector<struct Issue*> issueList, std::list<std::string> colspec)
 {
-    mg_printf(conn, "Content-Type: text/html\r\n\r\n");
-
-    char *data;
-    int n = loadProjectPage(conn, ctx.project->getPath(), "issues.html", &data);
-    if (n > 0) {
-        VariableNavigator vn(data, n);
-        while (1) {
-            std::string varname = vn.getNextVariable();
-            vn.dumpPrevious(conn);
-            if (varname.empty()) break;
-
-            if (varname == K_SM_DIV_NAVIGATION_GLOBAL) {
-                printNavigationGlobal(conn, ctx);
-
-            } else if (varname == K_SM_DIV_NAVIGATION_ISSUES) {
-                printNavigationIssues(conn, ctx, true);
-
-            } else if (varname == K_SM_DIV_ISSUES) {
-                printIssueList(conn, ctx, issueList, colspec);
-
-            } else if (varname == K_SM_RAW_PROJECT_NAME) {
-                mg_printf(conn, "%s", htmlEscape(ctx.project->getName()).c_str());
-            } else {
-                // unknown variable name
-                mg_printf(conn, "%s", varname.c_str());
-            }
-        }
-        free(data);
-    }
+    VariableNavigator vn("issues.html", ctx);
+    vn.issueList = &issueList;
+    vn.colspec = &colspec;
+    vn.printPage();
 }
 
 
@@ -1121,7 +1081,7 @@ bool isImage(const std::string &filename)
     return false;
 }
 
-void printIssue(struct mg_connection *conn, const ContextParameters &ctx, const Issue &issue, const std::list<Entry*> &entries)
+void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx, const Issue &issue, const std::list<Entry*> &entries)
 {
     mg_printf(conn, "<div class=\"sm_issue\">");
 
@@ -1287,78 +1247,18 @@ void printIssue(struct mg_connection *conn, const ContextParameters &ctx, const 
 
 void RHtml::printPageIssue(struct mg_connection *conn, const ContextParameters &ctx, const Issue &issue, const std::list<Entry*> &entries)
 {
-    mg_printf(conn, "Content-Type: text/html\r\n\r\n");
-    char *data;
-    int n = loadProjectPage(conn, ctx.project->getPath(), "issue.html", &data);
-    if (n > 0) {
-        VariableNavigator vn(data, n);
-        while (1) {
-            std::string varname = vn.getNextVariable();
-
-            vn.dumpPrevious(conn);
-
-            if (varname.empty()) break;
-
-            if (varname == K_SM_DIV_NAVIGATION_GLOBAL) {
-                printNavigationGlobal(conn, ctx);
-
-            } else if (varname == K_SM_DIV_NAVIGATION_ISSUES) {
-                printNavigationIssues(conn, ctx, false);
-
-            } else if (varname == K_SM_RAW_ISSUE_ID) {
-                mg_printf(conn, "%s", issue.id.c_str());
-
-            } else if (varname == K_SM_DIV_ISSUE) {
-                printIssue(conn, ctx, issue, entries);
-
-            } else if (varname == K_SM_RAW_PROJECT_NAME) {
-                mg_printf(conn, "%s", htmlEscape(ctx.project->getName()).c_str());
-
-            } else {
-                // unknown variable name
-                mg_printf(conn, "%s", varname.c_str());
-            }
-        }
-        free(data);
-    }
+    VariableNavigator vn("issue.html", ctx);
+    vn.currentIssue = &issue;
+    vn.entries = &entries;
+    vn.printPage();
 }
 
 
 
 void RHtml::printPageNewIssue(struct mg_connection *conn, const ContextParameters &ctx)
 {
-    mg_printf(conn, "Content-Type: text/html\r\n\r\n");
-    char *data;
-    int n = loadProjectPage(conn, ctx.project->getPath(), "newIssue.html", &data);
-    if (n > 0) {
-        VariableNavigator vn(data, n);
-        while (1) {
-            std::string varname = vn.getNextVariable();
-
-            vn.dumpPrevious(conn);
-
-            if (varname.empty()) break;
-
-            if (varname == K_SM_DIV_NAVIGATION_GLOBAL) {
-                printNavigationGlobal(conn, ctx);
-
-            } else if (varname == K_SM_DIV_NAVIGATION_ISSUES) {
-                printNavigationIssues(conn, ctx, false);
-
-            } else if (varname == K_SM_DIV_ISSUE) {
-                Issue issue;
-                printIssueForm(conn, ctx, issue, true);
-
-            } else if (varname == K_SM_RAW_PROJECT_NAME) {
-                mg_printf(conn, "%s", htmlEscape(ctx.project->getName()).c_str());
-
-            } else {
-                // unknown variable name
-                mg_printf(conn, "%s", varname.c_str());
-            }
-        }
-        free(data);
-    }
+    VariableNavigator vn("newIssue.html", ctx);
+    vn.printPage();
 }
 
 

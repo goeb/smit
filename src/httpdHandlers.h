@@ -4,7 +4,6 @@
 #include <string>
 
 int begin_request_handler(struct mg_connection *conn);
-void upload_handler(struct mg_connection *conn, const char *path);
 
 
 #endif

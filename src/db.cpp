@@ -84,13 +84,13 @@ std::string loadRef(const std::string &issuePath, const std::string &refname)
 {
     std::string refvalue;
     std::string headPath = issuePath + '/' + refname;
-    char *buf = 0;
+    const char *buf = 0;
     int n = loadFile(headPath.c_str(), &buf);
 
     if (n <= 0) return refvalue; // error or empty file
 
     refvalue.assign(buf, n);
-    free(buf);
+    free((void*)buf);
     return refvalue;
 }
 
@@ -159,7 +159,7 @@ Entry *loadEntry(std::string dir, const char* basename)
 {
     // load a given entry
     std::string path = dir + '/' + basename;
-    char *buf = 0;
+    const char *buf = 0;
     int n = loadFile(path.c_str(), &buf);
 
     if (n <= 0) return 0; // error or empty file
@@ -168,7 +168,7 @@ Entry *loadEntry(std::string dir, const char* basename)
     e->id = basename;
 
     std::list<std::list<std::string> > lines = parseConfigTokens(buf, n);
-    free(buf);
+    free((void*)buf);
 
     std::list<std::list<std::string> >::iterator line;
     int lineNum = 0;
@@ -528,14 +528,14 @@ int Project::loadConfig(const char *path)
     pathToProjectFile = pathToProjectFile + '/' + PROJECT_FILE;
 
 
-    char *buf = 0;
+    const char *buf = 0;
     int n = loadFile(pathToProjectFile.c_str(), &buf);
 
     if (n <= 0) return -1; // error or empty file
 
     std::list<std::list<std::string> > lines = parseConfigTokens(buf, n);
 
-    free(buf); // not needed any longer
+    free((void*)buf); // not needed any longer
 
     config = parseProjectConfig(lines);
 
@@ -750,14 +750,14 @@ void Project::loadPredefinedViews(const char *projectPath)
     path += '/';
     path += VIEWS_FILE;
 
-    char *buf = 0;
+    const char *buf = 0;
     int n = loadFile(path.c_str(), &buf);
 
     if (n > 0) {
 
         std::list<std::list<std::string> > lines = parseConfigTokens(buf, n);
 
-        free(buf); // not needed any longer
+        free((void*)buf); // not needed any longer
 
         config.predefinedViews = PredefinedView::parsePredefinedViews(lines);
     } // else error of empty file

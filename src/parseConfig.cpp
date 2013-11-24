@@ -158,7 +158,7 @@ std::list<std::list<std::string> > parseConfigTokens(const char *buf, size_t len
 //         -1 in case of error
 // If the file is empty, 0 is returned and the buffer is not allocated.
 // It is up to the caller to free the buffer (if the return value is > 0).
-int loadFile(const char *filepath, char **data)
+int loadFile(const char *filepath, const char **data)
 {
     //LOG_DEBUG("Loading file '%s'...", filepath);
     *data = 0;

@@ -8,7 +8,7 @@
 
 std::list<std::list<std::string> > parseConfigTokens(const char *buf, size_t len);
 
-int loadFile(const char *filepath, char **data);
+int loadFile(const char *filepath, const char **data);
 int writeToFile(const char *filepath, const std::string &data);
 int writeToFile(const char *filepath, const char *data, size_t len);
 

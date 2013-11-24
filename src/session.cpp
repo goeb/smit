@@ -66,7 +66,7 @@ int UserBase::load(const char *repository)
     std::string file = repository;
     file += "/";
     file += FILE_USERS;
-    char *data;
+    const char *data;
     int n = loadFile(file.c_str(), &data);
     if (n < 0) {
         LOG_ERROR("Could not load user file.");
@@ -75,7 +75,7 @@ int UserBase::load(const char *repository)
 
     std::list<std::list<std::string> > lines = parseConfigTokens(data, n);
 
-    free(data);
+    free((void*)data);
 
     std::list<std::list<std::string> >::iterator line;
     for (line = lines.begin(); line != lines.end(); line++) {

@@ -4,7 +4,6 @@ CONFIG -= qt
 
 SOURCES += \
     ../../mongoose/mongoose.c \
-    ../../src/hello.c \
     ../../src/db.cpp \
     ../../src/parseConfig.cpp \
     ../../src/identifiers.cpp \
