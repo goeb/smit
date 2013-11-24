@@ -16,6 +16,8 @@ Features
 - Easy to install locally, or on a server
 - UTF-8
 - Offline capability
+- full-contents view (all issues and their contents on a same page)
+  suitable for HTML or PDF export
 
 
 Getting Started
@@ -69,7 +71,6 @@ Roadmap
 
 - v1.1
   - make it also run on Windows
-  - full-contents view (all tickets with their contents on a single page)
 
 - v2.0
   - i18n (gettext)
@@ -92,23 +93,32 @@ You may modify the html files in $REPO/public:
     public/projects.html
     public/signin.html
 
-The dynamic contents is referred by SM_ variables:
+### What are these SM_DIV_... things ?
+These are variables dynamically replaced on the HTML pages.
+
+The following dynamic variables are defined:
 
     SM_DIV_NAVIGATION_GLOBAL
     SM_DIV_NAVIGATION_ISSUES
-    SM_RAW_PROJECT_NAME
+    SM_URL_PROJECT_NAME
+    SM_HTML_PROJECT_NAME
     SM_RAW_ISSUE_ID
-    SM_SCRIPT_UPDATE_CONFIG
+    SM_SCRIPT_PROJECT_CONFIG_UPDATE
     SM_DIV_PREDEFINED_VIEWS
     SM_DIV_PROJECTS
     SM_DIV_ISSUES
     SM_DIV_ISSUE
     SM_DIV_ISSUE_FORM
 
+Some variables make sense only in some particular context. For instance,
+SM_RAW_ISSUE_ID makes sense only when a single issue is displayed.
+
 ### How to set a logo?
 
 * Copy your logo image in $REPO/public (eg: logo.png)
 * Refer this image in the HTML pages
+
+    <img src="/public/logo.png" alt="logo">
 
 
 REST API

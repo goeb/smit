@@ -17,7 +17,8 @@ SOURCES += \
     ../../src/stringTools.cpp \
     ../../src/session.cpp \
     ../../src/mutexTools.cpp \
-    ../../src/dateTools.cpp
+    ../../src/dateTools.cpp \
+    ../../src/logging.cpp
 
 HEADERS += \
     ../../mongoose/mongoose.h \

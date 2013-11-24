@@ -711,7 +711,6 @@ void httpPostView(struct mg_connection *conn, Project &p, const std::string &nam
         }
     }
 
-
     if (pv.name.empty()) {
         // unnamed view
         if (role != ROLE_ADMIN && role != ROLE_RO && role != ROLE_RW) {

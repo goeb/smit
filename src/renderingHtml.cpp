@@ -56,7 +56,7 @@ const Project &ContextParameters::getProject() const
 #define K_SM_HTML_PROJECT_NAME "SM_HTML_PROJECT_NAME"
 #define K_SM_URL_PROJECT_NAME "SM_URL_PROJECT_NAME"
 #define K_SM_RAW_ISSUE_ID "SM_RAW_ISSUE_ID"
-#define K_SM_SCRIPT_UPDATE_CONFIG "SM_SCRIPT_UPDATE_CONFIG"
+#define K_SM_SCRIPT_PROJECT_CONFIG_UPDATE "SM_SCRIPT_PROJECT_CONFIG_UPDATE"
 #define K_SM_DIV_PREDEFINED_VIEWS "SM_DIV_PREDEFINED_VIEWS"
 #define K_SM_DIV_PROJECTS "SM_DIV_PROJECTS"
 #define K_SM_DIV_ISSUES "SM_DIV_ISSUES"
@@ -200,7 +200,7 @@ public:
             } else if (varname == K_SM_DIV_PROJECTS && projectList) {
                 RHtml::printProjects(ctx.conn, *projectList);
 
-            } else if (varname == K_SM_SCRIPT_UPDATE_CONFIG) {
+            } else if (varname == K_SM_SCRIPT_PROJECT_CONFIG_UPDATE) {
                 RHtml::printScriptUpdateConfig(ctx.conn, ctx);
 
             } else if (varname == K_SM_RAW_ISSUE_ID && currentIssue) {

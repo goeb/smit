@@ -121,7 +121,7 @@ std::string Issue::getSummary() const
 int Project::load(const char *path, char *basename)
 {
     Project *p = new Project;
-    LOG_INFO("Loading project %s (%p)...", path, p);
+    LOG_DEBUG("Loading project %s (%p)...", path, p);
 
     p->name = urlNameDecode(basename);
     LOG_DEBUG("Project name: '%s'", p->name.c_str());
