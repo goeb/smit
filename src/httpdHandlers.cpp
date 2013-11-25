@@ -581,7 +581,7 @@ void httpGetProject(struct mg_connection *conn, Project &p, User u)
 {
     // redirect to list of issues
     std::string url = "/";
-    url += p.getUrlName() + "/issues";
+    url += p.getUrlName() + "/issues?defaultView=1";
     sendHttpRedirect(conn, url.c_str(), 0);
 }
 
