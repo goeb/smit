@@ -12,32 +12,54 @@
  *   GNU General Public License for more details.
  */
 
-#include "renderingText.h"
+#include "renderingCsv.h"
 #include "db.h"
 #include "logging.h"
 #include "stringTools.h"
 
-void RText::printProjectList(struct mg_connection *conn, const std::list<std::pair<std::string, std::string> > &pList)
+/** Double quoting is needed when the string contains:
+  *    a " character
+  *    \n or \r
+  *    a comma ,
+  */
+std::string doubleQuoteCsv(const std::string &input)
+{
+    if (input.find_first_of("\n\r\",") == std::string::npos) return input; // no need for quotes
+
+    size_t n = input.size();
+    std::string result = "\"";
+
+    size_t i;
+    for (i=0; i<n; i++) {
+        if (input[i] == '"') result += "\"\"";
+        else result += input[i];
+    }
+    result += '"';
+    return result;
+}
+
+
+void RCsv::printProjectList(struct mg_connection *conn, const std::list<std::pair<std::string, std::string> > &pList)
 {
     mg_printf(conn, "Content-Type: text/plain\r\n\r\n");
 
     std::list<std::pair<std::string, std::string> >::const_iterator p;
     for (p=pList.begin(); p!=pList.end(); p++) {
-        mg_printf(conn, "%s (%s)\n", p->first.c_str(), p->second.c_str());
-
+        mg_printf(conn, "%s,%s\r\n", doubleQuoteCsv(p->first).c_str(), doubleQuoteCsv(p->second).c_str());
     }
 }
 
-void RText::printIssueList(struct mg_connection *conn, std::vector<struct Issue*> issueList, std::list<std::string> colspec)
+void RCsv::printIssueList(struct mg_connection *conn, std::vector<struct Issue*> issueList, std::list<std::string> colspec)
 {
     mg_printf(conn, "Content-Type: text/plain\r\n\r\n");
 
     // print names of columns
     std::list<std::string>::iterator colname;
     for (colname = colspec.begin(); colname != colspec.end(); colname++) {
-        mg_printf(conn, "%s,\t", colname->c_str());
+        if (colname != colspec.begin()) mg_printf(conn, ",");
+        mg_printf(conn, "%s", doubleQuoteCsv(*colname).c_str());
    }
-    mg_printf(conn, "\n");
+    mg_printf(conn, "\r\n");
 
     // list of issues
     std::vector<struct Issue*>::iterator i;
@@ -45,6 +67,8 @@ void RText::printIssueList(struct mg_connection *conn, std::vector<struct Issue*
 
         std::list<std::string>::iterator c;
         for (c = colspec.begin(); c != colspec.end(); c++) {
+            if (c != colspec.begin()) mg_printf(conn, ",");
+
             std::string text;
             std::string column = *c;
 
@@ -59,17 +83,9 @@ void RText::printIssueList(struct mg_connection *conn, std::vector<struct Issue*
                 if (p != properties.end()) text = toString(p->second);
             }
 
-            mg_printf(conn, "%s,\t", text.c_str());
+            mg_printf(conn, "%s", doubleQuoteCsv(text).c_str());
         }
-        mg_printf(conn, "\n");
+        mg_printf(conn, "\r\n");
     }
-
 }
 
-void RText::printIssue(struct mg_connection *conn, const Issue &issue, const std::list<Entry*> &Entries)
-{
-    LOG_DEBUG("RText::printIssue...");
-    mg_printf(conn, "Content-Type: text/plain\r\n\r\n");
-    mg_printf(conn, "not implemented\r\n");
-
-}

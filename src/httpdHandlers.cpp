@@ -39,6 +39,7 @@ typedef __int64 int64_t;
 #include "identifiers.h"
 #include "renderingText.h"
 #include "renderingHtml.h"
+#include "renderingCsv.h"
 #include "parseConfig.h"
 #include "stringTools.h"
 #include "session.h"
@@ -218,7 +219,7 @@ std::list<std::string> getParamListFromQueryString(const std::string & queryStri
     return result;
 }
 
-enum RenderingFormat { RENDERING_HTML, RENDERING_TEXT };
+enum RenderingFormat { RENDERING_HTML, RENDERING_TEXT, RENDERING_CSV };
 enum RenderingFormat getFormat(struct mg_connection *conn)
 {
     const struct mg_request_info *req = mg_get_request_info(conn);
@@ -227,6 +228,7 @@ enum RenderingFormat getFormat(struct mg_connection *conn)
     std::string format = getFirstParamFromQueryString(q, "format");
 
     if (format == "html" || format.empty()) return RENDERING_HTML;
+    else if (format == "csv") return RENDERING_CSV;
     else return RENDERING_TEXT;
 }
 
@@ -278,7 +280,7 @@ void httpPostSignin(struct mg_connection *conn)
 
         std::string redirect;
         enum RenderingFormat format = getFormat(conn);
-        if (format == RENDERING_TEXT) {
+        if (format == RENDERING_TEXT || format == RENDERING_CSV) {
             // no need to get the redirect location
 
         } else {
@@ -373,6 +375,7 @@ void httpGetRoot(struct mg_connection *conn, User u)
     enum RenderingFormat format = getFormat(conn);
 
     if (format == RENDERING_TEXT) RText::printProjectList(conn, pList);
+    else if (format == RENDERING_CSV) RCsv::printProjectList(conn, pList);
     else {
         ContextParameters ctx = ContextParameters(conn, u);
         RHtml::printPageProjectList(conn, ctx, pList);
@@ -404,13 +407,9 @@ void httpGetProjectConfig(struct mg_connection *conn, Project &p, User u)
 {
     if (u.getRole(p.getName()) != ROLE_ADMIN) return sendHttpHeader403(conn);
 
-    enum RenderingFormat format = getFormat(conn);
     sendHttpHeader200(conn);
-    if (format == RENDERING_HTML) {
-        ContextParameters ctx = ContextParameters(conn, u, p);
-        RHtml::printProjectConfig(conn, ctx);
-    }
-
+    ContextParameters ctx = ContextParameters(conn, u, p);
+    RHtml::printProjectConfig(conn, ctx);
 }
 
 /** Parse posted arguments into a list of tokens.
@@ -562,6 +561,7 @@ void httpGetListOfIssues(struct mg_connection *conn, Project &p, User u)
 
 
     if (format == RENDERING_TEXT) RText::printIssueList(conn, issueList, cols);
+    else if (format == RENDERING_CSV) RCsv::printIssueList(conn, issueList, cols);
     else {
         ContextParameters ctx = ContextParameters(conn, u, p);
         ctx.filterin = filterinRaw;
@@ -605,26 +605,20 @@ void httpGetNewIssueForm(struct mg_connection *conn, Project &p, User u)
 void httpGetView(struct mg_connection *conn, Project &p, const std::string &view, User u)
 {
     LOG_FUNC();
-    enum RenderingFormat format = getFormat(conn);
     sendHttpHeader200(conn);
 
     if (view.empty()) {
         // print the list of all views
-        if (RENDERING_TEXT == format) RText::printListOfViews(conn, p);
-        else {
-            ContextParameters ctx = ContextParameters(conn, u, p);
-            RHtml::printPageListOfViews(conn, ctx);
-        }
+        ContextParameters ctx = ContextParameters(conn, u, p);
+        RHtml::printPageListOfViews(conn, ctx);
+
     } else {
         // print the form of the given view
         std::string viewName = urlDecode(view);
         PredefinedView pv = p.getPredefinedView(viewName);
 
-        if (RENDERING_TEXT == format) RText::printView(conn, pv);
-        else {
-            ContextParameters ctx = ContextParameters(conn, u, p);
-            RHtml::printPageView(conn, ctx, pv);
-        }
+        ContextParameters ctx = ContextParameters(conn, u, p);
+        RHtml::printPageView(conn, ctx, pv);
     }
 }
 
@@ -735,7 +729,7 @@ void httpPostView(struct mg_connection *conn, Project &p, const std::string &nam
     }
 
     enum RenderingFormat format = getFormat(conn);
-    if (RENDERING_TEXT == format) {
+    if (RENDERING_TEXT == format || RENDERING_CSV == format) {
         sendHttpHeader200(conn);
 
     } else {
