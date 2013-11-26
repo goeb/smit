@@ -239,6 +239,11 @@ private:
 
 };
 
+/** Print the signin page and set the redirection field
+  *
+  * @param redirect
+  *    May include a query string
+  */
 void RHtml::printPageSignin(struct mg_connection *conn, const char *redirect)
 {
 
@@ -250,7 +255,8 @@ void RHtml::printPageSignin(struct mg_connection *conn, const char *redirect)
     if (r > 0) {
         mg_write(conn, data, r);
         // add javascript for updating the redirect URL
-        mg_printf(conn, "<script>document.getElementById(\"redirect\").value = \"%s\"</script>", redirect);
+        mg_printf(conn, "<script>document.getElementById(\"redirect\").value = \"%s\"</script>",
+                  enquoteJs(redirect).c_str());
         free((void*)data);
     } else {
         LOG_ERROR("Could not load %s (or empty file)", path.c_str());
@@ -857,8 +863,8 @@ void RHtml::printIssueList(struct mg_connection *conn, const ContextParameters &
 
     // add links to alternate download formats (CSV and full-contents)
     mg_printf(conn, "<div class=\"sm_issues_other_formats\">");
-    mg_printf(conn, "<a href=\"/%s\">csv</a> ", urlAdd(conn, "format=csv").c_str());
-    mg_printf(conn, "<a href=\"/%s\">full-contents</a></div>\n", urlAdd(conn, "full=1").c_str());
+    mg_printf(conn, "<a href=\"/%s\" class=\"sm_issues_other_formats\">csv</a> ", urlAdd(conn, "format=csv").c_str());
+    mg_printf(conn, "<a href=\"/%s\" class=\"sm_issues_other_formats\">full-contents</a></div>\n", urlAdd(conn, "full=1").c_str());
 
     printFilters(ctx);
 

@@ -316,10 +316,18 @@ void httpPostSignin(struct mg_connection *conn)
 
 }
 
-void redirectToSignin(struct mg_connection *conn, const std::string &resource)
+void redirectToSignin(struct mg_connection *conn, const char *resource = 0)
 {
     sendHttpHeader200(conn);
-    RHtml::printPageSignin(conn, resource.c_str());
+    std::string url;
+    if (!resource) {
+        struct mg_request_info *rq = mg_get_request_info(conn);
+        url = rq->uri;
+        const char *qs = rq->query_string;
+        if (qs && strlen(qs)) url = url + '?' + qs;
+        resource = url.c_str();
+    }
+    RHtml::printPageSignin(conn, resource);
 }
 
 
@@ -1116,7 +1124,7 @@ int begin_request_handler(struct mg_connection *conn)
     else if (user.username.size() == 0) {
 
         // user not logged in
-        if (getFormat(conn) == RENDERING_HTML) redirectToSignin(conn, "/" + resource + "/" + uri);
+        if (getFormat(conn) == RENDERING_HTML) redirectToSignin(conn, 0);
         else handleUnauthorizedAccess(conn, resource);
 
     }
