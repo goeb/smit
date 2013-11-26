@@ -589,9 +589,9 @@ void RHtml::printProjects(struct mg_connection *conn, const std::list<std::pair<
     std::list<std::pair<std::string, std::string> >::const_iterator p;
     for (p=pList.begin(); p!=pList.end(); p++) {
         std::string pname = p->first.c_str();
-        mg_printf(conn, "<div class=\"sm_link_project\"><a href=\"/%s/issues/?defaultView=1\">%s</a> (%s)",
+        mg_printf(conn, "<div class=\"sm_projects_link\"><a href=\"/%s/issues/?defaultView=1\" class=\"sm_projects_link\">%s</a> (%s)",
                   Project::urlNameEncode(pname).c_str(), htmlEscape(pname).c_str(), _(p->second.c_str()));
-        if (p->second == "admin") mg_printf(conn, " <a href=\"%s/config\">edit</a>", Project::urlNameEncode(pname).c_str());
+        if (p->second == "admin") mg_printf(conn, " <a href=\"%s/config\" class=\"sm_projects_edit\">edit</a>", Project::urlNameEncode(pname).c_str());
         mg_printf(conn, "</div>\n");
     }
 }
@@ -796,10 +796,10 @@ void printFilters(const ContextParameters &ctx)
 {
     struct mg_connection *conn = ctx.conn;
     if (!ctx.search.empty() || !ctx.filterin.empty() || !ctx.filterout.empty()) {
-       mg_printf(conn, "<div class=\"sm_view_summary\">");
-       if (!ctx.search.empty()) mg_printf(conn, "search: %s<br>", ctx.search.c_str());
-       if (!ctx.filterin.empty()) mg_printf(conn, "filterin: %s<br>", toString(ctx.filterin).c_str());
-       if (!ctx.filterout.empty()) mg_printf(conn, "filterout: %s", toString(ctx.filterout).c_str());
+       mg_printf(conn, "<div class=\"sm_issues_filters\">");
+       if (!ctx.search.empty()) mg_printf(conn, "search: %s<br>", htmlEscape(ctx.search).c_str());
+       if (!ctx.filterin.empty()) mg_printf(conn, "filterin: %s<br>", htmlEscape(toString(ctx.filterin)).c_str());
+       if (!ctx.filterout.empty()) mg_printf(conn, "filterout: %s", htmlEscape(toString(ctx.filterout)).c_str());
        mg_printf(conn, "</div>");
    }
 }
@@ -848,7 +848,7 @@ std::string urlAdd(struct mg_connection *conn, const char *param)
     const struct mg_request_info *rq = mg_get_request_info(conn);
     std::string url;
     if (rq && rq->uri && rq->query_string) {
-        url = urlEncode(rq->uri);
+        url = rq->uri;
         url += '?';
         if (strlen(rq->query_string)) url = url + rq->query_string + '&' + param;
         else url += param;
@@ -863,8 +863,8 @@ void RHtml::printIssueList(struct mg_connection *conn, const ContextParameters &
 
     // add links to alternate download formats (CSV and full-contents)
     mg_printf(conn, "<div class=\"sm_issues_other_formats\">");
-    mg_printf(conn, "<a href=\"/%s\" class=\"sm_issues_other_formats\">csv</a> ", urlAdd(conn, "format=csv").c_str());
-    mg_printf(conn, "<a href=\"/%s\" class=\"sm_issues_other_formats\">full-contents</a></div>\n", urlAdd(conn, "full=1").c_str());
+    mg_printf(conn, "<a href=\"%s\" class=\"sm_issues_other_formats\">csv</a> ", urlAdd(conn, "format=csv").c_str());
+    mg_printf(conn, "<a href=\"%s\" class=\"sm_issues_other_formats\">full-contents</a></div>\n", urlAdd(conn, "full=1").c_str());
 
     printFilters(ctx);
 
@@ -884,11 +884,13 @@ void RHtml::printIssueList(struct mg_connection *conn, const ContextParameters &
 
         std::string label = ctx.getProject().getLabelOfProperty(*colname);
         std::string newQueryString = getNewSortingSpec(conn, *colname, true);
-        mg_printf(conn, "<th class=\"sm_issues\"><a class=\"sm_sort_exclusive\" href=\"?%s\" title=\"Sort ascending\">%s</a>\n",
+        mg_printf(conn, "<th class=\"sm_issues\"><a class=\"sm_issues_sort\" href=\"?%s\" title=\"Sort ascending\">%s</a>\n",
                   newQueryString.c_str(), label.c_str());
         newQueryString = getNewSortingSpec(conn, *colname, false);
-        mg_printf(conn, "\n<br><a href=\"?%s\" class=\"sm_sort_accumulate\" ", newQueryString.c_str());
-        mg_printf(conn, "title=\"Sort while preserving order of other columns\n(or invert current column if already sorted-by)\">&gt;&gt;&gt;</a></th>\n");
+        mg_printf(conn, "\n<br><a href=\"?%s\" class=\"sm_issues_sort_cumulative\" ", newQueryString.c_str());
+        mg_printf(conn, "title=\"%s\">&gt;&gt;&gt;</a></th>\n",
+                  _("Sort while preserving order of other columns\n(or invert current column if already sorted-by)"));
+
     }
     mg_printf(conn, "</tr>\n");
 
@@ -898,15 +900,15 @@ void RHtml::printIssueList(struct mg_connection *conn, const ContextParameters &
         if (! group.empty() &&
             (i == issueList.begin() || getProperty((*i)->properties, group) != currentGroup) ) {
                 // insert group bar if relevant
-            mg_printf(conn, "<tr class=\"sm_group\">\n");
+            mg_printf(conn, "<tr class=\"sm_issues_group\">\n");
             currentGroup = getProperty((*i)->properties, group);
-            mg_printf(conn, "<td class=\"sm_group\" colspan=\"%d\"><span class=\"sm_group_label\">%s: </span>",
+            mg_printf(conn, "<td class=\"sm_group\" colspan=\"%d\"><span class=\"sm_issues_group_label\">%s: </span>",
                       colspec.size(), htmlEscape(ctx.getProject().getLabelOfProperty(group)).c_str());
-            mg_printf(conn, "<span class=\"sm_group\">%s</span></td>\n", htmlEscape(currentGroup).c_str());
+            mg_printf(conn, "<span class=\"sm_issues_group\">%s</span></td>\n", htmlEscape(currentGroup).c_str());
             mg_printf(conn, "</tr>\n");
         }
 
-        mg_printf(conn, "<tr class=\"tr_issues\">\n");
+        mg_printf(conn, "<tr class=\"sm_issues\">\n");
 
         std::list<std::string>::iterator c;
         for (c = colspec.begin(); c != colspec.end(); c++) {
@@ -1168,7 +1170,7 @@ void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx,
     // issue summary
     // -------------------------------------------------
     // print the fields of the issue in a two-column table
-    mg_printf(conn, "<table class=\"sm_properties\">");
+    mg_printf(conn, "<table class=\"sm_issue_properties\">");
     int workingColumn = 1;
     const uint8_t MAX_COLUMNS = 2;
 
@@ -1187,8 +1189,8 @@ void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx,
         if (workingColumn == 1) {
             mg_printf(conn, "<tr>\n");
         }
-        mg_printf(conn, "<td class=\"sm_plabel sm_plabel_%s\">%s: </td>\n", pname.c_str(), label.c_str());
-        mg_printf(conn, "<td class=\"sm_pvalue sm_pvalue_%s\">%s</td>\n", pname.c_str(), htmlEscape(value).c_str());
+        mg_printf(conn, "<td class=\"sm_issue_plabel sm_issue_plabel_%s\">%s: </td>\n", pname.c_str(), htmlEscape(label).c_str());
+        mg_printf(conn, "<td class=\"sm_issue_pvalue sm_issue_pvalue_%s\">%s</td>\n", pname.c_str(), htmlEscape(value).c_str());
 
         workingColumn += 1;
         if (workingColumn > MAX_COLUMNS) {
@@ -1200,7 +1202,7 @@ void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx,
 
     // add a link to edit form if role enables it
     if (ctx.userRole == ROLE_ADMIN || ctx.userRole == ROLE_RW) {
-        mg_printf(conn, "<div class=\"sm_link_edit_form\"><a href=\"#edit_form\">%s</a></div>", _("Add message / Edit properties"));
+        mg_printf(conn, "<span class=\"sm_issue_link_edit\"><a href=\"#edit_form\" class=\"sm_issue_link_edit\">%s</a></span>", _("Edit"));
     }
 
     // entries
@@ -1222,7 +1224,7 @@ void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx,
         lastEntryIt--;
         if ( (delta < DELETE_DELAY_S) && (ee.author == ctx.username) && (e == lastEntryIt) ) {
             // entry was created less than 10 minutes ago, and by same user, and is latest in the issue
-            mg_printf(conn, "<a href=\"#\" class=\"sm_delete\" title=\"Delete this entry (at most %d minutes after posting)\" ", (DELETE_DELAY_S/60));
+            mg_printf(conn, "<a href=\"#\" class=\"sm_entry_delete\" title=\"Delete this entry (at most %d minutes after posting)\" ", (DELETE_DELAY_S/60));
             mg_printf(conn, " onclick=\"deleteEntry('/%s/issues/%s', '%s');return false;\">\n",
                       ctx.getProject().getUrlName().c_str(), issue.id.c_str(), ee.id.c_str());
             mg_printf(conn, "&#10008; delete");
@@ -1230,7 +1232,7 @@ void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx,
         }
 
         // link to raw entry
-        mg_printf(conn, "(<a href=\"/%s/issues/%s/%s\" class=\"sm_raw_entry\">%s</a>)\n",
+        mg_printf(conn, "(<a href=\"/%s/issues/%s/%s\" class=\"sm_entry_raw\">%s</a>)\n",
                   ctx.getProject().getUrlName().c_str(),
                   issue.id.c_str(), ee.id.c_str(), _("raw"));
 
@@ -1298,7 +1300,7 @@ void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx,
         }
 
         if (otherProperties.str().size() > 0) {
-            mg_printf(conn, "<div class=\"sm_other_properties\">\n");
+            mg_printf(conn, "<div class=\"sm_entry_other_properties\">\n");
             mg_printf(conn, "%s", otherProperties.str().c_str());
             mg_printf(conn, "</div>\n");
         }
@@ -1346,12 +1348,12 @@ void RHtml::printIssueForm(struct mg_connection *conn, const ContextParameters &
     // each row is made of 1 label, 1 input, 1 label, 1 input (4 columns)
     // except for the summary.
     // summary
-    mg_printf(conn, "<table class=\"sm_properties\">");
+    mg_printf(conn, "<table class=\"sm_issue_properties\">");
     mg_printf(conn, "<tr>\n");
-    mg_printf(conn, "<td class=\"sm_plabel sm_plabel_summary\">%s: </td>\n", ctx.getProject().getLabelOfProperty("summary").c_str());
-    mg_printf(conn, "<td class=\"sm_pinput\" colspan=\"3\">");
+    mg_printf(conn, "<td class=\"sm_issue_plabel sm_issue_plabel_summary\">%s: </td>\n", ctx.getProject().getLabelOfProperty("summary").c_str());
+    mg_printf(conn, "<td class=\"sm_issue_pinput\" colspan=\"3\">");
 
-    mg_printf(conn, "<input class=\"sm_pinput_summary\" required=\"required\" type=\"text\" name=\"summary\" value=\"%s\"",
+    mg_printf(conn, "<input class=\"sm_issue_pinput_summary\" required=\"required\" type=\"text\" name=\"summary\" value=\"%s\"",
               htmlEscape(issue.getSummary()).c_str());
     if (autofocus) mg_printf(conn, " autofocus");
     mg_printf(conn, ">");
@@ -1394,7 +1396,7 @@ void RHtml::printIssueForm(struct mg_connection *conn, const ContextParameters &
         } else if (pspec.type == F_SELECT) {
             if (propertyValues.size()>0) value = propertyValues.front();
             std::list<std::string>::iterator so;
-            input << "<select class=\"sm_pinput_" << pname << "\" name=\"" << pname << "\">";
+            input << "<select class=\"sm_issue_pinput_" << pname << "\" name=\"" << pname << "\">";
 
             for (so = pspec.selectOptions.begin(); so != pspec.selectOptions.end(); so++) {
                 input << "<option" ;
@@ -1406,7 +1408,7 @@ void RHtml::printIssueForm(struct mg_connection *conn, const ContextParameters &
 
         } else if (pspec.type == F_MULTISELECT) {
             std::list<std::string>::iterator so;
-            input << "<select class=\"sm_pinput_" << pname << "\" name=\"" << pname << "\"";
+            input << "<select class=\"sm_issue_pinput_" << pname << "\" name=\"" << pname << "\"";
             if (pspec.type == F_MULTISELECT) input << " multiple=\"multiple\"";
             input << ">";
 
@@ -1420,7 +1422,7 @@ void RHtml::printIssueForm(struct mg_connection *conn, const ContextParameters &
 
         } else if (pspec.type == F_SELECT_USER) {
             if (propertyValues.size()>0) value = propertyValues.front();
-            input << "<select class=\"sm_pinput_" << pname << "\" name=\"" << pname << "\">";
+            input << "<select class=\"sm_issue_pinput_" << pname << "\" name=\"" << pname << "\">";
 
             // TODO
             std::set<std::string> users = UserBase::getUsersOfProject(ctx.getProject().getName());
@@ -1442,8 +1444,8 @@ void RHtml::printIssueForm(struct mg_connection *conn, const ContextParameters &
         if (workingColumn == 1) {
             mg_printf(conn, "<tr>\n");
         }
-        mg_printf(conn, "<td class=\"sm_plabel sm_plabel_%s\">%s: </td>\n", pname.c_str(), label.c_str());
-        mg_printf(conn, "<td class=\"sm_pinput\">%s</td>\n", input.str().c_str());
+        mg_printf(conn, "<td class=\"sm_issue_plabel sm_issue_plabel_%s\">%s: </td>\n", pname.c_str(), label.c_str());
+        mg_printf(conn, "<td class=\"sm_issue_pinput\">%s</td>\n", input.str().c_str());
 
         workingColumn += 1;
         if (workingColumn > MAX_COLUMNS) {
@@ -1457,16 +1459,16 @@ void RHtml::printIssueForm(struct mg_connection *conn, const ContextParameters &
         mg_printf(conn, "<td></td></tr>\n");
     }
     mg_printf(conn, "<tr>\n");
-    mg_printf(conn, "<td class=\"sm_plabel sm_plabel_message\" >%s: </td>\n", _("Message"));
+    mg_printf(conn, "<td class=\"sm_issue_plabel sm_issue_plabel_message\" >%s: </td>\n", _("Message"));
     mg_printf(conn, "<td colspan=\"3\">\n");
-    mg_printf(conn, "<textarea class=\"sm_pinput sm_pinput_message\" placeholder=\"%s\" name=\"%s\" wrap=\"hard\" cols=\"80\">\n",
+    mg_printf(conn, "<textarea class=\"sm_issue_pinput sm_issue_pinput_message\" placeholder=\"%s\" name=\"%s\" wrap=\"hard\" cols=\"80\">\n",
               _("Enter a message"), K_MESSAGE);
     mg_printf(conn, "</textarea>\n");
     mg_printf(conn, "</td></tr>\n");
 
     // check box "enable long lines"
     mg_printf(conn, "<tr><td></td>\n");
-    mg_printf(conn, "<td class=\"sm_longlines\" colspan=\"3\">\n");
+    mg_printf(conn, "<td class=\"sm_issue_longlines\" colspan=\"3\">\n");
     mg_printf(conn, "<label><input type=\"checkbox\" onclick=\"changeWrapping();\">\n");
     mg_printf(conn, "%s\n", _("Enable long lines"));
     mg_printf(conn, "</label></td></tr>\n");
@@ -1474,9 +1476,9 @@ void RHtml::printIssueForm(struct mg_connection *conn, const ContextParameters &
 
     // add file upload input
     mg_printf(conn, "<tr>\n");
-    mg_printf(conn, "<td class=\"sm_plabel sm_plabel_file\" >%s: </td>\n", _("File Upload"));
+    mg_printf(conn, "<td class=\"sm_issue_plabel sm_issue_plabel_file\" >%s: </td>\n", _("File Upload"));
     mg_printf(conn, "<td colspan=\"3\">\n");
-    mg_printf(conn, "<input type=\"file\" name=\"%s\" class=\"sm_input_file\" onchange=\"updateFileInput('sm_input_file');\">\n", K_FILE);
+    mg_printf(conn, "<input type=\"file\" name=\"%s\" class=\"sm_issue_input_file\" onchange=\"updateFileInput('sm_input_file');\">\n", K_FILE);
     mg_printf(conn, "</td></tr>\n");
 
     mg_printf(conn, "<tr><td></td>\n");
