@@ -130,7 +130,7 @@ The reserve keywords that cannot be used as project names are:
 
 ### How to set up different pages for two projects?
 
-HTML pages in $REPO/&lt;project&gt;/html/. are first looked after, and if not found Smit looks in the $REPO/public directory.
+HTML pages are first looked after in $REPO/&lt;project&gt;/html/. and, if not present, Smit looks in the $REPO/public directory.
 
 So, for example, if you want to customize the 'issues' page for a project:
 

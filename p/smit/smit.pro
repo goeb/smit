@@ -18,7 +18,8 @@ SOURCES += \
     ../../src/session.cpp \
     ../../src/mutexTools.cpp \
     ../../src/dateTools.cpp \
-    ../../src/logging.cpp
+    ../../src/logging.cpp \
+    ../../src/renderingCsv.cpp
 
 HEADERS += \
     ../../mongoose/mongoose.h \
@@ -35,5 +36,6 @@ HEADERS += \
     ../../src/session.h \
     ../../src/mutexTools.h \
     ../../src/dateTools.h \
-    ../../src/global.h
+    ../../src/global.h \
+    ../../src/renderingCsv.h
 

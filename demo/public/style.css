@@ -126,6 +126,9 @@ textarea.sm_pinput_message {
     width: 50em;
     height: 180px;
 }
+.sm_issues_other_formats {
+    text-align: right;
+}
 table.sm_issues {
     border-collapse:collapse;
 }

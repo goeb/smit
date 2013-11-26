@@ -18,6 +18,7 @@ SRCS_CPP = src/db.cpp  \
 		   src/main.cpp \
 		   src/httpdHandlers.cpp \
 		   src/renderingText.cpp \
+		   src/renderingCsv.cpp \
 		   src/renderingHtml.cpp \
 		   src/cpio.cpp \
 		   src/stringTools.cpp \

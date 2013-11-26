@@ -835,10 +835,30 @@ void RHtml::printIssueListFullContents(struct mg_connection *conn, const Context
 
 }
 
+/** concatenate a param to the URL (add ? or &)
+  */
+std::string urlAdd(struct mg_connection *conn, const char *param)
+{
+    const struct mg_request_info *rq = mg_get_request_info(conn);
+    std::string url;
+    if (rq && rq->uri && rq->query_string) {
+        url = urlEncode(rq->uri);
+        url += '?';
+        if (strlen(rq->query_string)) url = url + rq->query_string + '&' + param;
+        else url += param;
+    }
+    return url;
+}
+
 void RHtml::printIssueList(struct mg_connection *conn, const ContextParameters &ctx,
                     std::vector<struct Issue*> issueList, std::list<std::string> colspec)
 {
     mg_printf(conn, "<div class=\"sm_issues\">\n");
+
+    // add links to alternate download formats (CSV and full-contents)
+    mg_printf(conn, "<div class=\"sm_issues_other_formats\">");
+    mg_printf(conn, "<a href=\"/%s\">csv</a> ", urlAdd(conn, "format=csv").c_str());
+    mg_printf(conn, "<a href=\"/%s\">full-contents</a></div>\n", urlAdd(conn, "full=1").c_str());
 
     printFilters(ctx);
 
