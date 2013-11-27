@@ -54,7 +54,7 @@ std::string readMgConn(struct mg_connection *conn, size_t maxSize)
     char postFragment[SIZ+1];
     int n; // number of bytes read
 
-    while ( (n = mg_read(conn, postFragment, SIZ)) ) {
+    while ( (n = mg_read(conn, postFragment, SIZ)) > 0) {
         LOG_DEBUG("postFragment size=%d", n);
         if (postData.size() > maxSize) {
             // 10 MByte is too much. overflow. abort.

@@ -47,11 +47,9 @@ get() {
 
 post() {
     echo "post... args=$@" 
-    server=$1
-    project=$2
-    issue=$3
-    data=$4
-    curl -d "$data" -b $SMITC_COOKIE "$server/$project/issues/$issue?format=text"
+    uri="$1"
+    data=$2
+    curl -d "$data" -b $SMITC_COOKIE "$uri?format=text" "$data"
 }
 
 eval $command $args

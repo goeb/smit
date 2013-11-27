@@ -36,7 +36,7 @@ function addProperty(name, label, type, opts) {
     i.name = 'token';
     i.size = 15;
     i.value = name;
-    i.pattern = "[a-zA-Z_0-9]+"
+    i.pattern = "[a-zA-Z_-0-9]+"
         i.placeholder = "logical_name"
         i.title = "Allowed characters: letters, digits, underscore"
         if (type == 'reserved') i.disabled = true;

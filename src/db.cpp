@@ -381,6 +381,14 @@ FieldSpec parseFieldSpec(std::list<std::string> & tokens)
     }
 
     field.name = tokens.front();
+    // check that field name contains only [a-zA-Z0-9-_]
+    const char* allowedInPropertyName = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_";
+    if (field.name.find_first_not_of(allowedInPropertyName) != std::string::npos) {
+        // invalid character
+        LOG_DEBUG("Invalid property name: %s", field.name.c_str());
+        field.name = "";
+        return field;
+    }
     tokens.pop_front();
 
     if (tokens.size() < 1) {
@@ -549,7 +557,7 @@ int Project::modifyConfig(std::list<std::list<std::string> > &tokens)
     ProjectConfig c = parseProjectConfig(tokens);
     if (c.properties.size() == 0) {
         // error do not accept this
-        LOG_ERROR("Reject modification of project structure as there is no property at all");
+        LOG_INFO("Reject modification of project structure as there is no property at all");
         return -1;
     }
     c.predefinedViews = config.predefinedViews; // keep those unchanged
