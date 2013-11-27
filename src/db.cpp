@@ -244,7 +244,7 @@ void Project::consolidateIssue(Issue *i)
         // (in order to have only most recent properties)
 
         consolidateIssueWithSingleEntry(i, e, false); // do not overwrite as we move from most recent to oldest
-
+        i->ctime = e->ctime; // the oldest entry will take precedence for ctime
         parent = e->parent;
     } while (parent != K_PARENT_NULL);
 }

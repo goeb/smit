@@ -8,9 +8,9 @@ usage() {
     echo "Options:"
     echo
     echo "Examples:"
-    echo "    smitc signin http://127.0.0.1:8080 john johnpasswd"
-    echo "    smitc get http://localhost:8080/smit/issues?colspec=id+title"
-    echo "    smitc post http://localhost:8080 project newi summary=testxxx"
+    echo "    smitc signin http://127.0.0.1:8090 john johnpasswd"
+    echo "    smitc get http://127.0.0.1:8090/smit/issues?colspec=id+title"
+    echo "    smitc post http://127.0.0.1:8090/project/issues/new summary=testxxx"
 
     exit 1
 }
