@@ -708,7 +708,8 @@ std::string getNewSortingSpec(struct mg_connection *conn, const std::string prop
     return result;
 }
 
-
+/** Print javascript that will fulfill the inputs of the project configuration
+  */
 void RHtml::printScriptUpdateConfig(struct mg_connection *conn, const ContextParameters &ctx)
 {
     mg_printf(conn, "<script>\n");
@@ -724,24 +725,27 @@ void RHtml::printScriptUpdateConfig(struct mg_connection *conn, const ContextPar
 
     // other properties
     ProjectConfig c = ctx.getProject().getConfig();
-    std::map<std::string, PropertySpec>::iterator p;
-    FOREACH(p, c.properties) {
-        PropertySpec pspec = p->second;
-        const char *type = "";
-        switch (pspec.type) {
-        case F_TEXT: type = "text"; break;
-        case F_SELECT: type = "select"; break;
-        case F_MULTISELECT: type = "multiselect"; break;
-        case F_SELECT_USER: type = "selectUser"; break;
+    std::map<std::string, PropertySpec>::const_iterator ps;
+    std::list<std::string>::const_iterator p;
+    FOREACH(p, c.orderedProperties) {
+        ps = c.properties.find((*p));
+        if (ps != c.properties.end()) {
+            PropertySpec pspec = ps->second;
+            const char *type = "";
+            switch (pspec.type) {
+            case F_TEXT: type = "text"; break;
+            case F_SELECT: type = "select"; break;
+            case F_MULTISELECT: type = "multiselect"; break;
+            case F_SELECT_USER: type = "selectUser"; break;
+            }
+
+            std::string property = replaceAll(ctx.getProject().getLabelOfProperty(*p), '\'', "\\\'");
+            std::string value = replaceAll(toString(pspec.selectOptions, "\\n"), '\'', "\\\'");
+
+            mg_printf(conn, "addProperty('%s', '%s', '%s', '%s');\n", p->c_str(),
+                      property.c_str(),
+                      type, value.c_str());
         }
-
-        std::string property = replaceAll(ctx.getProject().getLabelOfProperty(p->first), '\'', "\\\'");
-        std::string value = replaceAll(toString(pspec.selectOptions, "\\n"), '\'', "\\\'");
-
-        mg_printf(conn, "addProperty('%s', '%s', '%s', '%s');\n", p->first.c_str(),
-                  property.c_str(),
-                  type, value.c_str());
-
     }
 
     // add 3 more empty properties
