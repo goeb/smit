@@ -851,10 +851,10 @@ std::string urlAdd(struct mg_connection *conn, const char *param)
 {
     const struct mg_request_info *rq = mg_get_request_info(conn);
     std::string url;
-    if (rq && rq->uri && rq->query_string) {
+    if (rq && rq->uri) {
         url = rq->uri;
         url += '?';
-        if (strlen(rq->query_string)) url = url + rq->query_string + '&' + param;
+        if (rq->query_string && strlen(rq->query_string)) url = url + rq->query_string + '&' + param;
         else url += param;
     }
     return url;
