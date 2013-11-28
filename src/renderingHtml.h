@@ -35,30 +35,30 @@ public:
 
 class RHtml {
 public:
-    static void printNavigationGlobal(struct mg_connection *conn, const ContextParameters &ctx);
-    static void printNavigationIssues(struct mg_connection *conn, const ContextParameters &ctx, bool autofocus);
+    static void printNavigationGlobal(const ContextParameters &ctx);
+    static void printNavigationIssues(const ContextParameters &ctx, bool autofocus);
 
-    static void printPageProjectList(struct mg_connection *conn, const ContextParameters &ctx, const std::list<std::pair<std::string, std::string> > &pList);
-    static void printProjectConfig(struct mg_connection *conn, const ContextParameters &ctx);
+    static void printPageProjectList(const ContextParameters &ctx, const std::list<std::pair<std::string, std::string> > &pList);
+    static void printProjectConfig(const ContextParameters &ctx);
     static void printPageIssuesFullContents(const ContextParameters &ctx, std::vector<struct Issue*> issueList);
     static void printPageIssueList(const ContextParameters &ctx, std::vector<struct Issue*> issueList, std::list<std::string> colspec);
-    static void printPageIssue(struct mg_connection *conn, const ContextParameters &ctx, const Issue &issue, const std::list<Entry*> &entries);
-    static void printPageNewIssue(struct mg_connection *conn, const ContextParameters &ctx);
+    static void printPageIssue(const ContextParameters &ctx, const Issue &issue, const std::list<Entry*> &entries);
+    static void printPageNewIssue(const ContextParameters &ctx);
 
     static bool inList(const std::list<std::string> &listOfValues, const std::string &value);
-    static void printIssueForm(struct mg_connection *conn, const ContextParameters &ctx, const Issue &issue, bool autofocus);
+    static void printIssueForm(const ContextParameters &ctx, const Issue &issue, bool autofocus);
     static void printPageSignin(struct mg_connection *conn, const char *redirect);
 
-    static void printPageView(struct mg_connection *conn, const ContextParameters &ctx, const PredefinedView &pv);
-    static void printPageListOfViews(struct mg_connection *conn, const ContextParameters &ctx);
-    static void printLinksToPredefinedViews(struct mg_connection *conn, const ContextParameters &ctx);
+    static void printPageView(const ContextParameters &ctx, const PredefinedView &pv);
+    static void printPageListOfViews(const ContextParameters &ctx);
+    static void printLinksToPredefinedViews(const ContextParameters &ctx);
     static void printProjects(struct mg_connection *conn, const std::list<std::pair<std::string, std::string> > &pList);
-    static void printScriptUpdateConfig(struct mg_connection *conn, const ContextParameters &ctx);
+    static void printScriptUpdateConfig(const ContextParameters &ctx);
     static void printIssueSummary(const ContextParameters &ctx, const Issue &issue);
-    static void printIssue(struct mg_connection *conn, const ContextParameters &ctx, const Issue &issue, const std::list<Entry*> &entries);
-    static void printIssueListFullContents(struct mg_connection *conn, const ContextParameters &ctx, std::vector<struct Issue*> issueList);
-    static void printIssueList(struct mg_connection *conn, const ContextParameters &ctx,
-                        std::vector<struct Issue*> issueList, std::list<std::string> colspec);
+    static void printIssue(const ContextParameters &ctx, const Issue &issue, const std::list<Entry*> &entries);
+    static void printIssueListFullContents(const ContextParameters &ctx, std::vector<struct Issue*> issueList);
+    static void printIssueList(const ContextParameters &ctx,
+                        const std::vector<struct Issue*> &issueList, const std::list<std::string> &colspec);
 
 };
 

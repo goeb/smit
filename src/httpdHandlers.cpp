@@ -386,7 +386,7 @@ void httpGetRoot(struct mg_connection *conn, User u)
     else if (format == RENDERING_CSV) RCsv::printProjectList(conn, pList);
     else {
         ContextParameters ctx = ContextParameters(conn, u);
-        RHtml::printPageProjectList(conn, ctx, pList);
+        RHtml::printPageProjectList(ctx, pList);
     }
 }
 
@@ -417,7 +417,7 @@ void httpGetProjectConfig(struct mg_connection *conn, Project &p, User u)
 
     sendHttpHeader200(conn);
     ContextParameters ctx = ContextParameters(conn, u, p);
-    RHtml::printProjectConfig(conn, ctx);
+    RHtml::printProjectConfig(ctx);
 }
 
 /** Parse posted arguments into a list of tokens.
@@ -607,7 +607,7 @@ void httpGetNewIssueForm(struct mg_connection *conn, Project &p, User u)
     ContextParameters ctx = ContextParameters(conn, u, p);
 
     // only HTML format is needed
-    RHtml::printPageNewIssue(conn, ctx);
+    RHtml::printPageNewIssue(ctx);
 }
 
 void httpGetView(struct mg_connection *conn, Project &p, const std::string &view, User u)
@@ -618,7 +618,7 @@ void httpGetView(struct mg_connection *conn, Project &p, const std::string &view
     if (view.empty()) {
         // print the list of all views
         ContextParameters ctx = ContextParameters(conn, u, p);
-        RHtml::printPageListOfViews(conn, ctx);
+        RHtml::printPageListOfViews(ctx);
 
     } else {
         // print the form of the given view
@@ -626,7 +626,7 @@ void httpGetView(struct mg_connection *conn, Project &p, const std::string &view
         PredefinedView pv = p.getPredefinedView(viewName);
 
         ContextParameters ctx = ContextParameters(conn, u, p);
-        RHtml::printPageView(conn, ctx, pv);
+        RHtml::printPageView(ctx, pv);
     }
 }
 
@@ -767,7 +767,7 @@ int httpGetIssue(struct mg_connection *conn, Project &p, const std::string &issu
         if (format == RENDERING_TEXT) RText::printIssue(conn, issue, entries);
         else {
             ContextParameters ctx = ContextParameters(conn, u, p);
-            RHtml::printPageIssue(conn, ctx, issue, entries);
+            RHtml::printPageIssue(ctx, issue, entries);
         }
         return 1; // done
     }

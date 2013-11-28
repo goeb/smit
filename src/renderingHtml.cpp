@@ -193,38 +193,38 @@ public:
                     mg_printf(ctx.conn, "%s", ctx.project->getUrlName().c_str());
 
             } else if (varname == K_SM_DIV_NAVIGATION_GLOBAL) {
-                RHtml::printNavigationGlobal(ctx.conn, ctx);
+                RHtml::printNavigationGlobal(ctx);
 
             } else if (varname == K_SM_DIV_NAVIGATION_ISSUES && ctx.project) {
-                RHtml::printNavigationIssues(ctx.conn, ctx, false);
+                RHtml::printNavigationIssues(ctx, false);
 
             } else if (varname == K_SM_DIV_PROJECTS && projectList) {
                 RHtml::printProjects(ctx.conn, *projectList);
 
             } else if (varname == K_SM_SCRIPT_PROJECT_CONFIG_UPDATE) {
-                RHtml::printScriptUpdateConfig(ctx.conn, ctx);
+                RHtml::printScriptUpdateConfig(ctx);
 
             } else if (varname == K_SM_RAW_ISSUE_ID && currentIssue) {
                 mg_printf(ctx.conn, "%s", currentIssue->id.c_str());
 
             } else if (varname == K_SM_DIV_ISSUES && issueList && colspec) {
-                RHtml::printIssueList(ctx.conn, ctx, *issueList, *colspec);
+                RHtml::printIssueList(ctx, *issueList, *colspec);
 
             } else if (varname == K_SM_DIV_ISSUES && issueListFullContents) {
-                RHtml::printIssueListFullContents(ctx.conn, ctx, *issueListFullContents);
+                RHtml::printIssueListFullContents(ctx, *issueListFullContents);
 
             } else if (varname == K_SM_DIV_ISSUE && currentIssue && entries) {
-                RHtml::printIssue(ctx.conn, ctx, *currentIssue, *entries);
+                RHtml::printIssue(ctx, *currentIssue, *entries);
 
             } else if (varname == K_SM_DIV_ISSUE_SUMMARY && currentIssue) {
                 RHtml::printIssueSummary(ctx, *currentIssue);
 
             } else if (varname == K_SM_DIV_ISSUE_FORM) {
                 Issue issue;
-                RHtml::printIssueForm(ctx.conn, ctx, issue, true);
+                RHtml::printIssueForm(ctx, issue, true);
 
             } else if (varname == K_SM_DIV_PREDEFINED_VIEWS) {
-                RHtml::printLinksToPredefinedViews(ctx.conn, ctx);
+                RHtml::printLinksToPredefinedViews(ctx);
 
             } else {
                 // unknown variable name
@@ -267,8 +267,10 @@ void RHtml::printPageSignin(struct mg_connection *conn, const char *redirect)
     }
 }
 
-void RHtml::printPageView(struct mg_connection *conn, const ContextParameters &ctx, const PredefinedView &pv)
+void RHtml::printPageView(const ContextParameters &ctx, const PredefinedView &pv)
 {
+    struct mg_connection *conn = ctx.conn;
+
     VariableNavigator vn("view.html", ctx);
     vn.printPage();
 
@@ -334,8 +336,10 @@ void RHtml::printPageView(struct mg_connection *conn, const ContextParameters &c
     mg_printf(conn, "</script>\n");
 }
 
-void RHtml::printLinksToPredefinedViews(struct mg_connection *conn, const ContextParameters &ctx)
+void RHtml::printLinksToPredefinedViews(const ContextParameters &ctx)
 {
+    struct mg_connection *conn = ctx.conn;
+
     ProjectConfig c = ctx.getProject().getConfig();
     std::map<std::string, PredefinedView>::iterator pv;
     mg_printf(conn, "<table class=\"sm_views\">");
@@ -351,7 +355,7 @@ void RHtml::printLinksToPredefinedViews(struct mg_connection *conn, const Contex
     mg_printf(conn, "<table>\n");
 }
 
-void RHtml::printPageListOfViews(struct mg_connection *conn, const ContextParameters &ctx)
+void RHtml::printPageListOfViews(const ContextParameters &ctx)
 {
     VariableNavigator vn("views.html", ctx);
     vn.printPage();
@@ -476,8 +480,9 @@ std::string makeQueryString(const PredefinedView &pv)
   * - link to modify project (if admin)
   * - signed-in user indication and link to signout
   */
-void RHtml::printNavigationGlobal(struct mg_connection *conn, const ContextParameters &ctx)
+void RHtml::printNavigationGlobal(const ContextParameters &ctx)
 {
+    struct mg_connection *conn = ctx.conn;
     HtmlNode div("div");
     div.addAttribute("class", "sm_navigation_global");
     HtmlNode linkToProjects("a");
@@ -539,8 +544,10 @@ void RHtml::printNavigationGlobal(struct mg_connection *conn, const ContextParam
   * - predefined views
   * - quick search form
   */
-void RHtml::printNavigationIssues(struct mg_connection *conn, const ContextParameters &ctx, bool autofocus)
+void RHtml::printNavigationIssues(const ContextParameters &ctx, bool autofocus)
 {
+    struct mg_connection *conn = ctx.conn;
+
     HtmlNode div("div");
     div.addAttribute("class", "sm_navigation_project");
     if (ctx.userRole == ROLE_ADMIN || ctx.userRole == ROLE_RW) {
@@ -601,7 +608,7 @@ void RHtml::printProjects(struct mg_connection *conn, const std::list<std::pair<
 }
 
 
-void RHtml::printPageProjectList(struct mg_connection *conn, const ContextParameters &ctx, const std::list<std::pair<std::string, std::string> > &pList)
+void RHtml::printPageProjectList(const ContextParameters &ctx, const std::list<std::pair<std::string, std::string> > &pList)
 {
     VariableNavigator vn("projects.html", ctx);
     vn.projectList = &pList;
@@ -714,8 +721,10 @@ std::string getNewSortingSpec(struct mg_connection *conn, const std::string prop
 
 /** Print javascript that will fulfill the inputs of the project configuration
   */
-void RHtml::printScriptUpdateConfig(struct mg_connection *conn, const ContextParameters &ctx)
+void RHtml::printScriptUpdateConfig(const ContextParameters &ctx)
 {
+    struct mg_connection *conn = ctx.conn;
+
     mg_printf(conn, "<script>\n");
 
     // fulfill reserved properties first
@@ -762,7 +771,7 @@ void RHtml::printScriptUpdateConfig(struct mg_connection *conn, const ContextPar
 }
 
 
-void RHtml::printProjectConfig(struct mg_connection *conn, const ContextParameters &ctx)
+void RHtml::printProjectConfig(const ContextParameters &ctx)
 {
     VariableNavigator vn("project.html", ctx);
     vn.printPage();
@@ -812,9 +821,10 @@ void printFilters(const ContextParameters &ctx)
    }
 }
 
-void RHtml::printIssueListFullContents(struct mg_connection *conn, const ContextParameters &ctx,
-                                   std::vector<struct Issue*> issueList)
+void RHtml::printIssueListFullContents(const ContextParameters &ctx, std::vector<struct Issue*> issueList)
 {
+    struct mg_connection *conn = ctx.conn;
+
     mg_printf(conn, "<div class=\"sm_issues\">\n");
 
     printFilters(ctx);
@@ -842,7 +852,7 @@ void RHtml::printIssueListFullContents(struct mg_connection *conn, const Context
             ContextParameters ctxCopy = ctx;
             ctxCopy.userRole = ROLE_RO;
             printIssueSummary(ctxCopy, issue);
-            printIssue(ctx.conn, ctxCopy, issue, entries);
+            printIssue(ctxCopy, issue, entries);
 
         }
     }
@@ -865,9 +875,11 @@ std::string urlAdd(struct mg_connection *conn, const char *param)
     return url;
 }
 
-void RHtml::printIssueList(struct mg_connection *conn, const ContextParameters &ctx,
-                    std::vector<struct Issue*> issueList, std::list<std::string> colspec)
+void RHtml::printIssueList(const ContextParameters &ctx, const std::vector<struct Issue*> &issueList,
+                     const std::list<std::string> &colspec)
 {
+    struct mg_connection *conn = ctx.conn;
+
     mg_printf(conn, "<div class=\"sm_issues\">\n");
 
     // add links to alternate download formats (CSV and full-contents)
@@ -888,7 +900,7 @@ void RHtml::printIssueList(struct mg_connection *conn, const ContextParameters &
 
     // print header of the table
     mg_printf(conn, "<tr class=\"sm_issues\">\n");
-    std::list<std::string>::iterator colname;
+    std::list<std::string>::const_iterator colname;
     for (colname = colspec.begin(); colname != colspec.end(); colname++) {
 
         std::string label = ctx.getProject().getLabelOfProperty(*colname);
@@ -903,7 +915,7 @@ void RHtml::printIssueList(struct mg_connection *conn, const ContextParameters &
     }
     mg_printf(conn, "</tr>\n");
 
-    std::vector<struct Issue*>::iterator i;
+    std::vector<struct Issue*>::const_iterator i;
     for (i=issueList.begin(); i!=issueList.end(); i++) {
 
         if (! group.empty() &&
@@ -919,7 +931,7 @@ void RHtml::printIssueList(struct mg_connection *conn, const ContextParameters &
 
         mg_printf(conn, "<tr class=\"sm_issues\">\n");
 
-        std::list<std::string>::iterator c;
+        std::list<std::string>::const_iterator c;
         for (c = colspec.begin(); c != colspec.end(); c++) {
             std::ostringstream text;
             std::string column = *c;
@@ -1177,8 +1189,9 @@ void RHtml::printIssueSummary(const ContextParameters &ctx, const Issue &issue)
 
 }
 
-void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx, const Issue &issue, const std::list<Entry*> &entries)
+void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue, const std::list<Entry*> &entries)
 {
+    struct mg_connection *conn = ctx.conn;
     mg_printf(conn, "<div class=\"sm_issue\">");
 
     // print id and summary
@@ -1328,13 +1341,13 @@ void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx,
     // print the form
     // -------------------------------------------------
     if (ctx.userRole == ROLE_ADMIN || ctx.userRole == ROLE_RW) {
-        RHtml::printIssueForm(conn, ctx, issue, false);
+        RHtml::printIssueForm(ctx, issue, false);
     }
     mg_printf(conn, "</div>\n");
 
 }
 
-void RHtml::printPageIssue(struct mg_connection *conn, const ContextParameters &ctx, const Issue &issue, const std::list<Entry*> &entries)
+void RHtml::printPageIssue(const ContextParameters &ctx, const Issue &issue, const std::list<Entry*> &entries)
 {
     VariableNavigator vn("issue.html", ctx);
     vn.currentIssue = &issue;
@@ -1344,7 +1357,7 @@ void RHtml::printPageIssue(struct mg_connection *conn, const ContextParameters &
 
 
 
-void RHtml::printPageNewIssue(struct mg_connection *conn, const ContextParameters &ctx)
+void RHtml::printPageNewIssue(const ContextParameters &ctx)
 {
     VariableNavigator vn("newIssue.html", ctx);
     vn.printPage();
@@ -1353,8 +1366,9 @@ void RHtml::printPageNewIssue(struct mg_connection *conn, const ContextParameter
 
 /** print form for adding a message / modifying the issue
   */
-void RHtml::printIssueForm(struct mg_connection *conn, const ContextParameters &ctx, const Issue &issue, bool autofocus)
+void RHtml::printIssueForm(const ContextParameters &ctx, const Issue &issue, bool autofocus)
 {
+    struct mg_connection *conn = ctx.conn;
 
     // enctype=\"multipart/form-data\"
     mg_printf(conn, "<form enctype=\"multipart/form-data\" method=\"post\"  class=\"sm_issue_form\" id=\"edit_form\">");
