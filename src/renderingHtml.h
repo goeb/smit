@@ -54,6 +54,7 @@ public:
     static void printLinksToPredefinedViews(struct mg_connection *conn, const ContextParameters &ctx);
     static void printProjects(struct mg_connection *conn, const std::list<std::pair<std::string, std::string> > &pList);
     static void printScriptUpdateConfig(struct mg_connection *conn, const ContextParameters &ctx);
+    static void printIssueSummary(const ContextParameters &ctx, const Issue &issue);
     static void printIssue(struct mg_connection *conn, const ContextParameters &ctx, const Issue &issue, const std::list<Entry*> &entries);
     static void printIssueListFullContents(struct mg_connection *conn, const ContextParameters &ctx, std::vector<struct Issue*> issueList);
     static void printIssueList(struct mg_connection *conn, const ContextParameters &ctx,

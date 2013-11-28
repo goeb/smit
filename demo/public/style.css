@@ -2,7 +2,7 @@
 /* main page styles */
 body {
     color: black;
-    /*margin: 0;*/
+    margin-top: 0;
     font-family: Verdana,sans-serif;
     font-size: small;
     vertical-align: top;
@@ -109,7 +109,7 @@ input {
     padding-right: 1em;
     border-right: 1px solid black;
     font-family: monospace;
-
+    font-size: 125%;
 }
 .sm_issue_pinput_summary {
     width: 100%;

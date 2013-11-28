@@ -106,6 +106,7 @@ The following dynamic variables are defined:
     SM_DIV_PREDEFINED_VIEWS
     SM_DIV_PROJECTS
     SM_DIV_ISSUES
+    SM_DIV_ISSUE_SUMMARY
     SM_DIV_ISSUE
     SM_DIV_ISSUE_FORM
 

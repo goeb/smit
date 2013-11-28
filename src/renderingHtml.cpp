@@ -61,6 +61,7 @@ const Project &ContextParameters::getProject() const
 #define K_SM_DIV_PROJECTS "SM_DIV_PROJECTS"
 #define K_SM_DIV_ISSUES "SM_DIV_ISSUES"
 #define K_SM_DIV_ISSUE "SM_DIV_ISSUE"
+#define K_SM_DIV_ISSUE_SUMMARY "SM_DIV_ISSUE_SUMMARY"
 #define K_SM_DIV_ISSUE_FORM "SM_DIV_ISSUE_FORM"
 
 
@@ -214,6 +215,9 @@ public:
 
             } else if (varname == K_SM_DIV_ISSUE && currentIssue && entries) {
                 RHtml::printIssue(ctx.conn, ctx, *currentIssue, *entries);
+
+            } else if (varname == K_SM_DIV_ISSUE_SUMMARY && currentIssue) {
+                RHtml::printIssueSummary(ctx, *currentIssue);
 
             } else if (varname == K_SM_DIV_ISSUE_FORM) {
                 Issue issue;
@@ -837,6 +841,7 @@ void RHtml::printIssueListFullContents(struct mg_connection *conn, const Context
             // deactivate user role
             ContextParameters ctxCopy = ctx;
             ctxCopy.userRole = ROLE_RO;
+            printIssueSummary(ctxCopy, issue);
             printIssue(ctx.conn, ctxCopy, issue, entries);
 
         }
@@ -1159,21 +1164,28 @@ bool isImage(const std::string &filename)
     return false;
 }
 
-void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx, const Issue &issue, const std::list<Entry*> &entries)
+/** print id and summary of an issue
+  *
+  */
+void RHtml::printIssueSummary(const ContextParameters &ctx, const Issue &issue)
 {
-    mg_printf(conn, "<div class=\"sm_issue\">");
-
-    // issue header
-    // -------------------------------------------------
-    // print id and summary
+    struct mg_connection *conn = ctx.conn;
     mg_printf(conn, "<div class=\"sm_issue_header\">\n");
     mg_printf(conn, "<span class=\"sm_issue_id\">%s</span>\n", issue.id.c_str());
     mg_printf(conn, "<span class=\"sm_issue_summary\">%s</span>\n", htmlEscape(issue.getSummary()).c_str());
     mg_printf(conn, "</div>\n");
 
-    // issue summary
+}
+
+void RHtml::printIssue(struct mg_connection *conn, const ContextParameters &ctx, const Issue &issue, const std::list<Entry*> &entries)
+{
+    mg_printf(conn, "<div class=\"sm_issue\">");
+
+    // print id and summary
+    //RHtml::printIssueSummary(ctx, issue);
+
+    // issue properties in a two-column table
     // -------------------------------------------------
-    // print the fields of the issue in a two-column table
     mg_printf(conn, "<table class=\"sm_issue_properties\">");
     int workingColumn = 1;
     const uint8_t MAX_COLUMNS = 2;
