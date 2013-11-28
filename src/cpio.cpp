@@ -105,7 +105,7 @@ int cpioExtract(FILE* f, const char *src, const char *dst)
         if (header.c_namesize % 2 == 1) header.c_namesize += 1; // make the size even
         n = fread(filepath, 1, header.c_namesize, f); // terminated null char included
         if (n != header.c_namesize) {
-            LOG_ERROR("cpioExtract: short read %d/%d", n, header.c_namesize);
+            LOG_ERROR("cpioExtract: short read %d/%u", n, header.c_namesize);
             return -1;
         }
         LOG_DEBUG("cpioExtract: filepath=%s", filepath);
@@ -213,7 +213,7 @@ int cpioExtract(FILE* f, const char *src, const char *dst)
                 return -1;
 
             } else if ((size_t)written != n) {
-                LOG_ERROR("cpioExtract: short write to file '%s': n=%d, written=%d", destinationFile.c_str(), n, written);
+                LOG_ERROR("cpioExtract: short write to file '%s': n=%d, written=%ld", destinationFile.c_str(), n, written);
                 close(extractedFile);
                 return -1;
             }
@@ -223,7 +223,7 @@ int cpioExtract(FILE* f, const char *src, const char *dst)
             char buffer[1];
             size_t n = fread(buffer, 1, 1, f);
             if (n != 1)  {
-                LOG_ERROR("cpioExtract: cannot get the padding 1: n=%d, %s", n, strerror(errno));
+                LOG_ERROR("cpioExtract: cannot get the padding 1: n=%u, %s", n, strerror(errno));
                 close(extractedFile);
                 return -1;
             }

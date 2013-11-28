@@ -63,7 +63,7 @@ std::string readMgConn(struct mg_connection *conn, size_t maxSize)
         }
         postData.append(std::string(postFragment, n));
     }
-    LOG_DEBUG("postData size=%d", postData.size());
+    LOG_DEBUG("postData size=%u", postData.size());
 
     return postData;
 }
@@ -959,7 +959,7 @@ void parseMultipartAndStoreUploadedFiles(const std::string &data, std::string bo
                 }
 
                 vars[name].push_back(basename);
-                LOG_DEBUG("name=%s, basename=%s, size=%d", name.c_str(), basename.c_str(), size);
+                LOG_DEBUG("name=%s, basename=%s, size=%u", name.c_str(), basename.c_str(), size);
 
             } // else: empty file, ignore.
         }
