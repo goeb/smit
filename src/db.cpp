@@ -200,7 +200,8 @@ Entry *loadEntry(std::string dir, const char* basename)
   */
 void consolidateIssueWithSingleEntry(Issue *i, Entry *e, bool overwrite) {
     std::map<std::string, std::list<std::string> >::iterator p;
-    for (p = e->properties.begin(); p != e->properties.end(); p++) {
+    FOREACH(p, e->properties) {
+        if (p->first.size() && p->first[0] == '+') continue; // do not consolidate these (+file, +message, etc.)
         if (overwrite || (i->properties.count(p->first) == 0) ) {
             i->properties[p->first] = p->second;
         }
