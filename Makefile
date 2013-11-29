@@ -84,8 +84,8 @@ smit: $(OBJS)
 
 CPIO_ARCHIVE = embedded.cpio
 cpio: embedcpio
-embedcpio: smit demo/public/*
-	cd demo && find public | cpio -o > ../$(CPIO_ARCHIVE)
+embedcpio: smit data/public/*
+	cd data && find public | cpio -o > ../$(CPIO_ARCHIVE)
 	cat $(CPIO_ARCHIVE) >> smit
 	size=`stat -c %s $(CPIO_ARCHIVE)`; \
 	python -c "import struct; import sys; sys.stdout.write(struct.pack('I', $$size))" >> smit

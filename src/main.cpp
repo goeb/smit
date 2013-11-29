@@ -30,7 +30,6 @@
 #include "global.h"
 #include "identifiers.h"
 
-#define VERSION "1.0.0"
 
 void usage()
 {

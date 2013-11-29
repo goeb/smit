@@ -1,14 +1,17 @@
++smv 1.0.0
+addView "Deleted issues" \
+    filterin status deleted \
 
-addView "Open issues" filterin status open sort mtime 
-addView "Deleted issues" filterin status deleted 
+addView "Open issues" \
+    default \
+    filterin status open \
+    sort +mtime \
 
-addView "test xxx" search "toto" \
+addView "test xxx-a" \
     filterin status open \
     filterin status closed \
     filterout owner "" \
-    colspec id+mtime+summary \
     sort -mtime+id \
-    default
-
-
+    colspec id+mtime+summary \
+    search toto
 

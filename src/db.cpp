@@ -45,6 +45,7 @@
 #define K_ISSUE_ID "id"
 #define K_PARENT_NULL "null"
 
+
 Database Database::Db;
 
 
@@ -153,8 +154,6 @@ int Project::load(const char *path, char *basename)
     return 0;
 }
 
-
-
 Entry *loadEntry(std::string dir, const char* basename)
 {
     // load a given entry
@@ -172,6 +171,7 @@ Entry *loadEntry(std::string dir, const char* basename)
 
     std::list<std::list<std::string> >::iterator line;
     int lineNum = 0;
+    std::string smitVersion = "1.0"; // default value if version is not present
     for (line=lines.begin(); line != lines.end(); line++) {
         lineNum++;
         // each line should be a key / value pair
@@ -187,10 +187,17 @@ Entry *loadEntry(std::string dir, const char* basename)
             e->ctime = atoi((char*)firstValue.c_str());
         } else if (0 == key.compare(K_PARENT)) e->parent = firstValue;
         else if (0 == key.compare(K_AUTHOR)) e->author = firstValue;
+        else if (key == K_SMIT_VERSION) smitVersion = firstValue;
         else {
             e->properties[key] = *line;
         }
     }
+    // if value is not 1.x, then raised a warning
+    if (smitVersion.empty() || 0 != strncmp("1.", smitVersion.c_str(), 2)) {
+        LOG_INFO("Version of entry %s higher than current Smit version (%s). Check compatibility.",
+                 smitVersion.c_str(), VERSION);
+    }
+
     return e;
 }
 
@@ -436,7 +443,12 @@ ProjectConfig parseProjectConfig(std::list<std::list<std::string> > &lines)
         wellFormatedLines.push_back(*line);
 
         std::string token = pop(*line);
-        if (0 == token.compare("addProperty")) {
+        if (token == K_SMIT_VERSION) {
+            // not used in this version
+            std::string v = pop(*line);
+            LOG_DEBUG("Smit version of project: %s", v.c_str());
+
+        } else if (0 == token.compare("addProperty")) {
             PropertySpec property = parseFieldSpec(*line);
             if (property.name.size() > 0) {
                 config.properties[property.name] = property;
@@ -475,7 +487,11 @@ std::map<std::string, PredefinedView> PredefinedView::parsePredefinedViews(std::
         token = pop(*line);
         if (token.empty()) continue;
 
-        if (token == "addView") {
+        if (token == K_SMIT_VERSION) {
+            std::string v = pop(*line);
+            LOG_DEBUG("Smit version of view: %s", v.c_str());
+
+        } else if (token == "addView") {
             PredefinedView pv;
             pv.name = pop(*line);
             if (pv.name.empty()) {
@@ -563,6 +579,12 @@ int Project::modifyConfig(std::list<std::list<std::string> > &tokens)
     }
     c.predefinedViews = config.predefinedViews; // keep those unchanged
 
+    // add version
+    std::list<std::string> versionLine;
+    versionLine.push_back(K_SMIT_VERSION);
+    versionLine.push_back(VERSION);
+    tokens.insert(tokens.begin(), versionLine);
+
     // write to file
     std::string data = serializeTokens(tokens);
 
@@ -644,6 +666,8 @@ int Project::setPredefinedView(const std::string &name, const PredefinedView &pv
 int Project::storeViewsToFile()
 {
     std::string fileContents;
+    fileContents = K_SMIT_VERSION " " VERSION "\n";
+
     std::map<std::string, PredefinedView>::const_iterator i;
     FOREACH(i, config.predefinedViews) {
         fileContents += i->second.serialize() + "\n";
@@ -692,6 +716,7 @@ int Project::createProject(const char *repositoryPath, const char *projectName)
 
     // create file 'project'
     const char* config =
+            K_SMIT_VERSION VERSION "\n"
             "setPropertyLabel id \"#\"\n"
             "addProperty status select open closed deleted\n"
             "addProperty owner selectUser\n"
@@ -1367,6 +1392,7 @@ std::string Entry::serialize()
 {
     std::ostringstream s;
 
+    s << K_SMIT_VERSION << " " << VERSION << "\n";
     s << K_PARENT << " " << parent << "\n";
     s << K_AUTHOR << " " << author << "\n";
     s << K_CTIME << " " << ctime << "\n";

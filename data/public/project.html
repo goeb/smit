@@ -1,0 +1,68 @@
+
+<html>
+    <head>
+        <title>Project configuration</title>
+        <link rel="stylesheet" type="text/css" href="/public/style.css">
+        <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/>
+        <script src="/public/smit.js"></script>
+        <script src="/public/project.js"></script>
+    </head>
+    <body onload="init();">
+        <div style="position: fixed; top: 0; padding-top: 15px; width: 100%; background: white;">
+
+            <div style="float: left; margin:1em;">
+                <img src="/public/logo.png" class="sm_logo" alt="logo">
+            </div>
+SM_DIV_NAVIGATION_GLOBAL
+SM_DIV_NAVIGATION_ISSUES
+        </div>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+
+<h1>Configuration of project 'SM_HTML_PROJECT_NAME'</h1>
+(<a href="/SM_URL_PROJECT_NAME">SM_HTML_PROJECT_NAME</a>)
+
+        <form method="POST" action="">
+            <!-- SM_DIV_PROJECT_NAME -->
+            <!--div>
+                Project name:
+                <input type="text" size="50" name="name"> 
+            </div-->
+            <h2>Properties</h2>
+            Edit here the properties that you want in your issues.<br>
+            Each property has:
+            <ul><li>a logical name, that must be unique among the properties of the project. This logical name is used in the address (query string) for filters and sorting.</li>
+                <li>a label, that is a more human friendly representation of the property, displayed in the pages. If the label is empty, then the logical name is used instead.</li>
+                <li>a type: <code>text</code>,
+                <code>select</code>,
+                <code>multiselect</code>,
+                <code>selectUser</code></li>
+                <li>a list of possible values, for types <code>select</code> and <code>multiselect</code></li>
+            </ul>
+            You cannot use the following logical names as they are reserved:
+            <code>id</code>,
+            <code>ctime</code>,
+            <code>mtime</code>,
+            <code>summary</code>
+            . However you may assign a human-readable label to these, as well as for any other.
+            <br>
+            <br>
+            <noscript>You must enable Javascript to continue...</noscript>
+
+            <table id="sm_config_properties" style="vertical-align: top;">
+                <tr><th>#</th><th>Logical Name</th><th>Type</th><th>Label</th></tr>
+            </table>
+            <br>
+            <div onclick="addMoreProperties(3);" class="sm_clickable">+ Click for more properties...</div>
+            <br>
+            SM_SCRIPT_PROJECT_CONFIG_UPDATE
+            <input type="submit" value="Apply Configuration">
+            <br>
+            <br>
+            <br>
+        </form>
+    </body>
+</html>

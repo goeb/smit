@@ -33,7 +33,10 @@ User::User()
 }
 std::string User::serialize()
 {
-    std::string result = "addUser ";
+    std::string result;
+    result = K_SMIT_VERSION " " VERSION "\n";
+
+    result += "addUser ";
     result += serializeSimpleToken(username) + " ";
     if (superadmin) result += "superadmin \\\n";
     if (!hashType.empty()) {
@@ -80,7 +83,11 @@ int UserBase::load(const char *repository)
     std::list<std::list<std::string> >::iterator line;
     for (line = lines.begin(); line != lines.end(); line++) {
         std::string verb = popListToken(*line);
-        if (verb == "addUser") {
+        if (verb == K_SMIT_VERSION) {
+            std::string v = popListToken(*line);
+            LOG_DEBUG("Smit version for user file: %s", v.c_str());
+
+        } else if (verb == "addUser") {
             User u;
             u.username = popListToken(*line);
             if (u.username.empty()) {

@@ -1229,10 +1229,24 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue, const s
     }
     mg_printf(conn, "</table>\n");
 
+    // links to id of the same page
+    mg_printf(conn, "<div class=\"sm_issue_links\">");
+
     // add a link to edit form if role enables it
     if (ctx.userRole == ROLE_ADMIN || ctx.userRole == ROLE_RW) {
-        mg_printf(conn, "<span class=\"sm_issue_link_edit\"><a href=\"#edit_form\" class=\"sm_issue_link_edit\">%s</a></span>", _("Edit"));
+        mg_printf(conn, "<span class=\"sm_issue_link_edit\">");
+        mg_printf(conn, "<a href=\"#edit_form\" class=\"sm_issue_link_edit\">%s</a>", _("Edit"));
+        mg_printf(conn, "</span> ");
     }
+#if 0
+    >>> deactivate this block, as floating menu prevents from having an ergonomic link to last entry
+    mg_printf(conn, "<span class=\"sm_issue_link_last_entry\">");
+    mg_printf(conn, "<a href=\"#%s\" class=\"sm_issue_link_edit\">%s</a>",
+              entries.back()->id.c_str(), _("Go to latest message"));
+    mg_printf(conn, "</span>");
+#endif
+
+    mg_printf(conn, "</div>"); // links
 
     // entries
     // -------------------------------------------------
