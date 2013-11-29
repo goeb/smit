@@ -129,7 +129,10 @@ The reserve keywords that cannot be used as project names are:
     public
     users
 
+
 ### How to set up different pages for two projects?
+
+Example of a specific project page for project X-yy.
 
 HTML pages are first looked after in $REPO/&lt;project&gt;/html/. and, if not present, Smit looks in the $REPO/public directory.
 
@@ -137,6 +140,32 @@ So, for example, if you want to customize the 'issues' page for a project:
 
 - copy $REPO/public/issues.html to $REPO/project/html/issues.html
 - edit $REPO/project/html/issues.html to suit your needs
+- restart Smit
+
+
+### How to rename a project?
+
+- rename the directory of the project (in $REPO)
+- restart Smit
+
+
+### How to remove an entry that contains a secret that was accidentally posted?
+
+- find this entry in $REPO/&lt;project&gt;/issues/*
+- edit this entry and remove the secret
+- restart Smit
+
+(a Smit command should be provided for this, but at the moment there is none)
+
+
+### How to repair a deleted entry?
+
+Use your backup.
+
+Or create a text file:
+
+    +parent &lt;parent&gt;
+    +message "missing entry"
 
 
 REST API
