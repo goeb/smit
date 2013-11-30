@@ -164,8 +164,10 @@ Use your backup.
 
 Or create a text file:
 
-    +parent &lt;parent&gt;
+    +parent <parent>
     +message "missing entry"
+
+where &lt;parent&gt; is the id of the previous entry.
 
 
 REST API
