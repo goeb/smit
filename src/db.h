@@ -6,7 +6,6 @@
 #include <list>
 #include <vector>
 #include <set>
-#include <pthread.h>
 #include <stdint.h>
 
 #include "ustring.h"

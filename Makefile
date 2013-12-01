@@ -3,6 +3,8 @@ ifeq ($(WIN),1)
 	CC = i586-mingw32msvc-gcc
 	CXX = i586-mingw32msvc-g++
 	BUILD_DIR = build_win
+	PTHREADS-W32 = $(HOME)/Downloads/pthreads-w32-2-9-1-release
+	CFLAGS += -I$(PTHREADS-W32)
 else
 	CC = gcc
 	CXX = g++
@@ -31,7 +33,7 @@ SRCS_CPP = src/db.cpp  \
 OBJS = $(SRCS:%.c=$(BUILD_DIR)/%.o) $(SRCS_CPP:%.cpp=$(BUILD_DIR)/%.o)
 DEPENDS = $(SRCS:%.c=$(BUILD_DIR)/%.d) $(SRCS_CPP:%.cpp=$(BUILD_DIR)/%.d)
 
-CFLAGS = -g -Wall
+CFLAGS += -g -Wall
 #CFLAGS = -O2 -Wall
 CFLAGS += -I mongoose
 LDFLAGS = -ldl -pthread -lcrypto

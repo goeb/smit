@@ -14,7 +14,7 @@ Features
 - Simple, fast and light
 - Easy to install locally, or on a server
 - UTF-8
-- full-contents view (all issues and their contents on a same page)
+- Full-contents view (all issues and their contents on a same page)
   suitable for HTML or PDF export
 - Manage several projects
 - Offline capability
@@ -69,7 +69,7 @@ Roadmap
 
 - v1.1
   - SSL, TLS
-  - make it also run on Windows
+  - support Windows platform
 
 - v2.0
   - i18n (gettext)
@@ -79,9 +79,9 @@ Roadmap
 Customize the HTML pages
 ------------------------
 
-### How to change the HTML pages?
+### How to customize the HTML pages?
 
-You may modify the html files in $REPO/public:
+Feel free to customize the HTM and CSS. These files are in $REPO/public:
 
     public/newIssue.html
     public/view.html
@@ -91,8 +91,9 @@ You may modify the html files in $REPO/public:
     public/views.html
     public/projects.html
     public/signin.html
+    public/style.css
 
-### What are these SM_DIV_... things ?
+### What are the SM_DIV_... variables ?
 These are variables dynamically replaced on the HTML pages.
 
 The following dynamic variables are defined:
@@ -132,14 +133,12 @@ The reserve keywords that cannot be used as project names are:
 
 ### How to set up different pages for two projects?
 
-Example of a specific project page for project X-yy.
-
 HTML pages are first looked after in $REPO/&lt;project&gt;/html/. and, if not present, Smit looks in the $REPO/public directory.
 
 So, for example, if you want to customize the 'issues' page for a project:
 
-- copy $REPO/public/issues.html to $REPO/project/html/issues.html
-- edit $REPO/project/html/issues.html to suit your needs
+- copy $REPO/public/issues.html to $REPO/&lt;project&gt;/html/issues.html
+- edit $REPO/&lt;project&gt;/html/issues.html to suit your needs
 - restart Smit
 
 
@@ -158,22 +157,11 @@ So, for example, if you want to customize the 'issues' page for a project:
 (a Smit command should be provided for this, but at the moment there is none)
 
 
-### How to repair a deleted entry?
-
-Use your backup.
-
-Or create a text file:
-
-    +parent <parent>
-    +message "missing entry"
-
-where &lt;parent&gt; is the id of the previous entry.
-
 
 REST API
 --------
 
-The request are driven by the Query String:
+The requests are driven by the Query String:
 
 Examples:
     
