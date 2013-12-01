@@ -949,7 +949,7 @@ void parseMultipartAndStoreUploadedFiles(const std::string &data, std::string bo
 
                 // store to tmpDirectory
                 std::string path = tmpDirectory;
-                mkdir(tmpDirectory.c_str(), S_IRUSR | S_IWUSR | S_IXUSR); // create dir if needed
+                mg_mkdir(tmpDirectory.c_str(), S_IRUSR | S_IWUSR | S_IXUSR); // create dir if needed
                 path += "/";
                 path += basename;
                 int r = writeToFile(path.c_str(), p, size);
@@ -1042,7 +1042,7 @@ void httpPostEntry(struct mg_connection *conn, Project &pro, const std::string &
 
         // extract the boundary
         const char *b = "boundary=";
-        const char *p = strcasestr(contentType, b);
+        const char *p = mg_strcasestr(contentType, b);
         if (!p) {
             LOG_ERROR("Missing boundary in multipart form data");
             return;

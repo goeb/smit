@@ -32,6 +32,7 @@
 #include "identifiers.h"
 #include "global.h"
 #include "stringTools.h"
+#include "mg_win32.h"
 
 #define PROJECT_FILE "project"
 #define ISSUES "issues" // sub-directory of a project where the entries are stored
@@ -708,7 +709,7 @@ PredefinedView Project::getDefaultView()
 int Project::createProject(const char *repositoryPath, const char *projectName)
 {
     std::string path = std::string(repositoryPath) + "/" + urlEncode(projectName);
-    int r = mkdir(path.c_str(), S_IRUSR | S_IXUSR | S_IWUSR);
+    int r = mg_mkdir(path.c_str(), S_IRUSR | S_IXUSR | S_IWUSR);
     if (r != 0) {
         LOG_ERROR("Could not create directory '%s': %s", path.c_str(), strerror(errno));
         return -1;
@@ -742,7 +743,7 @@ int Project::createProject(const char *repositoryPath, const char *projectName)
 
     // create directory 'issues'
     subpath = path + "/" + ISSUES;
-    r = mkdir(subpath.c_str(), S_IRUSR | S_IXUSR | S_IWUSR);
+    r = mg_mkdir(subpath.c_str(), S_IRUSR | S_IXUSR | S_IWUSR);
     if (r != 0) {
         LOG_ERROR("Could not create directory '%s': %s", subpath.c_str(), strerror(errno));
         return -1;
@@ -750,7 +751,7 @@ int Project::createProject(const char *repositoryPath, const char *projectName)
 
     // create directory 'html'
     subpath = path + "/html";
-    r = mkdir(subpath.c_str(), S_IRUSR | S_IXUSR | S_IWUSR);
+    r = mg_mkdir(subpath.c_str(), S_IRUSR | S_IXUSR | S_IWUSR);
     if (r != 0) {
         LOG_ERROR("Could not create directory '%s': %s", subpath.c_str(), strerror(errno));
         return -1;
@@ -758,7 +759,7 @@ int Project::createProject(const char *repositoryPath, const char *projectName)
 
     // create directory 'tmp'
     subpath = path + "/tmp";
-    r = mkdir(subpath.c_str(), S_IRUSR | S_IXUSR | S_IWUSR);
+    r = mg_mkdir(subpath.c_str(), S_IRUSR | S_IXUSR | S_IWUSR);
     if (r != 0) {
         LOG_ERROR("Could not create directory '%s': %s", subpath.c_str(), strerror(errno));
         return -1;
@@ -766,7 +767,7 @@ int Project::createProject(const char *repositoryPath, const char *projectName)
 
     // create directory 'files'
     subpath = path + "/files";
-    r = mkdir(subpath.c_str(), S_IRUSR | S_IXUSR | S_IWUSR);
+    r = mg_mkdir(subpath.c_str(), S_IRUSR | S_IXUSR | S_IWUSR);
     if (r != 0) {
         LOG_ERROR("Could not create directory '%s': %s", subpath.c_str(), strerror(errno));
         return -1;
@@ -1092,7 +1093,7 @@ bool Project::searchFullText(const Issue* issue, const char *text) const
     if (!text) return true;
 
     // look if id contains the fulltextSearch
-    if (strcasestr(issue->id.c_str(), text)) return true; // found
+    if (mg_strcasestr(issue->id.c_str(), text)) return true; // found
 
     // look through the properties of the issue
     std::map<std::string, std::list<std::string> >::const_iterator p;
@@ -1100,7 +1101,7 @@ bool Project::searchFullText(const Issue* issue, const char *text) const
         std::list<std::string>::const_iterator pp;
         std::list<std::string> listOfValues = p->second;
         for (pp = listOfValues.begin(); pp != listOfValues.end(); pp++) {
-            if (strcasestr(pp->c_str(), text)) return true;  // found
+            if (mg_strcasestr(pp->c_str(), text)) return true;  // found
         }
     }
 
@@ -1108,14 +1109,14 @@ bool Project::searchFullText(const Issue* issue, const char *text) const
     Entry *e = 0;
     std::string next = issue->head;
     while ( (e = getEntry(next)) ) {
-        if (strcasestr(e->getMessage().c_str(), text)) return true; // found
+        if (mg_strcasestr(e->getMessage().c_str(), text)) return true; // found
 
         // look through uploaded files
         std::map<std::string, std::list<std::string> >::const_iterator files = e->properties.find(K_FILE);
         if (files != e->properties.end()) {
             std::list<std::string>::const_iterator f;
             FOREACH(f, files->second) {
-                if (strcasestr(f->c_str(), text)) return true; // found
+                if (mg_strcasestr(f->c_str(), text)) return true; // found
             }
         }
 
@@ -1231,7 +1232,7 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
 
         pathOfIssue = path + '/' + ISSUES + '/' + issueId;
 
-        int r = mkdir(pathOfIssue.c_str(), S_IRUSR | S_IXUSR | S_IWUSR);
+        int r = mg_mkdir(pathOfIssue.c_str(), S_IRUSR | S_IXUSR | S_IWUSR);
         if (r != 0) {
             LOG_ERROR("Could not create dir '%s': %s", pathOfIssue.c_str(), strerror(errno));
 
@@ -1272,7 +1273,7 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
     std::map<std::string, std::list<std::string> >::iterator files = e->properties.find(K_FILE);
     if (files != e->properties.end()) {
         std::string dir = path + "/" + K_UPLOADED_FILES_DIR;
-        mkdir(dir.c_str(), S_IRUSR | S_IWUSR | S_IXUSR); // create dir if needed
+        mg_mkdir(dir.c_str(), S_IRUSR | S_IWUSR | S_IXUSR); // create dir if needed
 
         std::list<std::string>::iterator f;
         FOREACH(f, files->second) {

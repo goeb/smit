@@ -14,7 +14,7 @@
 #include <errno.h>
 #include <string.h>
 #include <stdint.h>
-#include <arpa/inet.h>
+//#include <arpa/inet.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -23,7 +23,7 @@
 
 #include "cpio.h"
 #include "logging.h"
-
+#include "mg_win32.h"
 
 // http://people.freebsd.org/~kientzle/libarchive/man/cpio.5.txt
 struct header_old_cpio {
@@ -150,7 +150,7 @@ int cpioExtract(FILE* f, const char *src, const char *dst)
 
             mode_t mode = S_IRUSR | S_IWUSR | S_IXUSR;
             LOG_DEBUG("cpioExtract: mkdir %s...", incrementalDir.c_str());
-            int r = mkdir(incrementalDir.c_str(), mode);
+            int r = mg_mkdir(incrementalDir.c_str(), mode);
             if (r == 0) continue; // ok
             else if (errno == EEXIST) continue; // maybe ok
             else {

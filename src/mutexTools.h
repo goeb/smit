@@ -1,7 +1,11 @@
 #ifndef _mutexTools_h
 #define _mutexTools_h
 
-#include <pthread.h>
+#if defined(_WIN32)
+  #include "mg_win32.h"
+#else
+  #include <pthread.h>
+#endif
 
 
 class Locker {

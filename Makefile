@@ -3,12 +3,13 @@ ifeq ($(WIN),1)
 	CC = i586-mingw32msvc-gcc
 	CXX = i586-mingw32msvc-g++
 	BUILD_DIR = build_win
-	PTHREADS-W32 = $(HOME)/Downloads/pthreads-w32-2-9-1-release
-	CFLAGS += -I$(PTHREADS-W32)
+	CFLAGS += -I $(HOME)/Downloads/openssl-1.0.1e/include
+	LDFLAGS += -lws2_32
 else
 	CC = gcc
 	CXX = g++
 	BUILD_DIR = build_linux86
+	LDFLAGS = -ldl -pthread -lcrypto
 endif
 
 SRCS = mongoose/mongoose.c \
@@ -30,13 +31,12 @@ SRCS_CPP = src/db.cpp  \
 		   src/logging.cpp
 
 
-OBJS = $(SRCS:%.c=$(BUILD_DIR)/%.o) $(SRCS_CPP:%.cpp=$(BUILD_DIR)/%.o)
+OBJS = $(SRCS_CPP:%.cpp=$(BUILD_DIR)/%.o) $(SRCS:%.c=$(BUILD_DIR)/%.o)
 DEPENDS = $(SRCS:%.c=$(BUILD_DIR)/%.d) $(SRCS_CPP:%.cpp=$(BUILD_DIR)/%.d)
 
 CFLAGS += -g -Wall
 #CFLAGS = -O2 -Wall
 CFLAGS += -I mongoose
-LDFLAGS = -ldl -pthread -lcrypto
 
 ifeq ($(GCOV),1)
 	CFLAGS += -fprofile-arcs -ftest-coverage
@@ -82,7 +82,7 @@ $(BUILD_DIR)/%.d: %.cpp
 	rm -f $@.$$$$
 
 smit: $(OBJS)
-	g++ -o $@ $^ $(LDFLAGS)
+	$(CXX) -o $@ $^ $(LDFLAGS)
 
 CPIO_ARCHIVE = embedded.cpio
 cpio: embedcpio

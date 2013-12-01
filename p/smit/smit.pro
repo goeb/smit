@@ -37,5 +37,6 @@ HEADERS += \
     ../../src/mutexTools.h \
     ../../src/dateTools.h \
     ../../src/global.h \
-    ../../src/renderingCsv.h
+    ../../src/renderingCsv.h \
+    ../../mongoose/mg_win32.h
 
