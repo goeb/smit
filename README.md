@@ -148,14 +148,6 @@ So, for example, if you want to customize the 'issues' page for a project:
 - restart Smit
 
 
-### How to remove an entry that contains a secret that was accidentally posted?
-
-- find this entry in $REPO/&lt;project&gt;/issues/*
-- edit this entry and remove the secret
-- restart Smit
-
-(a Smit command should be provided for this, but at the moment there is none)
-
 
 
 REST API
