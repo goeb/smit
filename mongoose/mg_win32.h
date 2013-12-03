@@ -31,7 +31,8 @@ extern "C" {
 
 
   inline struct tm *localtime_r(const time_t *timep, struct tm *result) {
-      result = localtime(timep);
+      struct tm *lt = localtime(timep);
+      *result = *lt;
       return result;
   }
 
