@@ -1,10 +1,11 @@
 
 ifeq ($(WIN),1)
+	OPENSSL = $(HOME)/Downloads/openssl-1.0.1e
 	CC = i586-mingw32msvc-gcc
 	CXX = i586-mingw32msvc-g++
 	BUILD_DIR = build_win
-	CFLAGS += -I $(HOME)/Downloads/openssl-1.0.1e/include
-	LDFLAGS += -lws2_32
+	CFLAGS += -I $(OPENSSL)/include
+	LDFLAGS += -lws2_32 $(OPENSSL)/libcrypto.a
 else
 	CC = gcc
 	CXX = g++
