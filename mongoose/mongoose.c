@@ -982,7 +982,7 @@ int pthread_mutex_lock(pthread_mutex_t *mutex) {
 }
 
 int pthread_mutex_unlock(pthread_mutex_t *mutex) {
-  return ReleaseMutex(*mutex) == 0 ? -1 : 0;
+    return ReleaseMutex(*mutex) == 0 ? GetLastError() : 0;
 }
 
 static int pthread_cond_init(pthread_cond_t *cv, const void *unused) {

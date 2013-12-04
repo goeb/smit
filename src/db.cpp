@@ -25,6 +25,7 @@
 #include <stdint.h>
 #include <time.h>
 #include <algorithm>
+#include <sys/types.h>
 
 #include "db.h"
 #include "parseConfig.h"

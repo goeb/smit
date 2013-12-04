@@ -17,6 +17,7 @@
 
 Locker::Locker()
 {
+    LOG_FUNC();
     nReaders = 0;
     pthread_mutex_init(&readOnlyMutex, 0);
     pthread_mutex_init(&readWriteMutex, 0);
@@ -25,44 +26,80 @@ Locker::Locker()
 
 Locker::~Locker()
 {
+    LOG_FUNC();
+
     pthread_mutex_destroy(&readOnlyMutex);
     pthread_mutex_destroy(&readWriteMutex);
 }
 
 void Locker::lockForWriting()
 {
-    pthread_mutex_lock(&readWriteMutex);
+    LOG_FUNC();
+    LOG_DEBUG("lockForWriting %p", &readWriteMutex);
+
+    int r = pthread_mutex_lock(&readWriteMutex);
+    if (r != 0) {
+        LOG_ERROR("pthread_mutex_lock error: (%d) %s", r, strerror(r));
+    }
+
 }
 void Locker::unlockForWriting()
 {
-    pthread_mutex_unlock(&readWriteMutex);
+    LOG_FUNC();
+    LOG_DEBUG("unlockForWriting %p", &readWriteMutex);
+
+    int r = pthread_mutex_unlock(&readWriteMutex);
+    if (r != 0) {
+        LOG_ERROR("pthread_mutex_unlock error: (%d) %s", r, strerror(r));
+    }
+
 }
 
 void Locker::lockForReading()
 {
-    pthread_mutex_lock(&readOnlyMutex);
+    LOG_FUNC();
+    LOG_DEBUG("lockForReading %p", this);
+
+    int r = pthread_mutex_lock(&readOnlyMutex);
+    if (r != 0) {
+        LOG_ERROR("pthread_mutex_lock error: (%d) %s", r, strerror(r));
+    }
     if (nReaders == 0) {
         // first reader
         lockForWriting();
     }
     nReaders++;
-    pthread_mutex_unlock(&readOnlyMutex);
+    r = pthread_mutex_unlock(&readOnlyMutex);
+    if (r != 0) {
+        LOG_ERROR("pthread_mutex_unlock error: (%d) %s", r, strerror(r));
+    }
+
 }
 
 void Locker::unlockForReading()
 {
-    pthread_mutex_lock(&readOnlyMutex);
+    LOG_FUNC();
+    LOG_DEBUG("unlockForReading %p", this);
+
+    int r = pthread_mutex_lock(&readOnlyMutex);
+    if (r != 0) {
+        LOG_ERROR("pthread_mutex_lock error: (%d) %s", r, strerror(r));
+    }
+
     if (nReaders <= 0) {
         // error
         LOG_ERROR("unlockForReading error: nReaders == %d", nReaders);
-    } else if (nReaders) {
+    } else {
         nReaders--;
     }
 
     if (nReaders == 0) {
         unlockForWriting();
     }
-    pthread_mutex_unlock(&readOnlyMutex);
+    r = pthread_mutex_unlock(&readOnlyMutex);
+    if (r != 0) {
+        LOG_ERROR("pthread_mutex_unlock error: (%d) %s", r, strerror(r));
+    }
 
 }
 

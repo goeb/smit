@@ -34,12 +34,28 @@ extern "C" {
       return result;
   }
 
+  inline long gettid()
+  {
+    long tid = GetCurrentThreadId();
+    return tid;
+  }
+
 
   // end #if _WIN32
 #else
   // linux
 
   #define mg_mkdir(x, y) mkdir(x, y)
+
+  #include <sys/syscall.h>
+
+  inline long gettid()
+  {
+    long tid = syscall(SYS_gettid);
+    return tid;
+  }
+
+
 
 #endif
 

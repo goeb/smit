@@ -67,12 +67,15 @@ std::list<std::list<std::string> > parseConfigTokens(const char *buf, size_t len
 
         case P_IN_BACKSLASH:
             if (c == '\n') { // new line escaped
-                // nothing particular here
+                // nothing particular here, continue on next line
+                state = P_READY;
+            } else if (c == '\r') { // ignore this
+
             } else {
                 tokenPending = true;
                 token += c;
+                state = P_READY;
             }
-            state = P_READY;
             break;
 
         case P_IN_DOUBLE_QUOTES:
@@ -139,6 +142,8 @@ std::list<std::list<std::string> > parseConfigTokens(const char *buf, size_t len
                 tokenPending = true;
                 state = P_IN_BOUNDARY_HEADER;
                 boundary.clear();
+            } else if (c == '\r') {
+                // ignore
             } else {
                 tokenPending = true;
                 token += c;
