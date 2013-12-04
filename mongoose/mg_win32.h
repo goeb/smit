@@ -11,9 +11,10 @@
   #include <windows.h>
   #include <time.h>
 
-#ifdef __cplusplus
 extern "C" {
-#endif // __cplusplus
+
+  #undef errno
+  #define errno   GetLastError()
 
   typedef HANDLE pthread_mutex_t;
   int pthread_mutex_init(pthread_mutex_t *mutex, void *unused);
@@ -22,12 +23,9 @@ extern "C" {
   int pthread_mutex_unlock(pthread_mutex_t *mutex);
 
   int mg_mkdir(const char *path, int mode);
-  const char *mg_strcasestr(const char *big_str, const char *small_str);
   #define sleep(x) Sleep((x) * 1000)
 
-#ifdef __cplusplus
 }
-#endif // __cplusplus
 
 
   inline struct tm *localtime_r(const time_t *timep, struct tm *result) {
@@ -43,9 +41,13 @@ extern "C" {
 
   #define mg_mkdir(x, y) mkdir(x, y)
 
-
-
 #endif
+
+extern "C" {
+
+const char *mg_strcasestr(const char *big_str, const char *small_str);
+
+}
 
 #endif // _mg_win32_h
 

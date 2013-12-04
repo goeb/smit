@@ -19,15 +19,6 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#ifdef _WIN32
-#include <windows.h>
-#include <io.h>
-#define strtoll strtol
-typedef __int64 int64_t;
-#else
-#include <inttypes.h>
-#include <unistd.h>
-#endif // !_WIN32
 
 #include <string>
 #include <sstream>
@@ -44,6 +35,7 @@ typedef __int64 int64_t;
 #include "stringTools.h"
 #include "session.h"
 #include "global.h"
+#include "mg_win32.h"
 
 // static members
 

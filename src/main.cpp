@@ -256,7 +256,7 @@ int serveRepository(int argc, const char **args)
     memset(&callbacks, 0, sizeof(callbacks));
     callbacks.begin_request = begin_request_handler;
 
-    LOG_DEBUG("Starting httpd server on port %s", options[1]);
+    LOG_INFO("Starting httpd server on port %s", options[1]);
     ctx = mg_start(&callbacks, NULL, options);
 
     while (1) sleep(1); // block until ctrl-C

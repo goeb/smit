@@ -717,7 +717,7 @@ int Project::createProject(const char *repositoryPath, const char *projectName)
 
     // create file 'project'
     const char* config =
-            K_SMIT_VERSION VERSION "\n"
+            K_SMIT_VERSION " " VERSION "\n"
             "setPropertyLabel id \"#\"\n"
             "addProperty status select open closed deleted\n"
             "addProperty owner selectUser\n"

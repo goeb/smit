@@ -152,9 +152,14 @@ int cpioExtract(FILE* f, const char *src, const char *dst)
             LOG_DEBUG("cpioExtract: mkdir %s...", incrementalDir.c_str());
             int r = mg_mkdir(incrementalDir.c_str(), mode);
             if (r == 0) continue; // ok
+#if defined(_WIN32)
+            else if (errno == ERROR_ALREADY_EXISTS) continue; // maybe ok
+#else
             else if (errno == EEXIST) continue; // maybe ok
+#endif
             else {
-                LOG_ERROR("cpioExtract: Could not mkdir '%s': %s (%d)", incrementalDir.c_str(), strerror(errno), errno);
+                LOG_ERROR("cpioExtract: Could not mkdir '%s': %s (errno=%d, r=%d)",
+                          incrementalDir.c_str(), strerror(errno), errno, r);
                 return -1;
             }
         }
@@ -171,6 +176,9 @@ int cpioExtract(FILE* f, const char *src, const char *dst)
         // create the file
         // destinationFile contains the basename of the file
         mode_t mode = O_CREAT | O_TRUNC | O_WRONLY;
+#if defined(_WIN32)
+        mode |= O_BINARY;
+#endif
         int flags = S_IRUSR | S_IWUSR;
         destinationFile = incrementalDir + "/" + destinationFile;
         LOG_DEBUG("cpioExtract: creating file %s...", destinationFile.c_str());
@@ -213,7 +221,8 @@ int cpioExtract(FILE* f, const char *src, const char *dst)
                 return -1;
 
             } else if ((size_t)written != n) {
-                LOG_ERROR("cpioExtract: short write to file '%s': n=%u, written=%d", destinationFile.c_str(), n, written);
+                LOG_ERROR("cpioExtract: short write to file '%s': n=%u, written=%d",
+                          destinationFile.c_str(), n, written);
                 close(extractedFile);
                 return -1;
             }
