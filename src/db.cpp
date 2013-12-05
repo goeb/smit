@@ -1132,7 +1132,7 @@ bool Project::searchFullText(const Issue* issue, const char *text) const
   *     - a new issue is created
   *     - its ID is returned within parameter 'issueId'
   */
-int Project::addEntry(std::map<std::string, std::list<std::string> > properties, std::string &issueId, std::string username)
+int Project::addEntry(std::map<std::string, std::list<std::string> > properties, std::string &issueId, std::string &entryId, std::string username)
 {
     ScopeLocker scopeLocker(locker, LOCK_READ_WRITE) ; // TODO look for optimization
 
@@ -1287,6 +1287,7 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
         }
     }
 
+    entryId = id;
     return r;
 }
 

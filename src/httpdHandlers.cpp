@@ -1055,15 +1055,22 @@ void httpPostEntry(struct mg_connection *conn, Project &pro, const std::string &
 
     std::string id = issueId;
     if (id == "new") id = ""; // TODO check if conflict between "new" and issue ids.
-    int status = pro.addEntry(vars, id, u.username);
+    std::string entryId;
+    int status = pro.addEntry(vars, id, entryId, u.username);
     if (status != 0) {
         // error
         sendHttpHeader500(conn, "Cannot add entry");
 
     } else {
-        // HTTP redirect
-        std::string redirectUrl = "/" + pro.getUrlName() + "/issues/" + id;
-        sendHttpRedirect(conn, redirectUrl.c_str(), 0);
+        if (getFormat(conn) == RENDERING_HTML) {
+            // HTTP redirect
+            std::string redirectUrl = "/" + pro.getUrlName() + "/issues/" + id;
+            sendHttpRedirect(conn, redirectUrl.c_str(), 0);
+        } else {
+            sendHttpHeader200(conn);
+            mg_printf(conn, "\r\n");
+            mg_printf(conn, "%s/%s\r\n", id.c_str(), entryId.c_str());
+        }
     }
 
 }

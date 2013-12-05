@@ -42,7 +42,6 @@ Locker::~Locker()
 void Locker::lockForWriting()
 {
     LOG_FUNC();
-    LOG_DEBUG("lockForWriting %p", &readWriteMutex);
 
     int r = pthread_mutex_lock(&readWriteMutex);
     if (r != 0) LOG_ERROR("pthread_mutex_lock error: (%d) %s", r, strerror(r));
@@ -65,7 +64,6 @@ void Locker::lockForWriting()
 void Locker::unlockForWriting()
 {
     LOG_FUNC();
-    LOG_DEBUG("unlockForWriting %p", &readWriteMutex);
 
     int r = pthread_mutex_unlock(&readWriteMutex);
     if (r != 0) LOG_ERROR("pthread_mutex_unlock error: (%d) %s", r, strerror(r));
@@ -74,7 +72,6 @@ void Locker::unlockForWriting()
 void Locker::lockForReading()
 {
     LOG_FUNC();
-    LOG_DEBUG("lockForReading %p", this);
     // lock && unlock the write mutex.
     // this is to prevent new reader while a writer has taken the mutex
     lockForWriting();
@@ -93,7 +90,6 @@ void Locker::lockForReading()
 void Locker::unlockForReading()
 {
     LOG_FUNC();
-    LOG_DEBUG("unlockForReading %p", this);
 
     int r = pthread_mutex_lock(&readOnlyMutex);
     if (r != 0) LOG_ERROR("pthread_mutex_lock error: (%d) %s", r, strerror(r));

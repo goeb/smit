@@ -40,16 +40,26 @@ signin() {
 
 get() {
     url="$1"
-    if [ `echo "$url" | grep "\?"` ]; then q="&";
-    else q="?"; fi
-    curl -b $SMITC_COOKIE "$url${q}format=text"
+    # if format is not specify, add format=text
+    if [ `echo "$url" | grep "format="` ]; then
+        q=""
+    else
+        if [ `echo "$url" | grep "\?"` ]; then q="&";
+        else q="?"; fi
+        q="${q}format=text"
+    fi
+    curl -s -b $SMITC_COOKIE "$url$q"
 }
 
 post() {
-    echo "post... args=$@" 
+    #echo "post... args=$@" 
     uri="$1"
-    data=$2
-    curl -d "$data" -b $SMITC_COOKIE "$uri?format=text" "$data"
+    shift
+    while [ "$1" != "" ]; do
+        data="$data -F $1"
+        shift
+    done
+    curl -s $data -b $SMITC_COOKIE "$uri?format=text"
 }
 
 eval $command $args
