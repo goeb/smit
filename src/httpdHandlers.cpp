@@ -19,15 +19,6 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#ifdef _WIN32
-#include <windows.h>
-#include <io.h>
-#define strtoll strtol
-typedef __int64 int64_t;
-#else
-#include <inttypes.h>
-#include <unistd.h>
-#endif // !_WIN32
 
 #include <string>
 #include <sstream>
@@ -44,6 +35,7 @@ typedef __int64 int64_t;
 #include "stringTools.h"
 #include "session.h"
 #include "global.h"
+#include "mg_win32.h"
 
 // static members
 
@@ -949,7 +941,7 @@ void parseMultipartAndStoreUploadedFiles(const std::string &data, std::string bo
 
                 // store to tmpDirectory
                 std::string path = tmpDirectory;
-                mkdir(tmpDirectory.c_str(), S_IRUSR | S_IWUSR | S_IXUSR); // create dir if needed
+                mg_mkdir(tmpDirectory.c_str(), S_IRUSR | S_IWUSR | S_IXUSR); // create dir if needed
                 path += "/";
                 path += basename;
                 int r = writeToFile(path.c_str(), p, size);
@@ -1042,7 +1034,7 @@ void httpPostEntry(struct mg_connection *conn, Project &pro, const std::string &
 
         // extract the boundary
         const char *b = "boundary=";
-        const char *p = strcasestr(contentType, b);
+        const char *p = mg_strcasestr(contentType, b);
         if (!p) {
             LOG_ERROR("Missing boundary in multipart form data");
             return;
@@ -1063,15 +1055,22 @@ void httpPostEntry(struct mg_connection *conn, Project &pro, const std::string &
 
     std::string id = issueId;
     if (id == "new") id = ""; // TODO check if conflict between "new" and issue ids.
-    int status = pro.addEntry(vars, id, u.username);
+    std::string entryId;
+    int status = pro.addEntry(vars, id, entryId, u.username);
     if (status != 0) {
         // error
         sendHttpHeader500(conn, "Cannot add entry");
 
     } else {
-        // HTTP redirect
-        std::string redirectUrl = "/" + pro.getUrlName() + "/issues/" + id;
-        sendHttpRedirect(conn, redirectUrl.c_str(), 0);
+        if (getFormat(conn) == RENDERING_HTML) {
+            // HTTP redirect
+            std::string redirectUrl = "/" + pro.getUrlName() + "/issues/" + id;
+            sendHttpRedirect(conn, redirectUrl.c_str(), 0);
+        } else {
+            sendHttpHeader200(conn);
+            mg_printf(conn, "\r\n");
+            mg_printf(conn, "%s/%s\r\n", id.c_str(), entryId.c_str());
+        }
     }
 
 }

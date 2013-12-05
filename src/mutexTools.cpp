@@ -12,11 +12,19 @@
  *   GNU General Public License for more details.
  */
 
+
+/** The read/write mutex pattern has been influenced by
+  * Windows weak mutex architecture: a thread cannot release
+  * a mutex locked by another thread. Hence the sleep during a few milliseconds.
+  * Maybe should be improved. I should read the MSDN doc.
+  *
+  */
 #include "mutexTools.h"
 #include "logging.h"
 
 Locker::Locker()
 {
+    LOG_FUNC();
     nReaders = 0;
     pthread_mutex_init(&readOnlyMutex, 0);
     pthread_mutex_init(&readWriteMutex, 0);
@@ -25,44 +33,75 @@ Locker::Locker()
 
 Locker::~Locker()
 {
+    LOG_FUNC();
+
     pthread_mutex_destroy(&readOnlyMutex);
     pthread_mutex_destroy(&readWriteMutex);
 }
 
 void Locker::lockForWriting()
 {
-    pthread_mutex_lock(&readWriteMutex);
+    LOG_FUNC();
+
+    int r = pthread_mutex_lock(&readWriteMutex);
+    if (r != 0) LOG_ERROR("pthread_mutex_lock error: (%d) %s", r, strerror(r));
+
+    // now wait until there is no reader
+    // TODO add a timeout
+    int n = 1;
+    while (n > 0) {
+        r = pthread_mutex_lock(&readOnlyMutex);
+        if (r != 0) LOG_ERROR("pthread_mutex_lock error: (%d) %s", r, strerror(r));
+
+        n = nReaders;
+
+        r = pthread_mutex_unlock(&readOnlyMutex);
+        if (r != 0) LOG_ERROR("pthread_mutex_unlock error: (%d) %s", r, strerror(r));
+
+        msleep(10); // prevent CPU consuming loop
+    }
 }
 void Locker::unlockForWriting()
 {
-    pthread_mutex_unlock(&readWriteMutex);
+    LOG_FUNC();
+
+    int r = pthread_mutex_unlock(&readWriteMutex);
+    if (r != 0) LOG_ERROR("pthread_mutex_unlock error: (%d) %s", r, strerror(r));
 }
 
 void Locker::lockForReading()
 {
-    pthread_mutex_lock(&readOnlyMutex);
-    if (nReaders == 0) {
-        // first reader
-        lockForWriting();
-    }
+    LOG_FUNC();
+    // lock && unlock the write mutex.
+    // this is to prevent new reader while a writer has taken the mutex
+    lockForWriting();
+    unlockForWriting();
+
+    // now get the read mutex, for updating nReaders
+    int r = pthread_mutex_lock(&readOnlyMutex);
+    if (r != 0) LOG_ERROR("pthread_mutex_lock error: (%d) %s", r, strerror(r));
+
     nReaders++;
-    pthread_mutex_unlock(&readOnlyMutex);
+
+    r = pthread_mutex_unlock(&readOnlyMutex);
+    if (r != 0) LOG_ERROR("pthread_mutex_unlock error: (%d) %s", r, strerror(r));
 }
 
 void Locker::unlockForReading()
 {
-    pthread_mutex_lock(&readOnlyMutex);
+    LOG_FUNC();
+
+    int r = pthread_mutex_lock(&readOnlyMutex);
+    if (r != 0) LOG_ERROR("pthread_mutex_lock error: (%d) %s", r, strerror(r));
+
     if (nReaders <= 0) {
         // error
         LOG_ERROR("unlockForReading error: nReaders == %d", nReaders);
-    } else if (nReaders) {
+    } else {
         nReaders--;
     }
 
-    if (nReaders == 0) {
-        unlockForWriting();
-    }
-    pthread_mutex_unlock(&readOnlyMutex);
-
+    r = pthread_mutex_unlock(&readOnlyMutex);
+    if (r != 0) LOG_ERROR("pthread_mutex_unlock error: (%d) %s", r, strerror(r));
 }
 

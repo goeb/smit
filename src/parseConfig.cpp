@@ -67,12 +67,15 @@ std::list<std::list<std::string> > parseConfigTokens(const char *buf, size_t len
 
         case P_IN_BACKSLASH:
             if (c == '\n') { // new line escaped
-                // nothing particular here
+                // nothing particular here, continue on next line
+                state = P_READY;
+            } else if (c == '\r') { // ignore this
+
             } else {
                 tokenPending = true;
                 token += c;
+                state = P_READY;
             }
-            state = P_READY;
             break;
 
         case P_IN_DOUBLE_QUOTES:
@@ -139,6 +142,8 @@ std::list<std::list<std::string> > parseConfigTokens(const char *buf, size_t len
                 tokenPending = true;
                 state = P_IN_BOUNDARY_HEADER;
                 boundary.clear();
+            } else if (c == '\r') {
+                // ignore
             } else {
                 tokenPending = true;
                 token += c;
@@ -218,6 +223,9 @@ int writeToFile(const char *filepath, const char *data, size_t len)
 {
     int result = 0;
     mode_t mode = O_CREAT | O_TRUNC | O_WRONLY;
+#if defined(_WIN32)
+    mode |= O_BINARY;
+#endif
     int flags = S_IRUSR;
 
     std::string tmp = filepath;
@@ -237,6 +245,9 @@ int writeToFile(const char *filepath, const char *data, size_t len)
 
     close(f);
 
+#if defined(_WIN32)
+    unlink(filepath); // rename on Windows fails if destination file already exists
+#endif
     int r = rename(tmp.c_str(), filepath);
     if (r != 0) {
         LOG_ERROR("Cannot rename '%s' -> '%s': (%d) %s", tmp.c_str(), filepath, errno, strerror(errno));

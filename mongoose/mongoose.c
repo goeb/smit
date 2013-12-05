@@ -160,8 +160,8 @@ typedef struct {HANDLE signal, broadcast;} pthread_cond_t;
 typedef DWORD pthread_t;
 #define pid_t HANDLE // MINGW typedefs pid_t to int. Using #define here.
 
-static int pthread_mutex_lock(pthread_mutex_t *);
-static int pthread_mutex_unlock(pthread_mutex_t *);
+int pthread_mutex_lock(pthread_mutex_t *);
+int pthread_mutex_unlock(pthread_mutex_t *);
 static void to_unicode(const char *path, wchar_t *wbuf, size_t wbuf_len);
 struct file;
 static char *mg_fgets(char *buf, size_t size, struct file *filep, char **p);
@@ -710,7 +710,7 @@ static char * mg_strdup(const char *str) {
   return mg_strndup(str, strlen(str));
 }
 
-static const char *mg_strcasestr(const char *big_str, const char *small_str) {
+const char *mg_strcasestr(const char *big_str, const char *small_str) {
   int i, big_len = strlen(big_str), small_len = strlen(small_str);
 
   for (i = 0; i <= big_len - small_len; i++) {
@@ -967,22 +967,22 @@ static void send_http_error(struct mg_connection *conn, int status,
 }
 
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
-static int pthread_mutex_init(pthread_mutex_t *mutex, void *unused) {
+int pthread_mutex_init(pthread_mutex_t *mutex, void *unused) {
   (void) unused;
   *mutex = CreateMutex(NULL, FALSE, NULL);
   return *mutex == NULL ? -1 : 0;
 }
 
-static int pthread_mutex_destroy(pthread_mutex_t *mutex) {
+int pthread_mutex_destroy(pthread_mutex_t *mutex) {
   return CloseHandle(*mutex) == 0 ? -1 : 0;
 }
 
-static int pthread_mutex_lock(pthread_mutex_t *mutex) {
+int pthread_mutex_lock(pthread_mutex_t *mutex) {
   return WaitForSingleObject(*mutex, INFINITE) == WAIT_OBJECT_0? 0 : -1;
 }
 
-static int pthread_mutex_unlock(pthread_mutex_t *mutex) {
-  return ReleaseMutex(*mutex) == 0 ? -1 : 0;
+int pthread_mutex_unlock(pthread_mutex_t *mutex) {
+    return ReleaseMutex(*mutex) == 0 ? GetLastError() : 0;
 }
 
 static int pthread_cond_init(pthread_cond_t *cv, const void *unused) {
@@ -1144,7 +1144,7 @@ static int mg_remove(const char *path) {
   return DeleteFileW(wbuf) ? 0 : -1;
 }
 
-static int mg_mkdir(const char *path, int mode) {
+int mg_mkdir(const char *path, int mode) {
   char buf[PATH_MAX];
   wchar_t wbuf[PATH_MAX];
 

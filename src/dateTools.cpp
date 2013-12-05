@@ -15,6 +15,7 @@
 #include <time.h>
 #include <stdio.h>
 
+#include "mg_win32.h"
 #include "dateTools.h"
 
 std::string getLocalTimestamp()
