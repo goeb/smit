@@ -40,6 +40,7 @@ extern "C" {
     return tid;
   }
 
+  #define msleep(x) Sleep(x)
 
   // end #if _WIN32
 #else
@@ -48,13 +49,14 @@ extern "C" {
   #define mg_mkdir(x, y) mkdir(x, y)
 
   #include <sys/syscall.h>
+  #include <unistd.h>
 
   inline long gettid()
   {
     long tid = syscall(SYS_gettid);
     return tid;
   }
-
+  #define msleep(x) usleep((x)*1000);
 
 
 #endif
