@@ -32,6 +32,7 @@ doreads() {
             if [ "$id" = "id" ]; then continue; fi
             echo "doreads[$$]: id=$id"
             $SMITC get "http://127.0.0.1:8090/$PROJECT/issues/$id?format=html" >/dev/null # get.html
+            sleep 0.1
         done
         )
     done
@@ -55,7 +56,7 @@ dowrites() {
 #init
 start
 doreads 5 &
-dowrites 2 5
+dowrites 5 5
 
 echo killing pid=$pid
 kill $pid
