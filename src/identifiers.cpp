@@ -150,6 +150,7 @@ std::string getSha1(const std::string &data)
   */
 std::string base64(const ustring &src)
 {
+
     static const char *b64 =
             "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.-";
 
@@ -171,6 +172,7 @@ std::string base64(const ustring &src)
             dst += b64[c & 63];
         }
     }
+    //LOG_DEBUG("base64(%s)=%s", bin2hex(src).c_str(), dst.c_str());
     return dst;
 }
 
@@ -183,5 +185,8 @@ std::string getBase64Id(const uint8_t *data, size_t len)
 
     ustring sha1sum(sha, SHA_DIGEST_LENGTH+1);
     std::string id = base64(sha1sum);
-    return id;
+    // remove last character (always 'A' because 6 last bits of the sha1 are always 0)
+    // 20+1 bytes binary => 28 bytes base64, the last of which is always 'A'
+
+    return id.substr(0, 27);
 }

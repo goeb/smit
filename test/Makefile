@@ -14,3 +14,6 @@ T_identifiers: $(SRCS_T_identifiers) utest.h
 	g++ -o $@ $(CPPFLAGS) $(SRCS_T_identifiers) -lcrypto
 	./$@
 
+
+functest:
+	sh functest.sh

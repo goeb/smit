@@ -16,6 +16,7 @@
 #include "db.h"
 #include "logging.h"
 #include "stringTools.h"
+#include "global.h"
 
 void RText::printProjectList(struct mg_connection *conn, const std::list<std::pair<std::string, std::string> > &pList)
 {
@@ -66,10 +67,12 @@ void RText::printIssueList(struct mg_connection *conn, std::vector<struct Issue*
 
 }
 
-void RText::printIssue(struct mg_connection *conn, const Issue &issue, const std::list<Entry*> &Entries)
+void RText::printIssue(struct mg_connection *conn, const Issue &issue, const std::list<Entry*> &entries)
 {
     LOG_DEBUG("RText::printIssue...");
     mg_printf(conn, "Content-Type: text/plain\r\n\r\n");
-    mg_printf(conn, "not implemented\r\n");
-
+    std::list<Entry*>::const_iterator e;
+    FOREACH(e, entries) {
+        mg_printf(conn, "%s\n", (*e)->id.c_str());
+    }
 }
