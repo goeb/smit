@@ -40,7 +40,7 @@ doreads() {
 
 dowrites() {
     n=$1
-    nentries=$2
+    nentries=$2 # number of messages under each issue
     for i in `seq 1 $n`; do
         echo "dowrites[$$]: $i"
         r=`$SMITC post "http://127.0.0.1:8090/$PROJECT/issues/new" "summary=test-xxx-$i" "+message=new-message-$i"`
@@ -53,10 +53,28 @@ dowrites() {
     done
 }
 
-#init
+init
 start
-doreads 5 &
-dowrites 5 5
+doreads 10 &
+doreads 10 &
+doreads 10 &
+doreads 10 &
+doreads 10 &
+dowrites 10 10
+
+sleep 2
+
+# check 
+$SMITC get "http://127.0.0.1:8090/$PROJECT/issues?colspec=id+summary\&sort=id" > functest.log
 
 echo killing pid=$pid
 kill $pid
+
+sleep 2
+
+cmp functest.ref functest.log
+echo -n "$0 ... "
+if [ $? -eq 0 ]; then echo OK
+else echo "ERROR (check diff functest.ref functest.log, repo=$REPO)"
+fi
+

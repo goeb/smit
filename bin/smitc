@@ -59,7 +59,7 @@ post() {
         data="$data -F $1"
         shift
     done
-    curl -s $data -b $SMITC_COOKIE "$uri?format=text"
+    curl -H Expect: -s $data -b $SMITC_COOKIE "$uri?format=text"
 }
 
 eval $command $args

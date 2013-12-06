@@ -1099,15 +1099,6 @@ void httpPostEntry(struct mg_connection *conn, Project &pro, const std::string &
 int begin_request_handler(struct mg_connection *conn)
 {
     LOG_FUNC();
-    LOG_DEBUG("begin_request_handler");
-
-    // check acces rights
-    std::string sessionId = getSessionIdFromCookie(conn);
-    LOG_DEBUG("session id: %s", sessionId.c_str());
-    User user = SessionBase::getLoggedInUser(sessionId);
-    // if username is empty, then no access is granted (only public pages will be available)
-
-    LOG_DEBUG("User logged: %s", user.username.c_str());
 
     bool handled = true;
     std::string uri = mg_get_request_info(conn)->uri;
@@ -1117,8 +1108,17 @@ int begin_request_handler(struct mg_connection *conn)
     std::string resource = popToken(uri, '/');
     LOG_DEBUG("resource=%s, method=%s", resource.c_str(), method.c_str());
 
-    if      ( (resource == "public") && (method == "GET") ) return 0; // let Mongoose handle static file
-    else if ( (resource == "signin") && (method == "POST") ) httpPostSignin(conn);
+    if ((resource == "public") && (method == "GET")) return 0; // let mongoose handle the file request directly
+
+    // check acces rights
+    std::string sessionId = getSessionIdFromCookie(conn);
+    LOG_DEBUG("session id: %s", sessionId.c_str());
+    User user = SessionBase::getLoggedInUser(sessionId);
+    // if username is empty, then no access is granted (only public pages will be available)
+
+    LOG_DEBUG("User logged: %s", user.username.c_str());
+
+    if ( (resource == "signin") && (method == "POST") ) httpPostSignin(conn);
     else if ( (resource == "signout") && (method == "POST") ) httpPostSignout(conn, sessionId);
     else if (user.username.size() == 0) {
 
