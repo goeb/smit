@@ -14,7 +14,7 @@ Smit will help you:
 - follow team activity
 - capitalize knowledge 
 
-Issues are to be understand in the broad sense:
+Issues are to be understood in the broad sense:
 - tasks
 - ideas
 - requests
