@@ -1297,7 +1297,7 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue, const s
             std::list<std::string>::iterator f;
             FOREACH(f, files->second) {
                 std::string shortName = *f;
-                if (shortName.size()>29) shortName = shortName.substr(29); // 29 fist characters are the sha1 prefix
+                if (shortName.size()>28) shortName = shortName.substr(28); // 28 fist characters are the sha1 prefix
                 mg_printf(conn, "<div class=\"sm_entry_file\">\n");
                 mg_printf(conn, "<a href=\"../%s/%s\" class=\"sm_entry_file\">", K_UPLOADED_FILES_DIR,
                           urlEncode(*f).c_str());
