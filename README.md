@@ -3,21 +3,34 @@ Smit
 
 Small Issue Tracker
 
-Smit is an open-source issue tracker for general usages, such as customer support, hardware development, bug tracking, etc.
+Smit is a free and open-source issue tracker designed to handle projects with speed and efficiency.
+
+Smit is easy to install and customize and has a tiny footprint with lightning fast performance.
+
+Smit will help you:
+
+- organize issues
+- assign work
+- follow team activity
+- capitalize knowledge 
+
+Issues are to be understand in the broad sense:
+- tasks
+- ideas
+- requests
+- experiments 
+- bugs
 
 
 Features
 --------
+Some of the main features of Smit are:
 
-- Full text searching
 - Easy customization of properties
-- Simple, fast and light
-- Easy to install locally, or on a server
-- UTF-8
-- Full-contents view (all issues and their contents on a same page)
-  suitable for HTML or PDF export
-- Manage several projects
-- Offline capability
+- Advanced searching (including full text searching) and sorting
+- Exporting contents to HTML, text, CSV, PDF (via the browser's capability)
+- Multiple projects support
+- Self-Contained: Smit is a single stand-alone executable
 
 
 Getting Started
