@@ -31,7 +31,11 @@ struct Entry {
     std::string serialize();
     int getCtime() const;
     std::string getMessage();
-    Entry() : ctime(0) {};
+    Entry() : ctime(0), next(0), prev(0) {};
+
+    // chainlist pointers
+    struct Entry *next;
+    struct Entry *prev;
 
 };
 
@@ -39,7 +43,7 @@ struct Entry {
 // An issue is consolidated over all its entries
 struct Issue {
     std::string id; // same as the first entry
-    std::string head; // the latest entry
+    std::string latest; // the latest entry
     int ctime; // creation time (the one of the first entry)
     int mtime; // modification time (the one of the last entry)
     std::map<std::string, std::list<std::string> > properties;
@@ -50,6 +54,16 @@ struct Issue {
     std::string getSummary() const;
     bool lessThan(const Issue *other, const std::list<std::pair<bool, std::string> > &sortingSpec) const;
     bool isInFilter(const std::map<std::string, std::list<std::string> > &filter);
+    std::map<std::string, Entry*> entries;
+
+    void getEntries(std::list<Entry*> &entryList);
+    int computeHead();
+    void consolidate();
+    void consolidateIssueWithSingleEntry(Entry *e, bool overwrite);
+    Entry *getEntry(const std::string &id) const;
+    bool searchFullText(const char *text) const;
+
+    Locker locker;
 
 
 };
@@ -102,11 +116,10 @@ public:
                              const std::map<std::string, std::list<std::string> > &filterIn,
                              const std::map<std::string, std::list<std::string> > &filterOut,
                              const char *sortingSpec);
-    int get(const char *issueId, Issue &issue, std::list<Entry*> &Entries);
+    int get(const char *issueId, Issue &issue);
     int addEntry(std::map<std::string, std::list<std::string> > properties, std::string &iid, std::string &eid, std::string username);
     Issue *getIssue(const std::string &id) const;
     Entry *getEntry(const std::string &id) const;
-    bool searchFullText(const Issue* issue, const char *text) const;
     std::string getLabelOfProperty(const std::string &propertyName) const;
 
     inline std::string getName() const { return name; }
@@ -115,7 +128,6 @@ public:
     inline static std::string urlNameDecode(const std::string &name) { return urlDecode(name, false, '='); }
     inline std::string getPath() const { return path; }
     inline ProjectConfig getConfig() const { return config; }
-    int writeHead(const std::string &issueId, const std::string &entryId);
     int deleteEntry(const std::string &issueId, const std::string &entryId, const std::string &username);
     std::list<std::string> getReservedProperties() const;
     std::list<std::string> getPropertiesNames() const;
@@ -132,7 +144,6 @@ private:
 
     ProjectConfig config;
     std::map<std::string, Issue*> issues;
-    std::map<std::string, Entry*> entries;
     Locker locker;
     Locker lockerForConfig;
     std::string name; //< name of the project, plain text

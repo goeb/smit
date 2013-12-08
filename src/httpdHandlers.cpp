@@ -746,12 +746,13 @@ int httpGetIssue(struct mg_connection *conn, Project &p, const std::string &issu
 
     Issue issue;
     std::list<Entry*> entries;
-    int r = p.get(issueId.c_str(), issue, entries);
+    int r = p.get(issueId.c_str(), issue);
     if (r < 0) {
         // issue not found or other error
         return 0; // let mongoose handle it
 
     } else {
+        issue.getEntries(entries);
         enum RenderingFormat format = getFormat(conn);
 
         sendHttpHeader200(conn);

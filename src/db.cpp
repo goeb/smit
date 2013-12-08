@@ -37,8 +37,8 @@
 
 #define PROJECT_FILE "project"
 #define ISSUES "issues" // sub-directory of a project where the entries are stored
-#define HEAD "_HEAD"
 #define VIEWS_FILE "views"
+#define K_DELETED "_del"
 
 
 #define K_PARENT "+parent"
@@ -79,22 +79,6 @@ int dbLoad(const char * pathToRepository)
         closedir(dirp);
     }
     return Database::Db.projects.size();
-}
-
-/** Load an identifier from a file
-  */
-std::string loadRef(const std::string &issuePath, const std::string &refname)
-{
-    std::string refvalue;
-    std::string headPath = issuePath + '/' + refname;
-    const char *buf = 0;
-    int n = loadFile(headPath.c_str(), &buf);
-
-    if (n <= 0) return refvalue; // error or empty file
-
-    refvalue.assign(buf, n);
-    free((void*)buf);
-    return refvalue;
 }
 
 
@@ -207,54 +191,49 @@ Entry *loadEntry(std::string dir, const char* basename)
   * If overwrite == false, then an already existing property in the
   * issue will not be overwritten.
   */
-void consolidateIssueWithSingleEntry(Issue *i, Entry *e, bool overwrite) {
+void Issue::consolidateIssueWithSingleEntry(Entry *e, bool overwrite) {
     std::map<std::string, std::list<std::string> >::iterator p;
     FOREACH(p, e->properties) {
         if (p->first.size() && p->first[0] == '+') continue; // do not consolidate these (+file, +message, etc.)
-        if (overwrite || (i->properties.count(p->first) == 0) ) {
-            i->properties[p->first] = p->second;
+        if (overwrite || (properties.count(p->first) == 0) ) {
+            properties[p->first] = p->second;
         }
     }
     // update also mtime of the issue
-    if (i->mtime == 0 || overwrite) i->mtime = e->ctime;
+    if (mtime == 0 || overwrite) mtime = e->ctime;
 }
 
 /** Consolidate an issue by accumulating all its entries
   *
   * This method must be called from a mutex-protected scope (no mutex is managed in here).
   */
-void Project::consolidateIssue(Issue *i)
+void Issue::consolidate()
 {
-    if (!i) {
-        LOG_ERROR("Cannot consolidate null issue!");
+    if (latest.empty()) {
+        // missign latest
+        LOG_ERROR("Cannot consolidate issue '%s': missing latest", id.c_str());
         return;
     }
-
-    if (i->head.empty()) {
-        // repair the head
-        // TODO
-        LOG_ERROR("Missing head for issue '%s'. Repairing TODO...", i->id.c_str());
-        return;
-    }
-    // now that the head is found, walk through all entries
+    // starting from the head, walk through all entries
     // following the _parent properties.
 
     Entry *e = 0;
-    std::string parent = i->head;
+    std::string parent = latest;
     // the entries are walked through backwards (from most recent to oldest)
     do {
         e = getEntry(parent);
 
         if (!e) {
-            LOG_ERROR("Broken chain of entries: missing reference %s for issue %s", parent.c_str(), i->id.c_str());
+            LOG_ERROR("Broken chain of entries: missing reference %s for issue %s",
+                     parent.c_str(), id.c_str());
             break;
         }
         // for each property of the parent,
         // create the same property in the issue, if not already existing
         // (in order to have only most recent properties)
 
-        consolidateIssueWithSingleEntry(i, e, false); // do not overwrite as we move from most recent to oldest
-        i->ctime = e->ctime; // the oldest entry will take precedence for ctime
+        consolidateIssueWithSingleEntry(e, false); // do not overwrite as we move from most recent to oldest
+        ctime = e->ctime; // the oldest entry will take precedence for ctime
         parent = e->parent;
     } while (parent != K_PARENT_NULL);
 }
@@ -269,9 +248,7 @@ void Project::consolidateIssues()
     std::map<std::string, Issue*>::iterator i;
     for (i = issues.begin(); i != issues.end(); i++) {
         Issue *currentIssue = i->second;
-
-        consolidateIssue(currentIssue);
-
+        currentIssue->consolidate();
     }
     LOG_DEBUG("consolidateIssues() done.");
 }
@@ -312,21 +289,22 @@ int Project::loadEntries(const char *path)
             while ((entryFile = readdir(issueDirHandle)) != NULL) {
                 if (0 == strcmp(entryFile->d_name, ".")) continue;
                 if (0 == strcmp(entryFile->d_name, "..")) continue;
-                if (0 == strcmp(entryFile->d_name, HEAD)) {
-                    // this is the HEAD, ie: the lastest entry.
-                    issue->head = loadRef(issuePath, HEAD);
+                if (0 == strcmp(entryFile->d_name, K_DELETED)) continue;
+                if (0 == strcmp(entryFile->d_name, "_HEAD")) {
+                    // obsolete.
+                    LOG_INFO("Found obsolete _HEAD");
                     continue;
                 }
                 // regular entry
                 std::string filePath = issuePath + '/' + entryFile->d_name;
                 Entry *e = loadEntry(issuePath, entryFile->d_name);
-                if (e) entries[e->id] = e;
+                if (e) issue->entries[e->id] = e;
                 else LOG_ERROR("Cannot load entry '%s'", filePath.c_str());
             }
 
             closedir(issueDirHandle);
+            issue->computeHead();
         }
-
     }
     closedir(entriesDirHandle);
 
@@ -341,7 +319,7 @@ Issue *Project::getIssue(const std::string &id) const
     else return i->second;
 }
 
-Entry *Project::getEntry(const std::string &id) const
+Entry *Issue::getEntry(const std::string &id) const
 {
     if (id == K_PARENT_NULL) return 0;
 
@@ -352,8 +330,10 @@ Entry *Project::getEntry(const std::string &id) const
 }
 
 
-int Project::get(const char *issueId, Issue &issue, std::list<Entry*> &Entries)
+int Project::get(const char *issueId, Issue &issue)
 {
+    ScopeLocker scopeLocker(locker, LOCK_READ_ONLY);
+
     Issue *i = getIssue(issueId);
     if (!i) {
         // issue not found
@@ -361,22 +341,71 @@ int Project::get(const char *issueId, Issue &issue, std::list<Entry*> &Entries)
         return -1;
     } else {
         issue = *i;
-        // build list of entries
-        std::string currentEntryId = issue.head; // latest entry
-
-        while (0 != currentEntryId.compare(K_PARENT_NULL)) {
-            std::map<std::string, Entry*>::iterator e = entries.find(currentEntryId);
-            if (e == entries.end()) {
-                LOG_ERROR("Broken chain of entries: missing reference '%s'", currentEntryId.c_str());
-                break; // abort the loop
-            }
-            Entry *currentEntry = e->second;
-            Entries.insert(Entries.begin(), currentEntry); // chronological order (latest last)
-            currentEntryId = currentEntry->parent;
-        }
     }
 
     return 0;
+}
+
+/** Guess the head from the previously loaded entries
+  *
+  * And resolve missing nodes.
+  */
+int Issue::computeHead()
+{
+    std::map<std::string, Entry*>::iterator eit;
+    FOREACH(eit, entries) {
+        Entry *e = eit->second;
+        if (e->parent == K_PARENT_NULL) e->prev = 0;
+        else {
+            std::map<std::string, Entry*>::iterator parentIt = entries.find(e->parent);
+            if (parentIt != entries.end()) {
+                Entry *parent = parentIt->second;
+                if (parent->next) {
+                    // error: the next of the parent was already assigned
+                    LOG_ERROR("Entry '%s' has already a child: '%s'", parent->id.c_str(),
+                              parent->next->id.c_str());
+                    // try to resolve this
+                    while (parent->next) parent = parent->next;
+                    LOG_INFO("New parent for '%s': '%s'", e->id.c_str(), parent->id.c_str());
+                }
+                parent->next = e;
+                e->prev = parent;
+            } else {
+                // error: parent is missing
+                LOG_ERROR("Parent missing: '%s'", e->parent.c_str());
+            }
+        }
+    }
+    // now find the entry that has no 'next'
+    FOREACH(eit, entries) {
+        Entry *e = eit->second;
+        if (e->next == 0) {
+            if (latest.empty()) latest = e->id;
+            else {
+                // error: another entry was already claimed as latest
+                LOG_ERROR("Entries conflict for 'latest': %s, %s", latest.c_str(), e->id.c_str());
+            }
+        }
+    }
+    return 0;
+}
+
+/** Get the list of ordered entries
+  */
+void Issue::getEntries(std::list<Entry*> &entryList)
+{
+    ScopeLocker scopeLocker(locker, LOCK_READ_ONLY);
+
+    entryList.clear();
+    // build list of entries
+    std::map<std::string, Entry*>::const_iterator eit = entries.find(latest);
+    if (eit == entries.end()) return;
+    Entry *e = eit->second;
+
+    while (e) {
+        entryList.insert(entryList.begin(), e); // chronological order (latest last)
+        e = e->prev;
+    }
 }
 
 FieldSpec parseFieldSpec(std::list<std::string> & tokens)
@@ -990,7 +1019,7 @@ std::vector<Issue*> Project::search(const char *fulltextSearch,
         if (!filterOut.empty() && issue->isInFilter(filterOut)) continue;
 
         // 2. search full text
-        if (! searchFullText(issue, fulltextSearch)) {
+        if (! issue->searchFullText(fulltextSearch)) {
             // do not keep this issue
             continue;
         }
@@ -1089,16 +1118,16 @@ bool Issue::lessThan(const Issue* other, const std::list<std::pair<bool, std::st
   *     true if found, false otherwise
   *
   */
-bool Project::searchFullText(const Issue* issue, const char *text) const
+bool Issue::searchFullText(const char *text) const
 {
     if (!text) return true;
 
     // look if id contains the fulltextSearch
-    if (mg_strcasestr(issue->id.c_str(), text)) return true; // found
+    if (mg_strcasestr(id.c_str(), text)) return true; // found
 
     // look through the properties of the issue
     std::map<std::string, std::list<std::string> >::const_iterator p;
-    for (p = issue->properties.begin(); p != issue->properties.end(); p++) {
+    for (p = properties.begin(); p != properties.end(); p++) {
         std::list<std::string>::const_iterator pp;
         std::list<std::string> listOfValues = p->second;
         for (pp = listOfValues.begin(); pp != listOfValues.end(); pp++) {
@@ -1108,7 +1137,7 @@ bool Project::searchFullText(const Issue* issue, const char *text) const
 
     // look through the entries
     Entry *e = 0;
-    std::string next = issue->head;
+    std::string next = latest;
     while ( (e = getEntry(next)) ) {
         if (mg_strcasestr(e->getMessage().c_str(), text)) return true; // found
 
@@ -1196,7 +1225,7 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
     }
 
     std::string parent;
-    if (i) parent = i->head;
+    if (i) parent = i->latest;
     else parent = K_PARENT_NULL;
 
     // create Entry object with properties
@@ -1206,6 +1235,14 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
     //e->id
     e->author = username;
     e->properties = properties;
+
+    if (i) {
+        std::map<std::string, Entry*>::iterator eit = i->entries.find(parent);
+        if (eit == i->entries.end()) LOG_ERROR("cannot find entry %s", parent.c_str());
+        e->prev = eit->second;
+        eit->second->next = e;
+    }
+
 
     // serialize the entry
     std::string data = e->serialize();
@@ -1260,15 +1297,12 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
 
     // add this entry in Project::entries
     e->id = id;
-    entries[id] = e;
+    i->entries[id] = e;
 
     // consolidate the issue
-    consolidateIssueWithSingleEntry(i, e, true);
+    i->consolidateIssueWithSingleEntry(e, true);
     i->mtime = e->ctime;
-    i->head = id;
-
-    // update _HEAD
-    r = writeHead(issueId, id);
+    i->latest = id;
 
     // move the uploaded files (if any)
     std::map<std::string, std::list<std::string> >::iterator files = e->properties.find(K_FILE);
@@ -1290,17 +1324,6 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
     entryId = id;
     return r;
 }
-
-int Project::writeHead(const std::string &issueId, const std::string &entryId)
-{
-    std::string pathToHead = path + '/' + ISSUES + '/' + issueId + '/' + HEAD;
-    int r = writeToFile(pathToHead.c_str(), entryId);
-    if (r<0) {
-        LOG_ERROR("Cannot write HEAD (%s/%s)", issueId.c_str(), entryId.c_str());
-    }
-    return r;
-}
-
 
 std::list<std::string> Project::getReservedProperties() const
 {
@@ -1341,43 +1364,44 @@ int Project::deleteEntry(const std::string &issueId, const std::string &entryId,
 {
     ScopeLocker(locker, LOCK_READ_WRITE);
 
-    Issue *i = 0;
+    Issue *i = getIssue(issueId);
+    if (!i) return -6;
+
     std::map<std::string, Entry*>::iterator ite;
-    ite = entries.find(entryId);
-    if (ite == entries.end()) return -1;
+    ite = i->entries.find(entryId);
+    if (ite == i->entries.end()) return -1;
 
     Entry *e = ite->second;
 
     if (time(0) - e->ctime > DELETE_DELAY_S) return -2;
     else if (e->parent == K_PARENT_NULL) return -3;
     else if (e->author != username) return -4;
+    else if (i->latest != e->id) return -7;
 
-    else {
-
-        // find the issue related to this entry
-        Entry *e2 = e;
-        while (e2 && e2->parent != K_PARENT_NULL) e2 = getEntry(e2->parent);
-
-        if (!e2) return -5; // could not find parent issue
-
-        i = getIssue(issueId);
-        if (!i) return -6;
-
-        if (i->head != e->id) return -7;
-    }
     // ok, we can delete this entry
 
     // modify pointers
-    i->head = e->parent;
-    consolidateIssue(i);
-    // write to disk
-    int r = writeHead(i->id, e->parent);
+    i->latest = e->parent;
+    i->consolidate();
 
-   // removre from internal tables
-    entries.erase(ite);
+   // remove from internal tables
+    i->entries.erase(ite);
     delete e;
 
-    return r;
+    // move the file to _del
+    std::string issuePath = getPath() + "/" + ISSUES + "/" + issueId + "/";
+    std::string deletePath = issuePath + K_DELETED;
+    mg_mkdir(path.c_str(), S_IRUSR | S_IWUSR | S_IXUSR); // create it if not already done
+    deletePath += "/" + entryId;
+    std::string entryPath = issuePath + "/" + entryId;
+    int r = rename(entryPath.c_str(), deletePath.c_str());
+    if (r != 0) {
+        LOG_ERROR("Cannot rename '%s' -> '%s': (%d) %s", entryPath.c_str(), deletePath.c_str(),
+                  errno, strerror(errno));
+        return -1;
+    }
+
+    return 0;
 }
 
 std::string Entry::getMessage()

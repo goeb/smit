@@ -841,13 +841,15 @@ void RHtml::printIssueListFullContents(const ContextParameters &ctx, std::vector
 
     FOREACH (i, issueList) {
         Issue issue;
-        std::list<Entry*> entries;
-        int r = ctx.project->get((*i)->id.c_str(), issue, entries);
+        int r = ctx.project->get((*i)->id.c_str(), issue);
         if (r < 0) {
             // issue not found (or other error)
             LOG_INFO("Issue disappeared: %s", (*i)->id.c_str());
 
         } else {
+
+            std::list<Entry*> entries;
+            issue.getEntries(entries);
             // deactivate user role
             ContextParameters ctxCopy = ctx;
             ctxCopy.userRole = ROLE_RO;
