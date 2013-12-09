@@ -36,14 +36,14 @@ function addProperty(name, label, type, opts) {
     i.name = 'token';
     i.size = 15;
     i.value = name;
-    i.pattern = "[a-zA-Z_-0-9]+"
+    i.pattern = "[-a-zA-Z_0-9]+"
         i.placeholder = "logical_name"
         i.title = "Allowed characters: letters, digits, underscore"
         if (type == 'reserved') i.disabled = true;
     cell.appendChild(i);
 
     cell = row.insertCell(row.cells.length);
-    cell.id = 'type_' + name;
+    cell.id = 'type_' + n;
     if (type == 'reserved') {
         i = document.createElement('span');
         i.innerHTML = 'reserved';
@@ -106,12 +106,12 @@ function fupdate(item, value) {
 function show_size_input(item, value) {
     // hide extra details
     x = document.getElementById(item.id + '_opt');
-    if (x) item.removeChild(x);
+    if (x != null) item.removeChild(x);
 }
 
 function show_list_input(item, value) {
     var i = document.getElementById(item.id + '_opt');
-    if (!i) {
+    if (i == null) {
         i = document.createElement('textarea')
             i.name = "token"
             i.id = item.id + '_opt';
@@ -125,7 +125,7 @@ function show_list_input(item, value) {
 
 function show_user_input(item) {
     x = document.getElementById(item.id + '_opt');
-    if (x) item.removeChild(x);
+    if (x != null) item.removeChild(x);
 }
 
 function init() {

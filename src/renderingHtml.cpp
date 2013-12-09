@@ -73,11 +73,11 @@ std::string enquoteJs(const std::string &in)
 
 std::string htmlEscape(const std::string &value)
 {
-    std::string result = replaceAll(value, '&', "&amp;");
+    std::string result = replaceAll(value, '&', "&#38;");
     result = replaceAll(result, '"', "&quot;");
     result = replaceAll(result, '<', "&lt;");
     result = replaceAll(result, '>', "&gt;");
-    result = replaceAll(result, '\'', "&apos;");
+    result = replaceAll(result, '\'', "&#39;");
     return result;
 }
 
