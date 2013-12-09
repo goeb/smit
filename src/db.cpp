@@ -1389,9 +1389,9 @@ int Project::deleteEntry(const std::string &issueId, const std::string &entryId,
     delete e;
 
     // move the file to _del
-    std::string issuePath = getPath() + "/" + ISSUES + "/" + issueId + "/";
-    std::string deletePath = issuePath + K_DELETED;
-    mg_mkdir(path.c_str(), S_IRUSR | S_IWUSR | S_IXUSR); // create it if not already done
+    std::string issuePath = getPath() + "/" + ISSUES + "/" + issueId;
+    std::string deletePath = issuePath + "/" + K_DELETED;
+    mg_mkdir(deletePath.c_str(), S_IRUSR | S_IWUSR | S_IXUSR); // create it if not already done
     deletePath += "/" + entryId;
     std::string entryPath = issuePath + "/" + entryId;
     int r = rename(entryPath.c_str(), deletePath.c_str());

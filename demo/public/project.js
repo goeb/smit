@@ -128,17 +128,6 @@ function show_user_input(item) {
     if (x != null) item.removeChild(x);
 }
 
-function init() {
-    //addProperty('id', '#', 'reserved', '');
-    //addProperty('ctime', 'Created', 'reserved', '');
-    //addProperty('mtime', 'Modified', 'reserved', '');
-    //addProperty('summary', 'Description', 'reserved', '');
-    //addProperty('status', '', 'select', 'open\nclosed\n');
-    //addProperty('priority', '', 'select', 'high\nmedium\nlow\n');
-    //addProperty('assignee', '', 'selectUser', '');
-    //replaceContentInContainer();
-}
-
 function replaceContentInContainer() {
     matchClass = "updatable";
 
