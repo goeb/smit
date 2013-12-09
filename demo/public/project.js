@@ -57,7 +57,12 @@ function addProperty(name, label, type, opts) {
         for (index=0; index<options.length; index++) {
             opt = document.createElement('option');
             opt.innerHTML = options[index];
-            if (type == opt.innerHTML) opt.selected = 1;
+            opt.value = options[index];
+            opt.text = options[index];
+            if (type == opt.text) {
+                opt.selected = 1;
+		i.selectedIndex = index;
+            }
             i.appendChild(opt);
         }
         cell.appendChild(i);
@@ -91,10 +96,11 @@ function fupdateThis() { fupdate(this); }
 
 function fupdate(item, value) {
     //alert(item.value);
-    if (item.value == "text") show_size_input(item.parentNode, value);
-    else if (item.value == "select") show_list_input(item.parentNode, value);
-    else if (item.value == "multiselect") show_list_input(item.parentNode, value);
-    else if (item.value == "selectUser") show_user_input(item.parentNode);
+    var type = item.options[item.selectedIndex].value;
+    if (type == "text") show_size_input(item.parentNode, value);
+    else if (type == "select") show_list_input(item.parentNode, value);
+    else if (type == "multiselect") show_list_input(item.parentNode, value);
+    else if (type == "selectUser") show_user_input(item.parentNode);
 }
 
 function show_size_input(item, value) {
