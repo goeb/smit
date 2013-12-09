@@ -209,7 +209,7 @@ void Issue::consolidateIssueWithSingleEntry(Entry *e, bool overwrite) {
   */
 void Issue::consolidate()
 {
-    if (latest.empty()) {
+    if (!latest) {
         // missign latest
         LOG_ERROR("Cannot consolidate issue '%s': missing latest", id.c_str());
         return;
@@ -217,25 +217,17 @@ void Issue::consolidate()
     // starting from the head, walk through all entries
     // following the _parent properties.
 
-    Entry *e = 0;
-    std::string parent = latest;
+    Entry *e = latest;
     // the entries are walked through backwards (from most recent to oldest)
-    do {
-        e = getEntry(parent);
-
-        if (!e) {
-            LOG_ERROR("Broken chain of entries: missing reference %s for issue %s",
-                     parent.c_str(), id.c_str());
-            break;
-        }
+    while (e) {
         // for each property of the parent,
         // create the same property in the issue, if not already existing
         // (in order to have only most recent properties)
 
         consolidateIssueWithSingleEntry(e, false); // do not overwrite as we move from most recent to oldest
         ctime = e->ctime; // the oldest entry will take precedence for ctime
-        parent = e->parent;
-    } while (parent != K_PARENT_NULL);
+        e = e->prev;
+    }
 }
 
 // 1. Walk through all loaded issues and compute the head
@@ -303,7 +295,7 @@ int Project::loadEntries(const char *path)
             }
 
             closedir(issueDirHandle);
-            issue->computeHead();
+            issue->computeLatestEntry();
         }
     }
     closedir(entriesDirHandle);
@@ -350,7 +342,7 @@ int Project::get(const char *issueId, Issue &issue)
   *
   * And resolve missing nodes.
   */
-int Issue::computeHead()
+int Issue::computeLatestEntry()
 {
     std::map<std::string, Entry*>::iterator eit;
     FOREACH(eit, entries) {
@@ -366,7 +358,7 @@ int Issue::computeHead()
                               parent->next->id.c_str());
                     // try to resolve this
                     while (parent->next) parent = parent->next;
-                    LOG_INFO("New parent for '%s': '%s'", e->id.c_str(), parent->id.c_str());
+                    LOG_INFO("Repair: new parent for '%s': '%s'", e->id.c_str(), parent->id.c_str());
                 }
                 parent->next = e;
                 e->prev = parent;
@@ -380,10 +372,10 @@ int Issue::computeHead()
     FOREACH(eit, entries) {
         Entry *e = eit->second;
         if (e->next == 0) {
-            if (latest.empty()) latest = e->id;
+            if (!latest) latest = e;
             else {
                 // error: another entry was already claimed as latest
-                LOG_ERROR("Entries conflict for 'latest': %s, %s", latest.c_str(), e->id.c_str());
+                LOG_ERROR("Entries conflict for 'latest': %s, %s", latest->id.c_str(), e->id.c_str());
             }
         }
     }
@@ -398,9 +390,7 @@ void Issue::getEntries(std::list<Entry*> &entryList)
 
     entryList.clear();
     // build list of entries
-    std::map<std::string, Entry*>::const_iterator eit = entries.find(latest);
-    if (eit == entries.end()) return;
-    Entry *e = eit->second;
+    Entry *e = latest;
 
     while (e) {
         entryList.insert(entryList.begin(), e); // chronological order (latest last)
@@ -1136,9 +1126,8 @@ bool Issue::searchFullText(const char *text) const
     }
 
     // look through the entries
-    Entry *e = 0;
-    std::string next = latest;
-    while ( (e = getEntry(next)) ) {
+    Entry *e = latest;
+    while (e) {
         if (mg_strcasestr(e->getMessage().c_str(), text)) return true; // found
 
         // look through uploaded files
@@ -1150,7 +1139,7 @@ bool Issue::searchFullText(const char *text) const
             }
         }
 
-        next = e->parent;
+        e = e->prev;
     }
 
     return false; // text not found
@@ -1224,23 +1213,22 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
         }
     }
 
-    std::string parent;
+    Entry *parent;
     if (i) parent = i->latest;
-    else parent = K_PARENT_NULL;
+    else parent = 0;
 
     // create Entry object with properties
     Entry *e = new Entry;
-    e->parent = parent;
+    if (parent) e->parent = parent->id;
+    else e->parent = K_PARENT_NULL;
     e->ctime = time(0);
     //e->id
     e->author = username;
     e->properties = properties;
 
     if (i) {
-        std::map<std::string, Entry*>::iterator eit = i->entries.find(parent);
-        if (eit == i->entries.end()) LOG_ERROR("cannot find entry %s", parent.c_str());
-        e->prev = eit->second;
-        eit->second->next = e;
+        e->prev = parent;
+        parent->next = e;
     }
 
 
@@ -1302,7 +1290,7 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
     // consolidate the issue
     i->consolidateIssueWithSingleEntry(e, true);
     i->mtime = e->ctime;
-    i->latest = id;
+    i->latest = e;
 
     // move the uploaded files (if any)
     std::map<std::string, std::list<std::string> >::iterator files = e->properties.find(K_FILE);
@@ -1376,12 +1364,12 @@ int Project::deleteEntry(const std::string &issueId, const std::string &entryId,
     if (time(0) - e->ctime > DELETE_DELAY_S) return -2;
     else if (e->parent == K_PARENT_NULL) return -3;
     else if (e->author != username) return -4;
-    else if (i->latest != e->id) return -7;
+    else if (i->latest != e) return -7;
 
     // ok, we can delete this entry
 
     // modify pointers
-    i->latest = e->parent;
+    i->latest = e->prev;
     i->consolidate();
 
    // remove from internal tables

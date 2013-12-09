@@ -31,11 +31,11 @@ struct Entry {
     std::string serialize();
     int getCtime() const;
     std::string getMessage();
-    Entry() : ctime(0), next(0), prev(0) {};
+    Entry() : ctime(0), next(0), prev(0) {}
 
     // chainlist pointers
-    struct Entry *next;
-    struct Entry *prev;
+    struct Entry *next; // child
+    struct Entry *prev; // parent
 
 };
 
@@ -43,11 +43,11 @@ struct Entry {
 // An issue is consolidated over all its entries
 struct Issue {
     std::string id; // same as the first entry
-    std::string latest; // the latest entry
+    Entry *latest; // the latest entry
     int ctime; // creation time (the one of the first entry)
     int mtime; // modification time (the one of the last entry)
     std::map<std::string, std::list<std::string> > properties;
-    Issue() : ctime(0), mtime(0) {}
+    Issue() : latest(0), ctime(0), mtime(0) {}
 
     // the properties of the issue is the consolidation of all the properties
     // of its entries. For a given key, the most recent value has priority.
@@ -57,7 +57,7 @@ struct Issue {
     std::map<std::string, Entry*> entries;
 
     void getEntries(std::list<Entry*> &entryList);
-    int computeHead();
+    int computeLatestEntry();
     void consolidate();
     void consolidateIssueWithSingleEntry(Entry *e, bool overwrite);
     Entry *getEntry(const std::string &id) const;
