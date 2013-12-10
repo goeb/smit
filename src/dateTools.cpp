@@ -15,6 +15,7 @@
 #include <time.h>
 #include <stdio.h>
 
+#include "global.h"
 #include "mg_win32.h"
 #include "dateTools.h"
 
@@ -46,13 +47,8 @@ std::string epochToString(time_t t)
     struct tm *tmp;
     tmp = localtime(&t);
     char datetime[100+1]; // should be enough
-    //strftime(datetime, sizeof(datetime)-1, "%Y-%m-%d %H:%M:%S", tmp);
-    if (time(0) - t > 48*3600) {
-        // date older than 2 days
-        strftime(datetime, sizeof(datetime)-1, "%d %b %Y", tmp);
-    } else {
-        strftime(datetime, sizeof(datetime)-1, "%d %b %Y, %H:%M:%S", tmp);
-    }
+    strftime(datetime, sizeof(datetime)-1, "%d %b %Y, %H:%M:%S", tmp);
+
     return std::string(datetime);
 }
 
@@ -64,13 +60,12 @@ std::string epochToStringDelta(time_t t)
     char datetime[100+1]; // should be enough
     //strftime(datetime, sizeof(datetime)-1, "%Y-%m-%d %H:%M:%S", tmp);
     time_t delta = time(0) - t;
-    if (delta < 60) snprintf(datetime, sizeof(datetime)-1, "%ld s", delta);
-    else if (delta < 60*60) snprintf(datetime, sizeof(datetime)-1, "%ld min", delta/60);
-    else if (delta < 60*60*24) snprintf(datetime, sizeof(datetime)-1, "%ld h", delta/60/60);
-    else if (delta < 60*60*24*7) snprintf(datetime, sizeof(datetime)-1, "%ld d", delta/60/60/24);
-    else if (delta < 60*60*24*30) snprintf(datetime, sizeof(datetime)-1, "%ld wk", delta/60/60/24/7);
-    else if (delta < 60*60*24*365) snprintf(datetime, sizeof(datetime)-1, "%ld m", delta/60/60/24/30);
-    else if (delta > 0) snprintf(datetime, sizeof(datetime)-1, "%ld yr", delta/60/60/24/30/365);
+    if (delta < 60) snprintf(datetime, sizeof(datetime)-1, "%ld %s", delta, _("s"));
+    else if (delta < 60*60) snprintf(datetime, sizeof(datetime)-1, "%ld %s", delta/60, _("min"));
+    else if (delta < 60*60*24) snprintf(datetime, sizeof(datetime)-1, "%ld %s", delta/60/60, _("h"));
+    else if (delta < 60*60*24*31) snprintf(datetime, sizeof(datetime)-1, "%ld %s", delta/60/60/24, _("days"));
+    else if (delta < 60*60*24*365) snprintf(datetime, sizeof(datetime)-1, "%ld %s", delta/60/60/24/30, _("months"));
+    else if (delta > 0) snprintf(datetime, sizeof(datetime)-1, "%ld %s", delta/60/60/24/30/365, _("years"));
     else return epochToString(t);
 
 

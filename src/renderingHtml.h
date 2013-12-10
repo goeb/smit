@@ -38,7 +38,9 @@ public:
     static void printNavigationGlobal(const ContextParameters &ctx);
     static void printNavigationIssues(const ContextParameters &ctx, bool autofocus);
 
-    static void printPageProjectList(const ContextParameters &ctx, const std::list<std::pair<std::string, std::string> > &pList);
+    static void printPageProjectList(const ContextParameters &ctx,
+                                     const std::list<std::pair<std::string, std::string> > &pList,
+                                     const std::map<std::string, std::map<std::string, Role> > &userRolesByProject);
     static void printProjectConfig(const ContextParameters &ctx);
     static void printPageIssuesFullContents(const ContextParameters &ctx, std::vector<struct Issue*> issueList);
     static void printPageIssueList(const ContextParameters &ctx, std::vector<struct Issue*> issueList, std::list<std::string> colspec);
@@ -52,7 +54,9 @@ public:
     static void printPageView(const ContextParameters &ctx, const PredefinedView &pv);
     static void printPageListOfViews(const ContextParameters &ctx);
     static void printLinksToPredefinedViews(const ContextParameters &ctx);
-    static void printProjects(struct mg_connection *conn, const std::list<std::pair<std::string, std::string> > &pList);
+    static void printProjects(struct mg_connection *conn,
+                              const std::list<std::pair<std::string, std::string> > &pList,
+                              const std::map<std::string, std::map<std::string, Role> > *userRolesByProject);
     static void printScriptUpdateConfig(const ContextParameters &ctx);
     static void printIssueSummary(const ContextParameters &ctx, const Issue &issue);
     static void printIssue(const ContextParameters &ctx, const Issue &issue, const std::list<Entry*> &entries);

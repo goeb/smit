@@ -117,6 +117,7 @@ public:
     const std::list<std::pair<std::string, std::string> > *projectList;
     const Issue *currentIssue;
     const std::list<Entry*> *entries;
+    const std::map<std::string, std::map<std::string, Role> > *userRolesByProject;
 
     VariableNavigator(const std::string basename, const ContextParameters &context) : ctx(context) {
         buffer = 0;
@@ -126,6 +127,7 @@ public:
         projectList = 0;
         currentIssue = 0;
         entries = 0;
+        userRolesByProject = 0;
 
         int n;
         if (ctx.project) n = loadProjectPage(ctx.conn, ctx.project->getPath(), basename, &buffer);
@@ -199,7 +201,7 @@ public:
                 RHtml::printNavigationIssues(ctx, false);
 
             } else if (varname == K_SM_DIV_PROJECTS && projectList) {
-                RHtml::printProjects(ctx.conn, *projectList);
+                RHtml::printProjects(ctx.conn, *projectList, userRolesByProject);
 
             } else if (varname == K_SM_SCRIPT_PROJECT_CONFIG_UPDATE) {
                 RHtml::printScriptUpdateConfig(ctx);
@@ -595,23 +597,48 @@ void RHtml::printNavigationIssues(const ContextParameters &ctx, bool autofocus)
 }
 
 
-void RHtml::printProjects(struct mg_connection *conn, const std::list<std::pair<std::string, std::string> > &pList)
+void RHtml::printProjects(struct mg_connection *conn,
+                          const std::list<std::pair<std::string, std::string> > &pList,
+                          const std::map<std::string, std::map<std::string, Role> > *userRolesByProject)
 {
     std::list<std::pair<std::string, std::string> >::const_iterator p;
+    mg_printf(conn, "<table class=\"sm_projects\">\n");
+    mg_printf(conn, "<tr class=\"sm_projects\"><th class=\"sm_projects\">%s</th>"
+              "<th class=\"sm_projects\">%s</th><th class=\"sm_projects\">%s</th></tr>\n",
+              _("Project"), _("Your Role"), _("Other Stakeholders"));
     for (p=pList.begin(); p!=pList.end(); p++) {
         std::string pname = p->first.c_str();
-        mg_printf(conn, "<div class=\"sm_projects_link\"><a href=\"/%s/issues/?defaultView=1\" class=\"sm_projects_link\">%s</a> (%s)",
-                  Project::urlNameEncode(pname).c_str(), htmlEscape(pname).c_str(), _(p->second.c_str()));
-        if (p->second == "admin") mg_printf(conn, " <a href=\"%s/config\" class=\"sm_projects_edit\">edit</a>", Project::urlNameEncode(pname).c_str());
-        mg_printf(conn, "</div>\n");
+        mg_printf(conn, "<tr class=\"sm_projects\">\n");
+
+        mg_printf(conn, "<td class=\"sm_projects_link\">");
+        mg_printf(conn, "<a href=\"/%s/issues/?defaultView=1\" class=\"sm_projects_link\">%s</a></td>\n",
+                  Project::urlNameEncode(pname).c_str(), htmlEscape(pname).c_str());
+
+        mg_printf(conn, "<td>%s</td>\n", _(p->second.c_str()));
+
+        mg_printf(conn, "<td>");
+        std::map<std::string, std::map<std::string, Role> >::const_iterator urit;
+        std::map<std::string, Role>::const_iterator urole;
+        urit = userRolesByProject->find(pname);
+        if (urit != userRolesByProject->end()) FOREACH(urole, urit->second) {
+            mg_printf(conn, "<span class=\"sm_projects_stakeholder\">%s:</span> <span class=\"sm_projects_stakeholder_role\">%s</span>",
+                      htmlEscape(urole->first).c_str(), htmlEscape(roleToString(urole->second)).c_str());
+            mg_printf(conn, "<br>\n");
+        }
+        mg_printf(conn, "</td>");
+        mg_printf(conn, "</tr>\n");
     }
+    mg_printf(conn, "</table>\n");
 }
 
 
-void RHtml::printPageProjectList(const ContextParameters &ctx, const std::list<std::pair<std::string, std::string> > &pList)
+void RHtml::printPageProjectList(const ContextParameters &ctx,
+                                 const std::list<std::pair<std::string, std::string> > &pList,
+                                 const std::map<std::string, std::map<std::string, Role> > &userRolesByProject)
 {
     VariableNavigator vn("projects.html", ctx);
     vn.projectList = &pList;
+    vn.userRolesByProject = &userRolesByProject;
     vn.printPage();
 }
 

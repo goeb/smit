@@ -19,6 +19,9 @@ enum Role {
     ROLE_NONE
 };
 
+std::string roleToString(Role r);
+
+
 struct User {
     std::string username;
     std::string hashType;
@@ -40,7 +43,9 @@ public:
     static User* getUser(const std::string &username);
     static void addUser(User u);
     static void addUserByProject(std::string project, std::string username);
-    static std::set<std::string> getUsersOfProject(std::string project);
+    static std::set<std::string> getUsersOfProject(const std::string &project);
+    static std::map<std::string, Role> getUsersRolesOfProject(const std::string &project);
+
 private:
     static UserBase UserDb;
     std::map<std::string, User*> configuredUsers;

@@ -236,6 +236,15 @@ a.sm_issues_sort { }
 }
 .sm_projects_edit {
 }
+table.sm_projects {
+    font-size: small;
+    text-align: left;
+}
+table.sm_projects th, table.sm_projects td {
+    padding-right: 3em;
+    padding-bottom: 1em;
+}
+.sm_projects_stakeholder { }
 .sm_issues_count {
     font-weight: bold;
     margin-bottom: 1em;
@@ -291,3 +300,4 @@ div.sm_entry_files {
 .sm_logo {
 	width: 100px;
 }
+

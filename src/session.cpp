@@ -62,6 +62,15 @@ std::string User::serialize()
     return result;
 }
 
+std::string roleToString(Role r)
+{
+    if (r == ROLE_ADMIN) return "admin";
+    else if (r == ROLE_RW) return "rw";
+    else if (r == ROLE_RO) return "ro";
+    else if (r == ROLE_REFERENCED) return "ref";
+    else return "none";
+}
+
 /** Load the users from file storage
   */
 int UserBase::load(const char *repository)
@@ -196,7 +205,7 @@ void UserBase::addUser(User newUser)
 
 /** Get the list of users that are at stake in the given project
   */
-std::set<std::string> UserBase::getUsersOfProject(std::string project)
+std::set<std::string> UserBase::getUsersOfProject(const std::string &project)
 {
     ScopeLocker(UserDb.locker, LOCK_READ_ONLY);
 
@@ -204,6 +213,23 @@ std::set<std::string> UserBase::getUsersOfProject(std::string project)
     users = UserDb.usersByProject.find(project);
     if (users == UserDb.usersByProject.end()) return std::set<std::string>();
     else return users->second;
+    }
+
+/** Get the list of users that are at stake in the given project
+  */
+std::map<std::string, Role> UserBase::getUsersRolesOfProject(const std::string &project)
+{
+    ScopeLocker(UserDb.locker, LOCK_READ_ONLY);
+
+    std::map<std::string, Role> result;
+    std::map<std::string, User*>::const_iterator u;
+    FOREACH(u, UserDb.configuredUsers) {
+        enum Role r = u->second->getRole(project);
+        if (r == ROLE_NONE) continue;
+
+        result[u->first] = r;
+    }
+    return result;
 }
 
 
@@ -223,9 +249,7 @@ std::list<std::pair<std::string, std::string> > User::getProjects()
     std::list<std::pair<std::string, std::string> > result;
     std::map<std::string, enum Role>::iterator r;
     for (r = rolesOnProjects.begin(); r != rolesOnProjects.end(); r++) {
-        if (r->second == ROLE_ADMIN) result.push_back(std::make_pair(r->first, "admin"));
-        else if (r->second == ROLE_RW) result.push_back(std::make_pair(r->first, "rw"));
-        else if (r->second == ROLE_RO) result.push_back(std::make_pair(r->first, "ro"));
+        result.push_back(std::make_pair(r->first, roleToString(r->second)));
     }
     return result;
 }

@@ -370,6 +370,7 @@ void httpGetRoot(struct mg_connection *conn, User u)
     //std::string req = request2string(conn);
     sendHttpHeader200(conn);
     // print list of available projects
+    std::list<std::pair<std::string, Role> > usersRoles;
     std::list<std::pair<std::string, std::string> > pList = u.getProjects();
 
     enum RenderingFormat format = getFormat(conn);
@@ -377,8 +378,19 @@ void httpGetRoot(struct mg_connection *conn, User u)
     if (format == RENDERING_TEXT) RText::printProjectList(conn, pList);
     else if (format == RENDERING_CSV) RCsv::printProjectList(conn, pList);
     else {
+
+        // get the list of users and roles for each project
+        std::map<std::string, std::map<std::string, Role> > usersRolesByProject;
+        std::list<std::pair<std::string, std::string> >::const_iterator p;
+        FOREACH(p, pList) {
+            std::map<std::string, Role> ur = UserBase::getUsersRolesOfProject(p->first);
+            // remove current user from others
+            ur.erase(u.username);
+            usersRolesByProject[p->first] = ur;
+        }
+
         ContextParameters ctx = ContextParameters(conn, u);
-        RHtml::printPageProjectList(ctx, pList);
+        RHtml::printPageProjectList(ctx, pList, usersRolesByProject);
     }
 }
 

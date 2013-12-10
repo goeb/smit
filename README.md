@@ -155,12 +155,6 @@ So, for example, if you want to customize the 'issues' page for a project:
 - restart Smit
 
 
-### How to rename a project?
-
-- rename the directory of the project (in $REPO)
-- restart Smit
-
-
 
 
 REST API
