@@ -46,30 +46,34 @@ td {
 .sm_entry {
     border: 0;
     margin: 0;
-    border-top: 3px;
+    /*border-top: 3px;
     border-style: solid;
     border-color: #E0E0E0;
+    */
     padding: 5px;
 }
 .sm_entry_header {
-    color: #444;
     margin: 0px;
     padding: 0px;
     font-weight: bold;
     font-size: 80%;
+    padding-left: 0.5em;
 }
 .sm_entry_message {
+    background-color: #EEE;
     white-space: pre;
     font-family: monospace;
     font-size: 100%;
-    padding-top: 0.5em;
+    padding: 0.5em;
     padding-bottom: 0.5em;
+    margin-top: 0.5em;
+    margin-bottom: 0.5em;
 }
 .sm_entry_other_properties {
-    color: #444;
-    background-color: #E0E0E0;
+    color: #777;
+    /*background-color: #E0E0E0;*/
     padding: 7px;
-    border-radius: 5px 5px 5px 5px;
+    /*border-radius: 5px 5px 5px 5px;*/
     width: 60em;
     font-size: 80%;
 }
@@ -232,10 +236,17 @@ a.sm_issues_sort { }
 .sm_username {
     font-weight: bold;
 }
-.sm_projects_link {
+.sm_projects_link { }
+.sm_projects_edit { }
+table.sm_projects {
+    font-size: small;
+    text-align: left;
 }
-.sm_projects_edit {
+table.sm_projects th, table.sm_projects td {
+    padding-right: 3em;
+    padding-bottom: 1em;
 }
+.sm_projects_stakeholder { }
 .sm_issues_count {
     font-weight: bold;
     margin-bottom: 1em;
@@ -275,14 +286,13 @@ table.sm_views td {
 
 }
 img.sm_entry_file {
-    width: 100px;
+    width: 150px;
     border: 0;
 }
 div.sm_entry_files {
-    color: #444;
-    background-color: #E0E0E0;
+    /*background-color: #E0E0E0;*/
     padding: 7px;
-    border-radius: 5px 5px 5px 5px;
+    /*border-radius: 5px 5px 5px 5px;*/
     width: 60em;
     font-size: 80%;
     font-weight: bold;
@@ -291,3 +301,4 @@ div.sm_entry_files {
 .sm_logo {
 	width: 100px;
 }
+
