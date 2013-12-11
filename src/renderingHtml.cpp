@@ -116,7 +116,6 @@ public:
     const ContextParameters &ctx;
     const std::list<std::pair<std::string, std::string> > *projectList;
     const Issue *currentIssue;
-    const std::list<Entry*> *entries;
     const std::map<std::string, std::map<std::string, Role> > *userRolesByProject;
 
     VariableNavigator(const std::string basename, const ContextParameters &context) : ctx(context) {
@@ -126,7 +125,6 @@ public:
         colspec = 0;
         projectList = 0;
         currentIssue = 0;
-        entries = 0;
         userRolesByProject = 0;
 
         int n;
@@ -215,8 +213,8 @@ public:
             } else if (varname == K_SM_DIV_ISSUES && issueListFullContents) {
                 RHtml::printIssueListFullContents(ctx, *issueListFullContents);
 
-            } else if (varname == K_SM_DIV_ISSUE && currentIssue && entries) {
-                RHtml::printIssue(ctx, *currentIssue, *entries);
+            } else if (varname == K_SM_DIV_ISSUE && currentIssue) {
+                RHtml::printIssue(ctx, *currentIssue);
 
             } else if (varname == K_SM_DIV_ISSUE_SUMMARY && currentIssue) {
                 RHtml::printIssueSummary(ctx, *currentIssue);
@@ -876,13 +874,11 @@ void RHtml::printIssueListFullContents(const ContextParameters &ctx, std::vector
 
         } else {
 
-            std::list<Entry*> entries;
-            issue.getEntries(entries);
             // deactivate user role
             ContextParameters ctxCopy = ctx;
             ctxCopy.userRole = ROLE_RO;
             printIssueSummary(ctxCopy, issue);
-            printIssue(ctxCopy, issue, entries);
+            printIssue(ctxCopy, issue);
 
         }
     }
@@ -1219,7 +1215,7 @@ void RHtml::printIssueSummary(const ContextParameters &ctx, const Issue &issue)
 
 }
 
-void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue, const std::list<Entry*> &entries)
+void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
 {
     struct mg_connection *conn = ctx.conn;
     mg_printf(conn, "<div class=\"sm_issue\">");
@@ -1272,7 +1268,7 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue, const s
     >>> deactivate this block, as floating menu prevents from having an ergonomic link to last entry
     mg_printf(conn, "<span class=\"sm_issue_link_last_entry\">");
     mg_printf(conn, "<a href=\"#%s\" class=\"sm_issue_link_edit\">%s</a>",
-              entries.back()->id.c_str(), _("Go to latest message"));
+              issue.latest->id.c_str(), _("Go to latest message"));
     mg_printf(conn, "</span>");
 #endif
 
@@ -1280,9 +1276,10 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue, const s
 
     // entries
     // -------------------------------------------------
-    std::list<Entry*>::const_iterator e;
-    for (e = entries.begin(); e != entries.end(); e++) {
-        Entry ee = *(*e);
+    Entry *e = issue.latest;
+    while (e && e->prev) e = e->prev; // go to the first one
+    while (e) {
+        Entry ee = *e;
         mg_printf(conn, "<div class=\"sm_entry\" id=\"%s\">\n", ee.id.c_str());
 
         mg_printf(conn, "<div class=\"sm_entry_header\">\n");
@@ -1293,9 +1290,7 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue, const s
 
         // delete button
         time_t delta = time(0) - ee.ctime;
-        std::list<Entry*>::const_iterator lastEntryIt = entries.end();
-        lastEntryIt--;
-        if ( (delta < DELETE_DELAY_S) && (ee.author == ctx.username) && (e == lastEntryIt) ) {
+        if ( (delta < DELETE_DELAY_S) && (ee.author == ctx.username) && (e == issue.latest) ) {
             // entry was created less than 10 minutes ago, and by same user, and is latest in the issue
             mg_printf(conn, "<a href=\"#\" class=\"sm_entry_delete\" title=\"Delete this entry (at most %d minutes after posting)\" ", (DELETE_DELAY_S/60));
             mg_printf(conn, " onclick=\"deleteEntry('/%s/issues/%s', '%s');return false;\">\n",
@@ -1380,6 +1375,7 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue, const s
 
         mg_printf(conn, "</div>\n"); // end entry
 
+        e = e->next;
     } // end of entries
 
     // print the form
@@ -1391,11 +1387,10 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue, const s
 
 }
 
-void RHtml::printPageIssue(const ContextParameters &ctx, const Issue &issue, const std::list<Entry*> &entries)
+void RHtml::printPageIssue(const ContextParameters &ctx, const Issue &issue)
 {
     VariableNavigator vn("issue.html", ctx);
     vn.currentIssue = &issue;
-    vn.entries = &entries;
     vn.printPage();
 }
 

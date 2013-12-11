@@ -56,14 +56,11 @@ struct Issue {
     bool isInFilter(const std::map<std::string, std::list<std::string> > &filter);
     std::map<std::string, Entry*> entries;
 
-    void getEntries(std::list<Entry*> &entryList);
     int computeLatestEntry();
     void consolidate();
     void consolidateIssueWithSingleEntry(Entry *e, bool overwrite);
-    Entry *getEntry(const std::string &id) const;
     bool searchFullText(const char *text) const;
 
-    Locker locker;
 
 
 };

@@ -67,12 +67,14 @@ void RText::printIssueList(struct mg_connection *conn, std::vector<struct Issue*
 
 }
 
-void RText::printIssue(struct mg_connection *conn, const Issue &issue, const std::list<Entry*> &entries)
+void RText::printIssue(struct mg_connection *conn, const Issue &issue)
 {
     LOG_DEBUG("RText::printIssue...");
     mg_printf(conn, "Content-Type: text/plain\r\n\r\n");
-    std::list<Entry*>::const_iterator e;
-    FOREACH(e, entries) {
-        mg_printf(conn, "%s\n", (*e)->id.c_str());
+    Entry *e = issue.latest;
+    while (e && e->prev) e = e->prev; // go to the first one
+    while (e) {
+        mg_printf(conn, "%s\n", e->id.c_str());
+        e = e->next;
     }
 }

@@ -764,15 +764,14 @@ int httpGetIssue(struct mg_connection *conn, Project &p, const std::string &issu
         return 0; // let mongoose handle it
 
     } else {
-        issue.getEntries(entries);
         enum RenderingFormat format = getFormat(conn);
 
         sendHttpHeader200(conn);
 
-        if (format == RENDERING_TEXT) RText::printIssue(conn, issue, entries);
+        if (format == RENDERING_TEXT) RText::printIssue(conn, issue);
         else {
             ContextParameters ctx = ContextParameters(conn, u, p);
-            RHtml::printPageIssue(ctx, issue, entries);
+            RHtml::printPageIssue(ctx, issue);
         }
         return 1; // done
     }

@@ -28,7 +28,7 @@ enum LockMode { LOCK_READ_ONLY, LOCK_READ_WRITE };
 
 class ScopeLocker {
 public:
-    inline ScopeLocker(Locker & L, enum LockMode m) : locker(L), mode(m) {
+    inline ScopeLocker(Locker &L, enum LockMode m) : locker(L), mode(m) {
         if (mode == LOCK_READ_ONLY) locker.lockForReading();
         else locker.lockForWriting();
     }
@@ -38,7 +38,7 @@ public:
     }
 
 private:
-    Locker & locker;
+    Locker &locker;
     enum LockMode mode;
 };
 

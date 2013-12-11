@@ -44,7 +44,7 @@ public:
     static void printProjectConfig(const ContextParameters &ctx);
     static void printPageIssuesFullContents(const ContextParameters &ctx, std::vector<struct Issue*> issueList);
     static void printPageIssueList(const ContextParameters &ctx, std::vector<struct Issue*> issueList, std::list<std::string> colspec);
-    static void printPageIssue(const ContextParameters &ctx, const Issue &issue, const std::list<Entry*> &entries);
+    static void printPageIssue(const ContextParameters &ctx, const Issue &issue);
     static void printPageNewIssue(const ContextParameters &ctx);
 
     static bool inList(const std::list<std::string> &listOfValues, const std::string &value);
@@ -59,7 +59,7 @@ public:
                               const std::map<std::string, std::map<std::string, Role> > *userRolesByProject);
     static void printScriptUpdateConfig(const ContextParameters &ctx);
     static void printIssueSummary(const ContextParameters &ctx, const Issue &issue);
-    static void printIssue(const ContextParameters &ctx, const Issue &issue, const std::list<Entry*> &entries);
+    static void printIssue(const ContextParameters &ctx, const Issue &issue);
     static void printIssueListFullContents(const ContextParameters &ctx, std::vector<struct Issue*> issueList);
     static void printIssueList(const ContextParameters &ctx,
                         const std::vector<struct Issue*> &issueList, const std::list<std::string> &colspec);

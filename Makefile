@@ -4,7 +4,7 @@ ifeq ($(WIN),1)
 	CC = i586-mingw32msvc-gcc
 	CXX = i586-mingw32msvc-g++
 	BUILD_DIR = build_win
-	CFLAGS += -I $(OPENSSL)/include
+	CFLAGS += -I $(OPENSSL)/include -DHAVE_STDINT
 	LDFLAGS += -lws2_32 $(OPENSSL)/libcrypto.a
 else
 	CC = gcc

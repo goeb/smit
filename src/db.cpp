@@ -311,17 +311,6 @@ Issue *Project::getIssue(const std::string &id) const
     else return i->second;
 }
 
-Entry *Issue::getEntry(const std::string &id) const
-{
-    if (id == K_PARENT_NULL) return 0;
-
-    std::map<std::string, Entry*>::const_iterator e;
-    e = entries.find(id);
-    if (e == entries.end()) return 0;
-    else return e->second;
-}
-
-
 int Project::get(const char *issueId, Issue &issue)
 {
     ScopeLocker scopeLocker(locker, LOCK_READ_ONLY);
@@ -380,22 +369,6 @@ int Issue::computeLatestEntry()
         }
     }
     return 0;
-}
-
-/** Get the list of ordered entries
-  */
-void Issue::getEntries(std::list<Entry*> &entryList)
-{
-    ScopeLocker scopeLocker(locker, LOCK_READ_ONLY);
-
-    entryList.clear();
-    // build list of entries
-    Entry *e = latest;
-
-    while (e) {
-        entryList.insert(entryList.begin(), e); // chronological order (latest last)
-        e = e->prev;
-    }
 }
 
 FieldSpec parseFieldSpec(std::list<std::string> & tokens)
@@ -1367,14 +1340,21 @@ int Project::deleteEntry(const std::string &issueId, const std::string &entryId,
     else if (i->latest != e) return -7;
 
     // ok, we can delete this entry
-
     // modify pointers
     i->latest = e->prev;
+    i->latest->next = 0;
+    e->prev = 0;
+    e->next = 0;
+
     i->consolidate();
 
-   // remove from internal tables
+    // remove from internal tables
     i->entries.erase(ite);
-    delete e;
+    // do not really delete the entry, because we do not
+    // have any mutex for this (a HTML page may be wanting to
+    // display an erased entry at the same time)
+    // this is a small memory leak, but acceptable I suppose
+    //delete e;
 
     // move the file to _del
     std::string issuePath = getPath() + "/" + ISSUES + "/" + issueId;
