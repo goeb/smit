@@ -54,6 +54,7 @@ void Locker::lockForWriting()
         if (r != 0) LOG_ERROR("pthread_mutex_lock error: (%d) %s", r, strerror(r));
 
         n = nReaders;
+        LOG_DEBUG("lockForWriting: nReaders=%d", nReaders);
 
         r = pthread_mutex_unlock(&readOnlyMutex);
         if (r != 0) LOG_ERROR("pthread_mutex_unlock error: (%d) %s", r, strerror(r));

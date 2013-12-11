@@ -77,15 +77,22 @@ dowritesnew 15 8
 sleep 2
 dowritesUpdateAllSummaries
 
-# check 
-$SMITC get "http://127.0.0.1:$PORT/$PROJECT/issues?colspec=id+summary\&sort=id" > functest.log
-
 echo killing pid=$pid
 kill $pid
 
 sleep 2
 
+# relaunch the serveur and check that we did not lose anything
+
+start
+
+$SMITC get "http://127.0.0.1:$PORT/$PROJECT/issues?colspec=id+summary\&sort=id" > functest.log
+
+echo killing pid=$pid
+kill $pid
+
 cmp functest.ref functest.log
+
 echo -n "$0 ... "
 if [ $? -eq 0 ]; then echo OK
 else echo "ERROR (check diff functest.ref functest.log, repo=$REPO)"

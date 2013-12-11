@@ -621,9 +621,10 @@ void RHtml::printProjects(struct mg_connection *conn,
         std::map<std::string, Role>::const_iterator urole;
         urit = userRolesByProject->find(pname);
         if (urit != userRolesByProject->end()) FOREACH(urole, urit->second) {
-            mg_printf(conn, "<span class=\"sm_projects_stakeholder\">%s:</span> <span class=\"sm_projects_stakeholder_role\">%s</span>",
+            if (urole != urit->second.begin()) mg_printf(conn, ", ");
+            mg_printf(conn, "<span class=\"sm_projects_stakeholder\">%s</span>"
+                      " <span class=\"sm_projects_stakeholder_role\">(%s)</span>",
                       htmlEscape(urole->first).c_str(), htmlEscape(roleToString(urole->second)).c_str());
-            mg_printf(conn, "<br>\n");
         }
         mg_printf(conn, "</td>");
         mg_printf(conn, "</tr>\n");
@@ -1311,9 +1312,9 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue, const s
 
         mg_printf(conn, "</div>\n"); // end header
 
-        mg_printf(conn, "<div class=\"sm_entry_message\">");
         std::string m = ee.getMessage();
         if (! m.empty()) {
+            mg_printf(conn, "<div class=\"sm_entry_message\">");
             mg_printf(conn, "%s\n", convertToRichText(htmlEscape(m)).c_str());
         }
         mg_printf(conn, "</div>\n"); // end message
