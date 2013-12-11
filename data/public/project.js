@@ -36,14 +36,14 @@ function addProperty(name, label, type, opts) {
     i.name = 'token';
     i.size = 15;
     i.value = name;
-    i.pattern = "[a-zA-Z_-0-9]+"
+    i.pattern = "[-a-zA-Z_0-9]+"
         i.placeholder = "logical_name"
         i.title = "Allowed characters: letters, digits, underscore"
         if (type == 'reserved') i.disabled = true;
     cell.appendChild(i);
 
     cell = row.insertCell(row.cells.length);
-    cell.id = 'type_' + name;
+    cell.id = 'type_' + n;
     if (type == 'reserved') {
         i = document.createElement('span');
         i.innerHTML = 'reserved';
@@ -57,7 +57,12 @@ function addProperty(name, label, type, opts) {
         for (index=0; index<options.length; index++) {
             opt = document.createElement('option');
             opt.innerHTML = options[index];
-            if (type == opt.innerHTML) opt.selected = 1;
+            opt.value = options[index];
+            opt.text = options[index];
+            if (type == opt.text) {
+                opt.selected = 1;
+		i.selectedIndex = index;
+            }
             i.appendChild(opt);
         }
         cell.appendChild(i);
@@ -91,21 +96,22 @@ function fupdateThis() { fupdate(this); }
 
 function fupdate(item, value) {
     //alert(item.value);
-    if (item.value == "text") show_size_input(item.parentNode, value);
-    else if (item.value == "select") show_list_input(item.parentNode, value);
-    else if (item.value == "multiselect") show_list_input(item.parentNode, value);
-    else if (item.value == "selectUser") show_user_input(item.parentNode);
+    var type = item.options[item.selectedIndex].value;
+    if (type == "text") show_size_input(item.parentNode, value);
+    else if (type == "select") show_list_input(item.parentNode, value);
+    else if (type == "multiselect") show_list_input(item.parentNode, value);
+    else if (type == "selectUser") show_user_input(item.parentNode);
 }
 
 function show_size_input(item, value) {
     // hide extra details
     x = document.getElementById(item.id + '_opt');
-    if (x) item.removeChild(x);
+    if (x != null) item.removeChild(x);
 }
 
 function show_list_input(item, value) {
     var i = document.getElementById(item.id + '_opt');
-    if (!i) {
+    if (i == null) {
         i = document.createElement('textarea')
             i.name = "token"
             i.id = item.id + '_opt';
@@ -119,18 +125,7 @@ function show_list_input(item, value) {
 
 function show_user_input(item) {
     x = document.getElementById(item.id + '_opt');
-    if (x) item.removeChild(x);
-}
-
-function init() {
-    //addProperty('id', '#', 'reserved', '');
-    //addProperty('ctime', 'Created', 'reserved', '');
-    //addProperty('mtime', 'Modified', 'reserved', '');
-    //addProperty('summary', 'Description', 'reserved', '');
-    //addProperty('status', '', 'select', 'open\nclosed\n');
-    //addProperty('priority', '', 'select', 'high\nmedium\nlow\n');
-    //addProperty('assignee', '', 'selectUser', '');
-    //replaceContentInContainer();
+    if (x != null) item.removeChild(x);
 }
 
 function replaceContentInContainer() {

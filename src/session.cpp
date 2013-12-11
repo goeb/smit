@@ -34,7 +34,6 @@ User::User()
 std::string User::serialize()
 {
     std::string result;
-    result = K_SMIT_VERSION " " VERSION "\n";
 
     result += "addUser ";
     result += serializeSimpleToken(username) + " ";
@@ -161,6 +160,8 @@ int UserBase::store(const char *repository)
 {
     ScopeLocker(UserDb.locker, LOCK_READ_WRITE);
     std::string result;
+    result = K_SMIT_VERSION " " VERSION "\n";
+
     std::map<std::string, User*>::iterator uit;
     FOREACH(uit, UserDb.configuredUsers) {
         result += uit->second->serialize();

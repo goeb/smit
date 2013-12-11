@@ -7,12 +7,14 @@ ifeq ($(WIN),1)
 	BUILD_DIR = build_win
 	CFLAGS += -I $(OPENSSL)/include -DHAVE_STDINT
 	LDFLAGS += -lws2_32 $(OPENSSL)/libcrypto.a
+	PACK_NAME = smit-win32
 else
 	EXE = smit
 	CC = gcc
 	CXX = g++
 	BUILD_DIR = build_linux86
 	LDFLAGS = -ldl -pthread -lcrypto
+	PACK_NAME = smit-linux86
 endif
 
 SRCS = mongoose/mongoose.c \
@@ -104,5 +106,15 @@ clean:
 .PHONY: test
 test:
 	$(MAKE) -C test
+
+.PHONY: release
+release: $(EXE)
+	i586-mingw32msvc-strip $(EXE)
+	set -e; V=`grep "#define VERSION" src/* |sed -e "s/.*VERSION *//" -e 's/"//g'`; \
+		rm -rf "smit-win32-$$V"; \
+		mkdir "smit-win32-$$V"; \
+		cp $(EXE) bin/*bat smit-win32-$$V/. ; \
+		zip -r smit-win32-$$V.zip smit-win32-$$V
+
 
 include $(DEPENDS)
