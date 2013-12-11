@@ -1316,8 +1316,8 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue, const s
         if (! m.empty()) {
             mg_printf(conn, "<div class=\"sm_entry_message\">");
             mg_printf(conn, "%s\n", convertToRichText(htmlEscape(m)).c_str());
+			mg_printf(conn, "</div>\n"); // end message
         }
-        mg_printf(conn, "</div>\n"); // end message
 
 
         // uploaded files
