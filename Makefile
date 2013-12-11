@@ -1,5 +1,6 @@
 
 ifeq ($(WIN),1)
+	EXE = smit.exe
 	OPENSSL = $(HOME)/Downloads/openssl-1.0.1e
 	CC = i586-mingw32msvc-gcc
 	CXX = i586-mingw32msvc-g++
@@ -7,6 +8,7 @@ ifeq ($(WIN),1)
 	CFLAGS += -I $(OPENSSL)/include -DHAVE_STDINT
 	LDFLAGS += -lws2_32 $(OPENSSL)/libcrypto.a
 else
+	EXE = smit
 	CC = gcc
 	CXX = g++
 	BUILD_DIR = build_linux86
@@ -82,22 +84,22 @@ $(BUILD_DIR)/%.d: %.cpp
 	sed "s,.*:,$$obj $@ : ,g" < $@.$$$$ > $@; \
 	rm -f $@.$$$$
 
-smit: $(OBJS)
+$(EXE): $(OBJS)
 	$(CXX) -o $@ $^ $(LDFLAGS)
 
 CPIO_ARCHIVE = embedded.cpio
 cpio: embedcpio
-embedcpio: smit data/public/*
+embedcpio: $(EXE) data/public/*
 	cd data && find public | cpio -o > ../$(CPIO_ARCHIVE)
-	cat $(CPIO_ARCHIVE) >> smit
+	cat $(CPIO_ARCHIVE) >> $(EXE)
 	size=`stat -c %s $(CPIO_ARCHIVE)`; \
-	python -c "import struct; import sys; sys.stdout.write(struct.pack('I', $$size))" >> smit
+	python -c "import struct; import sys; sys.stdout.write(struct.pack('I', $$size))" >> $(EXE)
 
 
 clean:
 	find . -name "*.o" -delete
 	find . -name "*.d" -delete
-	rm smit
+	rm $(EXE)
 
 .PHONY: test
 test:
