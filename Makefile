@@ -108,7 +108,7 @@ test:
 	$(MAKE) -C test
 
 .PHONY: release
-release:
+release: $(EXE)
 	i586-mingw32msvc-strip $(EXE)
 	$(MAKE) embedcpio
 	set -e; V=`grep "#define VERSION" src/* |sed -e "s/.*VERSION *//" -e 's/"//g'`; \
