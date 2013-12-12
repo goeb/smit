@@ -1,4 +1,4 @@
 mkdir IssuesRepo
-smit init IssuesRepo
-smit addproject -d IssuesRepo SampleProject
-smit adduser admin -d IssuesRepo --passwd admin --project SampleProject admin
+smit.exe init IssuesRepo
+smit.exe addproject -d IssuesRepo SampleProject
+smit.exe adduser admin -d IssuesRepo --passwd admin --project SampleProject admin

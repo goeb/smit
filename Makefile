@@ -108,8 +108,9 @@ test:
 	$(MAKE) -C test
 
 .PHONY: release
-release: $(EXE)
+release:
 	i586-mingw32msvc-strip $(EXE)
+	$(MAKE) embedcpio
 	set -e; V=`grep "#define VERSION" src/* |sed -e "s/.*VERSION *//" -e 's/"//g'`; \
 		rm -rf "smit-win32-$$V"; \
 		mkdir "smit-win32-$$V"; \

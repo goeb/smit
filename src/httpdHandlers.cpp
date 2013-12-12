@@ -944,7 +944,7 @@ void parseMultipartAndStoreUploadedFiles(const std::string &data, std::string bo
             if (size) {
                 // get the file extension
                 size_t lastSlash = filename.find_last_of("\\/");
-                if (lastSlash != std::string::npos) filename = filename.substr(lastSlash);
+                if (lastSlash != std::string::npos) filename = filename.substr(lastSlash+1);
 
                 std::string id = getBase64Id((uint8_t*)p, size);
                 std::string basename = id + "." + filename;

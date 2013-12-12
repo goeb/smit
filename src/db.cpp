@@ -641,7 +641,7 @@ int Project::setPredefinedView(const std::string &name, const PredefinedView &pv
 
     config.predefinedViews[pv.name] = pv;
 
-    if (!name.empty() && name != pv.name) {
+    if (!name.empty() && name != pv.name && name != "_") {
         // it was a rename. remove old name
         std::map<std::string, PredefinedView>::iterator i = config.predefinedViews.find(name);
         if (i != config.predefinedViews.end()) config.predefinedViews.erase(i);

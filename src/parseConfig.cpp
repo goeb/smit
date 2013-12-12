@@ -223,10 +223,11 @@ int writeToFile(const char *filepath, const char *data, size_t len)
 {
     int result = 0;
     mode_t mode = O_CREAT | O_TRUNC | O_WRONLY;
+    int flags = S_IRUSR;
 #if defined(_WIN32)
     mode |= O_BINARY;
+    flags |= S_IWUSR;
 #endif
-    int flags = S_IRUSR;
 
     std::string tmp = filepath;
     tmp += ".tmp";
