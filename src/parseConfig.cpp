@@ -246,9 +246,6 @@ int writeToFile(const char *filepath, const char *data, size_t len)
 
     close(f);
 
-#if defined(_WIN32)
-    unlink(filepath); // rename on Windows fails if destination file already exists
-#endif
     int r = rename(tmp.c_str(), filepath);
     if (r != 0) {
         LOG_ERROR("Cannot rename '%s' -> '%s': (%d) %s", tmp.c_str(), filepath, errno, strerror(errno));

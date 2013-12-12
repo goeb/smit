@@ -3,7 +3,7 @@
 #define _global_h
 
 
-#define VERSION "1.1.0-rc4"
+#define VERSION "1.1.0-rc5"
 #define K_SMIT_VERSION "+smv"
 
 // prepare for gettext
