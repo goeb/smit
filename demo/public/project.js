@@ -49,22 +49,11 @@ function addProperty(name, label, type, opts) {
         i.innerHTML = 'reserved';
         cell.appendChild(i);
     } else {
-        i = document.createElement('select');
+        var options = ['text', 'select', 'multiselect', 'selectUser'];
+        i = createSelect(options, type);
         i.name = 'token';
         i.className = "updatable";
         i.onchange = fupdateThis;
-        var options = ['text', 'select', 'multiselect', 'selectUser'];
-        for (index=0; index<options.length; index++) {
-            opt = document.createElement('option');
-            opt.innerHTML = options[index];
-            opt.value = options[index];
-            opt.text = options[index];
-            if (type == opt.text) {
-                opt.selected = 1;
-		i.selectedIndex = index;
-            }
-            i.appendChild(opt);
-        }
         cell.appendChild(i);
         fupdate(i, opts);
     }

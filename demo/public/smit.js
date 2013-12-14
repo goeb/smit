@@ -47,3 +47,22 @@ function updateFileInput(classname) {
         }
     }
 }
+function createSelect(items, selected) {
+    var select = document.createElement('select');
+    var items2 = items.slice(0); // copy the array
+    items2.push(''); // add an empty value
+    var length = items2.length;
+    for (var i = 0; i < length; i++) {
+        var opt = document.createElement('option');
+        opt.innerHTML = items2[i];
+        opt.value = items2[i];
+        opt.text = items2[i];
+        if (selected == items2[i]) {
+            opt.selected = "selected";
+            select.selectedIndex = i;
+        }
+        select.appendChild(opt);
+    }
+    return select;
+}
+
