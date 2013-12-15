@@ -14,21 +14,6 @@ function addFilter(divname, selected, value) {
     div.appendChild(i);
     div.appendChild(document.createElement('br'));
 }
-function createSelect(items, selected) {
-    var select = document.createElement('select');
-    var items2 = items.slice(0);
-    items2.push(''); // add an empty value
-    var length = items2.length;
-    for (var i = 0; i < length; i++) {
-        var opt = document.createElement('option');
-        if (selected == items2[i]) {
-            opt.selected = "selected";
-        }
-        opt.innerHTML = items2[i];
-        select.appendChild(opt);
-    }
-    return select;
-}
 function addColspec(selected) {
     var divname = 'colspec';
     var div = document.getElementById(divname);

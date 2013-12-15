@@ -24,6 +24,7 @@
 // static members
 SessionBase SessionBase::SessionDb;
 UserBase UserBase::UserDb;
+std::string UserBase::Repository;
 
 const char *FILE_USERS = "users";
 
@@ -52,6 +53,13 @@ std::string User::serialize()
     result += "\n\n";
     return result;
 }
+
+void User::setPasswd(const std::string &password)
+{
+    hashType = HASH_SHA1;
+    hashValue = getSha1(password);
+}
+
 
 std::string roleToString(Role r)
 {
@@ -84,9 +92,10 @@ std::list<std::string> getAvailableRoles()
 
 /** Load the users from file storage
   */
-int UserBase::load(const char *repository)
+int UserBase::load(const char *path)
 {
-    std::string file = repository;
+    Repository = path;
+    std::string file = Repository;
     file += "/";
     file += FILE_USERS;
     const char *data;
@@ -149,7 +158,7 @@ int UserBase::load(const char *repository)
             if (!error) {
                 // add user in database
                 LOG_DEBUG("Loaded user: %s on %d projects", u.username.c_str(), u.rolesOnProjects.size());
-                UserBase::addUser(u);
+                UserBase::addUserInArray(u);
 
             }
         }
@@ -167,9 +176,8 @@ int UserBase::initUsersFile(const char *repository)
 }
 
 
-int UserBase::store(const char *repository)
+int UserBase::store(const std::string &repository)
 {
-    ScopeLocker(UserDb.locker, LOCK_READ_WRITE);
     std::string result;
     result = K_SMIT_VERSION " " VERSION "\n";
 
@@ -194,9 +202,8 @@ User* UserBase::getUser(const std::string &username)
 
 /** Add a new user in database
   */
-void UserBase::addUser(User newUser)
+void UserBase::addUserInArray(User newUser)
 {
-    ScopeLocker(UserDb.locker, LOCK_READ_WRITE);
     User *u = new User;
     *u = newUser;
 
@@ -213,6 +220,16 @@ void UserBase::addUser(User newUser)
     FOREACH(r, newUser.rolesOnProjects) {
         UserDb.usersByProject[r->first].insert(newUser.username);
     }
+}
+
+/** Add a new user in database and store it.
+  */
+int UserBase::addUser(User newUser)
+{
+    ScopeLocker(UserDb.locker, LOCK_READ_WRITE);
+
+    addUserInArray(newUser);
+    return store(Repository);
 }
 
 /** Get the list of users that are at stake in the given project
@@ -243,6 +260,54 @@ std::map<std::string, Role> UserBase::getUsersRolesOfProject(const std::string &
     }
     return result;
 }
+
+int UserBase::updateUser(const std::string &username, User newConfig)
+{
+    ScopeLocker(UserDb.locker, LOCK_READ_WRITE);
+
+    std::map<std::string, User*>::iterator u = UserDb.configuredUsers.find(username);
+    if (u == UserDb.configuredUsers.end()) return -1;
+
+    if (newConfig.hashValue.empty()) {
+        // keep the same as before
+        newConfig.hashType = u->second->hashType;
+        newConfig.hashValue = u->second->hashValue;
+    }
+    *(u->second) = newConfig;
+
+    // change the key in the map if name of user was modified
+    if (username != newConfig.username) {
+        UserDb.configuredUsers[newConfig.username] = u->second;
+        UserDb.configuredUsers.erase(username);
+    }
+
+    return store(Repository);
+}
+
+int UserBase::updatePassword(const std::string &username, const std::string &password)
+{
+    ScopeLocker(UserDb.locker, LOCK_READ_WRITE);
+    std::map<std::string, User*>::iterator u = UserDb.configuredUsers.find(username);
+    if (u == UserDb.configuredUsers.end()) return -1;
+
+    u->second->setPasswd(password);
+    return store(Repository);
+}
+
+std::list<User> UserBase::getAllUsers()
+{
+    std::list<User> result;
+    ScopeLocker(UserDb.locker, LOCK_READ_ONLY);
+    std::map<std::string, User*>::const_iterator u;
+    FOREACH(u, UserDb.configuredUsers) {
+        result.push_back(*(u->second));
+    }
+    return result;
+}
+
+
+static UserBase UserDb;
+std::map<std::string, User*> configuredUsers;
 
 
 /** Get the role of the user for the given project
@@ -276,7 +341,7 @@ std::string SessionBase::requestSession(const std::string &username, const std::
     std::string sessid = ""; // empty session id indicates that no session is on
     User *u = UserBase::getUser(username);
 
-    if (u && u->hashType == "sha1") {
+    if (u && u->hashType == HASH_SHA1) {
         std::string sha1 = getSha1(passwd);
         if (sha1 != u->hashValue) {
             LOG_DEBUG("Sha1 do not match %s <> %s", sha1.c_str(), u->hashValue.c_str());

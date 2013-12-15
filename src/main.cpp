@@ -150,8 +150,7 @@ int addUser(int argc, const char **args)
 
         } else if (0 == strcmp(arg, "--passwd")) {
             if (i<argc) {
-                u.hashType = "sha1";
-                u.hashValue = getSha1(args[i]);
+                u.setPasswd(args[i]);
                 i++;
             } else usage();
 
@@ -204,12 +203,11 @@ int addUser(int argc, const char **args)
             if (newRole->second == ROLE_NONE) old->rolesOnProjects.erase(newRole->first);
             else old->rolesOnProjects[newRole->first] = newRole->second;
         }
-        UserBase::addUser(*old);
+        r = UserBase::addUser(*old);
 
     } else {
-        UserBase::addUser(u);
+        r = UserBase::addUser(u);
     }
-    r = UserBase::store(repo);
     if (r < 0) {
         LOG_ERROR("Abort.");
         return 1;

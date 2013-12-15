@@ -39,7 +39,8 @@ public:
 
     static void printPageProjectList(const ContextParameters &ctx,
                                      const std::list<std::pair<std::string, std::string> > &pList,
-                                     const std::map<std::string, std::map<std::string, Role> > &userRolesByProject);
+                                     const std::map<std::string, std::map<std::string, Role> > &userRolesByProject,
+                                     const std::list<User> &users);
     static void printProjectConfig(const ContextParameters &ctx);
     static void printPageIssuesFullContents(const ContextParameters &ctx, std::vector<struct Issue*> issueList);
     static void printPageIssueList(const ContextParameters &ctx, std::vector<struct Issue*> issueList, std::list<std::string> colspec);
@@ -58,6 +59,7 @@ public:
     static void printProjects(struct mg_connection *conn,
                               const std::list<std::pair<std::string, std::string> > &pList,
                               const std::map<std::string, std::map<std::string, Role> > *userRolesByProject);
+    static void printUsers(struct mg_connection *conn, const std::list<User> &usersList);
     static void printScriptUpdateConfig(const ContextParameters &ctx);
     static void printIssueSummary(const ContextParameters &ctx, const Issue &issue);
     static void printIssue(const ContextParameters &ctx, const Issue &issue);

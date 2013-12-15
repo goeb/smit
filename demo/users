@@ -1,35 +1,28 @@
-
-# Notes:
-# In this example, the passwords are the same as the user name.
-# Access rights:
-#     ref   = user has no access but is referenced for selectUser properties
-#     ro    = read only
-#     rw    = read write
-#     admin = rw + allowed to modify the structure of the project
-#
-# Supported hashes for passwords: sha1
-#
-
-addUser "John Smith" \
++smv 1.1.0-rc5
+addUser "John Smith" sha1 e61a3587b3f7a142b8c7b9263c82f8119398ecb7 \
     project things_to_do rw \
-    sha1 e61a3587b3f7a142b8c7b9263c82f8119398ecb7
 
-addUser homer \
-    project things_to_do admin \
-    sha1 8a30fca9ea5b46722cbdad24c7470a442718cac8 \
-    superadmin
 
-addUser alice \
-    sha1 522b276a356bdf39013dfabea2cd43e141ecc9e8 \
-    project things_to_do ro
-    
-addUser fred \
+addUser Peter sha1 9c5c73b3c49d665d0607dd4b888b4c1677881be3 \
+    project "Project X" admin \
+
+
+addUser alice sha1 da39a3ee5e6b4b0d3255bfef95601890afd80709 \
+    project myproject rw \
+    project things_to_do ro \
+
+
+addUser fred superadmin \
+sha1 31017a722665e4afce586950f42944a6d331dabf \
     project myproject admin \
+    project myproject/yoyo admin \
     project smit admin \
     project things_to_do admin \
     project toto admin \
-    project "myproject/yoyo" admin \
-    sha1 31017a722665e4afce586950f42944a6d331dabf \
-    superadmin
 
-addUser Peter project "Project X" admin sha1 9c5c73b3c49d665d0607dd4b888b4c1677881be3
+
+addUser homer superadmin \
+sha1 8a30fca9ea5b46722cbdad24c7470a442718cac8 \
+    project things_to_do admin \
+
+

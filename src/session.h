@@ -9,7 +9,7 @@
 #include "mutexTools.h"
 
 #define SESSION_DURATION (60*60*24) // 1 day
-
+#define HASH_SHA1 "sha1"
 
 enum Role {
     ROLE_ADMIN,
@@ -35,25 +35,32 @@ struct User {
     bool superadmin;
     User();
     std::string serialize();
+    void setPasswd(const std::string &passwd);
 
 };
 
 class UserBase {
 public:
     static int load(const char *repository);
-    static int store(const char *repository);
+    static int store(const std::string &repository);
     static int initUsersFile(const char *repository);
     static User* getUser(const std::string &username);
-    static void addUser(User u);
+    static int addUser(User u);
     static void addUserByProject(std::string project, std::string username);
     static std::set<std::string> getUsersOfProject(const std::string &project);
     static std::map<std::string, Role> getUsersRolesOfProject(const std::string &project);
+    static int updateUser(const std::string &username, User newConfig);
+    static int updatePassword(const std::string &username, const std::string &password);
+    static std::list<User> getAllUsers();
 
 private:
     static UserBase UserDb;
     std::map<std::string, User*> configuredUsers;
     std::map<std::string, std::set<std::string> > usersByProject; // for each project, indicate which users are at stake
     Locker locker;
+    static std::string Repository;
+    static void addUserInArray(User u);
+
 };
 
 struct Session {

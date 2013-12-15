@@ -251,6 +251,9 @@ table.sm_projects th, table.sm_projects td {
     font-weight: bold;
     margin-bottom: 1em;
 }
+.sm_projects_users {
+    font-weight: bold;
+}
 .sm_link_issues {
 }
 #sm_signout {

@@ -115,6 +115,7 @@ public:
     std::list<std::string> *colspec;
     const ContextParameters &ctx;
     const std::list<std::pair<std::string, std::string> > *projectList;
+    const std::list<User> *usersList;
     const Issue *currentIssue;
     const std::map<std::string, std::map<std::string, Role> > *userRolesByProject;
 
@@ -124,6 +125,7 @@ public:
         issueListFullContents = 0;
         colspec = 0;
         projectList = 0;
+        usersList = 0;
         currentIssue = 0;
         userRolesByProject = 0;
 
@@ -200,6 +202,7 @@ public:
 
             } else if (varname == K_SM_DIV_PROJECTS && projectList) {
                 RHtml::printProjects(ctx.conn, *projectList, userRolesByProject);
+                if (usersList) RHtml::printUsers(ctx.conn, *usersList);
 
             } else if (varname == K_SM_SCRIPT_PROJECT_CONFIG_UPDATE) {
                 RHtml::printScriptUpdateConfig(ctx);
@@ -670,13 +673,27 @@ void RHtml::printProjects(struct mg_connection *conn,
     mg_printf(conn, "</table>\n");
 }
 
+void RHtml::printUsers(struct mg_connection *conn, const std::list<User> &usersList)
+{
+    std::list<User>::const_iterator u;
+
+    if (!usersList.empty()) {
+        mg_printf(conn, "<div class=\"sm_projects_users\">%s</div>\n", htmlEscape(_("Users")).c_str());
+    }
+    FOREACH(u, usersList) {
+        mg_printf(conn, "<a href=\"/users/%s\">%s<a><br>",
+                  urlEncode(u->username).c_str(), htmlEscape(u->username).c_str());
+    }
+}
 
 void RHtml::printPageProjectList(const ContextParameters &ctx,
                                  const std::list<std::pair<std::string, std::string> > &pList,
-                                 const std::map<std::string, std::map<std::string, Role> > &userRolesByProject)
+                                 const std::map<std::string, std::map<std::string, Role> > &userRolesByProject,
+                                 const std::list<User> &users)
 {
     VariableNavigator vn("projects.html", ctx);
     vn.projectList = &pList;
+    vn.usersList = &users;
     vn.userRolesByProject = &userRolesByProject;
     vn.printPage();
 }

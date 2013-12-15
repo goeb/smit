@@ -97,6 +97,12 @@ void sendHttpHeader200(struct mg_connection *conn)
     mg_printf(conn, "HTTP/1.0 200 OK\r\n");
 }
 
+void sendHttpHeader400(struct mg_connection *conn, const char *msg)
+{
+    mg_printf(conn, "HTTP/1.0 400 Bad Request\r\n\r\n");
+    mg_printf(conn, "400 Bad Request\r\n");
+    mg_printf(conn, "%s\r\n", msg);
+}
 void sendHttpHeader403(struct mg_connection *conn)
 {
     mg_printf(conn, "HTTP/1.1 403 Forbidden\r\n\r\n");
@@ -419,7 +425,43 @@ void httpPostUsers(struct mg_connection *conn, User signedInUser, const std::str
             }
         }
 
-        // xxxxxxxxxxxxxxxxxxxxxxxx
+        int r = 0;
+
+        if (passwd1 != passwd2) {
+            LOG_INFO("passwd1 (%s) != passwd2 (%s)", passwd1.c_str(), passwd2.c_str());
+            sendHttpHeader400(conn, "passwords 1 and 2 do not match");
+            return;
+
+        } else if (!signedInUser.superadmin) {
+            // if signedInUser is not superadmin, only password is updated
+
+            newUserConfig.username = username; // used below for redirection
+            r = UserBase::updatePassword(username, passwd1);
+            if (r != 0) LOG_ERROR("Cannot update password of user '%s'", username.c_str());
+
+        } else {
+            // superadmin: update all parameters of the user's configuration
+            if (!passwd1.empty()) newUserConfig.setPasswd(passwd1);
+
+            if (username.empty() || username == "_") {
+                r = UserBase::addUser(newUserConfig);
+            } else {
+                r = UserBase::updateUser(username, newUserConfig);
+            }
+            if (r != 0) LOG_ERROR("Cannot update user '%s'", username.c_str());
+        }
+
+        if (r != 0) {
+            sendHttpHeader500(conn, "could not update user's parameters");
+
+        } else {
+            // ok, redirect
+            std::string redirectUrl = "/users/" + urlEncode(newUserConfig.username);
+            sendHttpRedirect(conn, redirectUrl.c_str(), 0);
+        }
+
+    } else {
+        LOG_ERROR("Bad contentType: %s", contentType);
     }
 }
 
@@ -474,8 +516,14 @@ void httpGetRoot(struct mg_connection *conn, User u)
             usersRolesByProject[p->first] = ur;
         }
 
+        std::list<User> allUsers;
+        if (u.superadmin) {
+            // get the list of all users
+            allUsers = UserBase::getAllUsers();
+        }
+
         ContextParameters ctx = ContextParameters(conn, u);
-        RHtml::printPageProjectList(ctx, pList, usersRolesByProject);
+        RHtml::printPageProjectList(ctx, pList, usersRolesByProject, allUsers);
     }
 }
 
