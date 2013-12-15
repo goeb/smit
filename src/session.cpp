@@ -62,6 +62,16 @@ std::string roleToString(Role r)
     else return "none";
 }
 
+Role stringToRole(const std::string &s)
+{
+    if (s == "ref") return ROLE_REFERENCED;
+    else if (s == "ro") return ROLE_RO;
+    else if (s == "rw") return ROLE_RW;
+    else if (s == "admin") return ROLE_ADMIN;
+    else return ROLE_NONE;
+}
+
+
 std::list<std::string> getAvailableRoles()
 {
     std::list<std::string> result;
@@ -117,15 +127,14 @@ int UserBase::load(const char *repository)
                         error = true;
                         break; // abort line
                     }
-                    if (role == "ref") u.rolesOnProjects[project] = ROLE_REFERENCED;
-                    else if (role == "ro") u.rolesOnProjects[project] = ROLE_RO;
-                    else if (role == "rw") u.rolesOnProjects[project] = ROLE_RW;
-                    else if (role == "admin") u.rolesOnProjects[project] = ROLE_ADMIN;
-                    else {
-                        LOG_ERROR("Invalid role '%s' on project '%s'", role.c_str(), project.c_str());
+                    Role r = stringToRole(role);
+                    if (r == ROLE_NONE) {
+                        LOG_ERROR("Invalid role '%s'", role.c_str());
                         error = true;
                         break; // abort line
                     }
+                    u.rolesOnProjects[project] = r;
+
                 } else if (token == "sha1") {
                     std::string hash = popListToken(*line);
                     if (hash.empty()) {

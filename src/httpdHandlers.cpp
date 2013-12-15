@@ -329,15 +329,23 @@ void httpPostSignout(struct mg_connection *conn, const std::string &sessionId)
     redirectToSignin(conn, "/");
 }
 
-
-void httGetUsers(struct mg_connection *conn, User u, const std::string &username)
+/** Get the configuration page of a given user
+  *
+  * @param signedInUser
+  *     currently signed-in user
+  *
+  * @param username
+  *     user whose configuration is requested
+  *
+  */
+void httpGetUsers(struct mg_connection *conn, User signedInUser, const std::string &username)
 {
-    ContextParameters ctx = ContextParameters(conn, u);
+    ContextParameters ctx = ContextParameters(conn, signedInUser);
 
     if (username.empty() || username == "_") {
         // display form for a new user
         // only a superadmin may do this
-        if (!u.superadmin) {
+        if (!signedInUser.superadmin) {
             sendHttpHeader403(conn);
         } else {
             sendHttpHeader200(conn);
@@ -349,10 +357,10 @@ void httGetUsers(struct mg_connection *conn, User u, const std::string &username
         User *editedUser = UserBase::getUser(username);
 
         if (!editedUser) {
-            if (u.superadmin) sendHttpHeader404(conn);
+            if (signedInUser.superadmin) sendHttpHeader404(conn);
             else sendHttpHeader403(conn);
 
-        } else if (username == u.username || u.superadmin) {
+        } else if (username == signedInUser.username || signedInUser.superadmin) {
 
             // handle an existing user
             // a user may only view his/her own user page
@@ -363,8 +371,56 @@ void httGetUsers(struct mg_connection *conn, User u, const std::string &username
     }
 }
 
-void httPostUsers(struct mg_connection *conn, User u, const std::string &username)
+/** Post configuration of a new or existing user
+  *
+  * Non-superadmin users may only post their password.
+  */
+void httpPostUsers(struct mg_connection *conn, User signedInUser, const std::string &username)
 {
+    if (!signedInUser.superadmin && username != signedInUser.username) {
+        sendHttpHeader403(conn);
+        return;
+    }
+
+    // parse the posted parameters
+    const char *contentType = mg_get_header(conn, "Content-Type");
+
+    if (0 == strcmp("application/x-www-form-urlencoded", contentType)) {
+        // application/x-www-form-urlencoded
+        // post_data is "var1=val1&var2=val2...".
+
+        std::string postData = readMgConn(conn, 4096);
+
+        User newUserConfig;
+        std::string passwd1, passwd2;
+        std::string project, role;
+
+        while (postData.size() > 0) {
+            std::string tokenPair = popToken(postData, '&');
+            std::string key = popToken(tokenPair, '=');
+            std::string value = urlDecode(tokenPair);
+
+            if (key == "name") newUserConfig.username = value;
+            else if (key == "superadmin" && value == "on") newUserConfig.superadmin = true;
+            else if (key == "passwd1") passwd1 = value;
+            else if (key == "passwd2") passwd2 = value;
+            else if (key == "project") project = value;
+            else if (key == "role") role = value;
+            else {
+                LOG_ERROR("httpPostUsers: unexpected parameter '%s'", key.c_str());
+            }
+
+            // look if the pair project/role is complete
+            if (!project.empty() && !role.empty()) {
+                Role r = stringToRole(role);
+                if (r != ROLE_NONE) newUserConfig.rolesOnProjects[project] = r;
+                project.clear();
+                role.clear();
+            }
+        }
+
+        // xxxxxxxxxxxxxxxxxxxxxxxx
+    }
 }
 
 std::string getSessionIdFromCookie(struct mg_connection *conn)
@@ -1172,8 +1228,8 @@ int begin_request_handler(struct mg_connection *conn)
     else if ( (resource == "signin") && (method == "GET") ) sendHttpRedirect(conn, "/", 0);
     else if ( (resource == "") && (method == "GET") ) httpGetRoot(conn, user);
     else if ( (resource == "") && (method == "POST") ) httpPostRoot(conn, user);
-    else if ( (resource == "users") && (method == "GET") ) httGetUsers(conn, user, uri);
-    else if ( (resource == "users") && (method == "POST") ) httPostUsers(conn, user, uri);
+    else if ( (resource == "users") && (method == "GET") ) httpGetUsers(conn, user, uri);
+    else if ( (resource == "users") && (method == "POST") ) httpPostUsers(conn, user, uri);
     else {
         // check if it is a valid project resource such as /myp/issues, /myp/users, /myp/config
         std::string projectUrl = resource;

@@ -6,7 +6,7 @@ function addProject(divname, selectedProject, selectedRole) {
     var div = document.getElementById(divname);
 
     var select = createSelect(Projects, selectedProject);
-    select.name = divname;
+    select.name = 'project';
     div.appendChild(select);
     var i = createSelect(Roles, selectedRole);
     i.name = 'role';
