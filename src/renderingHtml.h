@@ -21,9 +21,8 @@ public:
     ContextParameters(struct mg_connection *cnx, User u);
     const Project &getProject() const;
 
-    std::string username;
+    User user;
     enum Role userRole;
-    int numberOfIssues; // TODO check if used
     std::string search;
     std::string sort;
     std::list<std::string> filterin;
@@ -50,6 +49,8 @@ public:
     static bool inList(const std::list<std::string> &listOfValues, const std::string &value);
     static void printIssueForm(const ContextParameters &ctx, const Issue &issue, bool autofocus);
     static void printPageSignin(struct mg_connection *conn, const char *redirect);
+
+    static void printPageUser(const ContextParameters &ctx, const User *u);
 
     static void printPageView(const ContextParameters &ctx, const PredefinedView &pv);
     static void printPageListOfViews(const ContextParameters &ctx);

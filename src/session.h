@@ -20,6 +20,7 @@ enum Role {
 };
 
 std::string roleToString(Role r);
+std::list<std::string> getAvailableRoles();
 
 
 struct User {

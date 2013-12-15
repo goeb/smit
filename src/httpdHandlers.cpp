@@ -330,11 +330,40 @@ void httpPostSignout(struct mg_connection *conn, const std::string &sessionId)
 }
 
 
-void httGetUsers(struct mg_connection *conn, User u)
+void httGetUsers(struct mg_connection *conn, User u, const std::string &username)
 {
+    ContextParameters ctx = ContextParameters(conn, u);
+
+    if (username.empty() || username == "_") {
+        // display form for a new user
+        // only a superadmin may do this
+        if (!u.superadmin) {
+            sendHttpHeader403(conn);
+        } else {
+            sendHttpHeader200(conn);
+            RHtml::printPageUser(ctx, 0);
+        }
+
+    } else {
+        // look for existing user
+        User *editedUser = UserBase::getUser(username);
+
+        if (!editedUser) {
+            if (u.superadmin) sendHttpHeader404(conn);
+            else sendHttpHeader403(conn);
+
+        } else if (username == u.username || u.superadmin) {
+
+            // handle an existing user
+            // a user may only view his/her own user page
+            sendHttpHeader200(conn);
+            RHtml::printPageUser(ctx, editedUser);
+
+        } else sendHttpHeader403(conn);
+    }
 }
 
-void httPostUsers(struct mg_connection *conn, User u)
+void httPostUsers(struct mg_connection *conn, User u, const std::string &username)
 {
 }
 
@@ -1096,6 +1125,7 @@ void httpPostEntry(struct mg_connection *conn, Project &pro, const std::string &
   * /public/...             GET        all               public pages, javascript, CSS, logo
   * /signin                 POST       all               sign-in
   * /users                             superadmin        management of users for all projects
+  * /users/<user>           GET/POST   user, superadmin  management of a single user
   * /myp/config             GET/POST   admin             configuration of the project
   * /myp/views              GET/POST   admin             list predefined views / create new view
   * /myp/views/_            GET        admin             form for advanced search / new predefined view
@@ -1142,8 +1172,8 @@ int begin_request_handler(struct mg_connection *conn)
     else if ( (resource == "signin") && (method == "GET") ) sendHttpRedirect(conn, "/", 0);
     else if ( (resource == "") && (method == "GET") ) httpGetRoot(conn, user);
     else if ( (resource == "") && (method == "POST") ) httpPostRoot(conn, user);
-    else if ( (resource == "users") && (method == "GET") ) httGetUsers(conn, user);
-    else if ( (resource == "users") && (method == "POST") ) httPostUsers(conn, user);
+    else if ( (resource == "users") && (method == "GET") ) httGetUsers(conn, user, uri);
+    else if ( (resource == "users") && (method == "POST") ) httPostUsers(conn, user, uri);
     else {
         // check if it is a valid project resource such as /myp/issues, /myp/users, /myp/config
         std::string projectUrl = resource;

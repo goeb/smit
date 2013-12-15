@@ -46,15 +46,7 @@ std::string User::serialize()
     std::map<std::string, enum Role>::const_iterator role;
     FOREACH(role, rolesOnProjects) {
         std::string p = "    project " + serializeSimpleToken(role->first) + " ";
-        switch(role->second) {
-        case ROLE_ADMIN: p += "admin"; break;
-        case ROLE_RW: p += "rw"; break;
-        case ROLE_RO: p += "ro"; break;
-        case ROLE_REFERENCED: p += "ref"; break;
-        default:
-            LOG_ERROR("Cannot serialize invalid role for user '%s': %d", username.c_str(), role->second);
-            break;
-        }
+        p += roleToString(role->second);
         result += p + " \\\n";
     }
     result += "\n\n";
@@ -68,6 +60,16 @@ std::string roleToString(Role r)
     else if (r == ROLE_RO) return "ro";
     else if (r == ROLE_REFERENCED) return "ref";
     else return "none";
+}
+
+std::list<std::string> getAvailableRoles()
+{
+    std::list<std::string> result;
+    result.push_back(roleToString(ROLE_REFERENCED));
+    result.push_back(roleToString(ROLE_RO));
+    result.push_back(roleToString(ROLE_RW));
+    result.push_back(roleToString(ROLE_ADMIN));
+    return result;
 }
 
 /** Load the users from file storage

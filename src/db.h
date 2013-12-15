@@ -156,6 +156,7 @@ public:
     static Project *getProject(const std::string &projectName);
     std::string pathToRepository;
     inline static std::string getRootDir() { return Db.pathToRepository; }
+    static std::list<std::string> getProjects();
 };
 
 

@@ -30,7 +30,7 @@
 ContextParameters::ContextParameters(struct mg_connection *cnx, User u, Project &p)
 {
     project = &p;
-    username = u.username;
+    user = u;
     userRole = u.getRole(p.getName());
     conn = cnx;
 }
@@ -38,7 +38,7 @@ ContextParameters::ContextParameters(struct mg_connection *cnx, User u, Project 
 ContextParameters::ContextParameters(struct mg_connection *cnx, User u)
 {
     project = 0;
-    username = u.username;
+    user = u;
     conn = cnx;
 }
 
@@ -265,6 +265,46 @@ void RHtml::printPageSignin(struct mg_connection *conn, const char *redirect)
     } else {
         LOG_ERROR("Could not load %s (or empty file)", path.c_str());
     }
+}
+
+
+void RHtml::printPageUser(const ContextParameters &ctx, const User *u)
+{
+    VariableNavigator vn("user.html", ctx);
+    vn.printPage();
+
+    // add javascript for updating the inputs
+    struct mg_connection *conn = ctx.conn;
+
+    mg_printf(conn, "<script>\n");
+
+    if (!ctx.user.superadmin) {
+        // hide what is reserved to superadmin
+        mg_printf(conn, "hideSuperadminZone();\n");
+    } else {
+        if (u) mg_printf(conn, "setName('%s');\n", enquoteJs(u->username).c_str());
+    }
+
+    if (u && u->superadmin) {
+        mg_printf(conn, "setSuperadminCheckbox();\n");
+    }
+
+    std::list<std::string> projects = Database::getProjects();
+    mg_printf(conn, "Projects = %s;\n", toJavascriptArray(projects).c_str());
+    std::list<std::string> roleList = getAvailableRoles();
+    mg_printf(conn, "Roles = %s;\n", toJavascriptArray(roleList).c_str());
+
+    if (u) {
+        std::map<std::string, enum Role>::const_iterator rop;
+        FOREACH(rop, u->rolesOnProjects) {
+            mg_printf(conn, "addProject('roles_on_projects', '%s', '%s');\n",
+                      enquoteJs(rop->first).c_str(),
+                      enquoteJs(roleToString(rop->second)).c_str());
+        }
+    }
+    mg_printf(conn, "addProject('roles_on_projects', '', '');\n");
+
+    mg_printf(conn, "</script>\n");
 }
 
 void RHtml::printPageView(const ContextParameters &ctx, const PredefinedView &pv)
@@ -516,7 +556,7 @@ void RHtml::printNavigationGlobal(const ContextParameters &ctx)
     userinfo.addContents("%s", _("Logged in as: "));
     HtmlNode username("span");
     username.addAttribute("class", "sm_username");
-    username.addContents("%s", htmlEscape(ctx.username).c_str());
+    username.addContents("%s", htmlEscape(ctx.user.username).c_str());
     userinfo.addContents(username);
     div.addContents(userinfo);
 
@@ -1290,7 +1330,7 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
 
         // delete button
         time_t delta = time(0) - ee.ctime;
-        if ( (delta < DELETE_DELAY_S) && (ee.author == ctx.username) &&
+        if ( (delta < DELETE_DELAY_S) && (ee.author == ctx.user.username) &&
              (e == issue.latest) && e->prev) {
             // entry was created less than 10 minutes ago, and by same user, and is latest in the issue
             mg_printf(conn, "<a href=\"#\" class=\"sm_entry_delete\" title=\"Delete this entry (at most %d minutes after posting)\" ", (DELETE_DELAY_S/60));

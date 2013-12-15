@@ -1,0 +1,52 @@
+<html><head>
+        <title>Configuration of User</title>
+        <link href="/public/style.css" type="text/css" rel="stylesheet">
+        <meta content="text/html;charset=UTF-8" http-equiv="Content-Type">
+        <script src="/public/smit.js"></script>
+        <script src="/public/user.js"></script>
+        <style>
+            h2 { font-size: normal; margin:0; padding-top:0.5em; }
+            .sm_view_properties {
+                border-right: solid 1px rgb(200, 200, 186);
+                border-bottom: solid 1px rgb(200, 200, 186);
+            }
+        </style>
+    </head>
+    <body>
+        <div style="padding-top: 15px; width: 100%; background: white;">
+
+            <div style="margin:1em;">
+                <img src="/public/logo.png" class="sm_logo" alt="Logo">
+            </div>
+        </div>
+
+        <a href="/">Back to /</a><br>
+        <form action="" method="POST">
+            <h1>User Configuration</h1>
+            <div class="sm_user_superadmin_zone">
+                User name: <input id="name" name="name" type="text">
+                <br>
+                <label>Superadmin: <input id="sm_superadmin" name="superadmin" type="checkbox"></label>
+
+                <br>
+                <br>
+                <br>
+
+                Roles on projects:<br>
+                <div id="roles_on_projects"></div>
+                <div onclick="addProject('roles_on_projects', '', '');" class="sm_clickable">+ Click for more...</div>
+                <br>
+            </div>
+
+            <br>
+            <br>
+            <h2>Password</h2>
+            (leave empty to keep it unchanged)<br>
+            <input name="passwd1" type="password">
+            <br>
+            <input name="passwd2" type="password"> (re-enter the password)
+            <br>
+            <br>
+            <input type="submit" value="Apply">
+        </form>
+</body></html>

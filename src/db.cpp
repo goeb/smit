@@ -1410,6 +1410,18 @@ Project *Database::getProject(const std::string & projectName)
     else return p->second;
 }
 
+std::list<std::string> Database::getProjects()
+{
+    std::list<std::string> result;
+    std::map<std::string, Project*>::iterator p;
+    FOREACH(p, Database::Db.projects) {
+        result.push_back(p->first);
+    }
+
+    return result;
+}
+
+
 std::string PredefinedView::getDirectionName(bool d)
 {
     return d?_("Ascending"):_("Descending");
