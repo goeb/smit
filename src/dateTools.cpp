@@ -63,9 +63,9 @@ std::string epochToStringDelta(time_t t)
     if (delta < 60) snprintf(datetime, sizeof(datetime)-1, "%ld %s", delta, _("s"));
     else if (delta < 60*60) snprintf(datetime, sizeof(datetime)-1, "%ld %s", delta/60, _("min"));
     else if (delta < 60*60*24) snprintf(datetime, sizeof(datetime)-1, "%ld %s", delta/60/60, _("h"));
-    else if (delta < 60*60*24*31) snprintf(datetime, sizeof(datetime)-1, "%ld %s", delta/60/60/24, _("days"));
-    else if (delta < 60*60*24*365) snprintf(datetime, sizeof(datetime)-1, "%ld %s", delta/60/60/24/30, _("months"));
-    else if (delta > 0) snprintf(datetime, sizeof(datetime)-1, "%ld %s", delta/60/60/24/30/365, _("years"));
+    else if (delta < 60*60*24*31) snprintf(datetime, sizeof(datetime)-1, "%ld %s", delta/60/60/24, _("day"));
+    else if (delta < 60*60*24*365) snprintf(datetime, sizeof(datetime)-1, "%ld %s", delta/60/60/24/30, _("month"));
+    else if (delta > 0) snprintf(datetime, sizeof(datetime)-1, "%ld %s", delta/60/60/24/30/365, _("year"));
     else return epochToString(t);
 
 
