@@ -60,7 +60,8 @@ td {
     padding-left: 0.5em;
 }
 .sm_entry_message {
-    background-color: #EEE;
+    background-color: #DFDFDF;
+    border: 1px solid #BBB;
     white-space: pre;
     font-family: monospace;
     font-size: 100%;
