@@ -22,9 +22,9 @@ enum LogLevel {
 
 bool doPrint(enum LogLevel msgLevel);
 
-#define LOG_ERROR(...) { if (doPrint(LL_ERROR)) { LOG("ERROR", __VA_ARGS__); } }
-#define LOG_INFO(...)  { if (doPrint(LL_INFO)) { LOG("INFO ", __VA_ARGS__); } }
-#define LOG_DEBUG(...) { if (doPrint(LL_DEBUG)) { LOG("DEBUG", __VA_ARGS__); } }
+#define LOG_ERROR(...) do { if (doPrint(LL_ERROR)) { LOG("ERROR", __VA_ARGS__); } } while (0)
+#define LOG_INFO(...)  do { if (doPrint(LL_INFO)) { LOG("INFO ", __VA_ARGS__); } } while (0)
+#define LOG_DEBUG(...) do { if (doPrint(LL_DEBUG)) { LOG("DEBUG", __VA_ARGS__); } } while (0)
 
 #define LOG(_level, ...) LOG2(_level, __FILE__, __LINE__, __VA_ARGS__)
 

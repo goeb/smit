@@ -20,6 +20,7 @@
 #include "identifiers.h"
 #include "parseConfig.h"
 #include "global.h"
+#include "db.h"
 
 // static members
 SessionBase SessionBase::SessionDb;
@@ -136,6 +137,14 @@ int UserBase::load(const char *path)
                         error = true;
                         break; // abort line
                     }
+                    // check if project exists
+                    Project *p = Database::getProject(project);
+                    if (!p) {
+                        LOG_ERROR("Invalid project name '%s' for user %s", project.c_str(), u.username.c_str());
+                        error = true;
+                        break; // abort line
+                    }
+
                     Role r = stringToRole(role);
                     if (r == ROLE_NONE) {
                         LOG_ERROR("Invalid role '%s'", role.c_str());
@@ -159,7 +168,6 @@ int UserBase::load(const char *path)
                 // add user in database
                 LOG_DEBUG("Loaded user: %s on %d projects", u.username.c_str(), u.rolesOnProjects.size());
                 UserBase::addUserInArray(u);
-
             }
         }
     }

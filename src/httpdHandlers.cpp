@@ -438,6 +438,7 @@ void httpPostUsers(struct mg_connection *conn, User signedInUser, const std::str
             newUserConfig.username = username; // used below for redirection
             r = UserBase::updatePassword(username, passwd1);
             if (r != 0) LOG_ERROR("Cannot update password of user '%s'", username.c_str());
+            else LOG_INFO("Password updated for user '%s'", username.c_str());
 
         } else {
             // superadmin: update all parameters of the user's configuration
@@ -449,6 +450,9 @@ void httpPostUsers(struct mg_connection *conn, User signedInUser, const std::str
                 r = UserBase::updateUser(username, newUserConfig);
             }
             if (r != 0) LOG_ERROR("Cannot update user '%s'", username.c_str());
+            else if (newUserConfig.username != username) {
+                LOG_INFO("User '%s' renamed '%s'", username.c_str(), newUserConfig.username.c_str());
+            } else LOG_INFO("Parameters updated for user '%s'", username.c_str());
         }
 
         if (r != 0) {

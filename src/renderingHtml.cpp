@@ -59,6 +59,7 @@ const Project &ContextParameters::getProject() const
 #define K_SM_SCRIPT_PROJECT_CONFIG_UPDATE "SM_SCRIPT_PROJECT_CONFIG_UPDATE"
 #define K_SM_DIV_PREDEFINED_VIEWS "SM_DIV_PREDEFINED_VIEWS"
 #define K_SM_DIV_PROJECTS "SM_DIV_PROJECTS"
+#define K_SM_DIV_USERS "SM_DIV_USERS"
 #define K_SM_DIV_ISSUES "SM_DIV_ISSUES"
 #define K_SM_DIV_ISSUE "SM_DIV_ISSUE"
 #define K_SM_DIV_ISSUE_SUMMARY "SM_DIV_ISSUE_SUMMARY"
@@ -202,7 +203,9 @@ public:
 
             } else if (varname == K_SM_DIV_PROJECTS && projectList) {
                 RHtml::printProjects(ctx.conn, *projectList, userRolesByProject);
-                if (usersList) RHtml::printUsers(ctx.conn, *usersList);
+
+            } else if (varname == K_SM_DIV_USERS && usersList) {
+                RHtml::printUsers(ctx.conn, *usersList);
 
             } else if (varname == K_SM_SCRIPT_PROJECT_CONFIG_UPDATE) {
                 RHtml::printScriptUpdateConfig(ctx);
@@ -677,13 +680,28 @@ void RHtml::printUsers(struct mg_connection *conn, const std::list<User> &usersL
 {
     std::list<User>::const_iterator u;
 
-    if (!usersList.empty()) {
-        mg_printf(conn, "<div class=\"sm_projects_users\">%s</div>\n", htmlEscape(_("Users")).c_str());
-    }
+    if (usersList.empty()) return;
+
+    mg_printf(conn, "<table class=\"sm_users\">\n");
+    mg_printf(conn, "<tr class=\"sm_users\">");
+    mg_printf(conn, "<th class=\"sm_users\">%s</th>\n", _("Users"));
+    mg_printf(conn, "<th class=\"sm_users\">%s</th></tr>\n", _("Capabilities"));
+    mg_printf(conn, "</tr>");
+
     FOREACH(u, usersList) {
+        mg_printf(conn, "<tr class=\"sm_users\">");
+        mg_printf(conn, "<td class=\"sm_users\">\n");
         mg_printf(conn, "<a href=\"/users/%s\">%s<a><br>",
                   urlEncode(u->username).c_str(), htmlEscape(u->username).c_str());
+        mg_printf(conn, "</td>");
+        // capability
+        if (u->superadmin) mg_printf(conn, "<td class=\"sm_users\">%s</td>\n", _("superadmin"));
+        else mg_printf(conn, "<td class=\"sm_users\"> </td>\n");
+
+        mg_printf(conn, "</tr>\n");
+
     }
+    mg_printf(conn, "</table>\n");
 }
 
 void RHtml::printPageProjectList(const ContextParameters &ctx,
