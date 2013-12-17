@@ -702,6 +702,7 @@ void RHtml::printUsers(struct mg_connection *conn, const std::list<User> &usersL
 
     }
     mg_printf(conn, "</table>\n");
+	mg_printf(conn, "<a href=\"/users/_\" class=\"sm_users\">%s</a>\n", _("New User"));
 }
 
 void RHtml::printPageProjectList(const ContextParameters &ctx,
