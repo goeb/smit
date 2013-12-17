@@ -234,8 +234,9 @@ void UserBase::addUserInArray(User newUser)
   */
 int UserBase::addUser(User newUser)
 {
-    ScopeLocker(UserDb.locker, LOCK_READ_WRITE);
+    if (newUser.username.empty()) return -1;
 
+    ScopeLocker(UserDb.locker, LOCK_READ_WRITE);
     addUserInArray(newUser);
     return store(Repository);
 }
@@ -271,6 +272,8 @@ std::map<std::string, Role> UserBase::getUsersRolesOfProject(const std::string &
 
 int UserBase::updateUser(const std::string &username, User newConfig)
 {
+    if (username.empty() || newConfig.username.empty()) return -1;
+
     ScopeLocker(UserDb.locker, LOCK_READ_WRITE);
 
     std::map<std::string, User*>::iterator u = UserDb.configuredUsers.find(username);

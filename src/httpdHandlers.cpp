@@ -387,6 +387,7 @@ void httpPostUsers(struct mg_connection *conn, User signedInUser, const std::str
         sendHttpHeader403(conn);
         return;
     }
+    if (username.empty()) return sendHttpHeader403(conn);
 
     // parse the posted parameters
     const char *contentType = mg_get_header(conn, "Content-Type");
@@ -425,6 +426,11 @@ void httpPostUsers(struct mg_connection *conn, User signedInUser, const std::str
             }
         }
 
+        if (newUserConfig.username.empty() || newUserConfig.username == "_") {
+            LOG_INFO("Ignore user parameters as username is empty or '_'");
+            return sendHttpHeader400(conn, "Invalid user name");
+        }
+
         int r = 0;
 
         if (passwd1 != passwd2) {
@@ -444,7 +450,7 @@ void httpPostUsers(struct mg_connection *conn, User signedInUser, const std::str
             // superadmin: update all parameters of the user's configuration
             if (!passwd1.empty()) newUserConfig.setPasswd(passwd1);
 
-            if (username.empty() || username == "_") {
+            if (username == "_") {
                 r = UserBase::addUser(newUserConfig);
             } else {
                 r = UserBase::updateUser(username, newUserConfig);
