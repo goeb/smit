@@ -1,0 +1,9 @@
+title:        Smit Issue Tracker
+tagline:      "Smit"
+url:          http://example.com
+author:
+  name:       ""
+  email:      ""
+markdown:     rdiscount
+permalink:    pretty
+pygments:     true
