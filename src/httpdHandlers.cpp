@@ -586,8 +586,10 @@ std::list<std::list<std::string> > convertPostToTokens(std::string &postData)
         if (token != "token") continue; // ignore this
 
         if (value == "EOL") {
-            tokens.push_back(line);
-            LOG_DEBUG("convertPostToTokens: line=%s", toString(line).c_str());
+            if (! line.empty() && ! line.front().empty()) {
+                tokens.push_back(line);
+                LOG_DEBUG("convertPostToTokens: line=%s", toString(line).c_str());
+            }
             line.clear();
         } else {
             // split by \r\n if needed, and trim blanks
@@ -601,7 +603,7 @@ std::list<std::list<std::string> > convertPostToTokens(std::string &postData)
             line.push_back(value); // append the last subvalue
         }
     }
-    if (line.size() > 0) {
+    if (! line.empty() && ! line.front().empty()) {
         tokens.push_back(line);
         LOG_DEBUG("convertPostToTokens: line=%s", toString(line).c_str());
     }

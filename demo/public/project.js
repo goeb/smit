@@ -50,7 +50,7 @@ function addProperty(name, label, type, opts) {
         cell.appendChild(i);
     } else {
         var options = ['text', 'select', 'multiselect', 'selectUser'];
-        i = createSelect(options, type);
+        i = createSelect(options, type, false);
         i.name = 'token';
         i.className = "updatable";
         i.onchange = fupdateThis;

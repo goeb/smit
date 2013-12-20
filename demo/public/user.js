@@ -5,10 +5,10 @@
 function addProject(divname, selectedProject, selectedRole) {
     var div = document.getElementById(divname);
 
-    var select = createSelect(Projects, selectedProject);
+    var select = createSelect(Projects, selectedProject, true);
     select.name = 'project';
     div.appendChild(select);
-    var i = createSelect(Roles, selectedRole);
+    var i = createSelect(Roles, selectedRole, true);
     i.name = 'role';
     div.appendChild(i);
     div.appendChild(document.createElement('br'));

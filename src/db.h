@@ -66,11 +66,12 @@ struct Issue {
 };
 
 enum PropertyType { F_TEXT, F_SELECT, F_MULTISELECT, F_SELECT_USER};
-typedef struct PropertySpec {
+struct PropertySpec {
     std::string name;
+    std::string label;
     enum PropertyType type;
     std::list<std::string> selectOptions; // for F_SELECT and F_MULTISELECT only
-} FieldSpec;
+};
 
 struct PredefinedView {
     std::string name;
