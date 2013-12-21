@@ -66,6 +66,8 @@ struct Issue {
 };
 
 enum PropertyType { F_TEXT, F_SELECT, F_MULTISELECT, F_SELECT_USER};
+int strToPropertyType(const std::string &s, PropertyType &out);
+
 struct PropertySpec {
     std::string name;
     std::string label;

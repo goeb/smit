@@ -68,7 +68,9 @@ const Project &ContextParameters::getProject() const
 
 std::string enquoteJs(const std::string &in)
 {
-    std::string out = replaceAll(in, '\'', "\\'");
+    std::string out = replaceAll(in, '\\', "\\\\"); // escape backslahes
+    out = replaceAll(out, '\'', "\\'"); // escape '
+    out = replaceAll(out, '"', "\\\""); // escape "
     return out;
 }
 
@@ -834,9 +836,9 @@ void RHtml::printScriptUpdateConfig(const ContextParameters &ctx)
     std::list<std::string> reserved = ctx.getProject().getReservedProperties();
     std::list<std::string>::iterator r;
     FOREACH(r, reserved) {
-        std::string x = replaceAll(ctx.getProject().getLabelOfProperty(*r), '\'', "\\\'");
-        mg_printf(conn, "addProperty('%s', '%s', 'reserved', '');\n", r->c_str(),
-                  x.c_str());
+        std::string label = ctx.getProject().getLabelOfProperty(*r);
+        mg_printf(conn, "addProperty('%s', '%s', 'reserved', '');\n", enquoteJs(*r).c_str(),
+                  enquoteJs(label).c_str());
     }
 
     // other properties
@@ -855,12 +857,16 @@ void RHtml::printScriptUpdateConfig(const ContextParameters &ctx)
             case F_SELECT_USER: type = "selectUser"; break;
             }
 
-            std::string property = replaceAll(ctx.getProject().getLabelOfProperty(*p), '\'', "\\\'");
-            std::string value = replaceAll(toString(pspec.selectOptions, "\\n"), '\'', "\\\'");
-
+            std::string label = ctx.getProject().getLabelOfProperty(*p);
+            std::list<std::string>::const_iterator i;
+            std::string options;
+            FOREACH (i, pspec.selectOptions) {
+                if (i != pspec.selectOptions.begin()) options += "\\n";
+                options += enquoteJs(*i);
+            }
             mg_printf(conn, "addProperty('%s', '%s', '%s', '%s');\n", p->c_str(),
-                      property.c_str(),
-                      type, value.c_str());
+                      enquoteJs(label).c_str(),
+                      type, options.c_str());
         }
     }
 

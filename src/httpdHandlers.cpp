@@ -628,8 +628,65 @@ void httpPostProjectConfig(struct mg_connection *conn, Project &p, User u)
 
         postData = readMgConn(conn, 4096);
 
-        // convert the post data to tokens
-        std::list<std::list<std::string> > tokens = convertPostToTokens(postData);
+        LOG_DEBUG("postData=%s", postData.c_str());
+        // parse the posted data
+        std::string propertyName;
+        std::string type;
+        std::string label;
+        std::string selectOptions;
+        ProjectConfig pc;
+        std::list<std::list<std::string> > tokens;
+        while (1) {
+            std::string tokenPair = popToken(postData, '&');
+            std::string key = popToken(tokenPair, '=');
+            std::string value = urlDecode(tokenPair);
+
+            if (key == "propertyName" || postData.empty()) {
+                // process previous row
+                if (!propertyName.empty()) {
+
+                    if (type.empty()) {
+                        // case of reserved properties (id, ctime, mtime, etc.)
+                        if (label != propertyName) {
+                            std::list<std::string> line;
+                            line.push_back("setPropertyLabel");
+                            line.push_back(propertyName);
+                            line.push_back(label);
+                            tokens.push_back(line);
+                        }
+                    } else {
+                        // case of regular properties
+                        std::list<std::string> line;
+                        line.push_back("addProperty");
+                        line.push_back(propertyName);
+                        if (label != propertyName) {
+                            line.push_back("-label");
+                            line.push_back(label);
+                        }
+                        line.push_back(type);
+                        PropertyType ptype;
+                        int r = strToPropertyType(type, ptype);
+                        if (r == 0 && (ptype == F_SELECT || ptype == F_MULTISELECT) ) {
+                            // add options
+                            std::list<std::string> so = splitLinesAndTrimBlanks(selectOptions);
+                            line.insert(line.end(), so.begin(), so.end());
+                        }
+                        tokens.push_back(line);
+                    }
+                }
+                propertyName = value;
+                type.clear();
+                label.clear();
+                selectOptions.clear();
+            } else if (key == "type") { type = value; trimBlanks(type); }
+            else if (key == "label") { label = value; trimBlanks(label); }
+            else if (key == "selectOptions") selectOptions = value;
+            else {
+                LOG_ERROR("ProjectConfig: invalid posted parameter: '%s'", key.c_str());
+            }
+            if (postData.empty()) break; // leave the loop
+        }
+
         int r = p.modifyConfig(tokens);
         if (r == 0) {
             // success, redirect to

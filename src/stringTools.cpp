@@ -229,6 +229,29 @@ std::vector<std::string> split(const std::string &s, const char *c, int limit)
     return tokens;
 }
 
+
+std::list<std::string> splitLinesAndTrimBlanks(const std::string &s)
+{
+    std::list<std::string> lines;
+    size_t found;
+
+    int index = 0;
+    while ((found = s.find('\n', index)) != std::string::npos)
+    {
+        std::string line = s.substr(index, found-index);
+        trimBlanks(line);
+        lines.push_back(line);
+
+        index = found + 1;
+    }
+    std::string lastLine = s.substr(index);
+    trimBlanks(lastLine);
+    lines.push_back(lastLine);
+
+    return lines;
+}
+
+
 std::string join(const std::list<std::string> &items, const char *separator)
 {
     std::string out;

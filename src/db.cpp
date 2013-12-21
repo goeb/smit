@@ -371,6 +371,22 @@ int Issue::computeLatestEntry()
     return 0;
 }
 
+
+/** Convert a string to a PropertyType
+  *
+  * @return 0 on success, -1 on error
+  */
+int strToPropertyType(const std::string &s, PropertyType &out)
+{
+    if (s == "text") out = F_TEXT;
+    else if (s == "selectUser") out = F_SELECT_USER;
+    else if (s == "select") out = F_SELECT;
+    else if (s == "multiselect") out = F_MULTISELECT;
+    else return -1; // error
+
+    return 0; // ok
+}
+
 PropertySpec parsePropertySpec(std::list<std::string> & tokens)
 {
     // Supported syntax:
@@ -414,11 +430,8 @@ PropertySpec parsePropertySpec(std::list<std::string> & tokens)
 
     std::string type = tokens.front();
     tokens.pop_front();
-    if (0 == type.compare("text")) property.type = F_TEXT;
-    else if (0 == type.compare("selectUser")) property.type = F_SELECT_USER;
-    else if (0 == type.compare("select")) property.type = F_SELECT;
-    else if (0 == type.compare("multiselect")) property.type = F_MULTISELECT;
-    else { // error, unknown type
+    int r = strToPropertyType(type, property.type);
+    if (r < 0) { // error, unknown type
         LOG_ERROR("Unkown property type '%s'", type.c_str());
         property.name.clear();
         return property; // error, indicated to caller by empty name of property
@@ -437,7 +450,6 @@ PropertySpec parsePropertySpec(std::list<std::string> & tokens)
 
 /** Return a configuration object from a list of lines of tokens
   * The 'lines' parameter is modified and cleaned up of incorrect lines
-  * (suitable for subsequent searialisation to project file).
   */
 ProjectConfig parseProjectConfig(std::list<std::list<std::string> > &lines)
 {
