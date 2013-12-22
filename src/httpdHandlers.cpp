@@ -558,6 +558,18 @@ std::map<std::string, std::list<std::string> > parseFilter(const std::list<std::
 
     return result;
 }
+
+void httpGetNewProject(struct mg_connection *conn, User u)
+{
+    if (! u.superadmin) return sendHttpHeader403(conn);
+
+    Project p;
+    sendHttpHeader200(conn);
+    ContextParameters ctx = ContextParameters(conn, u, p);
+    RHtml::printProjectConfig(ctx);
+}
+
+
 void httpGetProjectConfig(struct mg_connection *conn, Project &p, User u)
 {
     if (u.getRole(p.getName()) != ROLE_ADMIN) return sendHttpHeader403(conn);
@@ -1347,6 +1359,7 @@ int begin_request_handler(struct mg_connection *conn)
     else if ( (resource == "") && (method == "POST") ) httpPostRoot(conn, user);
     else if ( (resource == "users") && (method == "GET") ) httpGetUsers(conn, user, uri);
     else if ( (resource == "users") && (method == "POST") ) httpPostUsers(conn, user, uri);
+    else if (resource == "_") httpGetNewProject(conn, user);
     else {
         // check if it is a valid project resource such as /myp/issues, /myp/users, /myp/config
         std::string projectUrl = resource;
