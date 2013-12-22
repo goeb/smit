@@ -213,14 +213,6 @@ void UserBase::addUserInArray(User newUser)
     if (uit != UserDb.configuredUsers.end()) delete uit->second;
 
     UserDb.configuredUsers[u->username] = u;
-
-    // add in table usersByProject
-
-    // fill the usersByProject table
-    std::map<std::string, enum Role>::iterator r;
-    FOREACH(r, newUser.rolesOnProjects) {
-        UserDb.usersByProject[r->first].insert(newUser.username);
-    }
 }
 
 /** Add a new user in database and store it.
@@ -240,11 +232,15 @@ std::set<std::string> UserBase::getUsersOfProject(const std::string &project)
 {
     ScopeLocker(UserDb.locker, LOCK_READ_ONLY);
 
-    std::map<std::string, std::set<std::string> >::iterator users;
-    users = UserDb.usersByProject.find(project);
-    if (users == UserDb.usersByProject.end()) return std::set<std::string>();
-    else return users->second;
+    std::set<std::string> result;
+    std::map<std::string, User*>::const_iterator u;
+    FOREACH(u, UserDb.configuredUsers) {
+        User *user = u->second;
+        if (user->getRole(project) != ROLE_NONE) result.insert(u->first);
     }
+
+    return result;
+}
 
 /** Get the list of users that are at stake in the given project
   */

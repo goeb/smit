@@ -56,7 +56,6 @@ public:
 private:
     static UserBase UserDb;
     std::map<std::string, User*> configuredUsers;
-    std::map<std::string, std::set<std::string> > usersByProject; // for each project, indicate which users are at stake
     Locker locker;
     static std::string Repository;
     static void addUserInArray(User u);
