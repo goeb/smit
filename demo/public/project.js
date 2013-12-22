@@ -114,3 +114,9 @@ function replaceContentInContainer() {
                 }
     }
 }
+function setProjectName(value) {
+    var iname = 'projectName';
+    var input = document.getElementById(iname);
+    input.value = value;
+}
+

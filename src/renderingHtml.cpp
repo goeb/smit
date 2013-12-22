@@ -192,7 +192,8 @@ public:
             if (varname.empty()) break;
 
             if (varname == K_SM_HTML_PROJECT_NAME && ctx.project) {
-                mg_printf(ctx.conn, "%s", htmlEscape(ctx.project->getName()).c_str());
+                if (ctx.project->getName().empty()) mg_printf(ctx.conn, "(new)");
+                else mg_printf(ctx.conn, "%s", htmlEscape(ctx.project->getName()).c_str());
 
             } else if (varname == K_SM_URL_PROJECT_NAME && ctx.project) {
                     mg_printf(ctx.conn, "%s", ctx.project->getUrlName().c_str());
@@ -201,7 +202,8 @@ public:
                 RHtml::printNavigationGlobal(ctx);
 
             } else if (varname == K_SM_DIV_NAVIGATION_ISSUES && ctx.project) {
-                RHtml::printNavigationIssues(ctx, false);
+                // do not print this in case a a new project
+                if (! ctx.project->getName().empty()) RHtml::printNavigationIssues(ctx, false);
 
             } else if (varname == K_SM_DIV_PROJECTS && projectList) {
                 RHtml::printProjects(ctx.conn, *projectList, userRolesByProject);
@@ -884,6 +886,14 @@ void RHtml::printProjectConfig(const ContextParameters &ctx)
 {
     VariableNavigator vn("project.html", ctx);
     vn.printPage();
+
+    if (!ctx.user.superadmin) {
+        // hide what is reserved to superadmin
+        mg_printf(ctx.conn, "<script>hideSuperadminZone();</script>\n");
+    } else {
+        if (ctx.project) mg_printf(ctx.conn, "setProjectName('%s');\n", enquoteJs(ctx.project->getName()).c_str());
+    }
+
 }
 
 /** Get the property name that will be used for gouping

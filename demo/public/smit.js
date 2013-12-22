@@ -66,3 +66,9 @@ function createSelect(items, selected, allowVoid) {
     return select;
 }
 
+function hideSuperadminZone() {
+    var divs = document.getElementsByClassName('sm_user_superadmin_zone');
+    for(var i=0; i<divs.length; i++) {
+          divs[i].style.display='none';
+    }
+}
