@@ -74,7 +74,7 @@ int dbLoad(const char * pathToRepository)
             std::string pathToProject = pathToRepository;
             pathToProject += '/';
             pathToProject += dp->d_name;
-            Project::load(pathToProject.c_str(), dp->d_name);
+            Database::loadProject(pathToProject.c_str());
         }
         closedir(dirp);
     }
@@ -105,12 +105,13 @@ std::string Issue::getSummary() const
   *     url-decoding, so that a double url-encoding would not be enough.
   */
 
-int Project::load(const char *path, char *basename)
+Project *Project::load(const char *path)
 {
     Project *p = new Project;
     LOG_DEBUG("Loading project %s (%p)...", path, p);
 
-    p->name = urlNameDecode(basename);
+    std::string bname = getBasename(path);
+    p->name = urlNameDecode(bname);
     LOG_DEBUG("Project name: '%s'", p->name.c_str());
 
     p->path = path;
@@ -120,7 +121,7 @@ int Project::load(const char *path, char *basename)
     if (r == -1) {
         delete p;
         LOG_DEBUG("Project '%s' not loaded because of errors while reading the config.", path);
-        return -1;
+        return 0;
     }
 
     p->loadPredefinedViews(path);
@@ -129,15 +130,13 @@ int Project::load(const char *path, char *basename)
     if (r == -1) {
         LOG_ERROR("Project '%s' not loaded because of errors while reading the entries.", path);
         delete p;
-        return -1;
+        return 0;
     }
     LOG_INFO("Project %s loaded.", path);
 
     p->consolidateIssues();
 
-    // store the project in memory
-    Database::Db.projects[p->name] = p;
-    return 0;
+    return p;
 }
 
 Entry *loadEntry(std::string dir, const char* basename)
@@ -588,6 +587,8 @@ int Project::loadConfig(const char *path)
     return 0;
 }
 
+
+
 int Project::modifyConfig(std::list<std::list<std::string> > &tokens)
 {
     LOG_FUNC();
@@ -595,11 +596,13 @@ int Project::modifyConfig(std::list<std::list<std::string> > &tokens)
 
     // verify the syntax of the tokens
     ProjectConfig c = parseProjectConfig(tokens);
+#if 0
     if (c.properties.empty()) {
         // error do not accept this
         LOG_INFO("Reject modification of project structure as there is no property at all");
         return -1;
     }
+#endif
     c.predefinedViews = config.predefinedViews; // keep those unchanged
 
     // add version
@@ -728,9 +731,15 @@ PredefinedView Project::getDefaultView()
 
 /** Create the directory and files for a new project
   */
-int Project::createProject(const char *repositoryPath, const char *projectName)
+int Project::createProjectFiles(const char *repositoryPath, const char *projectName, std::string &resultingPath)
 {
-    std::string path = std::string(repositoryPath) + "/" + urlEncode(projectName);
+    if (! projectName || strlen(projectName) == 0) {
+        LOG_ERROR("Cannot create project with empty name");
+        return -1;
+    }
+
+    resultingPath = std::string(repositoryPath) + "/" + Project::urlNameEncode(projectName);
+    std::string path = resultingPath;
     int r = mg_mkdir(path.c_str(), S_IRUSR | S_IXUSR | S_IWUSR);
     if (r != 0) {
         LOG_ERROR("Could not create directory '%s': %s", path.c_str(), strerror(errno));
@@ -1431,6 +1440,29 @@ std::string Entry::serialize()
 }
 
 
+Project *Database::createProject(const std::string &name)
+{
+    std::string resultingPath;
+    int r = Project::createProjectFiles(Db.getRootDir().c_str(), name.c_str(), resultingPath);
+    if (r != 0) return 0;
+
+    Project *p = loadProject(resultingPath.c_str());
+    return p;
+}
+
+Project *Database::loadProject(const char *path)
+{
+    Project *p = Project::load(path);
+    if (!p) return 0;
+
+    {
+        ScopeLocker scopeLocker(Db.locker, LOCK_READ_WRITE);
+        // store the project in memory
+        Db.projects[p->getName()] = p;
+    }
+    return p;
+}
+
 
 Project *Database::getProject(const std::string & projectName)
 {
@@ -1441,6 +1473,7 @@ Project *Database::getProject(const std::string & projectName)
 
 std::list<std::string> Database::getProjects()
 {
+    ScopeLocker scopeLocker(Db.locker, LOCK_READ_ONLY);
     std::list<std::string> result;
     std::map<std::string, Project*>::iterator p;
     FOREACH(p, Database::Db.projects) {

@@ -9,6 +9,7 @@ addUser alice sha1 522b276a356bdf39013dfabea2cd43e141ecc9e8 \
 
 addUser fred superadmin \
 sha1 31017a722665e4afce586950f42944a6d331dabf \
+    project "M03345-Phase1 - pilote/3" admin \
     project myproject admin \
     project myproject/yoyo admin \
     project smit admin \

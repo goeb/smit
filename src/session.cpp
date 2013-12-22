@@ -125,8 +125,9 @@ int UserBase::load(const char *path)
                 continue;
             }
 
-            bool error = false;
             while (! line->empty()) {
+                bool error = false;
+
                 std::string token = popListToken(*line);
                 if (token == "project") {
                     // get project name and access right
@@ -134,22 +135,19 @@ int UserBase::load(const char *path)
                     std::string role = popListToken(*line);
                     if (project.empty() || role.empty()) {
                         LOG_ERROR("Incomplete project access %s/%s", project.c_str(), role.c_str());
-                        error = true;
-                        break; // abort line
+                        continue;
                     }
                     // check if project exists
                     Project *p = Database::getProject(project);
                     if (!p) {
                         LOG_ERROR("Invalid project name '%s' for user %s", project.c_str(), u.username.c_str());
-                        error = true;
-                        break; // abort line
+                        continue;
                     }
 
                     Role r = stringToRole(role);
                     if (r == ROLE_NONE) {
                         LOG_ERROR("Invalid role '%s'", role.c_str());
-                        error = true;
-                        break; // abort line
+                        continue;
                     }
                     u.rolesOnProjects[project] = r;
 
@@ -157,18 +155,15 @@ int UserBase::load(const char *path)
                     std::string hash = popListToken(*line);
                     if (hash.empty()) {
                         LOG_ERROR("Empty hash");
-                        error = true;
-                        break; // abort line
+                        continue;
                     }
                     u.hashType = token;
                     u.hashValue = hash;
                 } else if (token == "superadmin") u.superadmin = true;
             }
-            if (!error) {
-                // add user in database
-                LOG_DEBUG("Loaded user: %s on %d projects", u.username.c_str(), u.rolesOnProjects.size());
-                UserBase::addUserInArray(u);
-            }
+            // add user in database
+            LOG_DEBUG("Loaded user: %s on %d projects", u.username.c_str(), u.rolesOnProjects.size());
+            UserBase::addUserInArray(u);
         }
     }
     return 0;
@@ -331,6 +326,7 @@ enum Role User::getRole(const std::string &project)
 }
 
 /** Get the projects where the user has access (read or write)
+  * List of pairs (project, role)
   */
 std::list<std::pair<std::string, std::string> > User::getProjects()
 {

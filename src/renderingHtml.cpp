@@ -206,7 +206,7 @@ public:
                 if (! ctx.project->getName().empty()) RHtml::printNavigationIssues(ctx, false);
 
             } else if (varname == K_SM_DIV_PROJECTS && projectList) {
-                RHtml::printProjects(ctx.conn, *projectList, userRolesByProject);
+                RHtml::printProjects(ctx, *projectList, userRolesByProject);
 
             } else if (varname == K_SM_DIV_USERS && usersList) {
                 RHtml::printUsers(ctx.conn, *usersList);
@@ -645,10 +645,12 @@ void RHtml::printNavigationIssues(const ContextParameters &ctx, bool autofocus)
 }
 
 
-void RHtml::printProjects(struct mg_connection *conn,
+void RHtml::printProjects(const ContextParameters &ctx,
                           const std::list<std::pair<std::string, std::string> > &pList,
                           const std::map<std::string, std::map<std::string, Role> > *userRolesByProject)
 {
+    struct mg_connection *conn = ctx.conn;
+
     std::list<std::pair<std::string, std::string> >::const_iterator p;
     mg_printf(conn, "<table class=\"sm_projects\">\n");
     mg_printf(conn, "<tr class=\"sm_projects\"><th class=\"sm_projects\">%s</th>"
@@ -678,6 +680,7 @@ void RHtml::printProjects(struct mg_connection *conn,
         mg_printf(conn, "</tr>\n");
     }
     mg_printf(conn, "</table>\n");
+    if (ctx.user.superadmin) mg_printf(conn, "<a href=\"/_\">%s<a><br>",  htmlEscape(_("New Project")).c_str());
 }
 
 void RHtml::printUsers(struct mg_connection *conn, const std::list<User> &usersList)
@@ -887,12 +890,14 @@ void RHtml::printProjectConfig(const ContextParameters &ctx)
     VariableNavigator vn("project.html", ctx);
     vn.printPage();
 
+    mg_printf(ctx.conn, "<script>");
     if (!ctx.user.superadmin) {
         // hide what is reserved to superadmin
-        mg_printf(ctx.conn, "<script>hideSuperadminZone();</script>\n");
+        mg_printf(ctx.conn, "hideSuperadminZone();\n");
     } else {
         if (ctx.project) mg_printf(ctx.conn, "setProjectName('%s');\n", enquoteJs(ctx.project->getName()).c_str());
     }
+    mg_printf(ctx.conn, "</script>");
 
 }
 

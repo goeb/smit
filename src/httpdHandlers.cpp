@@ -37,7 +37,7 @@
 #include "global.h"
 #include "mg_win32.h"
 
-// static members
+#define K_ME "me"
 
 std::string readMgConn(struct mg_connection *conn, size_t maxSize)
 {
@@ -508,7 +508,17 @@ void httpGetRoot(struct mg_connection *conn, User u)
     sendHttpHeader200(conn);
     // print list of available projects
     std::list<std::pair<std::string, Role> > usersRoles;
-    std::list<std::pair<std::string, std::string> > pList = u.getProjects();
+    std::list<std::pair<std::string, std::string> > pList;
+    if (!u.superadmin) pList = u.getProjects();
+    else {
+        // for a superadmin, get the list of all the projects
+        std::list<std::string> allProjects = Database::getProjects();
+        std::list<std::string>::iterator p;
+        FOREACH(p, allProjects) {
+            Role r = u.getRole(*p);
+            pList.push_back(std::make_pair(*p ,roleToString(r)));
+        }
+    }
 
     enum RenderingFormat format = getFormat(conn);
 
@@ -572,7 +582,7 @@ void httpGetNewProject(struct mg_connection *conn, User u)
 
 void httpGetProjectConfig(struct mg_connection *conn, Project &p, User u)
 {
-    if (u.getRole(p.getName()) != ROLE_ADMIN) return sendHttpHeader403(conn);
+    if (u.getRole(p.getName()) != ROLE_ADMIN && ! u.superadmin) return sendHttpHeader403(conn);
 
     sendHttpHeader200(conn);
     ContextParameters ctx = ContextParameters(conn, u, p);
@@ -625,7 +635,7 @@ std::list<std::list<std::string> > convertPostToTokens(std::string &postData)
 void httpPostProjectConfig(struct mg_connection *conn, Project &p, User u)
 {
     enum Role r = u.getRole(p.getName());
-    if (r != ROLE_ADMIN) {
+    if (r != ROLE_ADMIN && ! u.superadmin) {
         sendHttpHeader403(conn);
         return;
     }
@@ -646,6 +656,7 @@ void httpPostProjectConfig(struct mg_connection *conn, Project &p, User u)
         std::string type;
         std::string label;
         std::string selectOptions;
+        std::string projectName;
         ProjectConfig pc;
         std::list<std::list<std::string> > tokens;
         while (1) {
@@ -653,7 +664,10 @@ void httpPostProjectConfig(struct mg_connection *conn, Project &p, User u)
             std::string key = popToken(tokenPair, '=');
             std::string value = urlDecode(tokenPair);
 
-            if (key == "propertyName" || postData.empty()) {
+            if (key == "projectName") {
+                projectName = value;
+
+            } else if (key == "propertyName" || postData.empty()) {
                 // process previous row
                 if (!propertyName.empty()) {
 
@@ -699,7 +713,24 @@ void httpPostProjectConfig(struct mg_connection *conn, Project &p, User u)
             if (postData.empty()) break; // leave the loop
         }
 
-        int r = p.modifyConfig(tokens);
+        int r ;
+        if (p.getName().empty()) {
+            if (!u.superadmin) return sendHttpHeader403(conn);
+            if (projectName.empty()) return sendHttpHeader400(conn, "Empty project name");
+
+            // request for creation of a new project
+            Project *newProject = Database::createProject(projectName);
+            if (!newProject) return sendHttpHeader500(conn, "Cannot create project");
+
+            p = *newProject;
+
+        } else if (p.getName() != projectName) {
+                LOG_INFO("Renaming an existing project not supported at the moment (%s -> %s)",
+                         p.getName().c_str(), projectName.c_str());
+        }
+
+        r = p.modifyConfig(tokens);
+
         if (r == 0) {
             // success, redirect to
             std::string redirectUrl = "/" + p.getUrlName() + "/config";
@@ -712,7 +743,15 @@ void httpPostProjectConfig(struct mg_connection *conn, Project &p, User u)
     }
 }
 
-#define K_ME "me"
+void httpPostNewProject(struct mg_connection *conn, User u)
+{
+    if (! u.superadmin) return sendHttpHeader403(conn);
+
+    Project p;
+    return httpPostProjectConfig(conn, p, u);
+}
+
+
 void replaceUserMe(std::map<std::string, std::list<std::string> > &filters, const Project &p, const std::string &username)
 {
     ProjectConfig pconfig = p.getConfig();
@@ -1359,7 +1398,8 @@ int begin_request_handler(struct mg_connection *conn)
     else if ( (resource == "") && (method == "POST") ) httpPostRoot(conn, user);
     else if ( (resource == "users") && (method == "GET") ) httpGetUsers(conn, user, uri);
     else if ( (resource == "users") && (method == "POST") ) httpPostUsers(conn, user, uri);
-    else if (resource == "_") httpGetNewProject(conn, user);
+    else if ( (resource == "_") && (method == "GET") ) httpGetNewProject(conn, user);
+    else if ( (resource == "_") && (method == "POST") ) httpPostNewProject(conn, user);
     else {
         // check if it is a valid project resource such as /myp/issues, /myp/users, /myp/config
         std::string projectUrl = resource;

@@ -60,9 +60,6 @@ struct Issue {
     void consolidate();
     void consolidateIssueWithSingleEntry(Entry *e, bool overwrite);
     bool searchFullText(const char *text) const;
-
-
-
 };
 
 enum PropertyType { F_TEXT, F_SELECT, F_MULTISELECT, F_SELECT_USER};
@@ -101,15 +98,13 @@ struct ProjectConfig {
 
 };
 
-
-
-
 class Project {
 public:
-    static int load(const char *path, char *basename); // load a project
     int loadConfig(const char *path);
     int loadEntries(const char *path);
     void loadPredefinedViews(const char *path);
+    static Project *load(const char *path); // load a project
+
 
     void consolidateIssues();
     std::vector<Issue*> search(const char *fulltextSearch,
@@ -132,11 +127,12 @@ public:
     std::list<std::string> getReservedProperties() const;
     std::list<std::string> getPropertiesNames() const;
     int modifyConfig(std::list<std::list<std::string> > &tokens);
+    int createProject(std::string name, std::list<std::list<std::string> > &tokens);
     PredefinedView getPredefinedView(const std::string &name);
     int setPredefinedView(const std::string &name, const PredefinedView &pv);
     int deletePredefinedView(const std::string &name);
     PredefinedView getDefaultView();
-    static int createProject(const char *repositoryPath, const char *projectName);
+    static int createProjectFiles(const char *repositoryPath, const char *projectName, std::string &resultingPath);
 
 private:
     void consolidateIssue(Issue *i);
@@ -160,6 +156,11 @@ public:
     std::string pathToRepository;
     inline static std::string getRootDir() { return Db.pathToRepository; }
     static std::list<std::string> getProjects();
+    static Project *loadProject(const char *path); // load a project
+    static Project *createProject(const std::string &projectName);
+
+private:
+    Locker locker;
 };
 
 

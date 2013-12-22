@@ -128,8 +128,10 @@ int addProject(int argc, const char **args)
 
     if (!projectName) usage();
 
-    int r = Project::createProject(repo, projectName);
+    std::string resultingPath;
+    int r = Project::createProjectFiles(repo, projectName, resultingPath);
     if (r < 0) return 1;
+    LOG_INFO("Project created: %s", resultingPath.c_str());
     return 0;
 }
 

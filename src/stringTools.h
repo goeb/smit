@@ -23,6 +23,7 @@ std::vector<std::string> split(const std::string &s, const char *c, int limit = 
 std::list<std::string> splitLinesAndTrimBlanks(const std::string &s);
 
 std::string join(const std::list<std::string> &items, const char *separator);
+std::string getBasename(const std::string &path);
 
 
 #endif
