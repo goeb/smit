@@ -1421,7 +1421,7 @@ int begin_request_handler(struct mg_connection *conn)
 
         // check if user has at lest read access
         enum Role r = user.getRole(project);
-        if (r != ROLE_ADMIN && r != ROLE_RW && r != ROLE_RO) {
+        if (r != ROLE_ADMIN && r != ROLE_RW && r != ROLE_RO && ! user.superadmin) {
             // no access granted for this user to this project
             handleUnauthorizedAccess(conn, resource);
 

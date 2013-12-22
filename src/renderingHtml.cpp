@@ -328,7 +328,7 @@ void RHtml::printPageView(const ContextParameters &ctx, const PredefinedView &pv
     // add javascript for updating the inputs
     mg_printf(conn, "<script>\n");
 
-    if (ctx.userRole != ROLE_ADMIN) {
+    if (ctx.userRole != ROLE_ADMIN && !ctx.user.superadmin) {
         // hide what is reserved to admin
         mg_printf(conn, "hideAdminZone();\n");
     } else {
@@ -541,7 +541,7 @@ void RHtml::printNavigationGlobal(const ContextParameters &ctx)
     linkToProjects.addContents("%s", _("All projects"));
     div.addContents(linkToProjects);
 
-    if (ctx.userRole == ROLE_ADMIN) {
+    if (ctx.project && (ctx.userRole == ROLE_ADMIN || ctx.user.superadmin) ) {
         // link for modifying project structure
         HtmlNode linkToModify("a");
         linkToModify.addAttribute("class", "sm_link_modify_project");
@@ -600,7 +600,7 @@ void RHtml::printNavigationIssues(const ContextParameters &ctx, bool autofocus)
 
     HtmlNode div("div");
     div.addAttribute("class", "sm_navigation_project");
-    if (ctx.userRole == ROLE_ADMIN || ctx.userRole == ROLE_RW) {
+    if (ctx.userRole == ROLE_ADMIN || ctx.userRole == ROLE_RW || ctx.user.superadmin) {
         HtmlNode a("a");
         a.addAttribute("href", "/%s/issues/new", ctx.project->getUrlName().c_str());
         a.addAttribute("class", "sm_link_new_issue");
