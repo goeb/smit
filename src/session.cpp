@@ -126,8 +126,6 @@ int UserBase::load(const char *path)
             }
 
             while (! line->empty()) {
-                bool error = false;
-
                 std::string token = popListToken(*line);
                 if (token == "project") {
                     // get project name and access right

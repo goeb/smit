@@ -123,6 +123,7 @@ public:
     inline static std::string urlNameDecode(const std::string &name) { return urlDecode(name, false, '='); }
     inline std::string getPath() const { return path; }
     inline ProjectConfig getConfig() const { return config; }
+    inline void setConfig(ProjectConfig pconfig) { config = pconfig; }
     int deleteEntry(const std::string &issueId, const std::string &entryId, const std::string &username);
     std::list<std::string> getReservedProperties() const;
     std::list<std::string> getPropertiesNames() const;

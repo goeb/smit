@@ -574,6 +574,20 @@ void httpGetNewProject(struct mg_connection *conn, User u)
     if (! u.superadmin) return sendHttpHeader403(conn);
 
     Project p;
+    // add by default 2 properties : status (open, closed) and owner (selectUser)
+    PropertySpec pspec;
+    ProjectConfig pconfig;
+    pspec.name = "status";
+    pspec.type = F_SELECT;
+    pspec.selectOptions.push_back("open");
+    pspec.selectOptions.push_back("closed");
+    pconfig.properties[pspec.name] = pspec;
+    pspec.name = "owner";
+    pspec.type = F_SELECT_USER;
+    pconfig.properties[pspec.name] = pspec;
+    pconfig.orderedProperties.push_back("status");
+    pconfig.orderedProperties.push_back("owner");
+    p.setConfig(pconfig);
     sendHttpHeader200(conn);
     ContextParameters ctx = ContextParameters(conn, u, p);
     RHtml::printProjectConfig(ctx);
