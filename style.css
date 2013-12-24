@@ -16,30 +16,54 @@ a[href]:hover {
   text-decoration: underline;
 }
 
-hr {
-    clear: both;
-    border: 1;
-    color: #ccc;
-}
 
 .menu {
     float: left;
-    width: 200px;
-    margin: 1em;
+    margin: 0;
+    padding: 0;
+    width: 218px;
 }
 .menu li {
     list-style: none outside none;
-    padding-left: 1em;
-    padding-right: 1em;
+    padding: 0;
+}
+.menu ul {
+    padding: 0;
 }
 .contents {
+    margin: 0;
+    margin-bottom: 1em;
     float: right;
-    width: 70%;
     background-color: white;
     border: solid 1px #ccc;
     padding: 2em;
-    margin: 1em;
+    width: 660px;
 }
-li.current_page {
-    background-color: #bbb;
+li.active {
+    color: #4E443C;
+}
+.header {
+    padding-top: 15px;
+    margin: 0 auto;
+    width: 940px;
+}
+.header_text {
+    padding-left: 1em;
+    font-size: 150%;
+}
+div.header img {
+    vertical-align: middle;
+}
+.page {
+    margin: 0 auto;
+    width: 940px;
+}
+.footer {
+    margin 1em;
+    padding: 1em;
+    clear: both;
+}
+.footer {
+    margin-top: 1em;
+    border-top: 1px solid #ddd;
 }

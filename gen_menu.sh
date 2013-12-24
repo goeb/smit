@@ -29,7 +29,7 @@ generate_menu() {
     currentFile="$1"
     shift
 
-    echo "<div class='menu'>"
+    echo "<aside class='menu'>"
     echo "<ul>"
     while [ "$1" != "" ]; do
         file="$1"
@@ -39,7 +39,7 @@ generate_menu() {
         TITLE=`get_title "$file"`
         htmlfile=`echo $file | sed -e "s/\.md$/.html/"`
         if [ "$file" = "$currentFile" ]; then
-            echo "<li class='current_page'>$TITLE</li>"
+            echo "<li class='active'>$TITLE</li>"
         else
             echo "<li><a href='$htmlfile'>$TITLE</a></li>"
         fi
@@ -47,7 +47,7 @@ generate_menu() {
     done
 
     echo "</ul>"
-    echo "</div>"
+    echo "</aside>"
 }
 
 # main ##################
@@ -72,5 +72,10 @@ TITLE=`grep -m 1 "^#" "$PAGE" | pandoc | grep "^<h1" | sed -e "s;</h1>;;" -e "s;
 sed -e "s;__TITLE__;$TITLE;g" < "$HEADER"
 
 generate_menu "$PAGE" $@
+
+# generate contents
+echo "<div class='contents'>"
+pandoc < $PAGE
+echo "</div>"
 
 cat "$FOOTER"

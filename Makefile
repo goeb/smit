@@ -8,7 +8,7 @@ BUILD_DIR=.
 
 HTMLS = $(SRCS:%.md=%.html)
 
-DEPENDS = header.html footer.html
+DEPENDS = header.html footer.html gen_menu.sh
 
 all: $(HTMLS)
 
