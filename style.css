@@ -22,6 +22,7 @@ a[href]:hover {
     margin: 0;
     padding: 0;
     width: 208px;
+    font-size: medium;
 }
 .menu li {
     list-style: none outside none;
@@ -72,12 +73,15 @@ pre code {
     display: block;
     border-top: 1px solid #ccc;
     border-bottom: 1px solid #ccc;
+    border-right: 0;
+    border-left: 0;
+    border-radius: 0;
 }
 .tag, code {
     background-color: #ccc;
     border: 1px solid #bbb;
     padding: 0.1em 0.2em 0.1em 0.2em; /* top right bottom left */
-    border-radius: 10px;
+    border-radius: 5px;
 }
 
 
