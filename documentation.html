@@ -1,0 +1,101 @@
+
+<html>
+    <head>
+        <title>Documentation</title>
+        <link rel="stylesheet" type="text/css" href="style.css">
+        <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/>
+    </head>
+
+    <body>
+        <div class="header">
+            <img src="logo.png" alt="Logo" width="150">
+            <span class="header_text">The Small Issue Tracker</span>
+        </div>
+        <div class="page">
+<aside class='menu'>
+<ul>
+<li><a href='index.html'>Overview</a></li>
+<li><a href='getting_started.html'>Getting Started</a></li>
+<li class='active'>Documentation</li>
+<li><a href='downloads.html'>Downloads</a></li>
+</ul>
+</aside>
+<div class='contents'>
+<h1 id="documentation">Documentation</h1>
+<h2 id="create-a-new-repository-and-a-new-project">Create a new repository and a new project</h2>
+<pre><code>mkdir myrepo
+smit init myrepo
+smit addproject -d myrepo myproject1
+smit adduser homer -d myrepo --passwd homer --project myproject1 admin
+smit serve myrepo --listen-port 9090</code></pre>
+<p>And with your browser, go to: <a href="http://localhost:9090">http://localhost:9090</a></p>
+<h2 id="customize-the-html-pages">Customize the HTML pages</h2>
+<p>Feel free to customize the HTM and CSS. These files are in <code>$REPO/public</code>:</p>
+<pre><code>public/newIssue.html
+public/view.html
+public/project.html
+public/issues.html
+public/issue.html
+public/views.html
+public/projects.html
+public/signin.html
+public/style.css</code></pre>
+<h2 id="the-sm-variables">The SM variables</h2>
+<p>In order to let a maximum customization freedom, Smit let the user define the global structure of the HTML pages, and inserts the dynamic contents at users's defined places, indicated by SM variables:</p>
+<pre><code>SM_DIV_NAVIGATION_GLOBAL
+SM_DIV_NAVIGATION_ISSUES
+SM_URL_PROJECT_NAME
+SM_HTML_PROJECT_NAME
+SM_RAW_ISSUE_ID
+SM_SCRIPT_PROJECT_CONFIG_UPDATE
+SM_DIV_PREDEFINED_VIEWS
+SM_DIV_PROJECTS
+SM_DIV_USERS
+SM_DIV_ISSUES
+SM_DIV_ISSUE_SUMMARY
+SM_DIV_ISSUE
+SM_DIV_ISSUE_FORM</code></pre>
+<p>Some variables make sense only in some particular context. For instance, SM_RAW_ISSUE_ID makes sense only when a single issue is displayed.</p>
+<h3 id="how-to-set-a-logo">How to set a logo?</h3>
+<ul>
+<li>Copy your logo image in <code>$REPO/public</code> (eg: <code>logo.png</code>)</li>
+<li><p>Refer this image in the HTML pages</p>
+<p>&lt;img src=&quot;/public/logo.png&quot; alt=&quot;logo&quot;&gt;</p></li>
+</ul>
+<h3 id="why-cannot-i-create-a-project-named-public">Why cannot I create a project named 'public'?</h3>
+<p>'public' is reserved for holding HTML pages that are public, such as the signin page.</p>
+<p>The reserve keywords that cannot be used as project names are:</p>
+<pre><code>public
+users</code></pre>
+<h3 id="how-to-set-up-different-pages-for-two-projects">How to set up different pages for two projects?</h3>
+<p>HTML pages are first looked after in <code>$REPO/&lt;project&gt;/html/.</code> and, if not present, Smit looks in the <code>$REPO/public</code> directory.</p>
+<p>So, for example, if you want to customize the 'issues' page for a project:</p>
+<ul>
+<li>copy <code>$REPO/public/issues.html</code> to <code>$REPO/&lt;project&gt;/html/issues.html</code></li>
+<li>edit <code>$REPO/&lt;project&gt;/html/issues.html</code> to suit your needs</li>
+<li>restart Smit</li>
+</ul>
+<h2 id="rest-api">REST API</h2>
+<p>The requests are driven by the Query String:</p>
+<p>Examples:</p>
+<ul>
+<li><p><code>colspec=status+release+assignee</code></p>
+<p>The properties specified by colspec shall be displayed in the table.</p></li>
+<li><p><code>sort=aaa-bbb+ccc</code></p>
+<p>The specified properties shall drive the sorting order (+ for ascending order, and - for descending order).</p></li>
+<li><p><code>search=hello world</code></p>
+<p>Full text search on all properties and messages.</p></li>
+<li><p><code>filterin=status:open&amp;filterin=assignee:John Smith&amp;filterout=release:undefined</code></p>
+<p>'filterin' and 'filterout' may be specified several times on the query string.</p></li>
+<li><p><code>format= text | html | csv</code></p>
+<p>The default format is HTML.</p></li>
+<li><p><code>full=1</code></p>
+<p>This makes sense only for the <code>issues</code> pages, and makes the page display all issues and their contents on the page.</p></li>
+</ul>
+</div>
+        </div> <!-- div class page -->
+        <div class="footer">
+
+        </div>
+    </body>
+</html>
