@@ -4,7 +4,7 @@ body {
     background-color: #eeeee6;
     margin-top: 0;
     font-family: Verdana,sans-serif;
-    font-size: small;
+    font-size: medium;
     vertical-align: top;
 }
 a[href], a[href]:link {
@@ -21,7 +21,7 @@ a[href]:hover {
     float: left;
     margin: 0;
     padding: 0;
-    width: 218px;
+    width: 208px;
 }
 .menu li {
     list-style: none outside none;
@@ -67,3 +67,17 @@ div.header img {
     margin-top: 1em;
     border-top: 1px solid #ddd;
 }
+pre code {
+    background-color: #EEFFCC;
+    display: block;
+    border-top: 1px solid #ccc;
+    border-bottom: 1px solid #ccc;
+}
+.tag, code {
+    background-color: #ccc;
+    border: 1px solid #bbb;
+    padding: 0.1em 0.2em 0.1em 0.2em; /* top right bottom left */
+    border-radius: 10px;
+}
+
+

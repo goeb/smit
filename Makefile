@@ -1,7 +1,8 @@
 # Generate HTML pages with a menu
 
-SRCS += about.md
 SRCS += index.md
+SRCS += getting_started.md
+SRCS += documentation.md
 SRCS += downloads.md
 
 BUILD_DIR=.
