@@ -24,7 +24,11 @@ get_title() {
     printf "$TITLE"
 }
 
+# generate_menu current-page all-pages ...
 generate_menu() {
+    currentFile="$1"
+    shift
+
     echo "<div class='menu'>"
     echo "<ul>"
     while [ "$1" != "" ]; do
@@ -33,7 +37,12 @@ generate_menu() {
         # get the title from the first # mark in the file
 
         TITLE=`get_title "$file"`
-        echo "<li>$TITLE</li>"
+        htmlfile=`echo $file | sed -e "s/\.md$/.html/"`
+        if [ "$file" = "$currentFile" ]; then
+            echo "<li class='current_page'>$TITLE</li>"
+        else
+            echo "<li><a href='$htmlfile'>$TITLE</a></li>"
+        fi
         shift
     done
 
@@ -57,6 +66,11 @@ if [ -z "$HEADER" ]; then usage; fi
 if [ -z "$FOOTER" ]; then usage; fi
 if [ -z "$PAGE" ]; then usage; fi
 
+# start outputting HTML
+
 TITLE=`grep -m 1 "^#" "$PAGE" | pandoc | grep "^<h1" | sed -e "s;</h1>;;" -e "s;.*>;;"`
 sed -e "s;__TITLE__;$TITLE;g" < "$HEADER"
-generate_menu $@
+
+generate_menu "$PAGE" $@
+
+cat "$FOOTER"

@@ -18,18 +18,19 @@ a[href]:hover {
 
 hr {
     clear: both;
-    width: 80%;
     border: 1;
     color: #ccc;
 }
 
 .menu {
     float: left;
-    /*width: 200px;*/
-    margin: 2em;
+    width: 200px;
+    margin: 1em;
 }
 .menu li {
     list-style: none outside none;
+    padding-left: 1em;
+    padding-right: 1em;
 }
 .contents {
     float: right;
@@ -37,5 +38,8 @@ hr {
     background-color: white;
     border: solid 1px #ccc;
     padding: 2em;
-    margin: 2em;
+    margin: 1em;
+}
+li.current_page {
+    background-color: #bbb;
 }
