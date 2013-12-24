@@ -1,6 +1,7 @@
 
 body {
     color: black;
+    background-color: #eeeee6;
     margin-top: 0;
     font-family: Verdana,sans-serif;
     font-size: small;
@@ -24,12 +25,17 @@ hr {
 
 .menu {
     float: left;
-    width: 200px;
+    /*width: 200px;*/
+    margin: 2em;
 }
 .menu li {
     list-style: none outside none;
 }
 .contents {
     float: right;
-    width: 700px;
+    width: 70%;
+    background-color: white;
+    border: solid 1px #ccc;
+    padding: 2em;
+    margin: 2em;
 }
