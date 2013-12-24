@@ -18,12 +18,6 @@ function setName(value) {
     var input = document.getElementById(iname);
     input.value = value;
 }
-function hideSuperadminZone() {
-    var divs = document.getElementsByClassName('sm_user_superadmin_zone');
-    for(var i=0; i<divs.length; i++) {
-          divs[i].style.display='none';
-    }
-}
 function setSuperadminCheckbox() {
     var input = document.getElementById('sm_superadmin');
     input.checked = true;
