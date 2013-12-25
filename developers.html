@@ -22,6 +22,8 @@
 <li class='active'>Developers' Corner
 <ul class=menu_level2>
 <li><a href='#rest-api'>REST API</a></li>
+<li><a href='#directories-and-files'>Directories and files</a></li>
+<li><a href='#roadmap'>Roadmap</a></li>
 </ul>
 </li>
 </ul>
@@ -44,6 +46,54 @@
 <p>The default format is HTML.</p></li>
 <li><p><code>full=1</code></p>
 <p>This makes sense only for the <code>issues</code> pages, and makes the page display all issues and their contents on the page.</p></li>
+</ul>
+<h2 id="directories-and-files">Directories and files</h2>
+<p>The database is made of directories and files. The layout is as follows:</p>
+<pre><code>$REPO
+ ├── users
+ │
+ ├── project-A
+ │   ├── files   : uploaded files
+ │   ├── issues  : issues
+ │   ├── html    : cutomized HTML pages
+ │   ├── project : plain text project description
+ │   ├── tmp     : temporary dir for uploaded files
+ │   └── views   : plain text description of predefined views
+ │
+ ├── project-B
+ │
+ ├── project-C
+ │
+ └── public
+     ├── javascript files
+     ├── css files
+     ├── HTML files
+     └── logo</code></pre>
+<p>The issues are organized as follow:</p>
+<pre><code>issues
+├── 1
+│   ├── lEf-tTqa7wWoX-sJVnu-1U_4ADI
+│   ├── 4M6CY0RqvL4L7ZrDe1r0FQY-tE8
+│   ...
+│   ├── lEf-tTqa7wWoX-sJVnu-1U_4ADI
+│   └── _del : directory where deleted entries are moved
+│
+├── 2
+├── 3
+...</code></pre>
+<p>An issue is made up of successive immutable entries.</p>
+<p>The first entry is the one that has a null parent. The last entry is the one that is referenced as the parent of no other entry.</p>
+<h2 id="roadmap">Roadmap</h2>
+<ul>
+<li>v1.2
+<ul>
+<li>support SSL, TLS</li>
+</ul></li>
+<li>v2.0
+<ul>
+<li>i18n (gettext)</li>
+<li>branch and merge repositories</li>
+</ul></li>
 </ul>
 </div>
         </div> <!-- div class page -->
