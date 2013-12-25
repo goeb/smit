@@ -82,9 +82,9 @@ pre code {
     border-radius: 0;
 }
 .tag, code {
-    background-color: #ccc;
+    background-color: #eee;
     border: 1px solid #bbb;
-    padding: 0.1em 0.2em 0.1em 0.2em; /* top right bottom left */
+    padding: 0.1em 0.5em 0.1em 0.5em; /* top right bottom left */
     border-radius: 5px;
 }
 
