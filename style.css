@@ -31,6 +31,10 @@ a[href]:hover {
 .menu ul {
     padding: 0;
 }
+.menu_level2 {
+    font-size: small;
+    margin-left: 20px;
+}
 .contents {
     margin: 0;
     margin-bottom: 1em;
@@ -83,5 +87,4 @@ pre code {
     padding: 0.1em 0.2em 0.1em 0.2em; /* top right bottom left */
     border-radius: 5px;
 }
-
 

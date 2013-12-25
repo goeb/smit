@@ -2,8 +2,10 @@
 
 SRCS += index.md
 SRCS += getting_started.md
-SRCS += documentation.md
+SRCS += screenshots.md
 SRCS += downloads.md
+SRCS += documentation.md
+SRCS += developers.md
 
 BUILD_DIR=.
 

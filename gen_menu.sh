@@ -24,6 +24,18 @@ get_title() {
     printf "$TITLE"
 }
 
+# generate menu with entries h2 in the same page
+generate_menu_L2() {
+    currentFile="$1"
+    echo "<ul class="menu_level2">"
+    grep "^##[^#]" $currentFile | pandoc | while read h2; do
+        anchor=`echo $h2 | sed -e 's/.*id="//' -e 's/".*//'`
+        title=`echo $h2 | sed -e "s;</h2>;;" -e "s;.*>;;"`
+        echo "<li><a href='#$anchor'>$title</a></li>"
+    done
+    echo "</ul>"
+}
+
 # generate_menu current-page all-pages ...
 generate_menu() {
     currentFile="$1"
@@ -39,7 +51,10 @@ generate_menu() {
         TITLE=`get_title "$file"`
         htmlfile=`echo $file | sed -e "s/\.md$/.html/"`
         if [ "$file" = "$currentFile" ]; then
-            echo "<li class='active'>$TITLE</li>"
+            echo "<li class='active'>$TITLE"
+            # generate level 2 menu (links to ids in the same page)
+            generate_menu_L2 "$currentFile"
+            echo "</li>"
         else
             echo "<li><a href='$htmlfile'>$TITLE</a></li>"
         fi

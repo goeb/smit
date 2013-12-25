@@ -26,8 +26,10 @@ Some of the main features of Smit are:
 
 - Easy customization of properties
 - Innovative "one-click" sorting interface, more advanced than most other trackers
+- Rich text
+- Uploaded images displayed as thumbnails
 - Advanced searching (including full text searching)
-- Exporting contents to HTML, text, CSV, PDF (via the browser's capability)
+- Exporting contents to HTML, CSV, PDF (via the browser's capability)
 - Multiple projects support
 - Self-Contained: Smit is a single stand-alone executable
 

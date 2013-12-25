@@ -16,8 +16,16 @@
 <ul>
 <li><a href='index.html'>Overview</a></li>
 <li><a href='getting_started.html'>Getting Started</a></li>
-<li class='active'>Documentation</li>
+<li><a href='screenshots.html'>Screenshots</a></li>
 <li><a href='downloads.html'>Downloads</a></li>
+<li class='active'>Documentation
+<ul class=menu_level2>
+<li><a href='#create-a-new-repository-and-a-new-project'>Create a new repository and a new project</a></li>
+<li><a href='#customize-the-html-pages'>Customize the HTML pages</a></li>
+<li><a href='#the-sm-variables'>The SM variables</a></li>
+</ul>
+</li>
+<li><a href='developers.html'>Developers' Corner</a></li>
 </ul>
 </aside>
 <div class='contents'>
@@ -74,23 +82,6 @@ users</code></pre>
 <li>copy <code>$REPO/public/issues.html</code> to <code>$REPO/&lt;project&gt;/html/issues.html</code></li>
 <li>edit <code>$REPO/&lt;project&gt;/html/issues.html</code> to suit your needs</li>
 <li>restart Smit</li>
-</ul>
-<h2 id="rest-api">REST API</h2>
-<p>The requests are driven by the Query String:</p>
-<p>Examples:</p>
-<ul>
-<li><p><code>colspec=status+release+assignee</code></p>
-<p>The properties specified by colspec shall be displayed in the table.</p></li>
-<li><p><code>sort=aaa-bbb+ccc</code></p>
-<p>The specified properties shall drive the sorting order (+ for ascending order, and - for descending order).</p></li>
-<li><p><code>search=hello world</code></p>
-<p>Full text search on all properties and messages.</p></li>
-<li><p><code>filterin=status:open&amp;filterin=assignee:John Smith&amp;filterout=release:undefined</code></p>
-<p>'filterin' and 'filterout' may be specified several times on the query string.</p></li>
-<li><p><code>format= text | html | csv</code></p>
-<p>The default format is HTML.</p></li>
-<li><p><code>full=1</code></p>
-<p>This makes sense only for the <code>issues</code> pages, and makes the page display all issues and their contents on the page.</p></li>
 </ul>
 </div>
         </div> <!-- div class page -->
