@@ -4,6 +4,7 @@ SRCS += index.md
 SRCS += getting_started.md
 SRCS += screenshots.md
 SRCS += downloads.md
+SRCS += issue_tracking.md
 SRCS += documentation.md
 SRCS += developers.md
 
