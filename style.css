@@ -107,6 +107,7 @@ pre code {
     border-right: 0;
     border-left: 0;
     border-radius: 0;
+    line-height: normal;
 }
 .tag, code {
     background-color: #eee;
