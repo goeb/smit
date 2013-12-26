@@ -24,25 +24,49 @@ a[href]:hover {
     width: 208px;
     font-size: medium;
 }
+ul, li {
+    margin-right: 0;
+    padding-right: 0;
+}
 .menu li {
     list-style: none outside none;
+    font-weight: 600;
     padding: 0;
+    padding-top: 0.5em;
 }
 .menu ul {
     padding: 0;
 }
-.menu_level2 {
-    font-size: small;
+.menu_level2 li {
+    font-weight: normal;
+    font-size: 80%;
     margin-left: 20px;
+    padding: 0;
 }
+.contents h1 {
+    font-size: 36px;
+    padding-top: 0;
+    margin-top: 0;
+}
+.contents h2 {
+    font-size: 18px;
+    padding-top: 0;
+    margin-top: 2em;
+}
+
+.contents h3 {
+    font-size: 15px;
+}
+
 .contents {
     margin: 0;
     margin-bottom: 1em;
     float: right;
     background-color: white;
     border: solid 1px #ccc;
-    padding: 2em;
+    padding: 1.5em;
     width: 660px;
+    font-size: 14px;
 }
 li.active {
     color: #4E443C;
@@ -55,6 +79,9 @@ li.active {
 .header_text {
     padding-left: 1em;
     font-size: 150%;
+}
+img {
+    border: 0;
 }
 div.header img {
     vertical-align: middle;
@@ -86,5 +113,6 @@ pre code {
     border: 1px solid #bbb;
     padding: 0.1em 0.5em 0.1em 0.5em; /* top right bottom left */
     border-radius: 5px;
+    line-height: 1.8em;
 }
 

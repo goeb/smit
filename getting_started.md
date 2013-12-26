@@ -1,6 +1,6 @@
 # Getting Started
 
-## Online demo:
+## Online demo
 
 An online demo is available at this address: [http://smit.herokuapp.com](http://smit.herokuapp.com)
 
@@ -21,6 +21,6 @@ Unzip the smit package, and run:
     init.bat
     start.bat
 
-Feel free to look at these scripts and edit them, for modifying a user name or password.
+By default these scripts initiate a repository with a superadmin with username `admin` and password `admin`.
 
 
