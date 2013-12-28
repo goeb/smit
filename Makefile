@@ -1,6 +1,7 @@
 # Generate HTML pages with a menu
 
 SRCS += index.md
+SRCS += news.md
 SRCS += getting_started.md
 SRCS += screenshots.md
 SRCS += downloads.md

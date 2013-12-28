@@ -78,12 +78,51 @@ An issue is made up of successive immutable entries.
 
 The first entry is the one that has a null parent. The last entry is the one that is referenced as the parent of no other entry.
 
+### Sample entry of an issue
+
+Entries are text files with straightforward key-value syntax.
+
+    +parent null
+    +author Fred
+    +ctime 1379878590
+    +message < -----------endofmsg---
+    This page will allow the user to select the search parameters.
+    The output will use the parameters of the querystring: 
+    search, filterin, filterout, sort
+    -----------endofmsg---
+    status open
+    target_version v1.0
+    summary "HTML page (form) for advanced search"
+
+Keys with a `+` sign are specific to the entry and are not taken for the consolidation of the issue properties.
+
+### Sample `project` file
+
+This file describes the structure of the properties.
+
+    setPropertyLabel id "#"
+    setPropertyLabel ctime Created
+    setPropertyLabel mtime Modified
+    setPropertyLabel summary Description
+    addProperty status -label "The status" select open closed deleted
+    addProperty target_version select v1.1 v1.2 v2.0 other
+    addProperty owner selectUser
+
+### Sample `users` file
+
+This file describes the users and their priviledges.
+
+    addUser "John Smith" sha1 e61a3587b3f7a142b8c7b9263c82f8119398ecb7 \
+        project things_to_do rw 
+
+    addUser alice sha1 522b276a356bdf39013dfabea2cd43e141ecc9e8 \
+        project things_to_do ro 
 
 
 ## Roadmap
 
 - v1.2
-    - support SSL, TLS
+    - support of SSL, TLS
 
 - v2.0
     - i18n (gettext)

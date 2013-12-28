@@ -15,6 +15,7 @@
 <aside class='menu'>
 <ul>
 <li><a href='index.html'>Overview</a></li>
+<li><a href='news.html'>News</a></li>
 <li><a href='getting_started.html'>Getting Started</a></li>
 <li><a href='screenshots.html'>Screenshots</a></li>
 <li><a href='downloads.html'>Downloads</a></li>
@@ -84,11 +85,41 @@
 ...</code></pre>
 <p>An issue is made up of successive immutable entries.</p>
 <p>The first entry is the one that has a null parent. The last entry is the one that is referenced as the parent of no other entry.</p>
+<h3 id="sample-entry-of-an-issue">Sample entry of an issue</h3>
+<p>Entries are text files with straightforward key-value syntax.</p>
+<pre><code>+parent null
++author Fred
++ctime 1379878590
++message &lt; -----------endofmsg---
+This page will allow the user to select the search parameters.
+The output will use the parameters of the querystring: 
+search, filterin, filterout, sort
+-----------endofmsg---
+status open
+target_version v1.0
+summary &quot;HTML page (form) for advanced search&quot;</code></pre>
+<p>Keys with a <code>+</code> sign are specific to the entry and are not taken for the consolidation of the issue properties.</p>
+<h3 id="sample-project-file">Sample <code>project</code> file</h3>
+<p>This file describes the structure of the properties.</p>
+<pre><code>setPropertyLabel id &quot;#&quot;
+setPropertyLabel ctime Created
+setPropertyLabel mtime Modified
+setPropertyLabel summary Description
+addProperty status -label &quot;The status&quot; select open closed deleted
+addProperty target_version select v1.1 v1.2 v2.0 other
+addProperty owner selectUser</code></pre>
+<h3 id="sample-users-file">Sample <code>users</code> file</h3>
+<p>This file describes the users and their priviledges.</p>
+<pre><code>addUser &quot;John Smith&quot; sha1 e61a3587b3f7a142b8c7b9263c82f8119398ecb7 \
+    project things_to_do rw 
+
+addUser alice sha1 522b276a356bdf39013dfabea2cd43e141ecc9e8 \
+    project things_to_do ro </code></pre>
 <h2 id="roadmap">Roadmap</h2>
 <ul>
 <li>v1.2
 <ul>
-<li>support SSL, TLS</li>
+<li>support of SSL, TLS</li>
 </ul></li>
 <li>v2.0
 <ul>
