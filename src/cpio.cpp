@@ -121,7 +121,7 @@ int cpioGetFile(FILE* cpioArchiveFd, const char *file)
 {
     std::string filepath;
     FileType ftype;
-    size_t filesize;
+    uint32_t filesize;
     int r;
     while ( (r = cpioGetNextFileHeader(cpioArchiveFd, filepath, ftype, filesize)) >= 0 ) {
 
@@ -162,7 +162,7 @@ int cpioExtractTree(FILE* cpioArchiveFd, const char *src, const char *dst)
 {
     std::string filepath;
     FileType ftype;
-    size_t filesize;
+    uint32_t filesize;
     int r;
     while ( (r = cpioGetNextFileHeader(cpioArchiveFd, filepath, ftype, filesize)) >= 0 ) {
         // if file does not match src, then skip this file
