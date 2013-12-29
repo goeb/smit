@@ -1,4 +1,5 @@
 #include <stdio.h>
 
-int cpioExtract(FILE *f, const char *src, const char *dst);
+FILE *cpioOpenArchive(const char *file);
+int cpioGetFile(FILE* cpioArchiveFd, const char *file);
 int cpioExtractFile(const char *exe, const char *src, const char *dst);

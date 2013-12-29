@@ -287,6 +287,7 @@ int main(int argc, const char **argv)
 {
     if (argc < 2) usage();
 
+    exeFile = argv[0];
     int i = 1;
     const char *command = 0;
     while (i<argc) {

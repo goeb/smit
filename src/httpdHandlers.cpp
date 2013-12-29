@@ -36,7 +36,10 @@
 #include "session.h"
 #include "global.h"
 #include "mg_win32.h"
+#include "cpio.h"
 
+
+std::string exeFile; // path to the executable (used for extracting embedded files)
 #define K_ME "me"
 
 std::string readMgConn(struct mg_connection *conn, size_t maxSize)
@@ -333,6 +336,44 @@ void httpPostSignout(struct mg_connection *conn, const std::string &sessionId)
 {
     SessionBase::destroySession(sessionId);
     redirectToSignin(conn, "/");
+}
+
+/** Get a SM embedded file
+  */
+int httpGetSm(struct mg_connection *conn, const std::string &file)
+{
+    int r; // return 0 to let mongoose handle static file, 1 otherwise
+    FILE *f = cpioOpenArchive(exeFile.c_str());
+    if (!f) {
+        sendHttpHeader500(conn, "Cannot open CPIO archive");
+        return 1;
+    }
+    std::string internalFile = "sm/" + file;
+    r = cpioGetFile(f, internalFile.c_str());
+    if (r >= 0) {
+        sendHttpHeader200(conn);
+        const char *mimeType = mg_get_builtin_mime_type(file.c_str());
+        mg_printf(conn, "Content-Type: %s\r\n\r\n", mimeType);
+
+        // file found
+        size_t n;
+        const int BS = 1024;
+        char buffer[BS];
+        while (1) {
+            n = fread(buffer, 1, BS, f);
+            mg_write(conn, buffer, n);
+            if (n != BS) break;
+            if (feof(f)) break;
+        }
+        r = 1;
+    } else {
+        r = 0;
+    }
+
+    fclose(f);
+
+
+    return r;
 }
 
 /** Get the configuration page of a given user
@@ -1389,6 +1430,7 @@ int begin_request_handler(struct mg_connection *conn)
     LOG_DEBUG("resource=%s, method=%s", resource.c_str(), method.c_str());
 
     if ((resource == "public") && (method == "GET")) return 0; // let mongoose handle the file request directly
+    if ((resource == "sm") && (method == "GET")) return httpGetSm(conn, uri);
 
     // check acces rights
     std::string sessionId = getSessionIdFromCookie(conn);

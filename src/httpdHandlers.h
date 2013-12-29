@@ -3,6 +3,8 @@
 
 #include <string>
 
+extern std::string exeFile;
+
 int begin_request_handler(struct mg_connection *conn);
 
 
