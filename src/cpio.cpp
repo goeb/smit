@@ -306,7 +306,7 @@ FILE *cpioOpenArchive(const char *file)
         // (if file is not already a .exe)
         if (strlen(file) <= 4 || (strlen(file) > 4 && 0 != strcmp(file+strlen(file)-4, ".exe")) )  {
             std::string exe = std::string(file) + ".exe";
-            return cpioExtractFile(exe.c_str(), src, dst);
+            return cpioOpenArchive(exe.c_str());
         }
 #endif
         return NULL;
