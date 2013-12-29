@@ -351,19 +351,26 @@ int httpGetSm(struct mg_connection *conn, const std::string &file)
     std::string internalFile = "sm/" + file;
     r = cpioGetFile(f, internalFile.c_str());
     if (r >= 0) {
+        int filesize = r;
         sendHttpHeader200(conn);
         const char *mimeType = mg_get_builtin_mime_type(file.c_str());
+        LOG_DEBUG("mime-type=%s, size=%d", mimeType, filesize);
         mg_printf(conn, "Content-Type: %s\r\n\r\n", mimeType);
 
         // file found
-        size_t n;
         const int BS = 1024;
         char buffer[BS];
-        while (1) {
-            n = fread(buffer, 1, BS, f);
+        int remainingBytes = filesize;
+        while (remainingBytes > 0) {
+            int nToRead = remainingBytes;
+            if (nToRead > BS) nToRead = BS;
+            size_t n = fread(buffer, 1, nToRead, f);
             mg_write(conn, buffer, n);
-            if (n != BS) break;
-            if (feof(f)) break;
+
+            if (n != nToRead) break; // error
+            if (feof(f)) break; // error probably
+
+            remainingBytes -= n;
         }
         r = 1;
     } else {
