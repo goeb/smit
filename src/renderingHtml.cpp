@@ -1646,7 +1646,7 @@ void RHtml::printIssueForm(const ContextParameters &ctx, const Issue &issue, boo
     mg_printf(conn, "<tr>\n");
     mg_printf(conn, "<td class=\"sm_issue_plabel sm_issue_plabel_file\" >%s: </td>\n", _("File Upload"));
     mg_printf(conn, "<td colspan=\"3\">\n");
-    mg_printf(conn, "<input type=\"file\" name=\"%s\" class=\"sm_issue_input_file\" onchange=\"updateFileInput('sm_input_file');\">\n", K_FILE);
+    mg_printf(conn, "<input type=\"file\" name=\"%s\" class=\"sm_issue_input_file\" onchange=\"updateFileInput('sm_issue_input_file');\">\n", K_FILE);
     mg_printf(conn, "</td></tr>\n");
 
     mg_printf(conn, "<tr><td></td>\n");
