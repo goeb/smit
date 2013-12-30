@@ -56,7 +56,7 @@ public:
     static void printPageView(const ContextParameters &ctx, const PredefinedView &pv);
     static void printPageListOfViews(const ContextParameters &ctx);
     static void printLinksToPredefinedViews(const ContextParameters &ctx);
-    static void printProjects(struct mg_connection *conn,
+    static void printProjects(const ContextParameters &ctx,
                               const std::list<std::pair<std::string, std::string> > &pList,
                               const std::map<std::string, std::map<std::string, Role> > *userRolesByProject);
     static void printUsers(struct mg_connection *conn, const std::list<User> &usersList);

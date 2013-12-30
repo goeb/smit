@@ -68,7 +68,9 @@ const Project &ContextParameters::getProject() const
 
 std::string enquoteJs(const std::string &in)
 {
-    std::string out = replaceAll(in, '\'', "\\'");
+    std::string out = replaceAll(in, '\\', "\\\\"); // escape backslahes
+    out = replaceAll(out, '\'', "\\'"); // escape '
+    out = replaceAll(out, '"', "\\\""); // escape "
     return out;
 }
 
@@ -190,7 +192,8 @@ public:
             if (varname.empty()) break;
 
             if (varname == K_SM_HTML_PROJECT_NAME && ctx.project) {
-                mg_printf(ctx.conn, "%s", htmlEscape(ctx.project->getName()).c_str());
+                if (ctx.project->getName().empty()) mg_printf(ctx.conn, "(new)");
+                else mg_printf(ctx.conn, "%s", htmlEscape(ctx.project->getName()).c_str());
 
             } else if (varname == K_SM_URL_PROJECT_NAME && ctx.project) {
                     mg_printf(ctx.conn, "%s", ctx.project->getUrlName().c_str());
@@ -199,10 +202,11 @@ public:
                 RHtml::printNavigationGlobal(ctx);
 
             } else if (varname == K_SM_DIV_NAVIGATION_ISSUES && ctx.project) {
-                RHtml::printNavigationIssues(ctx, false);
+                // do not print this in case a a new project
+                if (! ctx.project->getName().empty()) RHtml::printNavigationIssues(ctx, false);
 
             } else if (varname == K_SM_DIV_PROJECTS && projectList) {
-                RHtml::printProjects(ctx.conn, *projectList, userRolesByProject);
+                RHtml::printProjects(ctx, *projectList, userRolesByProject);
 
             } else if (varname == K_SM_DIV_USERS && usersList) {
                 RHtml::printUsers(ctx.conn, *usersList);
@@ -324,7 +328,7 @@ void RHtml::printPageView(const ContextParameters &ctx, const PredefinedView &pv
     // add javascript for updating the inputs
     mg_printf(conn, "<script>\n");
 
-    if (ctx.userRole != ROLE_ADMIN) {
+    if (ctx.userRole != ROLE_ADMIN && !ctx.user.superadmin) {
         // hide what is reserved to admin
         mg_printf(conn, "hideAdminZone();\n");
     } else {
@@ -537,7 +541,7 @@ void RHtml::printNavigationGlobal(const ContextParameters &ctx)
     linkToProjects.addContents("%s", _("All projects"));
     div.addContents(linkToProjects);
 
-    if (ctx.userRole == ROLE_ADMIN) {
+    if (ctx.project && (ctx.userRole == ROLE_ADMIN || ctx.user.superadmin) ) {
         // link for modifying project structure
         HtmlNode linkToModify("a");
         linkToModify.addAttribute("class", "sm_link_modify_project");
@@ -596,7 +600,7 @@ void RHtml::printNavigationIssues(const ContextParameters &ctx, bool autofocus)
 
     HtmlNode div("div");
     div.addAttribute("class", "sm_navigation_project");
-    if (ctx.userRole == ROLE_ADMIN || ctx.userRole == ROLE_RW) {
+    if (ctx.userRole == ROLE_ADMIN || ctx.userRole == ROLE_RW || ctx.user.superadmin) {
         HtmlNode a("a");
         a.addAttribute("href", "/%s/issues/new", ctx.project->getUrlName().c_str());
         a.addAttribute("class", "sm_link_new_issue");
@@ -641,10 +645,12 @@ void RHtml::printNavigationIssues(const ContextParameters &ctx, bool autofocus)
 }
 
 
-void RHtml::printProjects(struct mg_connection *conn,
+void RHtml::printProjects(const ContextParameters &ctx,
                           const std::list<std::pair<std::string, std::string> > &pList,
                           const std::map<std::string, std::map<std::string, Role> > *userRolesByProject)
 {
+    struct mg_connection *conn = ctx.conn;
+
     std::list<std::pair<std::string, std::string> >::const_iterator p;
     mg_printf(conn, "<table class=\"sm_projects\">\n");
     mg_printf(conn, "<tr class=\"sm_projects\"><th class=\"sm_projects\">%s</th>"
@@ -674,6 +680,7 @@ void RHtml::printProjects(struct mg_connection *conn,
         mg_printf(conn, "</tr>\n");
     }
     mg_printf(conn, "</table>\n");
+    if (ctx.user.superadmin) mg_printf(conn, "<a href=\"/_\">%s<a><br>",  htmlEscape(_("New Project")).c_str());
 }
 
 void RHtml::printUsers(struct mg_connection *conn, const std::list<User> &usersList)
@@ -700,9 +707,9 @@ void RHtml::printUsers(struct mg_connection *conn, const std::list<User> &usersL
 
         mg_printf(conn, "</tr>\n");
 
-    }
+    }    
     mg_printf(conn, "</table>\n");
-	mg_printf(conn, "<a href=\"/users/_\" class=\"sm_users\">%s</a>\n", _("New User"));
+	mg_printf(conn, "<a href=\"/users/_\" class=\"sm_users\">%s</a>\n", htmlEscape(_("New User")).c_str());
 }
 
 void RHtml::printPageProjectList(const ContextParameters &ctx,
@@ -833,9 +840,9 @@ void RHtml::printScriptUpdateConfig(const ContextParameters &ctx)
     std::list<std::string> reserved = ctx.getProject().getReservedProperties();
     std::list<std::string>::iterator r;
     FOREACH(r, reserved) {
-        std::string x = replaceAll(ctx.getProject().getLabelOfProperty(*r), '\'', "\\\'");
-        mg_printf(conn, "addProperty('%s', '%s', 'reserved', '');\n", r->c_str(),
-                  x.c_str());
+        std::string label = ctx.getProject().getLabelOfProperty(*r);
+        mg_printf(conn, "addProperty('%s', '%s', 'reserved', '');\n", enquoteJs(*r).c_str(),
+                  enquoteJs(label).c_str());
     }
 
     // other properties
@@ -854,12 +861,16 @@ void RHtml::printScriptUpdateConfig(const ContextParameters &ctx)
             case F_SELECT_USER: type = "selectUser"; break;
             }
 
-            std::string property = replaceAll(ctx.getProject().getLabelOfProperty(*p), '\'', "\\\'");
-            std::string value = replaceAll(toString(pspec.selectOptions, "\\n"), '\'', "\\\'");
-
+            std::string label = ctx.getProject().getLabelOfProperty(*p);
+            std::list<std::string>::const_iterator i;
+            std::string options;
+            FOREACH (i, pspec.selectOptions) {
+                if (i != pspec.selectOptions.begin()) options += "\\n";
+                options += enquoteJs(*i);
+            }
             mg_printf(conn, "addProperty('%s', '%s', '%s', '%s');\n", p->c_str(),
-                      property.c_str(),
-                      type, value.c_str());
+                      enquoteJs(label).c_str(),
+                      type, options.c_str());
         }
     }
 
@@ -877,6 +888,16 @@ void RHtml::printProjectConfig(const ContextParameters &ctx)
 {
     VariableNavigator vn("project.html", ctx);
     vn.printPage();
+
+    mg_printf(ctx.conn, "<script>");
+    if (!ctx.user.superadmin) {
+        // hide what is reserved to superadmin
+        mg_printf(ctx.conn, "hideSuperadminZone();\n");
+    } else {
+        if (ctx.project) mg_printf(ctx.conn, "setProjectName('%s');\n", enquoteJs(ctx.project->getName()).c_str());
+    }
+    mg_printf(ctx.conn, "</script>");
+
 }
 
 /** Get the property name that will be used for gouping

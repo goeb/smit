@@ -20,7 +20,10 @@ std::string getProperty(const std::map<std::string, std::list<std::string> > &pr
 std::string replaceAll(const std::string &in, char c, const char *replaceBy);
 std::string toJavascriptArray(const std::list<std::string> &items);
 std::vector<std::string> split(const std::string &s, const char *c, int limit = -1);
+std::list<std::string> splitLinesAndTrimBlanks(const std::string &s);
+
 std::string join(const std::list<std::string> &items, const char *separator);
+std::string getBasename(const std::string &path);
 
 
 #endif

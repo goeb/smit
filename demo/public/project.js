@@ -18,29 +18,36 @@ function addProperty(name, label, type, opts) {
     // input boxes for this property
     var cell;
     cell = row.insertCell(row.cells.length);
-    i = document.createElement('input');
-    i.type = "hidden"; i.name = "token"; i.value = "EOL";
-    cell.appendChild(i);
-
     var i = document.createTextNode('#' + n + ' ');
-    cell.appendChild(i);
-
     cell.appendChild(i);
 
     cell = row.insertCell(row.cells.length);
     i = document.createElement('input');
-    i.type = "hidden"; i.name = "token"; i.value = "addProperty";
-    cell.appendChild(i);
-
-    i = document.createElement('input');
-    i.name = 'token';
+    i.name = 'propertyName';
     i.size = 15;
     i.value = name;
-    i.pattern = "[-a-zA-Z_0-9]+"
-        i.placeholder = "logical_name"
-        i.title = "Allowed characters: letters, digits, underscore"
-        if (type == 'reserved') i.disabled = true;
+    i.pattern = "[-a-zA-Z_0-9]+";
+    i.placeholder = "logical_name";
+    i.title = "Allowed characters: letters, digits, underscore, dash";
+    if (type == 'reserved') {
+        i.type = 'hidden';
+        cell.appendChild(i);
+        var text = document.createTextNode(name);
+        cell.appendChild(text);
+    } else {
+        cell.appendChild(i);
+    }
+
+    // label
+    cell = row.insertCell(row.cells.length);
+    i = document.createElement('input');
+    i.name = 'label';
+    i.size = 20;
+    i.value = label;
+    i.placeholder = "Label that will be displayed";
+    i.title = "Label that will be displayed";
     cell.appendChild(i);
+
 
     cell = row.insertCell(row.cells.length);
     cell.id = 'type_' + n;
@@ -50,35 +57,14 @@ function addProperty(name, label, type, opts) {
         cell.appendChild(i);
     } else {
         var options = ['text', 'select', 'multiselect', 'selectUser'];
-        i = createSelect(options, type);
-        i.name = 'token';
+        i = createSelect(options, type, false);
+        i.name = 'type';
         i.className = "updatable";
         i.onchange = fupdateThis;
         cell.appendChild(i);
         fupdate(i, opts);
     }
 
-    // label
-    cell = row.insertCell(row.cells.length);
-    i = document.createElement('input');
-    i.type = "hidden"; i.name = "token"; i.value = "EOL";
-    cell.appendChild(i);
-
-    i = document.createElement('input');
-    i.type = "hidden"; i.name = "token"; i.value = "setPropertyLabel";
-    cell.appendChild(i);
-
-    i = document.createElement('input');
-    i.type = "hidden"; i.name = "token"; i.value = name;
-    cell.appendChild(i);
-
-    i = document.createElement('input');
-    i.name = 'token';
-    i.size = 20;
-    i.value = label;
-    i.placeholder = "Label that will be displayed";
-    i.title = "Label that will be displayed";
-    cell.appendChild(i);
 }
 
 function fupdateThis() { fupdate(this); }
@@ -102,7 +88,7 @@ function show_list_input(item, value) {
     var i = document.getElementById(item.id + '_opt');
     if (i == null) {
         i = document.createElement('textarea')
-            i.name = "token"
+            i.name = "selectOptions"
             i.id = item.id + '_opt';
         i.rows = 4;
         i.cols = 20;
@@ -128,3 +114,9 @@ function replaceContentInContainer() {
                 }
     }
 }
+function setProjectName(value) {
+    var iname = 'projectName';
+    var input = document.getElementById(iname);
+    input.value = value;
+}
+

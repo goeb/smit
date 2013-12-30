@@ -74,7 +74,7 @@ int dbLoad(const char * pathToRepository)
             std::string pathToProject = pathToRepository;
             pathToProject += '/';
             pathToProject += dp->d_name;
-            Project::load(pathToProject.c_str(), dp->d_name);
+            Database::loadProject(pathToProject.c_str());
         }
         closedir(dirp);
     }
@@ -105,12 +105,13 @@ std::string Issue::getSummary() const
   *     url-decoding, so that a double url-encoding would not be enough.
   */
 
-int Project::load(const char *path, char *basename)
+Project *Project::load(const char *path)
 {
     Project *p = new Project;
     LOG_DEBUG("Loading project %s (%p)...", path, p);
 
-    p->name = urlNameDecode(basename);
+    std::string bname = getBasename(path);
+    p->name = urlNameDecode(bname);
     LOG_DEBUG("Project name: '%s'", p->name.c_str());
 
     p->path = path;
@@ -120,7 +121,7 @@ int Project::load(const char *path, char *basename)
     if (r == -1) {
         delete p;
         LOG_DEBUG("Project '%s' not loaded because of errors while reading the config.", path);
-        return -1;
+        return 0;
     }
 
     p->loadPredefinedViews(path);
@@ -129,15 +130,13 @@ int Project::load(const char *path, char *basename)
     if (r == -1) {
         LOG_ERROR("Project '%s' not loaded because of errors while reading the entries.", path);
         delete p;
-        return -1;
+        return 0;
     }
     LOG_INFO("Project %s loaded.", path);
 
     p->consolidateIssues();
 
-    // store the project in memory
-    Database::Db.projects[p->name] = p;
-    return 0;
+    return p;
 }
 
 Entry *loadEntry(std::string dir, const char* basename)
@@ -371,60 +370,85 @@ int Issue::computeLatestEntry()
     return 0;
 }
 
-FieldSpec parseFieldSpec(std::list<std::string> & tokens)
+
+/** Convert a string to a PropertyType
+  *
+  * @return 0 on success, -1 on error
+  */
+int strToPropertyType(const std::string &s, PropertyType &out)
+{
+    if (s == "text") out = F_TEXT;
+    else if (s == "selectUser") out = F_SELECT_USER;
+    else if (s == "select") out = F_SELECT;
+    else if (s == "multiselect") out = F_MULTISELECT;
+    else return -1; // error
+
+    return 0; // ok
+}
+
+PropertySpec parsePropertySpec(std::list<std::string> & tokens)
 {
     // Supported syntax:
     // name [label <label>] type params ...
     // type = text | select | multiselect | selectUser
-    FieldSpec field;
+    PropertySpec property;
     if (tokens.size() < 2) {
         LOG_DEBUG("Not enough tokens");
-        return field; // error, indicated to caller by empty name of field
+        return property; // error, indicated to caller by empty name of property
     }
 
-    field.name = tokens.front();
-    // check that field name contains only [a-zA-Z0-9-_]
+    property.name = tokens.front();
+    // check that property name contains only [a-zA-Z0-9-_]
     const char* allowedInPropertyName = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_";
-    if (field.name.find_first_not_of(allowedInPropertyName) != std::string::npos) {
+    if (property.name.find_first_not_of(allowedInPropertyName) != std::string::npos) {
         // invalid character
-        LOG_DEBUG("Invalid property name: %s", field.name.c_str());
-        field.name = "";
-        return field;
+        LOG_DEBUG("Invalid property name: %s", property.name.c_str());
+        property.name = "";
+        return property;
     }
     tokens.pop_front();
 
-    if (tokens.size() < 1) {
+    if (tokens.empty()) {
         LOG_ERROR("Not enough tokens");
-        field.name = "";
-        return field; // error, indicated to caller by empty name of field
+        property.name = "";
+        return property; // error, indicated to caller by empty name of property
     }
+
+    // look for optional -label parameter
+    if (tokens.front() == "-label") {
+        tokens.pop_front();
+        if (tokens.empty()) {
+            LOG_ERROR("Not enough tokens (-label)");
+            property.name = "";
+            return property; // error, indicated to caller by empty name of property
+        }
+        property.label = tokens.front();
+        tokens.pop_front();
+    }
+
 
     std::string type = tokens.front();
     tokens.pop_front();
-    if (0 == type.compare("text")) field.type = F_TEXT;
-    else if (0 == type.compare("selectUser")) field.type = F_SELECT_USER;
-    else if (0 == type.compare("select")) field.type = F_SELECT;
-    else if (0 == type.compare("multiselect")) field.type = F_MULTISELECT;
-    else { // error, unknown type
-        LOG_ERROR("Unkown field type '%s'", type.c_str());
-        field.name.clear();
-        return field; // error, indicated to caller by empty name of field
+    int r = strToPropertyType(type, property.type);
+    if (r < 0) { // error, unknown type
+        LOG_ERROR("Unkown property type '%s'", type.c_str());
+        property.name.clear();
+        return property; // error, indicated to caller by empty name of property
     }
 
-    if (F_SELECT == field.type || F_MULTISELECT == field.type) {
+    if (F_SELECT == property.type || F_MULTISELECT == property.type) {
         // populate the allowed values
         while (tokens.size() > 0) {
             std::string value = tokens.front();
             tokens.pop_front();
-            field.selectOptions.push_back(value);
+            property.selectOptions.push_back(value);
         }
     }
-    return field;
+    return property;
 }
 
 /** Return a configuration object from a list of lines of tokens
   * The 'lines' parameter is modified and cleaned up of incorrect lines
-  * (suitable for subsequent searialisation to project file).
   */
 ProjectConfig parseProjectConfig(std::list<std::list<std::string> > &lines)
 {
@@ -443,11 +467,13 @@ ProjectConfig parseProjectConfig(std::list<std::list<std::string> > &lines)
             LOG_DEBUG("Smit version of project: %s", v.c_str());
 
         } else if (0 == token.compare("addProperty")) {
-            PropertySpec property = parseFieldSpec(*line);
+            PropertySpec property = parsePropertySpec(*line);
             if (property.name.size() > 0) {
                 config.properties[property.name] = property;
                 config.orderedProperties.push_back(property.name);
                 LOG_DEBUG("orderedProperties: added %s", property.name.c_str());
+
+                if (! property.label.empty()) config.propertyLabels[property.name] = property.label;
 
             } else {
                 // parse error, ignore
@@ -561,16 +587,22 @@ int Project::loadConfig(const char *path)
     return 0;
 }
 
+
+
 int Project::modifyConfig(std::list<std::list<std::string> > &tokens)
 {
     LOG_FUNC();
     ScopeLocker scopeLocker(locker, LOCK_READ_WRITE);
+
+    // verify the syntax of the tokens
     ProjectConfig c = parseProjectConfig(tokens);
-    if (c.properties.size() == 0) {
+#if 0
+    if (c.properties.empty()) {
         // error do not accept this
         LOG_INFO("Reject modification of project structure as there is no property at all");
         return -1;
     }
+#endif
     c.predefinedViews = config.predefinedViews; // keep those unchanged
 
     // add version
@@ -699,9 +731,15 @@ PredefinedView Project::getDefaultView()
 
 /** Create the directory and files for a new project
   */
-int Project::createProject(const char *repositoryPath, const char *projectName)
+int Project::createProjectFiles(const char *repositoryPath, const char *projectName, std::string &resultingPath)
 {
-    std::string path = std::string(repositoryPath) + "/" + urlEncode(projectName);
+    if (! projectName || strlen(projectName) == 0) {
+        LOG_ERROR("Cannot create project with empty name");
+        return -1;
+    }
+
+    resultingPath = std::string(repositoryPath) + "/" + Project::urlNameEncode(projectName);
+    std::string path = resultingPath;
     int r = mg_mkdir(path.c_str(), S_IRUSR | S_IXUSR | S_IWUSR);
     if (r != 0) {
         LOG_ERROR("Could not create directory '%s': %s", path.c_str(), strerror(errno));
@@ -1154,7 +1192,7 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
                     doErase = true;
                 }
             } else {
-                std::map<std::string, FieldSpec>::iterator f;
+                std::map<std::string, PropertySpec>::iterator f;
                 f = config.properties.find(entryProperty->first);
                 if ( (f == config.properties.end()) && (entryProperty->first != K_SUMMARY) ) {
                     // erase property because it is not part of the official fields of the project
@@ -1402,6 +1440,29 @@ std::string Entry::serialize()
 }
 
 
+Project *Database::createProject(const std::string &name)
+{
+    std::string resultingPath;
+    int r = Project::createProjectFiles(Db.getRootDir().c_str(), name.c_str(), resultingPath);
+    if (r != 0) return 0;
+
+    Project *p = loadProject(resultingPath.c_str());
+    return p;
+}
+
+Project *Database::loadProject(const char *path)
+{
+    Project *p = Project::load(path);
+    if (!p) return 0;
+
+    {
+        ScopeLocker scopeLocker(Db.locker, LOCK_READ_WRITE);
+        // store the project in memory
+        Db.projects[p->getName()] = p;
+    }
+    return p;
+}
+
 
 Project *Database::getProject(const std::string & projectName)
 {
@@ -1412,6 +1473,7 @@ Project *Database::getProject(const std::string & projectName)
 
 std::list<std::string> Database::getProjects()
 {
+    ScopeLocker scopeLocker(Db.locker, LOCK_READ_ONLY);
     std::list<std::string> result;
     std::map<std::string, Project*>::iterator p;
     FOREACH(p, Database::Db.projects) {

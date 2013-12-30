@@ -37,7 +37,7 @@
 #include "global.h"
 #include "mg_win32.h"
 
-// static members
+#define K_ME "me"
 
 std::string readMgConn(struct mg_connection *conn, size_t maxSize)
 {
@@ -387,6 +387,7 @@ void httpPostUsers(struct mg_connection *conn, User signedInUser, const std::str
         sendHttpHeader403(conn);
         return;
     }
+    if (username.empty()) return sendHttpHeader403(conn);
 
     // parse the posted parameters
     const char *contentType = mg_get_header(conn, "Content-Type");
@@ -425,6 +426,11 @@ void httpPostUsers(struct mg_connection *conn, User signedInUser, const std::str
             }
         }
 
+        if (newUserConfig.username.empty() || newUserConfig.username == "_") {
+            LOG_INFO("Ignore user parameters as username is empty or '_'");
+            return sendHttpHeader400(conn, "Invalid user name");
+        }
+
         int r = 0;
 
         if (passwd1 != passwd2) {
@@ -444,7 +450,7 @@ void httpPostUsers(struct mg_connection *conn, User signedInUser, const std::str
             // superadmin: update all parameters of the user's configuration
             if (!passwd1.empty()) newUserConfig.setPasswd(passwd1);
 
-            if (username.empty() || username == "_") {
+            if (username == "_") {
                 r = UserBase::addUser(newUserConfig);
             } else {
                 r = UserBase::updateUser(username, newUserConfig);
@@ -502,7 +508,17 @@ void httpGetRoot(struct mg_connection *conn, User u)
     sendHttpHeader200(conn);
     // print list of available projects
     std::list<std::pair<std::string, Role> > usersRoles;
-    std::list<std::pair<std::string, std::string> > pList = u.getProjects();
+    std::list<std::pair<std::string, std::string> > pList;
+    if (!u.superadmin) pList = u.getProjects();
+    else {
+        // for a superadmin, get the list of all the projects
+        std::list<std::string> allProjects = Database::getProjects();
+        std::list<std::string>::iterator p;
+        FOREACH(p, allProjects) {
+            Role r = u.getRole(*p);
+            pList.push_back(std::make_pair(*p ,roleToString(r)));
+        }
+    }
 
     enum RenderingFormat format = getFormat(conn);
 
@@ -552,9 +568,35 @@ std::map<std::string, std::list<std::string> > parseFilter(const std::list<std::
 
     return result;
 }
+
+void httpGetNewProject(struct mg_connection *conn, User u)
+{
+    if (! u.superadmin) return sendHttpHeader403(conn);
+
+    Project p;
+    // add by default 2 properties : status (open, closed) and owner (selectUser)
+    PropertySpec pspec;
+    ProjectConfig pconfig;
+    pspec.name = "status";
+    pspec.type = F_SELECT;
+    pspec.selectOptions.push_back("open");
+    pspec.selectOptions.push_back("closed");
+    pconfig.properties[pspec.name] = pspec;
+    pspec.name = "owner";
+    pspec.type = F_SELECT_USER;
+    pconfig.properties[pspec.name] = pspec;
+    pconfig.orderedProperties.push_back("status");
+    pconfig.orderedProperties.push_back("owner");
+    p.setConfig(pconfig);
+    sendHttpHeader200(conn);
+    ContextParameters ctx = ContextParameters(conn, u, p);
+    RHtml::printProjectConfig(ctx);
+}
+
+
 void httpGetProjectConfig(struct mg_connection *conn, Project &p, User u)
 {
-    if (u.getRole(p.getName()) != ROLE_ADMIN) return sendHttpHeader403(conn);
+    if (u.getRole(p.getName()) != ROLE_ADMIN && ! u.superadmin) return sendHttpHeader403(conn);
 
     sendHttpHeader200(conn);
     ContextParameters ctx = ContextParameters(conn, u, p);
@@ -580,8 +622,10 @@ std::list<std::list<std::string> > convertPostToTokens(std::string &postData)
         if (token != "token") continue; // ignore this
 
         if (value == "EOL") {
-            tokens.push_back(line);
-            LOG_DEBUG("convertPostToTokens: line=%s", toString(line).c_str());
+            if (! line.empty() && ! line.front().empty()) {
+                tokens.push_back(line);
+                LOG_DEBUG("convertPostToTokens: line=%s", toString(line).c_str());
+            }
             line.clear();
         } else {
             // split by \r\n if needed, and trim blanks
@@ -595,7 +639,7 @@ std::list<std::list<std::string> > convertPostToTokens(std::string &postData)
             line.push_back(value); // append the last subvalue
         }
     }
-    if (line.size() > 0) {
+    if (! line.empty() && ! line.front().empty()) {
         tokens.push_back(line);
         LOG_DEBUG("convertPostToTokens: line=%s", toString(line).c_str());
     }
@@ -605,7 +649,7 @@ std::list<std::list<std::string> > convertPostToTokens(std::string &postData)
 void httpPostProjectConfig(struct mg_connection *conn, Project &p, User u)
 {
     enum Role r = u.getRole(p.getName());
-    if (r != ROLE_ADMIN) {
+    if (r != ROLE_ADMIN && ! u.superadmin) {
         sendHttpHeader403(conn);
         return;
     }
@@ -620,9 +664,87 @@ void httpPostProjectConfig(struct mg_connection *conn, Project &p, User u)
 
         postData = readMgConn(conn, 4096);
 
-        // convert the post data to tokens
-        std::list<std::list<std::string> > tokens = convertPostToTokens(postData);
-        int r = p.modifyConfig(tokens);
+        LOG_DEBUG("postData=%s", postData.c_str());
+        // parse the posted data
+        std::string propertyName;
+        std::string type;
+        std::string label;
+        std::string selectOptions;
+        std::string projectName;
+        ProjectConfig pc;
+        std::list<std::list<std::string> > tokens;
+        while (1) {
+            std::string tokenPair = popToken(postData, '&');
+            std::string key = popToken(tokenPair, '=');
+            std::string value = urlDecode(tokenPair);
+
+            if (key == "projectName") {
+                projectName = value;
+
+            } else if (key == "propertyName" || postData.empty()) {
+                // process previous row
+                if (!propertyName.empty()) {
+
+                    if (type.empty()) {
+                        // case of reserved properties (id, ctime, mtime, etc.)
+                        if (label != propertyName) {
+                            std::list<std::string> line;
+                            line.push_back("setPropertyLabel");
+                            line.push_back(propertyName);
+                            line.push_back(label);
+                            tokens.push_back(line);
+                        }
+                    } else {
+                        // case of regular properties
+                        std::list<std::string> line;
+                        line.push_back("addProperty");
+                        line.push_back(propertyName);
+                        if (label != propertyName) {
+                            line.push_back("-label");
+                            line.push_back(label);
+                        }
+                        line.push_back(type);
+                        PropertyType ptype;
+                        int r = strToPropertyType(type, ptype);
+                        if (r == 0 && (ptype == F_SELECT || ptype == F_MULTISELECT) ) {
+                            // add options
+                            std::list<std::string> so = splitLinesAndTrimBlanks(selectOptions);
+                            line.insert(line.end(), so.begin(), so.end());
+                        }
+                        tokens.push_back(line);
+                    }
+                }
+                propertyName = value;
+                type.clear();
+                label.clear();
+                selectOptions.clear();
+            } else if (key == "type") { type = value; trimBlanks(type); }
+            else if (key == "label") { label = value; trimBlanks(label); }
+            else if (key == "selectOptions") selectOptions = value;
+            else {
+                LOG_ERROR("ProjectConfig: invalid posted parameter: '%s'", key.c_str());
+            }
+            if (postData.empty()) break; // leave the loop
+        }
+
+        int r ;
+        if (p.getName().empty()) {
+            if (!u.superadmin) return sendHttpHeader403(conn);
+            if (projectName.empty()) return sendHttpHeader400(conn, "Empty project name");
+
+            // request for creation of a new project
+            Project *newProject = Database::createProject(projectName);
+            if (!newProject) return sendHttpHeader500(conn, "Cannot create project");
+
+            p = *newProject;
+
+        } else if (p.getName() != projectName) {
+                LOG_INFO("Renaming an existing project not supported at the moment (%s -> %s)",
+                         p.getName().c_str(), projectName.c_str());
+        }
+
+        r = p.modifyConfig(tokens);
+
         if (r == 0) {
             // success, redirect to
             std::string redirectUrl = "/" + p.getUrlName() + "/config";
@@ -635,7 +757,15 @@ void httpPostProjectConfig(struct mg_connection *conn, Project &p, User u)
     }
 }
 
-#define K_ME "me"
+void httpPostNewProject(struct mg_connection *conn, User u)
+{
+    if (! u.superadmin) return sendHttpHeader403(conn);
+
+    Project p;
+    return httpPostProjectConfig(conn, p, u);
+}
+
+
 void replaceUserMe(std::map<std::string, std::list<std::string> > &filters, const Project &p, const std::string &username)
 {
     ProjectConfig pconfig = p.getConfig();
@@ -1282,6 +1412,8 @@ int begin_request_handler(struct mg_connection *conn)
     else if ( (resource == "") && (method == "POST") ) httpPostRoot(conn, user);
     else if ( (resource == "users") && (method == "GET") ) httpGetUsers(conn, user, uri);
     else if ( (resource == "users") && (method == "POST") ) httpPostUsers(conn, user, uri);
+    else if ( (resource == "_") && (method == "GET") ) httpGetNewProject(conn, user);
+    else if ( (resource == "_") && (method == "POST") ) httpPostNewProject(conn, user);
     else {
         // check if it is a valid project resource such as /myp/issues, /myp/users, /myp/config
         std::string projectUrl = resource;
@@ -1289,7 +1421,7 @@ int begin_request_handler(struct mg_connection *conn)
 
         // check if user has at lest read access
         enum Role r = user.getRole(project);
-        if (r != ROLE_ADMIN && r != ROLE_RW && r != ROLE_RO) {
+        if (r != ROLE_ADMIN && r != ROLE_RW && r != ROLE_RO && ! user.superadmin) {
             // no access granted for this user to this project
             handleUnauthorizedAccess(conn, resource);
 

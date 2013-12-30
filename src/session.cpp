@@ -125,7 +125,6 @@ int UserBase::load(const char *path)
                 continue;
             }
 
-            bool error = false;
             while (! line->empty()) {
                 std::string token = popListToken(*line);
                 if (token == "project") {
@@ -134,22 +133,19 @@ int UserBase::load(const char *path)
                     std::string role = popListToken(*line);
                     if (project.empty() || role.empty()) {
                         LOG_ERROR("Incomplete project access %s/%s", project.c_str(), role.c_str());
-                        error = true;
-                        break; // abort line
+                        continue;
                     }
                     // check if project exists
                     Project *p = Database::getProject(project);
                     if (!p) {
                         LOG_ERROR("Invalid project name '%s' for user %s", project.c_str(), u.username.c_str());
-                        error = true;
-                        break; // abort line
+                        continue;
                     }
 
                     Role r = stringToRole(role);
                     if (r == ROLE_NONE) {
                         LOG_ERROR("Invalid role '%s'", role.c_str());
-                        error = true;
-                        break; // abort line
+                        continue;
                     }
                     u.rolesOnProjects[project] = r;
 
@@ -157,18 +153,15 @@ int UserBase::load(const char *path)
                     std::string hash = popListToken(*line);
                     if (hash.empty()) {
                         LOG_ERROR("Empty hash");
-                        error = true;
-                        break; // abort line
+                        continue;
                     }
                     u.hashType = token;
                     u.hashValue = hash;
                 } else if (token == "superadmin") u.superadmin = true;
             }
-            if (!error) {
-                // add user in database
-                LOG_DEBUG("Loaded user: %s on %d projects", u.username.c_str(), u.rolesOnProjects.size());
-                UserBase::addUserInArray(u);
-            }
+            // add user in database
+            LOG_DEBUG("Loaded user: %s on %d projects", u.username.c_str(), u.rolesOnProjects.size());
+            UserBase::addUserInArray(u);
         }
     }
     return 0;
@@ -220,22 +213,15 @@ void UserBase::addUserInArray(User newUser)
     if (uit != UserDb.configuredUsers.end()) delete uit->second;
 
     UserDb.configuredUsers[u->username] = u;
-
-    // add in table usersByProject
-
-    // fill the usersByProject table
-    std::map<std::string, enum Role>::iterator r;
-    FOREACH(r, newUser.rolesOnProjects) {
-        UserDb.usersByProject[r->first].insert(newUser.username);
-    }
 }
 
 /** Add a new user in database and store it.
   */
 int UserBase::addUser(User newUser)
 {
-    ScopeLocker(UserDb.locker, LOCK_READ_WRITE);
+    if (newUser.username.empty()) return -1;
 
+    ScopeLocker(UserDb.locker, LOCK_READ_WRITE);
     addUserInArray(newUser);
     return store(Repository);
 }
@@ -246,11 +232,15 @@ std::set<std::string> UserBase::getUsersOfProject(const std::string &project)
 {
     ScopeLocker(UserDb.locker, LOCK_READ_ONLY);
 
-    std::map<std::string, std::set<std::string> >::iterator users;
-    users = UserDb.usersByProject.find(project);
-    if (users == UserDb.usersByProject.end()) return std::set<std::string>();
-    else return users->second;
+    std::set<std::string> result;
+    std::map<std::string, User*>::const_iterator u;
+    FOREACH(u, UserDb.configuredUsers) {
+        User *user = u->second;
+        if (user->getRole(project) != ROLE_NONE) result.insert(u->first);
     }
+
+    return result;
+}
 
 /** Get the list of users that are at stake in the given project
   */
@@ -271,6 +261,8 @@ std::map<std::string, Role> UserBase::getUsersRolesOfProject(const std::string &
 
 int UserBase::updateUser(const std::string &username, User newConfig)
 {
+    if (username.empty() || newConfig.username.empty()) return -1;
+
     ScopeLocker(UserDb.locker, LOCK_READ_WRITE);
 
     std::map<std::string, User*>::iterator u = UserDb.configuredUsers.find(username);
@@ -328,6 +320,7 @@ enum Role User::getRole(const std::string &project)
 }
 
 /** Get the projects where the user has access (read or write)
+  * List of pairs (project, role)
   */
 std::list<std::pair<std::string, std::string> > User::getProjects()
 {

@@ -4,7 +4,7 @@
  */
 function addFilter(divname, selected, value) {
     var div = document.getElementById(divname);
-    var select = createSelect(Properties, selected);
+    var select = createSelect(Properties, selected, true);
     select.name = divname;
     div.appendChild(select);
     var i = document.createElement('input');
@@ -17,17 +17,17 @@ function addFilter(divname, selected, value) {
 function addColspec(selected) {
     var divname = 'colspec';
     var div = document.getElementById(divname);
-    var select = createSelect(Properties, selected);
+    var select = createSelect(Properties, selected, true);
     select.name = 'colspec';
     div.appendChild(select);
 }
 function addSort(selectedDirection, selectedProperty) {
     var divname = 'sort';
     var div = document.getElementById(divname);
-    var select = createSelect(['Ascending', 'Descending'], selectedDirection);
+    var select = createSelect(['Ascending', 'Descending'], selectedDirection, true);
     select.name = 'sort_direction';
     div.appendChild(select);
-    select = createSelect(Properties, selectedProperty);
+    select = createSelect(Properties, selectedProperty, true);
     select.name = 'sort_property';
     div.appendChild(select);
     div.appendChild(document.createElement('br'));

@@ -47,10 +47,10 @@ function updateFileInput(classname) {
         }
     }
 }
-function createSelect(items, selected) {
+function createSelect(items, selected, allowVoid) {
     var select = document.createElement('select');
     var items2 = items.slice(0); // copy the array
-    items2.push(''); // add an empty value
+    if (allowVoid) items2.push(''); // add an empty value
     var length = items2.length;
     for (var i = 0; i < length; i++) {
         var opt = document.createElement('option');
@@ -66,3 +66,9 @@ function createSelect(items, selected) {
     return select;
 }
 
+function hideSuperadminZone() {
+    var divs = document.getElementsByClassName('sm_user_superadmin_zone');
+    for(var i=0; i<divs.length; i++) {
+          divs[i].style.display='none';
+    }
+}

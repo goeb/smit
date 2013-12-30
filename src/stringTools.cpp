@@ -20,8 +20,10 @@
 #include "global.h"
 
 /** take first token name out of uri
-  * /a/b/c -> a and b/c
-  * a/b/c -> a and b/c
+  * Examples:
+  *     popToken("/a/b/c", '/') -> return "a" and set uri to "b/c"
+  *     popToken("a/b/c", '/') -> return "a" and set uri to "b/c"
+  *     popToken("x=1&y=2", '&') -> return "x=1" and set uri to "y=2"
   */
 std::string popToken(std::string & uri, char separator)
 {
@@ -229,6 +231,29 @@ std::vector<std::string> split(const std::string &s, const char *c, int limit)
     return tokens;
 }
 
+
+std::list<std::string> splitLinesAndTrimBlanks(const std::string &s)
+{
+    std::list<std::string> lines;
+    size_t found;
+
+    int index = 0;
+    while ((found = s.find('\n', index)) != std::string::npos)
+    {
+        std::string line = s.substr(index, found-index);
+        trimBlanks(line);
+        lines.push_back(line);
+
+        index = found + 1;
+    }
+    std::string lastLine = s.substr(index);
+    trimBlanks(lastLine);
+    lines.push_back(lastLine);
+
+    return lines;
+}
+
+
 std::string join(const std::list<std::string> &items, const char *separator)
 {
     std::string out;
@@ -240,4 +265,22 @@ std::string join(const std::list<std::string> &items, const char *separator)
     return out;
 }
 
-
+/** basename / -> ""
+  * basename . -> .
+  * basename "" -> ""
+  * basename a/b/c -> c
+  * basename a/b/c/ -> c
+  */
+std::string getBasename(const std::string &path)
+{
+    if (path.empty()) return "";
+    size_t i;
+#if defined(_WIN32)
+    i = path.find_last_of("/\\");
+#else
+    i = path.find_last_of("/");
+#endif
+    if (i == std::string::npos) return path;
+    else if (i == path.size()-1) return getBasename(path.substr(0, path.size()-1));
+    else return path.substr(i+1);
+}
