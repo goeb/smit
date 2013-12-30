@@ -426,7 +426,11 @@ PropertySpec parsePropertySpec(std::list<std::string> & tokens)
         tokens.pop_front();
     }
 
-
+    if (tokens.empty()) {
+        LOG_ERROR("Not enough tokens");
+        property.name = "";
+        return property; // error, indicated to caller by empty name of property
+    }
     std::string type = tokens.front();
     tokens.pop_front();
     int r = strToPropertyType(type, property.type);
@@ -596,13 +600,6 @@ int Project::modifyConfig(std::list<std::list<std::string> > &tokens)
 
     // verify the syntax of the tokens
     ProjectConfig c = parseProjectConfig(tokens);
-#if 0
-    if (c.properties.empty()) {
-        // error do not accept this
-        LOG_INFO("Reject modification of project structure as there is no property at all");
-        return -1;
-    }
-#endif
     c.predefinedViews = config.predefinedViews; // keep those unchanged
 
     // add version

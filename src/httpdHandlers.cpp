@@ -775,7 +775,7 @@ void httpPostProjectConfig(struct mg_connection *conn, Project &p, User u)
             if (postData.empty()) break; // leave the loop
         }
 
-        int r ;
+        Project *ptr;
         if (p.getName().empty()) {
             if (!u.superadmin) return sendHttpHeader403(conn);
             if (projectName.empty()) return sendHttpHeader400(conn, "Empty project name");
@@ -784,18 +784,20 @@ void httpPostProjectConfig(struct mg_connection *conn, Project &p, User u)
             Project *newProject = Database::createProject(projectName);
             if (!newProject) return sendHttpHeader500(conn, "Cannot create project");
 
-            p = *newProject;
+            ptr = newProject;
 
-        } else if (p.getName() != projectName) {
+        } else {
+            if (p.getName() != projectName) {
                 LOG_INFO("Renaming an existing project not supported at the moment (%s -> %s)",
                          p.getName().c_str(), projectName.c_str());
+            }
+            ptr = &p;
         }
-
-        r = p.modifyConfig(tokens);
+        int r = ptr->modifyConfig(tokens);
 
         if (r == 0) {
             // success, redirect to
-            std::string redirectUrl = "/" + p.getUrlName() + "/config";
+            std::string redirectUrl = "/" + ptr->getUrlName() + "/config";
             sendHttpRedirect(conn, redirectUrl.c_str(), 0);
 
         } else { // error
