@@ -1426,7 +1426,7 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
                 mg_printf(conn, "<a href=\"../%s/%s\" class=\"sm_entry_file\">", K_UPLOADED_FILES_DIR,
                           urlEncode(*f).c_str());
                 if (isImage(*f)) {
-                    mg_printf(conn, "<img src=\"../files/%s\" class=\"sm_entry_file\"> ", urlEncode(*f).c_str());
+                    mg_printf(conn, "<img src=\"../files/%s\" class=\"sm_entry_file\"><br>", urlEncode(*f).c_str());
                 }
                 mg_printf(conn, "%s", htmlEscape(shortName).c_str());
                 mg_printf(conn, "</a>");

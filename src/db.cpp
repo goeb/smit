@@ -26,6 +26,7 @@
 #include <time.h>
 #include <algorithm>
 #include <sys/types.h>
+#include <unistd.h>
 
 #include "db.h"
 #include "parseConfig.h"
@@ -1244,10 +1245,9 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
     std::string data = e->serialize();
 
     // generate a id for this entry
-    std::string id;
-    id = getBase64Id((uint8_t*)data.c_str(), data.size());
+    std::string newEntryId = getBase64Id((uint8_t*)data.c_str(), data.size());
 
-    LOG_DEBUG("new entry: %s", id.c_str());
+    LOG_DEBUG("new entry: %s", newEntryId.c_str());
 
     std::string pathOfNewEntry;
     std::string pathOfIssue;
@@ -1280,10 +1280,15 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
         issues[issueId] = i;
 
     } else {
+        // check that this entry ID does not exist
+        if (i->entries.find(newEntryId) != i->entries.end()) {
+            LOG_ERROR("Entry with same id already exists: %s", newEntryId.c_str());
+            return -1;
+        }
         pathOfIssue = path + '/' + ISSUES + '/' + issueId;
     }
 
-    pathOfNewEntry = pathOfIssue + '/' + id;
+    pathOfNewEntry = pathOfIssue + '/' + newEntryId;
     int r = writeToFile(pathOfNewEntry.c_str(), data);
     if (r != 0) {
         // error.
@@ -1292,8 +1297,8 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
     }
 
     // add this entry in Project::entries
-    e->id = id;
-    i->entries[id] = e;
+    e->id = newEntryId;
+    i->entries[newEntryId] = e;
 
     // consolidate the issue
     i->consolidateIssueWithSingleEntry(e, true);
@@ -1310,14 +1315,25 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
         FOREACH(f, files->second) {
             std::string oldpath = path + "/tmp/" + *f;
             std::string newpath = dir + "/" + *f;
-            int r = rename(oldpath.c_str(), newpath.c_str());
-            if (r != 0) {
-                LOG_ERROR("Cannot move file '%s' -> '%s': %s", oldpath.c_str(), newpath.c_str(), strerror(errno));
+
+            if (access(newpath.c_str(), F_OK ) != -1 ) {
+                // destination file already exists
+                // file already uploaded (or SHA1 collision)
+                // do nothing, and erase temporary file
+                LOG_INFO("File '%s' already uploaded. Ignore new upload of this file.", f->c_str());
+                unlink(oldpath.c_str());
+
+            } else {
+                // move the file from tmp to persistent directory
+                int r = rename(oldpath.c_str(), newpath.c_str());
+                if (r != 0) {
+                    LOG_ERROR("Cannot move file '%s' -> '%s': %s", oldpath.c_str(), newpath.c_str(), strerror(errno));
+                }
             }
         }
-    }
+    } // end of processing of uploaded files
 
-    entryId = id;
+    entryId = newEntryId;
     return r;
 }
 

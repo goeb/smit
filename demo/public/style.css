@@ -44,6 +44,7 @@ td {
     border-collapse:collapse;
 }
 .sm_entry {
+    clear: both;
     border: 0;
     margin: 0;
     /*border-top: 3px;
@@ -71,6 +72,7 @@ td {
     margin-bottom: 0.5em;
 }
 .sm_entry_other_properties {
+    clear: both;
     color: #777;
     /*background-color: #E0E0E0;*/
     padding-top: 7px;
@@ -120,7 +122,8 @@ input {
     width: 100%;
 }
 .sm_issue_form {
-    border-top: 1em solid #E0E0E0;
+    clear: both;
+    border-top: 2px solid #E0E0E0;
     padding-top: 2em;
     margin-top: 4em;
 }
@@ -292,8 +295,18 @@ table.sm_views td {
 
 }
 img.sm_entry_file {
-    width: 150px;
+    height: 50px;
     border: 0;
+}
+.sm_entry_file:hover {
+    background-color: #d0d0d0;
+}
+div.sm_entry_file {
+    float: left;
+    background-color: #e0e0e0;
+    padding: 6px;
+    margin: 3px;
+    text-align: center;
 }
 div.sm_entry_files {
     /*background-color: #E0E0E0;*/
