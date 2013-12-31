@@ -333,6 +333,8 @@ FILE *cpioOpenArchive(const char *file)
         LOG_ERROR("Cannot fseek %d file '%s': %s", -4-size, file, strerror(errno));
         return NULL;
     }
+    long offset = ftell(f);
+    LOG_DEBUG("Position in file: offset=%ld", offset);
     return f;
 }
 
