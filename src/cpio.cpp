@@ -327,8 +327,9 @@ FILE *cpioOpenArchive(const char *file)
     //size = ntohl(size); // convert to host byte order
     LOG_DEBUG("cpioExtractFile: size=%u\n", size);
 
+    long sizeToSeek = size;
     // go to the beginning of the cpio archive
-    r = fseek(f, -4-size, SEEK_END);
+    r = fseek(f, -4-sizeToSeek, SEEK_END);
     if (r != 0) {
         LOG_ERROR("Cannot fseek %d file '%s': %s", -4-size, file, strerror(errno));
         return NULL;
