@@ -49,6 +49,7 @@ enum FileType { FTYPE_REGULAR, FTYPE_DIR, FTYPE_OTHER };
   */
 int cpioGetNextFileHeader(FILE* cpioArchiveFd, std::string &filepath, FileType &ftype, uint32_t &filesize)
 {
+    LOG_FUNC();
     struct header_old_cpio header;
     size_t n = fread(&header, sizeof(header), 1, cpioArchiveFd);
     if (n == 0) {
@@ -119,6 +120,7 @@ int cpioGetNextFileHeader(FILE* cpioArchiveFd, std::string &filepath, FileType &
   */
 int cpioGetFile(FILE* cpioArchiveFd, const char *file)
 {
+    LOG_FUNC();
     std::string filepath;
     FileType ftype;
     uint32_t filesize;
@@ -297,6 +299,8 @@ int cpioExtractTree(FILE* cpioArchiveFd, const char *src, const char *dst)
 
 FILE *cpioOpenArchive(const char *file)
 {
+    LOG_FUNC();
+    LOG_DEBUG("cpioOpenArchive(%s)", file);
     FILE *f = fopen(file, "rb");
     if (!f) {
         LOG_ERROR("Cannot open file '%s': %s", file, strerror(errno));
@@ -329,6 +333,8 @@ FILE *cpioOpenArchive(const char *file)
         LOG_ERROR("Cannot fseek %d file '%s': %s", -4-size, file, strerror(errno));
         return NULL;
     }
+    long offset = ftell(f);
+    LOG_DEBUG("Position in file: offset=%ld", offset);
     return f;
 }
 
