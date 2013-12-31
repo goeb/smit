@@ -96,8 +96,7 @@ data/sm/version:
 		echo $$V >> $@
 	echo -n "Build: " >> $@
 	date "+%Y-%m-%d %H:%M:%S" >> $@
-	echo -n "Latest " >> $@
-	git log -1 | head -1 >> $@
+	which git && echo -n "Latest " >> $@ && git log -1 | head -1 >> $@
 
 
 
