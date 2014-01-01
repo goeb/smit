@@ -823,7 +823,8 @@ void replaceUserMe(std::map<std::string, std::list<std::string> > &filters, cons
     std::map<std::string, std::list<std::string> >::iterator filter;
     FOREACH(filter, filters) {
         std::map<std::string, PropertySpec>::const_iterator ps = propertiesSpec.find(filter->first);
-        if ( (ps != pconfig.properties.end()) && (ps->second.type == F_SELECT_USER) ) {
+
+        if ( (ps != propertiesSpec.end()) && (ps->second.type == F_SELECT_USER) ) {
             std::list<std::string>::iterator v;
             FOREACH(v, filter->second) {
                 if ((*v) == K_ME) {

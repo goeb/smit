@@ -394,7 +394,7 @@ PropertySpec parsePropertySpec(std::list<std::string> & tokens)
     // type = text | select | multiselect | selectUser
     PropertySpec property;
     if (tokens.size() < 2) {
-        LOG_DEBUG("Not enough tokens");
+        LOG_ERROR("Not enough tokens");
         return property; // error, indicated to caller by empty name of property
     }
 
@@ -403,7 +403,7 @@ PropertySpec parsePropertySpec(std::list<std::string> & tokens)
     const char* allowedInPropertyName = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_";
     if (property.name.find_first_not_of(allowedInPropertyName) != std::string::npos) {
         // invalid character
-        LOG_DEBUG("Invalid property name: %s", property.name.c_str());
+        LOG_ERROR("Invalid property name: %s", property.name.c_str());
         property.name = "";
         return property;
     }
