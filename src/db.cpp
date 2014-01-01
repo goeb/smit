@@ -597,7 +597,7 @@ int Project::loadConfig(const char *path)
 int Project::modifyConfig(std::list<std::list<std::string> > &tokens)
 {
     LOG_FUNC();
-    ScopeLocker scopeLocker(locker, LOCK_READ_WRITE);
+    ScopeLocker scopeLocker(lockerForConfig, LOCK_READ_WRITE);
 
     // verify the syntax of the tokens
     ProjectConfig c = parseProjectConfig(tokens);
@@ -833,6 +833,8 @@ void Project::loadPredefinedViews(const char *projectPath)
 
 std::string Project::getLabelOfProperty(const std::string &propertyName) const
 {
+    ScopeLocker scopeLocker(lockerForConfig, LOCK_READ_ONLY);
+
     std::string label;
     std::map<std::string, std::string> labels = config.propertyLabels;
     std::map<std::string, std::string>::const_iterator l;
@@ -1162,6 +1164,7 @@ bool Issue::searchFullText(const char *text) const
 int Project::addEntry(std::map<std::string, std::list<std::string> > properties, std::string &issueId, std::string &entryId, std::string username)
 {
     ScopeLocker scopeLocker(locker, LOCK_READ_WRITE) ; // TODO look for optimization
+    ScopeLocker scopeLockerConfig(lockerForConfig, LOCK_READ_ONLY);
 
     Issue *i = 0;
     if (issueId.size()>0) {
@@ -1351,6 +1354,7 @@ std::list<std::string> Project::getReservedProperties() const
   */
 std::list<std::string> Project::getPropertiesNames() const
 {
+    ScopeLocker scopeLocker(lockerForConfig, LOCK_READ_ONLY);
     std::list<std::string> colspec = config.orderedProperties;
     // add mandatory properties that are not included in orderedProperties
     std::list<std::string> reserved = getReservedProperties();

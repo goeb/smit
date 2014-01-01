@@ -141,8 +141,8 @@ private:
 
     ProjectConfig config;
     std::map<std::string, Issue*> issues;
-    Locker locker;
-    Locker lockerForConfig;
+    mutable Locker locker; // mutex for issues
+    mutable Locker lockerForConfig; // mutext for config
     std::string name; //< name of the project, plain text
     std::string path; //< path to the project, in which the basename is the urlencoded name
     int maxIssueId;

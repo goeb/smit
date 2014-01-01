@@ -56,7 +56,7 @@ public:
 private:
     static UserBase UserDb;
     std::map<std::string, User*> configuredUsers;
-    Locker locker;
+    Locker locker; // mutex for configuredUsers
     static std::string Repository;
     static void addUserInArray(User u);
 
