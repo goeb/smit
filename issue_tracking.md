@@ -7,7 +7,7 @@ Issue Tracking is the art of managing issues in order to get a clear status of u
 > An issue database is more or less a 3D matrix:
 >
 > - a row for each *issue*
-> - a column for each *property*
+> - a column for each *property* (eg: a status is a property)
 > - a depth axis for the *history*
 > 
 
