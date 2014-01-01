@@ -2,6 +2,15 @@
 
 Issue Tracking is the art of managing issues in order to get a clear status of unresolved issues and a history of what happened about all issues.
 
+> *&#8984; Vocabulary*
+> 
+> An issue database is more or less a 3D matrix:
+>
+> - a row for each *issue*
+> - a column for each *property*
+> - a depth axis for the *history*
+> 
+
 The main pitfalls that issue tracker software have to tackle are:
 
 - information is lost in a mass of issues

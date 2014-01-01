@@ -117,3 +117,21 @@ pre code {
     line-height: 1.8em;
 }
 
+blockquote {
+    background-color: #EEE;
+    padding: 0.5em;
+    padding-top: 1px;
+    padding-bottom: 2px;
+    border: 1px solid #AAA;
+    margin: 0;
+    font-size: 80%;
+}
+blockquote p, blockquote ul {
+    padding-top: 0;
+    padding-bottom: 0;
+    margin: 0;
+}
+em {
+    font-weight: bold;
+    font-style: normal;
+}

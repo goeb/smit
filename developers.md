@@ -1,5 +1,6 @@
 # Developers' Corner
 
+Smit is built on top of [Mongoose HTTP server](http://code.google.com/p/mongoose/).
 
 ## REST API
 The requests are driven by the Query String:
