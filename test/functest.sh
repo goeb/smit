@@ -94,7 +94,7 @@ kill $pid
 cmp functest.ref functest.log
 
 echo -n "$0 ... "
-if [ $? -eq 0 ]; then echo OK
-else echo "ERROR (check diff functest.ref functest.log, repo=$REPO)"
+if [ $? -eq 0 ]; then echo OK 1>&2
+else echo "ERROR (check diff functest.ref functest.log, repo=$REPO)" 1>&2
 fi
 

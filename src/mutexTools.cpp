@@ -75,11 +75,13 @@ void Locker::lockForReading()
     LOG_FUNC();
     // lock && unlock the write mutex.
     // this is to prevent new reader while a writer has taken the mutex
-    lockForWriting();
-    unlockForWriting();
+    int r = pthread_mutex_lock(&readWriteMutex);
+    if (r != 0) LOG_ERROR("pthread_mutex_lock error: (%d) %s", r, strerror(r));
+    r = pthread_mutex_unlock(&readWriteMutex);
+    if (r != 0) LOG_ERROR("pthread_mutex_lock error: (%d) %s", r, strerror(r));
 
     // now get the read mutex, for updating nReaders
-    int r = pthread_mutex_lock(&readOnlyMutex);
+    r = pthread_mutex_lock(&readOnlyMutex);
     if (r != 0) LOG_ERROR("pthread_mutex_lock error: (%d) %s", r, strerror(r));
 
     nReaders++;

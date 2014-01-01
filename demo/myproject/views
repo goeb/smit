@@ -1,4 +1,4 @@
-+smv 1.1.0-rc5
++smv 1.1.1
 addView "Deleted issues" \
     filterin status deleted \
 
@@ -8,12 +8,7 @@ addView "Open issues" \
     sort +mtime \
 
 addView "test xxx-abb-renaed" \
+    filterin id "" \
+    filterout id 2121 \
     search toto
-
-addView ttty \
-    filterin ctime "" \
-    filterin summary "" \
-    filterout summary "" \
-    colspec id+ctime+status \
-    search ttty
 
