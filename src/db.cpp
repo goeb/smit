@@ -1479,6 +1479,8 @@ Project *Database::loadProject(const char *path)
 
 Project *Database::getProject(const std::string & projectName)
 {
+    ScopeLocker scopeLocker(Db.locker, LOCK_READ_ONLY);
+
     std::map<std::string, Project*>::iterator p = Database::Db.projects.find(projectName);
     if (p == Database::Db.projects.end()) return 0;
     else return p->second;

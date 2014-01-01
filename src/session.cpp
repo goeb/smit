@@ -93,8 +93,11 @@ std::list<std::string> getAvailableRoles()
 
 /** Load the users from file storage
   */
-int UserBase::load(const char *path)
+int UserBase::init(const char *path)
 {
+    // init random seed
+    srand(time(0));
+
     Repository = path;
     std::string file = Repository;
     file += "/";

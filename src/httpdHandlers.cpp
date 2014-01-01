@@ -358,11 +358,11 @@ int httpGetSm(struct mg_connection *conn, const std::string &file)
         mg_printf(conn, "Content-Type: %s\r\n\r\n", mimeType);
 
         // file found
-        const int BS = 1024;
+        const uint32_t BS = 1024;
         char buffer[BS];
         int remainingBytes = filesize;
         while (remainingBytes > 0) {
-            int nToRead = remainingBytes;
+            uint32_t nToRead = remainingBytes;
             if (nToRead > BS) nToRead = BS;
             size_t n = fread(buffer, 1, nToRead, f);
             mg_write(conn, buffer, n);
