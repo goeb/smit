@@ -93,8 +93,11 @@ std::list<std::string> getAvailableRoles()
 
 /** Load the users from file storage
   */
-int UserBase::load(const char *path)
+int UserBase::init(const char *path)
 {
+    // init random seed
+    srand(time(0));
+
     Repository = path;
     std::string file = Repository;
     file += "/";
@@ -403,10 +406,11 @@ std::string SessionBase::createSession(const std::string &username)
     ScopeLocker(locker, LOCK_READ_WRITE);
 
     std::stringstream randomStr;
-    randomStr << rand() << rand() << rand();
+    randomStr << std::hex << rand() << rand() << rand();
     Session s;
     s.ctime = time(0);
     s.id = randomStr.str();
+    LOG_DEBUG("session-id: %s", s.id.c_str());
     s.username = username;
     s.duration = SESSION_DURATION;
     SessionDb.sessions[s.id] = s;

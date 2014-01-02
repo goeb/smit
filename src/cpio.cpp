@@ -49,6 +49,7 @@ enum FileType { FTYPE_REGULAR, FTYPE_DIR, FTYPE_OTHER };
   */
 int cpioGetNextFileHeader(FILE* cpioArchiveFd, std::string &filepath, FileType &ftype, uint32_t &filesize)
 {
+    LOG_FUNC();
     struct header_old_cpio header;
     size_t n = fread(&header, sizeof(header), 1, cpioArchiveFd);
     if (n == 0) {
@@ -119,9 +120,10 @@ int cpioGetNextFileHeader(FILE* cpioArchiveFd, std::string &filepath, FileType &
   */
 int cpioGetFile(FILE* cpioArchiveFd, const char *file)
 {
+    LOG_FUNC();
     std::string filepath;
     FileType ftype;
-    size_t filesize;
+    uint32_t filesize;
     int r;
     while ( (r = cpioGetNextFileHeader(cpioArchiveFd, filepath, ftype, filesize)) >= 0 ) {
 
@@ -129,7 +131,7 @@ int cpioGetFile(FILE* cpioArchiveFd, const char *file)
             // this is not the file we are looking for
             // skip the contents of this file
             if (filesize % 2 == 1) filesize++; // padding of 1 null byte
-            int r = fseek(cpioArchiveFd, filesize, SEEK_CUR);
+            int r = fseek(cpioArchiveFd, (long)filesize, SEEK_CUR);
             if (r != 0) {
                 LOG_ERROR("fseek error (file=%s contentsSize=%u): %s", filepath.c_str(), filesize, strerror(errno));
                 return -1;
@@ -162,13 +164,13 @@ int cpioExtractTree(FILE* cpioArchiveFd, const char *src, const char *dst)
 {
     std::string filepath;
     FileType ftype;
-    size_t filesize;
+    uint32_t filesize;
     int r;
     while ( (r = cpioGetNextFileHeader(cpioArchiveFd, filepath, ftype, filesize)) >= 0 ) {
         // if file does not match src, then skip this file
         if (src && strlen(src) && 0 != strncmp(src, filepath.c_str(), strlen(src))) {
             if (filesize % 2 == 1) filesize++; // padding of 1 null byte
-            int r = fseek(cpioArchiveFd, filesize, SEEK_CUR);
+            int r = fseek(cpioArchiveFd, (long)filesize, SEEK_CUR);
             if (r != 0) {
                 LOG_ERROR("fseek error (file=%s contentsSize=%u): %s", filepath.c_str(), filesize, strerror(errno));
                 return -1;
@@ -297,6 +299,8 @@ int cpioExtractTree(FILE* cpioArchiveFd, const char *src, const char *dst)
 
 FILE *cpioOpenArchive(const char *file)
 {
+    LOG_FUNC();
+    LOG_DEBUG("cpioOpenArchive(%s)", file);
     FILE *f = fopen(file, "rb");
     if (!f) {
         LOG_ERROR("Cannot open file '%s': %s", file, strerror(errno));
@@ -323,12 +327,15 @@ FILE *cpioOpenArchive(const char *file)
     //size = ntohl(size); // convert to host byte order
     LOG_DEBUG("cpioExtractFile: size=%u\n", size);
 
+    long sizeToSeek = size;
     // go to the beginning of the cpio archive
-    r = fseek(f, -4-size, SEEK_END);
+    r = fseek(f, -4-sizeToSeek, SEEK_END);
     if (r != 0) {
         LOG_ERROR("Cannot fseek %d file '%s': %s", -4-size, file, strerror(errno));
         return NULL;
     }
+    long offset = ftell(f);
+    LOG_DEBUG("Position in file: offset=%ld", offset);
     return f;
 }
 

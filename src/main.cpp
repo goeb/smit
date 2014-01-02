@@ -186,7 +186,7 @@ int addUser(int argc, const char **args)
     if (!username) usage();
     u.username = username;
 
-    int r = UserBase::load(repo);
+    int r = UserBase::init(repo);
     if (r < 0) {
         LOG_ERROR("Cannot loads users of repository '%s'. Aborting.", repo);
         exit(1);
@@ -243,7 +243,7 @@ int serveRepository(int argc, const char **args)
         LOG_ERROR("Cannot serve repository '%s'. Aborting.", repo);
         exit(1);
     }
-    r = UserBase::load(repo);
+    r = UserBase::init(repo);
     if (r < 0) {
         LOG_ERROR("Cannot loads users of repository '%s'. Aborting.", repo);
         exit(1);

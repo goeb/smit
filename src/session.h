@@ -41,7 +41,7 @@ struct User {
 
 class UserBase {
 public:
-    static int load(const char *repository);
+    static int init(const char *repository);
     static int store(const std::string &repository);
     static int initUsersFile(const char *repository);
     static User* getUser(const std::string &username);
@@ -56,7 +56,7 @@ public:
 private:
     static UserBase UserDb;
     std::map<std::string, User*> configuredUsers;
-    Locker locker;
+    Locker locker; // mutex for configuredUsers
     static std::string Repository;
     static void addUserInArray(User u);
 

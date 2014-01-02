@@ -26,6 +26,7 @@
 #include <time.h>
 #include <algorithm>
 #include <sys/types.h>
+#include <unistd.h>
 
 #include "db.h"
 #include "parseConfig.h"
@@ -393,7 +394,7 @@ PropertySpec parsePropertySpec(std::list<std::string> & tokens)
     // type = text | select | multiselect | selectUser
     PropertySpec property;
     if (tokens.size() < 2) {
-        LOG_DEBUG("Not enough tokens");
+        LOG_ERROR("Not enough tokens");
         return property; // error, indicated to caller by empty name of property
     }
 
@@ -402,7 +403,7 @@ PropertySpec parsePropertySpec(std::list<std::string> & tokens)
     const char* allowedInPropertyName = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_";
     if (property.name.find_first_not_of(allowedInPropertyName) != std::string::npos) {
         // invalid character
-        LOG_DEBUG("Invalid property name: %s", property.name.c_str());
+        LOG_ERROR("Invalid property name: %s", property.name.c_str());
         property.name = "";
         return property;
     }
@@ -426,7 +427,11 @@ PropertySpec parsePropertySpec(std::list<std::string> & tokens)
         tokens.pop_front();
     }
 
-
+    if (tokens.empty()) {
+        LOG_ERROR("Not enough tokens");
+        property.name = "";
+        return property; // error, indicated to caller by empty name of property
+    }
     std::string type = tokens.front();
     tokens.pop_front();
     int r = strToPropertyType(type, property.type);
@@ -592,17 +597,10 @@ int Project::loadConfig(const char *path)
 int Project::modifyConfig(std::list<std::list<std::string> > &tokens)
 {
     LOG_FUNC();
-    ScopeLocker scopeLocker(locker, LOCK_READ_WRITE);
+    ScopeLocker scopeLocker(lockerForConfig, LOCK_READ_WRITE);
 
     // verify the syntax of the tokens
     ProjectConfig c = parseProjectConfig(tokens);
-#if 0
-    if (c.properties.empty()) {
-        // error do not accept this
-        LOG_INFO("Reject modification of project structure as there is no property at all");
-        return -1;
-    }
-#endif
     c.predefinedViews = config.predefinedViews; // keep those unchanged
 
     // add version
@@ -835,6 +833,8 @@ void Project::loadPredefinedViews(const char *projectPath)
 
 std::string Project::getLabelOfProperty(const std::string &propertyName) const
 {
+    ScopeLocker scopeLocker(lockerForConfig, LOCK_READ_ONLY);
+
     std::string label;
     std::map<std::string, std::string> labels = config.propertyLabels;
     std::map<std::string, std::string>::const_iterator l;
@@ -1164,6 +1164,7 @@ bool Issue::searchFullText(const char *text) const
 int Project::addEntry(std::map<std::string, std::list<std::string> > properties, std::string &issueId, std::string &entryId, std::string username)
 {
     ScopeLocker scopeLocker(locker, LOCK_READ_WRITE) ; // TODO look for optimization
+    ScopeLocker scopeLockerConfig(lockerForConfig, LOCK_READ_ONLY);
 
     Issue *i = 0;
     if (issueId.size()>0) {
@@ -1247,10 +1248,9 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
     std::string data = e->serialize();
 
     // generate a id for this entry
-    std::string id;
-    id = getBase64Id((uint8_t*)data.c_str(), data.size());
+    std::string newEntryId = getBase64Id((uint8_t*)data.c_str(), data.size());
 
-    LOG_DEBUG("new entry: %s", id.c_str());
+    LOG_DEBUG("new entry: %s", newEntryId.c_str());
 
     std::string pathOfNewEntry;
     std::string pathOfIssue;
@@ -1283,10 +1283,15 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
         issues[issueId] = i;
 
     } else {
+        // check that this entry ID does not exist
+        if (i->entries.find(newEntryId) != i->entries.end()) {
+            LOG_ERROR("Entry with same id already exists: %s", newEntryId.c_str());
+            return -1;
+        }
         pathOfIssue = path + '/' + ISSUES + '/' + issueId;
     }
 
-    pathOfNewEntry = pathOfIssue + '/' + id;
+    pathOfNewEntry = pathOfIssue + '/' + newEntryId;
     int r = writeToFile(pathOfNewEntry.c_str(), data);
     if (r != 0) {
         // error.
@@ -1295,8 +1300,8 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
     }
 
     // add this entry in Project::entries
-    e->id = id;
-    i->entries[id] = e;
+    e->id = newEntryId;
+    i->entries[newEntryId] = e;
 
     // consolidate the issue
     i->consolidateIssueWithSingleEntry(e, true);
@@ -1313,14 +1318,25 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
         FOREACH(f, files->second) {
             std::string oldpath = path + "/tmp/" + *f;
             std::string newpath = dir + "/" + *f;
-            int r = rename(oldpath.c_str(), newpath.c_str());
-            if (r != 0) {
-                LOG_ERROR("Cannot move file '%s' -> '%s': %s", oldpath.c_str(), newpath.c_str(), strerror(errno));
+
+            if (access(newpath.c_str(), F_OK ) != -1 ) {
+                // destination file already exists
+                // file already uploaded (or SHA1 collision)
+                // do nothing, and erase temporary file
+                LOG_INFO("File '%s' already uploaded. Ignore new upload of this file.", f->c_str());
+                unlink(oldpath.c_str());
+
+            } else {
+                // move the file from tmp to persistent directory
+                int r = rename(oldpath.c_str(), newpath.c_str());
+                if (r != 0) {
+                    LOG_ERROR("Cannot move file '%s' -> '%s': %s", oldpath.c_str(), newpath.c_str(), strerror(errno));
+                }
             }
         }
-    }
+    } // end of processing of uploaded files
 
-    entryId = id;
+    entryId = newEntryId;
     return r;
 }
 
@@ -1338,6 +1354,7 @@ std::list<std::string> Project::getReservedProperties() const
   */
 std::list<std::string> Project::getPropertiesNames() const
 {
+    ScopeLocker scopeLocker(lockerForConfig, LOCK_READ_ONLY);
     std::list<std::string> colspec = config.orderedProperties;
     // add mandatory properties that are not included in orderedProperties
     std::list<std::string> reserved = getReservedProperties();
@@ -1466,6 +1483,8 @@ Project *Database::loadProject(const char *path)
 
 Project *Database::getProject(const std::string & projectName)
 {
+    ScopeLocker scopeLocker(Db.locker, LOCK_READ_ONLY);
+
     std::map<std::string, Project*>::iterator p = Database::Db.projects.find(projectName);
     if (p == Database::Db.projects.end()) return 0;
     else return p->second;

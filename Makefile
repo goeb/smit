@@ -96,8 +96,7 @@ data/sm/version:
 		echo $$V >> $@
 	echo -n "Build: " >> $@
 	date "+%Y-%m-%d %H:%M:%S" >> $@
-	echo -n "Latest " >> $@
-	git log -1 | head -1 >> $@
+	which git && echo -n "Latest " >> $@ && git log -1 | head -1 >> $@
 
 
 
@@ -108,6 +107,7 @@ embedcpio: $(EXE) data/*/* data/sm/version
 	cat $(CPIO_ARCHIVE) >> $(EXE)
 	size=`stat -c %s $(CPIO_ARCHIVE)`; \
 	python -c "import struct; import sys; sys.stdout.write(struct.pack('I', $$size))" >> $(EXE)
+	cp $(CPIO_ARCHIVE) $(EXE) demo/public
 
 
 clean:

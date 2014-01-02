@@ -358,11 +358,11 @@ int httpGetSm(struct mg_connection *conn, const std::string &file)
         mg_printf(conn, "Content-Type: %s\r\n\r\n", mimeType);
 
         // file found
-        const int BS = 1024;
+        const uint32_t BS = 1024;
         char buffer[BS];
         int remainingBytes = filesize;
         while (remainingBytes > 0) {
-            int nToRead = remainingBytes;
+            uint32_t nToRead = remainingBytes;
             if (nToRead > BS) nToRead = BS;
             size_t n = fread(buffer, 1, nToRead, f);
             mg_write(conn, buffer, n);
@@ -775,7 +775,7 @@ void httpPostProjectConfig(struct mg_connection *conn, Project &p, User u)
             if (postData.empty()) break; // leave the loop
         }
 
-        int r ;
+        Project *ptr;
         if (p.getName().empty()) {
             if (!u.superadmin) return sendHttpHeader403(conn);
             if (projectName.empty()) return sendHttpHeader400(conn, "Empty project name");
@@ -784,18 +784,20 @@ void httpPostProjectConfig(struct mg_connection *conn, Project &p, User u)
             Project *newProject = Database::createProject(projectName);
             if (!newProject) return sendHttpHeader500(conn, "Cannot create project");
 
-            p = *newProject;
+            ptr = newProject;
 
-        } else if (p.getName() != projectName) {
+        } else {
+            if (p.getName() != projectName) {
                 LOG_INFO("Renaming an existing project not supported at the moment (%s -> %s)",
                          p.getName().c_str(), projectName.c_str());
+            }
+            ptr = &p;
         }
-
-        r = p.modifyConfig(tokens);
+        int r = ptr->modifyConfig(tokens);
 
         if (r == 0) {
             // success, redirect to
-            std::string redirectUrl = "/" + p.getUrlName() + "/config";
+            std::string redirectUrl = "/" + ptr->getUrlName() + "/config";
             sendHttpRedirect(conn, redirectUrl.c_str(), 0);
 
         } else { // error
@@ -821,7 +823,8 @@ void replaceUserMe(std::map<std::string, std::list<std::string> > &filters, cons
     std::map<std::string, std::list<std::string> >::iterator filter;
     FOREACH(filter, filters) {
         std::map<std::string, PropertySpec>::const_iterator ps = propertiesSpec.find(filter->first);
-        if ( (ps != pconfig.properties.end()) && (ps->second.type == F_SELECT_USER) ) {
+
+        if ( (ps != propertiesSpec.end()) && (ps->second.type == F_SELECT_USER) ) {
             std::list<std::string>::iterator v;
             FOREACH(v, filter->second) {
                 if ((*v) == K_ME) {
