@@ -23,6 +23,7 @@
 <li class='active'>Documentation
 <ul class=menu_level2>
 <li><a href='#install'>Install</a></li>
+<li><a href='#usage'>Usage</a></li>
 <li><a href='#directories-layout'>Directories Layout</a></li>
 <li><a href='#create-repo-and-project'>Create repo and project</a></li>
 <li><a href='#customize-the-html-pages'>Customize the HTML pages</a></li>
@@ -53,6 +54,41 @@
 cd smit
 make</code></pre>
 <p>And copy the compiled executable <code>smit</code> to somewhere in your PATH (for example $HOME/bin).</p>
+<h2 id="usage">Usage</h2>
+<pre><code>Usage: smit [--version] [--help]
+            &lt;command&gt; [&lt;args&gt;]
+
+Commands:
+
+    init [&lt;directory&gt;]
+        Initialize a repository in an existing empty directory. A repository
+        is a directory where the projects are stored.
+
+    addproject &lt;project-name&gt; [-d &lt;repository&gt;]
+        Add a new project, with a default structure. The structure
+        may be modified online by an admin user.
+
+    adduser &lt;user-name&gt; [--passwd &lt;password&gt;] [--project &lt;project-name&gt; &lt;role&gt;]
+                        [--superadmin] [-d &lt;repository&gt;]
+        Add a user on one or several projects.
+        The role must be one of: admin, rw, ro, ref.
+        --project options are cumulative with previously defined projects roles
+        for the same user.
+
+    serve [&lt;repository&gt;] [--listen-port &lt;port&gt;]
+        Default listening port is 8090.
+
+    --version
+    --help
+
+When a repository is not specified, the current working directory is assumed.
+
+Roles:
+    superadmin  able to create projects and manage users
+    admin       able to modify an existing project
+    rw          able to add and modify issues
+    ro          able to read issues
+    ref         may not access a project, but may be referenced</code></pre>
 <h2 id="directories-layout">Directories Layout</h2>
 <p>Each instance of Smit serve one repository (also refered below as <code>$REPO</code>).</p>
 <p>The Directories layout is typically:</p>
@@ -87,7 +123,6 @@ views.html
 newIssue.html
 projects.html
 style.css</code></pre>
-<p>Note: do not modify the javascript files <code>project.js</code>, <code>smit.js</code>, <code>user.js</code>, <code>view.js</code>, as they work together with the <code>smit</code> executable.</p>
 <h2 id="customize-the-logo">Customize the logo</h2>
 <p>Modifiy the <code>$REPO/public/logo.png</code> according to yours needs.</p>
 <h2 id="the-sm-variables">The SM variables</h2>
@@ -105,12 +140,13 @@ SM_DIV_ISSUES
 SM_DIV_ISSUE_SUMMARY
 SM_DIV_ISSUE
 SM_DIV_ISSUE_FORM</code></pre>
-<p>Some variables make sense only in some particular context. For instance, SM_RAW_ISSUE_ID makes sense only when a single issue is displayed.</p>
+<p>Some variables make sense only in some particular context. For instance, <code>SM_RAW_ISSUE_ID</code> makes sense only when a single issue is displayed.</p>
 <h2 id="faq">FAQ</h2>
 <h3 id="why-cannot-i-create-a-project-named-public">Why cannot I create a project named 'public'?</h3>
 <p><code>public</code> is reserved for storing HTML pages that are public, such as the signin page.</p>
 <p>The reserve keywords that cannot be used as project names are:</p>
 <pre><code>public
+sm
 users</code></pre>
 <h3 id="how-to-set-up-different-pages-for-two-projects">How to set up different pages for two projects?</h3>
 <p>HTML pages are first looked after in <code>$REPO/&lt;project&gt;/html/.</code> and, if not present, Smit looks in the <code>$REPO/public</code> directory.</p>
@@ -118,7 +154,6 @@ users</code></pre>
 <ul>
 <li>copy <code>$REPO/public/issues.html</code> to <code>$REPO/&lt;project&gt;/html/issues.html</code></li>
 <li>edit <code>$REPO/&lt;project&gt;/html/issues.html</code> to suit your needs</li>
-<li>restart Smit</li>
 </ul>
 </div>
         </div> <!-- div class page -->

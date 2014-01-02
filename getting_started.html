@@ -19,8 +19,8 @@
 <li class='active'>Getting Started
 <ul class=menu_level2>
 <li><a href='#online-demo'>Online demo</a></li>
-<li><a href='#experiment-on-linux'>Experiment on Linux</a></li>
-<li><a href='#experiment-on-windows'>Experiment on Windows</a></li>
+<li><a href='#getting-started-on-linux'>Getting Started on Linux</a></li>
+<li><a href='#getting-started-on-windows'>Getting Started on Windows</a></li>
 </ul>
 </li>
 <li><a href='screenshots.html'>Screenshots</a></li>
@@ -34,17 +34,37 @@
 <h1 id="getting-started">Getting Started</h1>
 <h2 id="online-demo">Online demo</h2>
 <p>An online demo is available at this address: <a href="http://smit.herokuapp.com">http://smit.herokuapp.com</a></p>
-<h2 id="experiment-on-linux">Experiment on Linux</h2>
+<h2 id="getting-started-on-linux">Getting Started on Linux</h2>
 <pre><code>git clone https://github.com/goeb/smit.git
 cd smit
 make
 ./smit serve demo &amp;</code></pre>
 <p>Then, browse to: <a href="http://127.0.0.1:8090/things_to_do/issues">http://127.0.0.1:8090/things_to_do/issues</a></p>
-<h2 id="experiment-on-windows">Experiment on Windows</h2>
+<h2 id="getting-started-on-windows">Getting Started on Windows</h2>
 <p>Unzip the smit package, and run:</p>
 <pre><code>init.bat
 start.bat</code></pre>
 <p>By default these scripts initiate a repository with a superadmin with username <code>admin</code> and password <code>admin</code>.</p>
+<h3 id="init.bat">init.bat</h3>
+<p>There is what <code>init.bat</code> looks like:</p>
+<pre><code>REM create a new empty directory
+mkdir IssuesRepo 
+
+REM Initiate this directory as a Smit repository
+smit.exe init IssuesRepo
+
+REM Create in this repository a project named &quot;SampleProject&quot;
+smit.exe addproject -d IssuesRepo SampleProject
+
+REM Create in this repository a user, that has administrator priviledges
+smit.exe adduser admin -d IssuesRepo --superadmin --passwd admin --project SampleProject admin</code></pre>
+<h3 id="start.bat">start.bat</h3>
+<p>There is the <code>start.bat</code> script:</p>
+<pre><code>REM Start the Smit server locally
+start /B smit serve IssuesRepo --listen-port 8090
+
+REM Start your favorite browser
+start http://127.0.0.1:8090</code></pre>
 </div>
         </div> <!-- div class page -->
         <div class="footer">

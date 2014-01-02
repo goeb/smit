@@ -22,6 +22,43 @@ Installation instructions:
 
 And copy the compiled executable `smit` to somewhere in your PATH (for example $HOME/bin).
 
+## Usage
+
+    Usage: smit [--version] [--help]
+                <command> [<args>]
+
+    Commands:
+
+        init [<directory>]
+            Initialize a repository in an existing empty directory. A repository
+            is a directory where the projects are stored.
+
+        addproject <project-name> [-d <repository>]
+            Add a new project, with a default structure. The structure
+            may be modified online by an admin user.
+    
+        adduser <user-name> [--passwd <password>] [--project <project-name> <role>]
+                            [--superadmin] [-d <repository>]
+            Add a user on one or several projects.
+            The role must be one of: admin, rw, ro, ref.
+            --project options are cumulative with previously defined projects roles
+            for the same user.
+    
+        serve [<repository>] [--listen-port <port>]
+            Default listening port is 8090.
+    
+        --version
+        --help
+    
+    When a repository is not specified, the current working directory is assumed.
+    
+    Roles:
+        superadmin  able to create projects and manage users
+        admin       able to modify an existing project
+        rw          able to add and modify issues
+        ro          able to read issues
+        ref         may not access a project, but may be referenced
+
 ## Directories Layout
 
 Each instance of Smit serve one repository (also refered below as `$REPO`).
@@ -40,6 +77,7 @@ The Directories layout is typically:
     │
     └── public
     
+
 
 ## Create repo and project
 
@@ -71,8 +109,6 @@ Feel free to customize the HTML and CSS. These files are in `$REPO/public`:
     projects.html
     style.css
 
-Note: do not modify the javascript files `project.js`, `smit.js`, `user.js`, `view.js`, as they work together with the `smit` executable.
-
 
 ## Customize the logo
 
@@ -97,7 +133,7 @@ In order to let a maximum customization freedom, Smit let the user define the gl
     SM_DIV_ISSUE_FORM
  
 Some variables make sense only in some particular context. For instance,
-SM_RAW_ISSUE_ID makes sense only when a single issue is displayed.
+`SM_RAW_ISSUE_ID` makes sense only when a single issue is displayed.
 
 
 ## FAQ
@@ -109,6 +145,7 @@ SM_RAW_ISSUE_ID makes sense only when a single issue is displayed.
 The reserve keywords that cannot be used as project names are:
 
     public
+    sm
     users
 
 ### How to set up different pages for two projects?
@@ -119,6 +156,5 @@ So, for example, if you want to customize the 'issues' page for a project:
 
 - copy `$REPO/public/issues.html` to `$REPO/<project>/html/issues.html`
 - edit `$REPO/<project>/html/issues.html` to suit your needs
-- restart Smit
 
 
