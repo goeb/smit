@@ -89,10 +89,22 @@ $(BUILD_DIR)/%.d: %.cpp
 $(EXE): $(OBJS)
 	$(CXX) -o $@ $^ $(LDFLAGS)
 
+.PHONY: data/sm/version
+data/sm/version:
+	echo -n "Version: v" > $@
+	set -e; V=`grep "#define VERSION" src/* |sed -e "s/.*VERSION *//" -e 's/"//g'`; \
+		echo $$V >> $@
+	echo -n "Build: " >> $@
+	date "+%Y-%m-%d %H:%M:%S" >> $@
+	echo -n "Latest " >> $@
+	git log -1 | head -1 >> $@
+
+
+
 CPIO_ARCHIVE = embedded.cpio
 cpio: embedcpio
-embedcpio: $(EXE) data/public/*
-	cd data && find public | cpio -o > ../$(CPIO_ARCHIVE)
+embedcpio: $(EXE) data/*/* data/sm/version
+	cd data && find * | cpio -o > ../$(CPIO_ARCHIVE)
 	cat $(CPIO_ARCHIVE) >> $(EXE)
 	size=`stat -c %s $(CPIO_ARCHIVE)`; \
 	python -c "import struct; import sys; sys.stdout.write(struct.pack('I', $$size))" >> $(EXE)

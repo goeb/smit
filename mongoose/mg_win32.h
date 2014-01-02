@@ -64,6 +64,7 @@ extern "C" {
 extern "C" {
 
 const char *mg_strcasestr(const char *big_str, const char *small_str);
+const char *mg_get_builtin_mime_type(const char *path);
 
 }
 
