@@ -54,6 +54,7 @@ void usage()
            "        for the same user.\n"
            "\n"
            "    serve [<repository>] [--listen-port <port>]\n"
+           "        Default listening port is 8090.\n"
            "\n"
            "    --version\n"
            "    --help\n"
