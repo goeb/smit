@@ -1,4 +1,4 @@
-+smv 1.1.0-rc6
++smv 1.1.1
 addUser "John Smith" sha1 e61a3587b3f7a142b8c7b9263c82f8119398ecb7 \
     project things_to_do rw \
 
@@ -20,10 +20,16 @@ sha1 8a30fca9ea5b46722cbdad24c7470a442718cac8 \
     project things_to_do admin \
 
 
+addUser "not assigned"     project myproject ref \
+    project smit ref \
+    project things_to_do ref \
+
+
 addUser xxx sha1 b60d121b438a380c343d5ec3c2037564b82ffef3 \
     project myproject admin \
 
 
 addUser yyy sha1 186154712b2d5f6791d85b9a0987b98fa231779c \
     project myproject rw \
+
 

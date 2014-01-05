@@ -1590,6 +1590,10 @@ void RHtml::printIssueForm(const ContextParameters &ctx, const Issue &issue, boo
 
         } else if (pspec.type == F_SELECT_USER) {
             if (propertyValues.size()>0) value = propertyValues.front();
+            else {
+                // by default, if no selection is made, select the current user
+                value = ctx.user.username;
+            }
             input << "<select class=\"sm_issue_pinput_" << pname << "\" name=\"" << pname << "\">";
 
             // TODO
