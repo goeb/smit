@@ -1,0 +1,10 @@
+
+
+v1.1.1, 5 Jan 2014
+
+    have embedded javascript
+    do not overwrite pre-existing entries or files
+    fix new property not taken when creating new project
+    
+
+v1.1.0, 25 Dec 2013
