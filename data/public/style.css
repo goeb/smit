@@ -255,11 +255,13 @@ table.sm_projects tr:hover, table.sm_users tr:hover {
     background-color: #E8E8E8;
 }
 .sm_projects_stakeholder { }
+.sm_projects_new { font-weight: bold; }
 .sm_issues_count {
     font-weight: bold;
     margin-bottom: 1em;
 }
 .sm_users { }
+.sm_users_new { font-weight: bold; }
 .sm_link_issues {
 }
 #sm_signout {

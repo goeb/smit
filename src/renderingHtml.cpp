@@ -655,7 +655,7 @@ void RHtml::printProjects(const ContextParameters &ctx,
     mg_printf(conn, "<table class=\"sm_projects\">\n");
     mg_printf(conn, "<tr class=\"sm_projects\"><th class=\"sm_projects\">%s</th>"
               "<th class=\"sm_projects\">%s</th><th class=\"sm_projects\">%s</th></tr>\n",
-              _("Project"), _("Your Role"), _("Other Stakeholders"));
+              _("Projects"), _("My Role"), _("Other Stakeholders"));
     for (p=pList.begin(); p!=pList.end(); p++) {
         std::string pname = p->first.c_str();
         mg_printf(conn, "<tr class=\"sm_projects\">\n");
@@ -679,8 +679,10 @@ void RHtml::printProjects(const ContextParameters &ctx,
         mg_printf(conn, "</td>");
         mg_printf(conn, "</tr>\n");
     }
-    mg_printf(conn, "</table>\n");
-    if (ctx.user.superadmin) mg_printf(conn, "<a href=\"/_\">%s<a><br>",  htmlEscape(_("New Project")).c_str());
+    mg_printf(conn, "</table><br>\n");
+    if (ctx.user.superadmin) mg_printf(conn, "<div class=\"sm_projects_new\">"
+                                       "<a href=\"/_\" class=\"sm_projects_new\">%s</a></div><br>",
+                                       htmlEscape(_("New Project")).c_str());
 }
 
 void RHtml::printUsers(struct mg_connection *conn, const std::list<User> &usersList)
@@ -708,8 +710,10 @@ void RHtml::printUsers(struct mg_connection *conn, const std::list<User> &usersL
         mg_printf(conn, "</tr>\n");
 
     }    
-    mg_printf(conn, "</table>\n");
-    mg_printf(conn, "<a href=\"/users/_\">%s<a><br>",  htmlEscape(_("New User")).c_str());
+    mg_printf(conn, "</table><br>\n");
+    mg_printf(conn, "<div class=\"sm_users_new\">"
+              "<a href=\"/users/_\" class=\"sm_users_new\">%s</a></div><br>",
+              htmlEscape(_("New User")).c_str());
 
 }
 
@@ -1596,7 +1600,6 @@ void RHtml::printIssueForm(const ContextParameters &ctx, const Issue &issue, boo
             }
             input << "<select class=\"sm_issue_pinput_" << pname << "\" name=\"" << pname << "\">";
 
-            // TODO
             std::set<std::string> users = UserBase::getUsersOfProject(ctx.getProject().getName());
             std::set<std::string>::iterator u;
             for (u = users.begin(); u != users.end(); u++) {

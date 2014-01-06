@@ -975,7 +975,7 @@ bool Issue::isInFilter(const std::map<std::string, std::list<std::string> > &fil
 
 /** search
   *   fulltext: text that is searched (optional: 0 for no fulltext search)
-  *             The case is ignored. (TODO)
+  *             The case is ignored.
   *   filterIn: list of propName:value
   *   filterOut: list of propName:value
   *   sortingSpec: aa+bb-cc (+ for ascending, - for descending order)
@@ -1015,7 +1015,7 @@ std::vector<Issue*> Project::search(const char *fulltextSearch,
     for (i=issues.begin(); i!=issues.end(); i++) {
 
         Issue* issue = i->second;
-        // 1. TODO
+        // 1. filters
         if (!filterIn.empty() && !issue->isInFilter(filterIn)) continue;
         if (!filterOut.empty() && issue->isInFilter(filterOut)) continue;
 
@@ -1163,7 +1163,7 @@ bool Issue::searchFullText(const char *text) const
   */
 int Project::addEntry(std::map<std::string, std::list<std::string> > properties, std::string &issueId, std::string &entryId, std::string username)
 {
-    ScopeLocker scopeLocker(locker, LOCK_READ_WRITE) ; // TODO look for optimization
+    ScopeLocker scopeLocker(locker, LOCK_READ_WRITE);
     ScopeLocker scopeLockerConfig(lockerForConfig, LOCK_READ_ONLY);
 
     Issue *i = 0;

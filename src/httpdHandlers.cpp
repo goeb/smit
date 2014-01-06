@@ -205,7 +205,7 @@ std::string getFirstParamFromQueryString(const std::string & queryString, const 
 std::list<std::string> getParamListFromQueryString(const std::string & queryString, const char *param)
 {
     std::list<std::string> result;
-    std::string q = queryString; // TODO optimizattion can be done here (no need for copying..)
+    std::string q = queryString;
     std::string paramEqual = param;
     paramEqual += "=";
     std::string token;
@@ -1379,12 +1379,11 @@ void httpPostEntry(struct mg_connection *conn, Project &pro, const std::string &
 
     } else {
         // multipart/form-data
-        // TODO
         LOG_ERROR("Content-Type '%s' not supported", contentType);
     }
 
     std::string id = issueId;
-    if (id == "new") id = ""; // TODO check if conflict between "new" and issue ids.
+    if (id == "new") id = "";
     std::string entryId;
     int status = pro.addEntry(vars, id, entryId, u.username);
     if (status != 0) {
