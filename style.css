@@ -94,10 +94,12 @@ div.header img {
     margin 1em;
     padding: 1em;
     clear: both;
+    color: grey;
+    text-align: center;
 }
 .footer {
     margin-top: 1em;
-    border-top: 1px solid #ddd;
+    /*border-top: 1px solid #ddd;*/
 }
 pre code {
     background-color: #EEFFCC;

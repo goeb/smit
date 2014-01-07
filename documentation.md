@@ -4,8 +4,8 @@
 
 ### Windows Platform
 
-- Download [smit-win32-1.1.0.zip](https://github.com/goeb/smit/blob/master/downloads/smit-win32-1.1.0.zip?raw=true)
-- Unzip `smit-win32-1.1.0.zip`
+- Download [smit-win32-1.1.1.zip](downloads/smit-win32-1.1.1.zip)
+- Unzip `smit-win32-1.1.1.zip`
 - `smit.exe` is ready to use
 
 ### Linux

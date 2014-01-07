@@ -93,4 +93,4 @@ echo "<div class='contents'>"
 pandoc < $PAGE
 echo "</div>"
 
-cat "$FOOTER"
+sed -e "s;__DATE__;`date '+%e %b %Y'`;" < "$FOOTER"
