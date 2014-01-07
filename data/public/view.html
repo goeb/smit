@@ -4,6 +4,15 @@
         <link href="/public/style.css" type="text/css" rel="stylesheet">
         <meta content="text/html;charset=UTF-8" http-equiv="Content-Type">
         <script src="/sm/smit.js"></script>
+        <style>
+            h2 { padding: 0; margin: 0; font-size: medium;}
+            table { border-collapse:collapse; }
+            /*table tr td { border-bottom: 1px solid black; }*/
+            td { padding-bottom: 1.5em; }
+            ul, li { padding: 0; margin: 0; }
+            ul, li { padding-left: 1em; }
+            td.align_right { text-align: right; width: 25em;}
+        </style>
     </head>
     <body>
         <div style="position: fixed; top: 0; padding-top: 15px; width: 100%; background: white;">
@@ -15,66 +24,100 @@ SM_DIV_NAVIGATION_GLOBAL
 SM_DIV_NAVIGATION_ISSUES
         </div>
 
-<br>
-<br>
-<br>
-<br>
-<br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
         <form action="" method="POST">
-            <h1>Advanced Search / Predefined View</h1>
-            <div class="sm_view_admin_zone">
-                Current configuration of this view: 
-                <a id="sm_view_current_url" href="/myproject/issues/?filterin=status:open&sort=-mtime">filterin=status:open&sort=-mtime</a>
-                <h2>Name</h2>
-                Give it a name if you want to get it stored and displayed in the navigation bar (you must be admin for that): 
-                <input id="name" name="name" type="text">
-                <br>
-                (you may rename a view)
-                <br>
-                <label>Set as default<input id="sm_default_view" name="default" type="checkbox"></label>
-            </div>
-            
-            <h2>Search text</h2>
-            <input id="search" name="search" type="text">
-            (text to look for through all the properties and text of the issues)
-            <br>
-            <br>
-            <table><tr><td style="padding-right: 2em; border-right: solid grey 1px;">
-            <h2>Filter-In</h2>
-            Select the properties/values for which the issues shall be returned.
-            <br>
-            <br>
+            <h1>Advanced Search<span class="sm_view_admin_zone"> / Predefined View</span></h1>
+            <table>
+                <tr class="sm_view_admin_zone">
+                    <td colspan="2">
+                        Current configuration of this view: 
+                        <a id="sm_view_current_url" href="/myproject/issues/?filterin=status:open&sort=-mtime">filterin=status:open&sort=-mtime</a>
+                    </td>
+                </tr>
+                <tr class="sm_view_admin_zone">
+                    <td class="align_right">
+                        <h2>Name</h2>
+                        Give it a name if you want to get it stored and displayed
+                        in the navigation bar. You may rename a view.
+                    </td>
+                    <td>
+                        <input id="name" name="name" type="text">
+                </td>
+                </tr>
+                <tr class="sm_view_admin_zone">
+                    <td class="align_right">
+                        <h2><label for="sm_default_view">Set as default</label></h2></td>
+                    <td>
+                        <input id="sm_default_view" name="default" type="checkbox">
+                    </td>
+                </tr>
+                <tr>
+                    <td class="align_right">
+                        <h2>Search text</h2>
+                        The search is done through all
+                        messages, names of uploaded files, 
+                        and properties.<br>
+                        (case insensitive)
+                    </td>
+                    <td>
+                        <input id="search" name="search" type="text">
+                    </td>
+                </tr>
+                <tr><td class="align_right">
+                        <h2>Filter-In</h2>
+                        Select the properties/values for which the issues shall be returned.
+                        </td><td>
+                        <div id="filterin"></div>
+                        <div onclick="addFilter('filterin', '', '');" class="sm_clickable">+ Click for more...</div>
+                </td></tr>
+                <tr>
+                    <td class="align_right">
+                        <h2>Filter-Out</h2>
+                        Select the properties/values for which the issues will <b>not</b> be returned.
+                    </td>
+                    <td>
+                        <div id="filterout"></div>
+                        <div onclick="addFilter('filterout', '', '');" class="sm_clickable">+ Click for more...</div>
 
-            <div id="filterin"></div>
-            <div onclick="addFilter('filterin', '', '');" class="sm_clickable">+ Click for more...</div>
-
-                </td><td style="padding-left:1em;">
-            <h2>Filter-Out</h2>
-            Select the properties/values for which the issues will <b>not</b> be returned.
-            <br>
-            <br>
-            <div id="filterout"></div>
-            <div onclick="addFilter('filterout', '', '');" class="sm_clickable">+ Click for more...</div>
-
-            </td></tr></table>
-            <p style="font-size: small;">
-            Notes on filters (in or out):
-            <ul><li>The keyword <span class="sm_tag">me</span> may be used on selectUser-typed properties to indicate the current signed-in user.
-            </ul>
-            </p>
-            <h2>Columns Specification</h2>
-            Select here the properties that you want to display in the columns (none means all).<br>
-            <br>
-            <div id="colspec"></div>
-            <div onclick="addColspec('');" class="sm_clickable">+ Click for more...</div>
-            <h2>Sort</h2>
-
-            <div id="sort"></div>
-            <div onclick="addSort();" class="sm_clickable">+ Click for more...</div>
-
-            <br>
-            <br>
-            <input type="submit" value="Validate">
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="2">
+                        Notes on filters (in or out):
+                        <ul><li>The keyword <span class="sm_tag">me</span> may be used on selectUser-typed properties to indicate the current signed-in user.
+                        </ul>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="align_right">
+                        <h2>Columns Specification</h2>
+                        Select here the properties that you want to display
+                        in the columns (none means all).
+                    </td>
+                    <td>
+                        <div id="colspec"></div>
+                        <div onclick="addColspec('');" class="sm_clickable">+ Click for more...</div>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="align_right">
+                        <h2>Sort</h2>
+                    </td>
+                    <td>
+                        <div id="sort"></div>
+                        <div onclick="addSort();" class="sm_clickable">+ Click for more...</div>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="2">
+                        <input type="submit" value="Validate">
+                    </td>
+                </tr>
+            </table>
         </form>
         <form class="sm_view_admin_zone" onsubmit="return confirm('Really delete this view?');" method="post">
             <input type="hidden" name="delete" value="1">
