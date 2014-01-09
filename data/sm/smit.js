@@ -93,7 +93,7 @@ function addProperty(name, label, type, opts) {
     cell = row.insertCell(row.cells.length);
     i = document.createElement('input');
     i.name = 'propertyName';
-    i.size = 15;
+    i.className = 'sm_project_propname';
     i.value = name;
     i.pattern = "[-a-zA-Z_0-9]+";
     i.placeholder = "logical_name";
@@ -111,7 +111,7 @@ function addProperty(name, label, type, opts) {
     cell = row.insertCell(row.cells.length);
     i = document.createElement('input');
     i.name = 'label';
-    i.size = 20;
+    i.className = 'sm_project_label';
     i.value = label;
     i.placeholder = "Label that will be displayed";
     i.title = "Label that will be displayed";
@@ -156,11 +156,10 @@ function show_size_input(item, value) {
 function show_list_input(item, value) {
     var i = document.getElementById(item.id + '_opt');
     if (i == null) {
-        i = document.createElement('textarea')
-            i.name = "selectOptions"
-            i.id = item.id + '_opt';
-        i.rows = 4;
-        i.cols = 20;
+        i = document.createElement('textarea');
+        i.name = "selectOptions";
+        i.id = item.id + '_opt';
+        i.className = 'sm_project_list';
         i.value = "one\r\nvalue\nper\nline"
             item.appendChild(i);
     }

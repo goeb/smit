@@ -328,3 +328,13 @@ div.sm_entry_files {
     padding: 0.1em 0.2em 0.1em 0.2em; /* top right bottom left */
     border-radius: 10px;
 }
+.sm_project_propname {
+    width: 12em;
+}
+.sm_project_label {
+    width: 25em;
+}
+.sm_project_list {
+    width: 25em;
+    height: 4.5em;
+}
