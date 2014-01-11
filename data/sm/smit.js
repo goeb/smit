@@ -87,8 +87,14 @@ function addProperty(name, label, type, opts) {
     // input boxes for this property
     var cell;
     cell = row.insertCell(row.cells.length);
-    var i = document.createTextNode('#' + n + ' ');
-    cell.appendChild(i);
+    var buttonUp = document.createElement('button');
+    buttonUp.innerHTML = '&#9650;';
+    buttonUp.onclick = function() {moveRowUp(buttonUp); return false;};
+    cell.appendChild(buttonUp);
+    var buttonDown = document.createElement('button');
+    buttonDown.innerHTML = '&#9660;';
+    buttonDown.onclick = function() {moveRowDown(buttonDown); return false;};
+    cell.appendChild(buttonDown);
 
     cell = row.insertCell(row.cells.length);
     i = document.createElement('input');
@@ -271,4 +277,21 @@ function showPropertiesChanges() {
 
     var i2 = document.getElementsByClassName('sm_entry_other_properties');
     for(var i=0; i<i2.length; i++) { i2[i].style.display='block'; }
+}
+
+function moveRowUp(item) {
+    var tr = item.parentNode.parentNode;
+    var prevRow = tr.previousElementSibling;
+    if (prevRow) {
+        var parent = tr.parentNode;
+        parent.insertBefore(tr, prevRow);
+    }
+}
+function moveRowDown(item) {
+    var tr = item.parentNode.parentNode;
+    var nextRow = tr.nextElementSibling;
+    if (nextRow) {
+        var parent = tr.parentNode;
+        parent.insertBefore(nextRow, tr);
+    }
 }
