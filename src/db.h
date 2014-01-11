@@ -99,13 +99,7 @@ struct ProjectConfig {
 
 class Project {
 public:
-    int loadConfig(const char *path);
-    int loadEntries(const char *path);
-    void loadPredefinedViews(const char *path);
     static Project *load(const char *path); // load a project
-
-
-    void consolidateIssues();
     std::vector<Issue*> search(const char *fulltextSearch,
                              const std::map<std::string, std::list<std::string> > &filterIn,
                              const std::map<std::string, std::list<std::string> > &filterOut,
@@ -133,8 +127,16 @@ public:
     int deletePredefinedView(const std::string &name);
     PredefinedView getDefaultView();
     static int createProjectFiles(const char *repositoryPath, const char *projectName, std::string &resultingPath);
+    int toggleTag(const std::string &issueId, const std::string &entryId);
+
 
 private:
+    int loadConfig(const char *path);
+    int loadEntries(const char *path);
+    void loadPredefinedViews(const char *path);
+    void consolidateIssues();
+
+
     void consolidateIssue(Issue *i);
     int storeViewsToFile();
 

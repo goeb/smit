@@ -816,6 +816,52 @@ int Project::createProjectFiles(const char *repositoryPath, const char *projectN
     return 0;
 }
 
+/** Tag or untag an entry
+  *
+  */
+int Project::toggleTag(const std::string &issueId, const std::string &entryId)
+{
+    ScopeLocker scopeLocker(locker, LOCK_READ_WRITE);
+
+    Issue *i = getIssue(issueId);
+    if (!i) {
+        // issue not found
+        LOG_DEBUG("Issue not found: %s", issueId.c_str());
+        return -1;
+    } else {
+        std::map<std::string, Entry*>::iterator eit;
+        eit = i->entries.find(entryId);
+        if (eit == i->entries.end()) {
+            LOG_DEBUG("Entry not found: %s/%s", issueId.c_str(), entryId.c_str());
+            return -1;
+        }
+        Entry *e = eit->second;
+        e->tagged = !e->tagged; // invert the tag
+
+        // store to disk
+        std::string path = getPath() + "/tags/";
+
+        int r;
+        if (e->tagged) {
+            // create sub directories every time (not optimum)
+            mg_mkdir(path.c_str(), S_IRUSR | S_IXUSR | S_IWUSR);
+            path += issueId;
+            mg_mkdir(path.c_str(), S_IRUSR | S_IXUSR | S_IWUSR);
+            path += "/" + entryId;
+
+            // create the file
+            r = writeToFile(path.c_str(), "");
+
+        } else {
+            // remove the file
+            path += issueId + "/" + entryId;
+            r = unlink(path.c_str());
+        }
+
+        return r;
+    }
+}
+
 void Project::loadPredefinedViews(const char *projectPath)
 {
     LOG_FUNC();
