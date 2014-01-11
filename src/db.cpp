@@ -49,6 +49,16 @@
 #define K_PARENT_NULL "null"
 
 
+/**
+  * Directory layout within a project directory
+  *
+  * issues/<issue>/<entry>
+  * issues/<issue>/_del/<entry>
+  * files/<file>
+  * tags/<issue>/<entry>
+  *
+  */
+
 Database Database::Db;
 
 

@@ -87,6 +87,18 @@ span.sm_issue_show_properties {
     font-size: 80%;
 }
 .sm_entry_no_contents { display: none; }
+a.sm_entry_tagged, a.sm_entry_tagged:link, a.sm_entry_tagged:hover {
+    font-weight: bold;
+    color: green;
+    cursor: pointer;
+    text-decoration: none;
+}
+a.sm_entry_notag, a.sm_entry_notag:link, a.sm_entry_notag:hover {
+    font-weight: bold;
+    color: #ccc;
+    cursor: pointer;
+    text-decoration: none;
+}
 .sm_issue_plabel {
     font-weight: bold;
     white-space: nowrap;

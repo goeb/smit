@@ -31,12 +31,11 @@ struct Entry {
     std::string serialize();
     int getCtime() const;
     std::string getMessage();
-    Entry() : ctime(0), next(0), prev(0) {}
-
     // chainlist pointers
     struct Entry *next; // child
     struct Entry *prev; // parent
-
+    bool tagged;
+    Entry() : ctime(0), next(0), prev(0), tagged(false) {}
 };
 
 // Issue

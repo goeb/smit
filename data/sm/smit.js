@@ -8,21 +8,32 @@ function changeWrapping() {
     else msg.wrap = "hard";
 }
 
-function deleteEntry(urlPrefix, entryId) 
-{
+function ajaxPost(url) {
+    var request = new XMLHttpRequest();
+    request.open('POST', url, false); // synchronous
+    request.send(null);
+    status = request.status;
+    if (status == 200) return true;
+    else return false;
+}
+function deleteEntry(urlPrefix, entryId) {
     var r = confirm("Confirm delete?");
     if (r==true) {
-        var request = new XMLHttpRequest();
-        request.open('POST', urlPrefix + '/' + entryId + '/delete', false); // synchronous
-        request.send(null);
-        status = request.status;
-        if (status == 200) {
-            // ok
-            // remove entry from current HTML page
-            e = document.getElementById(entryId);
+        r = ajaxPost(urlPrefix + '/' + entryId + '/delete');
+        if (r) { // ok, remove entry from current HTML page
+            var e = document.getElementById(entryId);
             e.parentNode.removeChild(e);
         } else alert('error');
     }
+}
+
+function tagEntry(urlPrefix, entryId) {
+    var r = ajaxPost(urlPrefix + '/' + entryId);
+    if (r) {
+        var e = document.getElementById('tag' + entryId);
+        if (e.className == 'sm_entry_tagged') e.className = 'sm_entry_notag';
+        else e.className = 'sm_entry_tagged';
+    } else alert('error');
 }
 
 function updateFileInput(classname) {

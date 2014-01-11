@@ -1405,6 +1405,20 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
                   issue.id.c_str(), ee.id.c_str(), _("raw"));
 
 
+        // tag
+        const char *tagTitle = _("Click to tag this entry");
+        const char *tagStyle = "sm_entry_notag";
+        if (ee.tagged) {
+            tagTitle = _("Click to remove the tag");
+            tagStyle = "sm_entry_tagged";
+        }
+        mg_printf(conn, "<a href=\"#\" class=\"%s\" id=\"tag%s\" title=\"%s\" ",
+                  tagStyle, ee.id.c_str(), tagTitle);
+        mg_printf(conn, " onclick=\"tagEntry('/%s/tags/%s', '%s');return false;\">\n",
+                  ctx.getProject().getUrlName().c_str(), issue.id.c_str(), ee.id.c_str());
+        mg_printf(conn, "&#11044;");
+        mg_printf(conn, "</a>\n");
+
         mg_printf(conn, "</div>\n"); // end header
 
         std::string m = ee.getMessage();
