@@ -1091,6 +1091,7 @@ void httpPostTag(struct mg_connection *conn, Project &p, std::string &ref, User 
     int r = p.toggleTag(issueId, entryId);
     if (r == 0) {
         sendHttpHeader200(conn);
+        mg_printf(conn, "\r\n");
     } else {
         sendHttpHeader500(conn, "cannot toggle tag");
     }
