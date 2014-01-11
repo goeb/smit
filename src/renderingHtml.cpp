@@ -1357,36 +1357,17 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
     }
     mg_printf(conn, "</table>\n");
 
-    // links to id of the same page
-    mg_printf(conn, "<div class=\"sm_issue_links\">");
-
-    // add a link to edit form if role enables it
-    if (ctx.userRole == ROLE_ADMIN || ctx.userRole == ROLE_RW) {
-        mg_printf(conn, "<span class=\"sm_issue_link_edit\">");
-        mg_printf(conn, "<a href=\"#edit_form\" class=\"sm_issue_link_edit\">%s</a>", _("Edit"));
-        mg_printf(conn, "</span>");
-    }
-
-    // add a link to latest entry
-    mg_printf(conn, "<span class=\"sm_issue_link_last_entry\">");
-    mg_printf(conn, "<a href=\"#%s\" class=\"sm_issue_link_last_entry\">%s</a>",
-              issue.latest->id.c_str(), _("Go to latest message"));
-    mg_printf(conn, "</span>");
-
-    // add an action for displaying all modifications of properties
-    mg_printf(conn, "<span class=\"sm_issue_show_properties\">");
-    mg_printf(conn, "<a href=\"#\" class=\"sm_issue_show_properties\"");
-    mg_printf(conn, " onclick=\"showPropertiesChanges('');return false;\">%s</a>", _("Show properties changes"));
-    mg_printf(conn, "</span>");
-
-    mg_printf(conn, "</div>"); // links
-
     // entries
     // -------------------------------------------------
     Entry *e = issue.latest;
     while (e && e->prev) e = e->prev; // go to the first one
     while (e) {
         Entry ee = *e;
+
+        if (!e->next) {
+            // latest entry. Add an anchor.
+            mg_printf(conn, "<span id=\"sm_last_entry\"></span>");
+        }
 
         // look if class sm_no_contents is applicable
         // an entry has no contents if no message and no file

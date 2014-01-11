@@ -36,6 +36,11 @@ td {
     font-size: small;
     border-collapse:collapse;
 }
+.sm_issue_link_edit { margin: 1em 0 1em 0; }
+.sm_issue_link_last_entry { display:none; } /* deactivate this block, as floating menu prevents from having an ergonomic link to last entry */
+span.sm_issue_show_properties {
+    padding-left: 2em;
+}
 .sm_issue_properties {
     margin-top: 1em;
     width: 50em;
@@ -73,6 +78,7 @@ td {
 }
 .sm_entry_other_properties {
     clear: both;
+    display: none;
     color: #777;
     /*background-color: #E0E0E0;*/
     padding-top: 7px;
@@ -80,6 +86,7 @@ td {
     width: 60em;
     font-size: 80%;
 }
+.sm_entry_no_contents { display: none; }
 .sm_issue_plabel {
     font-weight: bold;
     white-space: nowrap;
@@ -227,9 +234,6 @@ a.sm_issues_sort { }
 .sm_entry_delete {
     cursor: pointer;
     color: red;
-}
-.sm_issue_link_edit {
-    margin: 1em 0 1em 0;
 }
 .sm_issues_filters {
     color: #444;
