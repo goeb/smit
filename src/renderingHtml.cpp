@@ -1364,15 +1364,20 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
     if (ctx.userRole == ROLE_ADMIN || ctx.userRole == ROLE_RW) {
         mg_printf(conn, "<span class=\"sm_issue_link_edit\">");
         mg_printf(conn, "<a href=\"#edit_form\" class=\"sm_issue_link_edit\">%s</a>", _("Edit"));
-        mg_printf(conn, "</span> ");
+        mg_printf(conn, "</span>");
     }
-#if 0
-    >>> deactivate this block, as floating menu prevents from having an ergonomic link to last entry
+
+    // add a link to latest entry
     mg_printf(conn, "<span class=\"sm_issue_link_last_entry\">");
-    mg_printf(conn, "<a href=\"#%s\" class=\"sm_issue_link_edit\">%s</a>",
+    mg_printf(conn, "<a href=\"#%s\" class=\"sm_issue_link_last_entry\">%s</a>",
               issue.latest->id.c_str(), _("Go to latest message"));
     mg_printf(conn, "</span>");
-#endif
+
+    // add an action for displaying all modifications of properties
+    mg_printf(conn, "<span class=\"sm_issue_show_properties\">");
+    mg_printf(conn, "<a href=\"#\" class=\"sm_issue_show_properties\"");
+    mg_printf(conn, " onclick=\"showPropertiesChanges('');return false;\">%s</a>", _("Show properties changes"));
+    mg_printf(conn, "</span>");
 
     mg_printf(conn, "</div>"); // links
 
@@ -1382,7 +1387,18 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
     while (e && e->prev) e = e->prev; // go to the first one
     while (e) {
         Entry ee = *e;
-        mg_printf(conn, "<div class=\"sm_entry\" id=\"%s\">\n", ee.id.c_str());
+
+        // look if class sm_no_contents is applicable
+        // an entry has no contents if no message and no file
+        const char* classNoContents = "";
+        if (ee.getMessage().empty()) {
+            std::map<std::string, std::list<std::string> >::iterator files = ee.properties.find(K_FILE);
+            if (files == ee.properties.end() || files->second.empty()) {
+                classNoContents = "sm_entry_no_contents";
+            }
+        }
+
+        mg_printf(conn, "<div class=\"sm_entry %s\" id=\"%s\">\n", classNoContents, ee.id.c_str());
 
         mg_printf(conn, "<div class=\"sm_entry_header\">\n");
         mg_printf(conn, "<span class=\"sm_entry_author\">%s</span>", htmlEscape(ee.author).c_str());

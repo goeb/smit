@@ -265,3 +265,10 @@ function setDefaultCheckbox() {
     var input = document.getElementById('sm_default_view');
     input.checked = true;
 }
+function showPropertiesChanges() {
+    var i1 = document.getElementsByClassName('sm_entry_no_contents');
+    for(var i=0; i<i1.length; i++) { i1[i].style.display='block'; }
+
+    var i2 = document.getElementsByClassName('sm_entry_other_properties');
+    for(var i=0; i<i2.length; i++) { i2[i].style.display='block'; }
+}
