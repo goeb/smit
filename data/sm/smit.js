@@ -31,8 +31,23 @@ function tagEntry(urlPrefix, entryId) {
     var r = ajaxPost(urlPrefix + '/' + entryId);
     if (r) {
         var e = document.getElementById('tag' + entryId);
-        if (e.className == 'sm_entry_tagged') e.className = 'sm_entry_notag';
-        else e.className = 'sm_entry_tagged';
+        var e2 = document.getElementById(entryId);
+        var do_tag = true;
+        var replaceMe = new RegExp('sm_entry_notag');
+        var replaceBy = 'sm_entry_tagged';
+        if (e.className.match(/sm_entry_tagged/)) {
+            do_tag = false; // do untag
+            replaceMe = new RegExp('sm_entry_tagged');
+            replaceBy = 'sm_entry_notag';
+        }
+        if (e.className.match(replaceMe)) {
+            e.className = e.className.replace(replaceMe, replaceBy);
+        } else e.className += ' ' + replaceBy;
+
+        if (e2.className.match(replaceMe)) {
+            e2.className = e2.className.replace(replaceMe, replaceBy);
+        } else e2.className += ' ' + replaceBy;
+
     } else alert('error');
 }
 
@@ -288,6 +303,10 @@ function showPropertiesChanges() {
 
     var i2 = document.getElementsByClassName('sm_entry_other_properties');
     for(var i=0; i<i2.length; i++) { i2[i].style.display='block'; }
+}
+function hideUntaggedEntries() {
+    var i1 = document.getElementsByClassName('sm_entry_notag');
+    for(var i=0; i<i1.length; i++) { i1[i].style.display='none'; }
 }
 
 function moveRowUp(item) {

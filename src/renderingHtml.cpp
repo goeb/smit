@@ -1378,8 +1378,10 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
                 classNoContents = "sm_entry_no_contents";
             }
         }
+        const char * classTagged = "sm_entry_notag";
+        if (ee.tagged) classTagged = "sm_entry_tagged";
 
-        mg_printf(conn, "<div class=\"sm_entry %s\" id=\"%s\">\n", classNoContents, ee.id.c_str());
+        mg_printf(conn, "<div class=\"sm_entry %s %s\" id=\"%s\">\n", classNoContents, classTagged, ee.id.c_str());
 
         mg_printf(conn, "<div class=\"sm_entry_header\">\n");
         mg_printf(conn, "<span class=\"sm_entry_author\">%s</span>", htmlEscape(ee.author).c_str());
@@ -1406,12 +1408,10 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
 
 
         // tag
-        const char *tagTitle = _("Click to tag this entry");
+        const char *tagTitle = _("Click to tag/untag");
         const char *tagStyle = "sm_entry_notag";
-        if (ee.tagged) {
-            tagTitle = _("Click to remove the tag");
-            tagStyle = "sm_entry_tagged";
-        }
+        if (ee.tagged) tagStyle = "sm_entry_tagged";
+
         mg_printf(conn, "<a href=\"#\" class=\"%s\" id=\"tag%s\" title=\"%s\" ",
                   tagStyle, ee.id.c_str(), tagTitle);
         mg_printf(conn, " onclick=\"tagEntry('/%s/tags/%s', '%s');return false;\">\n",

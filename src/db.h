@@ -134,6 +134,7 @@ private:
     int loadConfig(const char *path);
     int loadEntries(const char *path);
     void loadPredefinedViews(const char *path);
+    void loadTags(const char *path);
     void consolidateIssues();
 
 
