@@ -36,6 +36,11 @@ td {
     font-size: small;
     border-collapse:collapse;
 }
+.sm_issue_link_edit { margin: 1em 0 1em 0; }
+.sm_issue_link_last_entry { display:none; } /* deactivate this block, as floating menu prevents from having an ergonomic link to last entry */
+span.sm_issue_show_properties {
+    padding-left: 2em;
+}
 .sm_issue_properties {
     margin-top: 1em;
     width: 50em;
@@ -73,12 +78,29 @@ td {
 }
 .sm_entry_other_properties {
     clear: both;
+    display: none;
     color: #777;
     /*background-color: #E0E0E0;*/
     padding-top: 7px;
     /*border-radius: 5px 5px 5px 5px;*/
     width: 60em;
     font-size: 80%;
+}
+.sm_entry_no_contents { display: none; }
+div.sm_entry_tagged {
+    background-color: #AFA;
+}
+a.sm_entry_tagged, a.sm_entry_tagged:link, a.sm_entry_tagged:hover {
+    font-weight: bold;
+    color: green;
+    cursor: pointer;
+    text-decoration: none;
+}
+a.sm_entry_notag, a.sm_entry_notag:link, a.sm_entry_notag:hover {
+    font-weight: bold;
+    color: #ccc;
+    cursor: pointer;
+    text-decoration: none;
 }
 .sm_issue_plabel {
     font-weight: bold;
@@ -228,9 +250,6 @@ a.sm_issues_sort { }
     cursor: pointer;
     color: red;
 }
-.sm_issue_link_edit {
-    margin: 1em 0 1em 0;
-}
 .sm_issues_filters {
     color: #444;
     background-color: #E0E0E0;
@@ -327,4 +346,14 @@ div.sm_entry_files {
     border: 1px solid #aaa;
     padding: 0.1em 0.2em 0.1em 0.2em; /* top right bottom left */
     border-radius: 10px;
+}
+.sm_project_propname {
+    width: 12em;
+}
+.sm_project_label {
+    width: 25em;
+}
+.sm_project_list {
+    width: 25em;
+    height: 4.5em;
 }

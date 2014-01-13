@@ -237,11 +237,13 @@ int writeToFile(const char *filepath, const char *data, size_t len)
         return -1;
     }
 
-    size_t n = write(f, data, len);
-    if (n != len) {
-        LOG_ERROR("Could not write all data, incomplete file '%s': (%d) %s",
-                  filepath, errno, strerror(errno));
-        return -1;
+    if (len > 0) {
+        size_t n = write(f, data, len);
+        if (n != len) {
+            LOG_ERROR("Could not write all data, incomplete file '%s': (%d) %s",
+                      filepath, errno, strerror(errno));
+            return -1;
+        }
     }
 
     close(f);

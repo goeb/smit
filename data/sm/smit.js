@@ -8,21 +8,47 @@ function changeWrapping() {
     else msg.wrap = "hard";
 }
 
-function deleteEntry(urlPrefix, entryId) 
-{
+function ajaxPost(url) {
+    var request = new XMLHttpRequest();
+    request.open('POST', url, false); // synchronous
+    request.send(null);
+    status = request.status;
+    if (status == 200) return true;
+    else return false;
+}
+function deleteEntry(urlPrefix, entryId) {
     var r = confirm("Confirm delete?");
     if (r==true) {
-        var request = new XMLHttpRequest();
-        request.open('POST', urlPrefix + '/' + entryId + '/delete', false); // synchronous
-        request.send(null);
-        status = request.status;
-        if (status == 200) {
-            // ok
-            // remove entry from current HTML page
-            e = document.getElementById(entryId);
+        r = ajaxPost(urlPrefix + '/' + entryId + '/delete');
+        if (r) { // ok, remove entry from current HTML page
+            var e = document.getElementById(entryId);
             e.parentNode.removeChild(e);
         } else alert('error');
     }
+}
+
+function tagEntry(urlPrefix, entryId) {
+    var r = ajaxPost(urlPrefix + '/' + entryId);
+    if (r) {
+        var e = document.getElementById('tag' + entryId);
+        var e2 = document.getElementById(entryId);
+        var do_tag = true;
+        var replaceMe = new RegExp('sm_entry_notag');
+        var replaceBy = 'sm_entry_tagged';
+        if (e.className.match(/sm_entry_tagged/)) {
+            do_tag = false; // do untag
+            replaceMe = new RegExp('sm_entry_tagged');
+            replaceBy = 'sm_entry_notag';
+        }
+        if (e.className.match(replaceMe)) {
+            e.className = e.className.replace(replaceMe, replaceBy);
+        } else e.className += ' ' + replaceBy;
+
+        if (e2.className.match(replaceMe)) {
+            e2.className = e2.className.replace(replaceMe, replaceBy);
+        } else e2.className += ' ' + replaceBy;
+
+    } else alert('error');
 }
 
 function updateFileInput(classname) {
@@ -87,13 +113,19 @@ function addProperty(name, label, type, opts) {
     // input boxes for this property
     var cell;
     cell = row.insertCell(row.cells.length);
-    var i = document.createTextNode('#' + n + ' ');
-    cell.appendChild(i);
+    var buttonUp = document.createElement('button');
+    buttonUp.innerHTML = '&#9650;';
+    buttonUp.onclick = function() {moveRowUp(buttonUp); return false;};
+    cell.appendChild(buttonUp);
+    var buttonDown = document.createElement('button');
+    buttonDown.innerHTML = '&#9660;';
+    buttonDown.onclick = function() {moveRowDown(buttonDown); return false;};
+    cell.appendChild(buttonDown);
 
     cell = row.insertCell(row.cells.length);
     i = document.createElement('input');
     i.name = 'propertyName';
-    i.size = 15;
+    i.className = 'sm_project_propname';
     i.value = name;
     i.pattern = "[-a-zA-Z_0-9]+";
     i.placeholder = "logical_name";
@@ -111,7 +143,7 @@ function addProperty(name, label, type, opts) {
     cell = row.insertCell(row.cells.length);
     i = document.createElement('input');
     i.name = 'label';
-    i.size = 20;
+    i.className = 'sm_project_label';
     i.value = label;
     i.placeholder = "Label that will be displayed";
     i.title = "Label that will be displayed";
@@ -156,11 +188,10 @@ function show_size_input(item, value) {
 function show_list_input(item, value) {
     var i = document.getElementById(item.id + '_opt');
     if (i == null) {
-        i = document.createElement('textarea')
-            i.name = "selectOptions"
-            i.id = item.id + '_opt';
-        i.rows = 4;
-        i.cols = 20;
+        i = document.createElement('textarea');
+        i.name = "selectOptions";
+        i.id = item.id + '_opt';
+        i.className = 'sm_project_list';
         i.value = "one\r\nvalue\nper\nline"
             item.appendChild(i);
     }
@@ -265,4 +296,32 @@ function hideAdminZone() {
 function setDefaultCheckbox() {
     var input = document.getElementById('sm_default_view');
     input.checked = true;
+}
+function showPropertiesChanges() {
+    var i1 = document.getElementsByClassName('sm_entry_no_contents');
+    for(var i=0; i<i1.length; i++) { i1[i].style.display='block'; }
+
+    var i2 = document.getElementsByClassName('sm_entry_other_properties');
+    for(var i=0; i<i2.length; i++) { i2[i].style.display='block'; }
+}
+function hideUntaggedEntries() {
+    var i1 = document.getElementsByClassName('sm_entry_notag');
+    for(var i=0; i<i1.length; i++) { i1[i].style.display='none'; }
+}
+
+function moveRowUp(item) {
+    var tr = item.parentNode.parentNode;
+    var prevRow = tr.previousElementSibling;
+    if (prevRow) {
+        var parent = tr.parentNode;
+        parent.insertBefore(tr, prevRow);
+    }
+}
+function moveRowDown(item) {
+    var tr = item.parentNode.parentNode;
+    var nextRow = tr.nextElementSibling;
+    if (nextRow) {
+        var parent = tr.parentNode;
+        parent.insertBefore(nextRow, tr);
+    }
 }

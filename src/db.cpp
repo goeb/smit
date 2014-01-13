@@ -39,6 +39,7 @@
 #define PROJECT_FILE "project"
 #define ISSUES "issues" // sub-directory of a project where the entries are stored
 #define VIEWS_FILE "views"
+#define TAGS_DIR "tags"
 #define K_DELETED "_del"
 
 
@@ -48,6 +49,16 @@
 #define K_ISSUE_ID "id"
 #define K_PARENT_NULL "null"
 
+
+/**
+  * Directory layout within a project directory
+  *
+  * issues/<issue>/<entry>
+  * issues/<issue>/_del/<entry>
+  * files/<file>
+  * tags/<issue>/<entry>
+  *
+  */
 
 Database Database::Db;
 
@@ -133,6 +144,9 @@ Project *Project::load(const char *path)
         delete p;
         return 0;
     }
+
+    p->loadTags(path);
+
     LOG_INFO("Project %s loaded.", path);
 
     p->consolidateIssues();
@@ -806,6 +820,52 @@ int Project::createProjectFiles(const char *repositoryPath, const char *projectN
     return 0;
 }
 
+/** Tag or untag an entry
+  *
+  */
+int Project::toggleTag(const std::string &issueId, const std::string &entryId)
+{
+    ScopeLocker scopeLocker(locker, LOCK_READ_WRITE);
+
+    Issue *i = getIssue(issueId);
+    if (!i) {
+        // issue not found
+        LOG_DEBUG("Issue not found: %s", issueId.c_str());
+        return -1;
+    } else {
+        std::map<std::string, Entry*>::iterator eit;
+        eit = i->entries.find(entryId);
+        if (eit == i->entries.end()) {
+            LOG_DEBUG("Entry not found: %s/%s", issueId.c_str(), entryId.c_str());
+            return -1;
+        }
+        Entry *e = eit->second;
+        e->tagged = !e->tagged; // invert the tag
+
+        // store to disk
+        std::string path = getPath() + "/" TAGS_DIR "/";
+
+        int r;
+        if (e->tagged) {
+            // create sub directories every time (not optimum)
+            mg_mkdir(path.c_str(), S_IRUSR | S_IXUSR | S_IWUSR);
+            path += issueId;
+            mg_mkdir(path.c_str(), S_IRUSR | S_IXUSR | S_IWUSR);
+            path += "/" + entryId;
+
+            // create the file
+            r = writeToFile(path.c_str(), "");
+
+        } else {
+            // remove the file
+            path += issueId + "/" + entryId;
+            r = unlink(path.c_str());
+        }
+
+        return r;
+    }
+}
+
 void Project::loadPredefinedViews(const char *projectPath)
 {
     LOG_FUNC();
@@ -829,6 +889,58 @@ void Project::loadPredefinedViews(const char *projectPath)
     LOG_DEBUG("predefined views loaded: %d", config.predefinedViews.size());
 }
 
+/** Look for tags: files <project>/tags/<issue>/<entry>
+  *
+  */
+void Project::loadTags(const char *projectPath)
+{
+    std::string path = projectPath;
+    path += "/" TAGS_DIR "/";
+    DIR *tagsDirHandle;
+    if ((tagsDirHandle = opendir(path.c_str())) == NULL) {
+        LOG_DEBUG("No tags directory '%s'", path.c_str());
+        return;
+    }
+
+    struct dirent *issueDir;
+    while ((issueDir = readdir(tagsDirHandle)) != NULL) {
+        if (0 == strcmp(issueDir->d_name, ".")) continue;
+        if (0 == strcmp(issueDir->d_name, "..")) continue;
+
+        std::string issueId = issueDir->d_name;
+        // get the issue object
+        Issue *i = getIssue(issueId);
+        if (!i) {
+            LOG_ERROR("Tags for unknown issue: '%s'", issueId.c_str());
+            continue;
+        }
+
+        std::string issuePath = path;
+        issuePath += "/" + issueId;
+        // open this subdir and look for all files of this subdir
+        DIR *issueDirHandle;
+        if ((issueDirHandle = opendir(issuePath.c_str())) == NULL) continue; // not a directory
+        else {
+            struct dirent *entryTag;
+            while ((entryTag = readdir(issueDirHandle)) != NULL) {
+                if (0 == strcmp(entryTag->d_name, ".")) continue;
+                if (0 == strcmp(entryTag->d_name, "..")) continue;
+
+                std::string entryId = entryTag->d_name;
+                std::map<std::string, Entry*>::iterator eit;
+                eit = i->entries.find(entryId);
+                if (eit == i->entries.end()) {
+                    LOG_DEBUG("Tags for unknown entry: %s/%s", issueId.c_str(), entryId.c_str());
+                    continue;
+                }
+                Entry *e = eit->second;
+                e->tagged = true;
+            }
+            closedir(issueDirHandle);
+        }
+    }
+    closedir(tagsDirHandle);
+}
 
 
 std::string Project::getLabelOfProperty(const std::string &propertyName) const

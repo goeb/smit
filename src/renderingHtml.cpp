@@ -1357,32 +1357,31 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
     }
     mg_printf(conn, "</table>\n");
 
-    // links to id of the same page
-    mg_printf(conn, "<div class=\"sm_issue_links\">");
-
-    // add a link to edit form if role enables it
-    if (ctx.userRole == ROLE_ADMIN || ctx.userRole == ROLE_RW) {
-        mg_printf(conn, "<span class=\"sm_issue_link_edit\">");
-        mg_printf(conn, "<a href=\"#edit_form\" class=\"sm_issue_link_edit\">%s</a>", _("Edit"));
-        mg_printf(conn, "</span> ");
-    }
-#if 0
-    >>> deactivate this block, as floating menu prevents from having an ergonomic link to last entry
-    mg_printf(conn, "<span class=\"sm_issue_link_last_entry\">");
-    mg_printf(conn, "<a href=\"#%s\" class=\"sm_issue_link_edit\">%s</a>",
-              issue.latest->id.c_str(), _("Go to latest message"));
-    mg_printf(conn, "</span>");
-#endif
-
-    mg_printf(conn, "</div>"); // links
-
     // entries
     // -------------------------------------------------
     Entry *e = issue.latest;
     while (e && e->prev) e = e->prev; // go to the first one
     while (e) {
         Entry ee = *e;
-        mg_printf(conn, "<div class=\"sm_entry\" id=\"%s\">\n", ee.id.c_str());
+
+        if (!e->next) {
+            // latest entry. Add an anchor.
+            mg_printf(conn, "<span id=\"sm_last_entry\"></span>");
+        }
+
+        // look if class sm_no_contents is applicable
+        // an entry has no contents if no message and no file
+        const char* classNoContents = "";
+        if (ee.getMessage().empty()) {
+            std::map<std::string, std::list<std::string> >::iterator files = ee.properties.find(K_FILE);
+            if (files == ee.properties.end() || files->second.empty()) {
+                classNoContents = "sm_entry_no_contents";
+            }
+        }
+        const char * classTagged = "sm_entry_notag";
+        if (ee.tagged) classTagged = "sm_entry_tagged";
+
+        mg_printf(conn, "<div class=\"sm_entry %s %s\" id=\"%s\">\n", classNoContents, classTagged, ee.id.c_str());
 
         mg_printf(conn, "<div class=\"sm_entry_header\">\n");
         mg_printf(conn, "<span class=\"sm_entry_author\">%s</span>", htmlEscape(ee.author).c_str());
@@ -1407,6 +1406,18 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
                   ctx.getProject().getUrlName().c_str(),
                   issue.id.c_str(), ee.id.c_str(), _("raw"));
 
+
+        // tag
+        const char *tagTitle = _("Click to tag/untag");
+        const char *tagStyle = "sm_entry_notag";
+        if (ee.tagged) tagStyle = "sm_entry_tagged";
+
+        mg_printf(conn, "<a href=\"#\" class=\"%s\" id=\"tag%s\" title=\"%s\" ",
+                  tagStyle, ee.id.c_str(), tagTitle);
+        mg_printf(conn, " onclick=\"tagEntry('/%s/tags/%s', '%s');return false;\">\n",
+                  ctx.getProject().getUrlName().c_str(), issue.id.c_str(), ee.id.c_str());
+        mg_printf(conn, "&#11044;");
+        mg_printf(conn, "</a>\n");
 
         mg_printf(conn, "</div>\n"); // end header
 

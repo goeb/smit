@@ -1069,6 +1069,34 @@ void httpPostView(struct mg_connection *conn, Project &p, const std::string &nam
     }
 }
 
+/** Handled the posting of a tag
+  *
+  * If the ref is not tagged, then this will put a tag on the entry.
+  * If the ref is already tagged, then this will remove the tag of the entry.
+  * @param ref
+  *     The reference of the message: <issue>/<entry>
+  *
+  */
+void httpPostTag(struct mg_connection *conn, Project &p, std::string &ref, User u)
+{
+    enum Role role = u.getRole(p.getName());
+    if (role != ROLE_RW && role != ROLE_ADMIN) {
+        sendHttpHeader403(conn);
+        return;
+    }
+
+    std::string issueId = popToken(ref, '/');
+    std::string entryId = ref;
+
+    int r = p.toggleTag(issueId, entryId);
+    if (r == 0) {
+        sendHttpHeader200(conn);
+        mg_printf(conn, "\r\n");
+    } else {
+        sendHttpHeader500(conn, "cannot toggle tag");
+    }
+}
+
 
 int httpGetIssue(struct mg_connection *conn, Project &p, const std::string &issueId, User u)
 {
@@ -1413,6 +1441,7 @@ void httpPostEntry(struct mg_connection *conn, Project &pro, const std::string &
   * /public/...             GET        all               public pages, javascript, CSS, logo
   * /signin                 POST       all               sign-in
   * /users                             superadmin        management of users for all projects
+  * /_                      GET/POST   superadmin        new project
   * /users/<user>           GET/POST   user, superadmin  management of a single user
   * /myp/config             GET/POST   admin             configuration of the project
   * /myp/views              GET/POST   admin             list predefined views / create new view
@@ -1423,7 +1452,8 @@ void httpPostEntry(struct mg_connection *conn, Project &pro, const std::string &
   * /myp/issues/new         GET        user              page with a form for submitting new issue
   * /myp/issues/123         GET/POST   user              a particular issue: get all entries or add a new entry
   * /myp/issues/x/y/delete  POST       user              delete an entry y of issue x
-  * /any/other/file         GET        user              any existing file (relatively to the repository)
+  * /myp/tags/x/y           POST       user              tag / untag an entry
+  * /any/other/file         GET        user              any existing file (in the repository)
   */
 
 int begin_request_handler(struct mg_connection *conn)
@@ -1500,6 +1530,7 @@ int begin_request_handler(struct mg_connection *conn)
                 else if ( (resource == "views") && (method == "GET") && !isdir && uri.empty()) sendHttpRedirect(conn, "/" + projectUrl + "/views/", 0);
                 else if ( (resource == "views") && (method == "GET")) httpGetView(conn, *p, uri, user);
                 else if ( (resource == "views") && (method == "POST") ) httpPostView(conn, *p, uri, user);
+                else if ( (resource == "tags") && (method == "POST") ) httpPostTag(conn, *p, uri, user);
                 else handled = false;
 
             } else handled = false; // the resource is not a project
