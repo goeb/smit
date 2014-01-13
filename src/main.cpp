@@ -221,6 +221,8 @@ int addUser(int argc, const char **args)
 }
 int serveRepository(int argc, const char **args)
 {
+    LOG_INFO("Starting Smit v" VERSION);
+
     int i = 0;
     const char *listenPort = "8090";
     const char *repo = 0;
@@ -258,7 +260,7 @@ int serveRepository(int argc, const char **args)
     memset(&callbacks, 0, sizeof(callbacks));
     callbacks.begin_request = begin_request_handler;
 
-    LOG_INFO("Starting httpd server on port %s", options[1]);
+    LOG_INFO("Starting http server on port %s", options[1]);
     ctx = mg_start(&callbacks, NULL, options);
 
     while (1) sleep(1); // block until ctrl-C
