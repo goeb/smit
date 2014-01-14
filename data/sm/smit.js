@@ -12,7 +12,7 @@ function ajaxPost(url) {
     var request = new XMLHttpRequest();
     request.open('POST', url, false); // synchronous
     request.send(null);
-    status = request.status;
+    var status = request.status;
     if (status == 200) return true;
     else return false;
 }
