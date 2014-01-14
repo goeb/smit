@@ -1120,8 +1120,6 @@ bool RHtml::inList(const std::list<std::string> &listOfValues, const std::string
     return false;
 }
 
-
-
 std::string convertToRichTextWholeline(const std::string &in, const char *start, const char *htmlTag, const char *htmlClass)
 {
     std::string result;
@@ -1186,7 +1184,7 @@ std::string convertToRichTextWholeline(const std::string &in, const char *start,
   *
   */
 std::string convertToRichTextInline(const std::string &in, const char *begin, const char *end,
-                                   bool dropDelimiters, const char *htmlTag, const char *htmlClass)
+                                   bool dropDelimiters, bool multiline, const char *htmlTag, const char *htmlClass)
 {
     std::string result;
     size_t i = 0;
@@ -1232,7 +1230,7 @@ std::string convertToRichTextInline(const std::string &in, const char *begin, co
                 result += currentBlock.str();
                 insideBlock = false;
 
-            } else if (c == '\n') {
+            } else if (c == '\n' && !multiline) {
                 // end of line cancels the pending block
                 result += in.substr(block, i-block+1);
                 insideBlock = false;
@@ -1259,7 +1257,6 @@ std::string convertToRichTextInline(const std::string &in, const char *begin, co
         result += in.substr(block);
     }
     return result;
-
 }
 
 /** Convert text to HTML rich text
@@ -1275,12 +1272,13 @@ std::string convertToRichTextInline(const std::string &in, const char *begin, co
   */
 std::string convertToRichText(const std::string &raw)
 {
-    std::string result = convertToRichTextInline(raw, "**", "**", true, "strong", "");
-    result = convertToRichTextInline(result, "__", "__", true, "span", "sm_underline");
-    result = convertToRichTextInline(result, "&quot;", "&quot;", false, "span", "sm_double_quote");
-    result = convertToRichTextInline(result, "++", "++", true, "em", "");
-    result = convertToRichTextInline(result, "[[", "]]", true, "a", "sm_hyperlink");
+    std::string result = convertToRichTextInline(raw, "**", "**", true, false, "strong", "");
+    result = convertToRichTextInline(result, "__", "__", true, false, "span", "sm_underline");
+    result = convertToRichTextInline(result, "&quot;", "&quot;", false, false, "span", "sm_double_quote");
+    result = convertToRichTextInline(result, "++", "++", true, false, "em", "");
+    result = convertToRichTextInline(result, "[[", "]]", true, false, "a", "sm_hyperlink");
     result = convertToRichTextWholeline(result, "&gt;", "span", "sm_quote");
+    result = convertToRichTextInline(result, "{{{", "}}}", true, true, "span", "sm_block");
     return result;
 
 }
