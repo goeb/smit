@@ -215,9 +215,8 @@ em {
 .sm_double_quote {
     color: blue;
 }
-.sm_quote {
-    color: green;
-}
+.sm_quote { color: green; }
+.sm_block { color: blue; }
 .sm_hyperlink { }
 
 a:link.sm_issues_sort_cumulative { color: #344; }
