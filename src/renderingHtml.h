@@ -48,7 +48,7 @@ public:
     static void printPageNewIssue(const ContextParameters &ctx);
 
     static bool inList(const std::list<std::string> &listOfValues, const std::string &value);
-    static void printIssueForm(const ContextParameters &ctx, const Issue &issue, bool autofocus);
+    static void printIssueForm(const ContextParameters &ctx, const Issue *issue, bool autofocus);
     static void printPageSignin(struct mg_connection *conn, const char *redirect);
 
     static void printPageUser(const ContextParameters &ctx, const User *u);

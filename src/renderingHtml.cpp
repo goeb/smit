@@ -231,7 +231,8 @@ public:
 
             } else if (varname == K_SM_DIV_ISSUE_FORM) {
                 Issue issue;
-                RHtml::printIssueForm(ctx, issue, true);
+                if (!currentIssue)  currentIssue = &issue;
+                RHtml::printIssueForm(ctx, currentIssue, true);
 
             } else if (varname == K_SM_DIV_PREDEFINED_VIEWS) {
                 RHtml::printLinksToPredefinedViews(ctx);
@@ -1490,11 +1491,6 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
         e = e->next;
     } // end of entries
 
-    // print the form
-    // -------------------------------------------------
-    if (ctx.userRole == ROLE_ADMIN || ctx.userRole == ROLE_RW) {
-        RHtml::printIssueForm(ctx, issue, false);
-    }
     mg_printf(conn, "</div>\n");
 
 }
@@ -1517,11 +1513,18 @@ void RHtml::printPageNewIssue(const ContextParameters &ctx)
 
 /** print form for adding a message / modifying the issue
   */
-void RHtml::printIssueForm(const ContextParameters &ctx, const Issue &issue, bool autofocus)
+void RHtml::printIssueForm(const ContextParameters &ctx, const Issue *issue, bool autofocus)
 {
+    if (!issue) {
+        LOG_ERROR("printIssueForm: Invalid null issue");
+        return;
+    }
+    if (ctx.userRole != ROLE_ADMIN && ctx.userRole != ROLE_RW) {
+        return;
+    }
+
     struct mg_connection *conn = ctx.conn;
 
-    // enctype=\"multipart/form-data\"
     mg_printf(conn, "<form enctype=\"multipart/form-data\" method=\"post\"  class=\"sm_issue_form\" id=\"edit_form\">");
     // print the fields of the issue in a two-column table
 
@@ -1535,7 +1538,7 @@ void RHtml::printIssueForm(const ContextParameters &ctx, const Issue &issue, boo
     mg_printf(conn, "<td class=\"sm_issue_pinput\" colspan=\"3\">");
 
     mg_printf(conn, "<input class=\"sm_issue_pinput_summary\" required=\"required\" type=\"text\" name=\"summary\" value=\"%s\"",
-              htmlEscape(issue.getSummary()).c_str());
+              htmlEscape(issue->getSummary()).c_str());
     if (autofocus) mg_printf(conn, " autofocus");
     mg_printf(conn, ">");
     mg_printf(conn, "</td>\n");
@@ -1562,9 +1565,9 @@ void RHtml::printIssueForm(const ContextParameters &ctx, const Issue &issue, boo
 
         PropertySpec pspec = propertySpec->second;
 
-        std::map<std::string, std::list<std::string> >::const_iterator p = issue.properties.find(pname);
+        std::map<std::string, std::list<std::string> >::const_iterator p = issue->properties.find(pname);
         std::list<std::string> propertyValues;
-        if (p!=issue.properties.end()) propertyValues = p->second;
+        if (p!=issue->properties.end()) propertyValues = p->second;
 
         std::ostringstream input;
         std::string value;
