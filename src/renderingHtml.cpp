@@ -64,7 +64,7 @@ const Project &ContextParameters::getProject() const
 #define K_SM_DIV_ISSUE "SM_DIV_ISSUE"
 #define K_SM_DIV_ISSUE_SUMMARY "SM_DIV_ISSUE_SUMMARY"
 #define K_SM_DIV_ISSUE_FORM "SM_DIV_ISSUE_FORM"
-
+#define K_SM_DIV_ISSUE_MSG_PREVIEW "SM_DIV_ISSUE_MSG_PREVIEW"
 
 std::string enquoteJs(const std::string &in)
 {
@@ -236,6 +236,9 @@ public:
 
             } else if (varname == K_SM_DIV_PREDEFINED_VIEWS) {
                 RHtml::printLinksToPredefinedViews(ctx);
+
+            } else if (varname == K_SM_DIV_ISSUE_MSG_PREVIEW) {
+                mg_printf(ctx.conn, "<div id=\"sm_issue_msg_preview\"></div>");
 
             } else {
                 // unknown variable name
@@ -1646,7 +1649,7 @@ void RHtml::printIssueForm(const ContextParameters &ctx, const Issue *issue, boo
         mg_printf(conn, "<td></td></tr>\n");
     }
     mg_printf(conn, "<tr>\n");
-    mg_printf(conn, "<td class=\"sm_issue_plabel sm_issue_plabel_message\" >%s: </td>\n", _("Message"));
+    mg_printf(conn, "<td class=\"sm_issue_plabel sm_issue_plabel_message\" >%s: </td>\n",  htmlEscape(_("Message")).c_str());
     mg_printf(conn, "<td colspan=\"3\">\n");
     mg_printf(conn, "<textarea class=\"sm_issue_pinput sm_issue_pinput_message\" placeholder=\"%s\" name=\"%s\" wrap=\"hard\" cols=\"80\">\n",
               _("Enter a message"), K_MESSAGE);
@@ -1663,14 +1666,15 @@ void RHtml::printIssueForm(const ContextParameters &ctx, const Issue *issue, boo
 
     // add file upload input
     mg_printf(conn, "<tr>\n");
-    mg_printf(conn, "<td class=\"sm_issue_plabel sm_issue_plabel_file\" >%s: </td>\n", _("File Upload"));
+    mg_printf(conn, "<td class=\"sm_issue_plabel sm_issue_plabel_file\" >%s: </td>\n", htmlEscape(_("File Upload")).c_str());
     mg_printf(conn, "<td colspan=\"3\">\n");
     mg_printf(conn, "<input type=\"file\" name=\"%s\" class=\"sm_issue_input_file\" onchange=\"updateFileInput('sm_issue_input_file');\">\n", K_FILE);
     mg_printf(conn, "</td></tr>\n");
 
     mg_printf(conn, "<tr><td></td>\n");
     mg_printf(conn, "<td colspan=\"3\">\n");
-    mg_printf(conn, "<input type=\"submit\" value=\"%s\">\n", ctx.getProject().getLabelOfProperty("Add-Message").c_str());
+    mg_printf(conn, "<button onclick=\"previewMessage(); return false;\">%s</button>\n", htmlEscape(_("Preview")).c_str());
+    mg_printf(conn, "<input type=\"submit\" value=\"%s\">\n", htmlEscape(_("Post")).c_str());
     mg_printf(conn, "</td></tr>\n");
 
     mg_printf(conn, "</table>\n");

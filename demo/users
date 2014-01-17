@@ -1,4 +1,4 @@
-+smv 1.1.1
++smv 1.2-rc1
 addUser "John Smith" sha1 e61a3587b3f7a142b8c7b9263c82f8119398ecb7 \
     project things_to_do rw \
 
@@ -10,7 +10,7 @@ addUser alice sha1 522b276a356bdf39013dfabea2cd43e141ecc9e8 \
 addUser fred superadmin \
 sha1 31017a722665e4afce586950f42944a6d331dabf \
     project myproject admin \
-    project myproject/yoyo admin \
+    project myproject/yoyo ro \
     project smit admin \
     project things_to_do admin \
 
