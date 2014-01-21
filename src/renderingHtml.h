@@ -61,6 +61,7 @@ public:
                               const std::map<std::string, std::map<std::string, Role> > *userRolesByProject);
     static void printUsers(struct mg_connection *conn, const std::list<User> &usersList);
     static void printScriptUpdateConfig(const ContextParameters &ctx);
+    static std::string convertToRichText(const std::string &raw);
     static void printIssueSummary(const ContextParameters &ctx, const Issue &issue);
     static void printIssue(const ContextParameters &ctx, const Issue &issue);
     static void printIssueListFullContents(const ContextParameters &ctx, std::vector<struct Issue*> issueList);

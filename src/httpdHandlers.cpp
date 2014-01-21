@@ -346,7 +346,8 @@ void handleMessagePreview(struct mg_connection *conn)
     std::string q;
     if (req->query_string) q = req->query_string;
     std::string message = getFirstParamFromQueryString(q, "message");
-
+    LOG_DEBUG("message=%s", message.c_str());
+    message = RHtml::convertToRichText(htmlEscape(message));
     sendHttpHeader200(conn);
     mg_printf(conn, "Content-Type: text/html\r\n\r\n");
     mg_printf(conn, "%s", message.c_str());

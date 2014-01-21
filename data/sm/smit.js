@@ -17,7 +17,7 @@ function ajaxPost(url) {
     else return false;
 }
 function previewMessage() {
-    var divPreview = document.getElementById('sm_issue_msg_preview');
+    var divPreview = document.getElementById('sm_entry_preview');
     if (!divPreview) {
         alert('Preview not available');
         return;
@@ -25,7 +25,7 @@ function previewMessage() {
     var msg = document.getElementsByName('+message')[0];
     var value = msg.value;
     // url-encode value TODO
-    var url = '/sm/preview?message=' + value;
+    var url = '/sm/preview?message=' + encodeURIComponent(value);
     var request = new XMLHttpRequest();
     request.open('GET', url, false); // synchronous
     request.send(null);
