@@ -118,19 +118,20 @@ Modifiy the `$REPO/public/logo.png` according to yours needs.
 
 In order to let a maximum customization freedom, Smit let the user define the global structure of the HTML pages, and inserts the dynamic contents at users's defined places, indicated by SM variables:
 
+    SM_DIV_ISSUE
+    SM_DIV_ISSUE_FORM
+    SM_DIV_ISSUE_MSG_PREVIEW
+    SM_DIV_ISSUES
+    SM_DIV_ISSUE_SUMMARY
     SM_DIV_NAVIGATION_GLOBAL
     SM_DIV_NAVIGATION_ISSUES
-    SM_URL_PROJECT_NAME
-    SM_HTML_PROJECT_NAME
-    SM_RAW_ISSUE_ID
-    SM_SCRIPT_PROJECT_CONFIG_UPDATE
     SM_DIV_PREDEFINED_VIEWS
     SM_DIV_PROJECTS
     SM_DIV_USERS
-    SM_DIV_ISSUES
-    SM_DIV_ISSUE_SUMMARY
-    SM_DIV_ISSUE
-    SM_DIV_ISSUE_FORM
+    SM_HTML_PROJECT_NAME
+    SM_RAW_ISSUE_ID
+    SM_SCRIPT_PROJECT_CONFIG_UPDATE
+    SM_URL_PROJECT_NAME
  
 Some variables make sense only in some particular context. For instance,
 `SM_RAW_ISSUE_ID` makes sense only when a single issue is displayed.
