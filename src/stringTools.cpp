@@ -153,6 +153,16 @@ std::string urlEncode(const std::string &src, char mark, const char *dontEscape)
     return dst;
 }
 
+std::string htmlEscape(const std::string &value)
+{
+    std::string result = replaceAll(value, '&', "&#38;");
+    result = replaceAll(result, '"', "&quot;");
+    result = replaceAll(result, '<', "&lt;");
+    result = replaceAll(result, '>', "&gt;");
+    result = replaceAll(result, '\'', "&#39;");
+    return result;
+}
+
 std::string pop(std::list<std::string> & L)
 {
     std::string token = "";

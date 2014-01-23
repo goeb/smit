@@ -338,11 +338,37 @@ void httpPostSignout(struct mg_connection *conn, const std::string &sessionId)
     redirectToSignin(conn, "/");
 }
 
+
+void handleMessagePreview(struct mg_connection *conn)
+{
+    LOG_FUNC();
+    const struct mg_request_info *req = mg_get_request_info(conn);
+    std::string q;
+    if (req->query_string) q = req->query_string;
+    std::string message = getFirstParamFromQueryString(q, "message");
+    LOG_DEBUG("message=%s", message.c_str());
+    message = RHtml::convertToRichText(htmlEscape(message));
+    sendHttpHeader200(conn);
+    mg_printf(conn, "Content-Type: text/html\r\n\r\n");
+    mg_printf(conn, "%s", message.c_str());
+}
+
 /** Get a SM embedded file
+  *
+  * Embbeded files: smit.js, etc.
+  * Virtual files: preview
   */
 int httpGetSm(struct mg_connection *conn, const std::string &file)
 {
     int r; // return 0 to let mongoose handle static file, 1 otherwise
+
+    LOG_DEBUG("httpGetSm: %s", file.c_str());
+    const char *virtualFilePreview = "preview";
+    if (0 == strncmp(file.c_str(), virtualFilePreview, strlen(virtualFilePreview))) {
+        handleMessagePreview(conn);
+        return 1;
+    }
+
     FILE *f = cpioOpenArchive(exeFile.c_str());
     if (!f) {
         sendHttpHeader500(conn, "Cannot open CPIO archive");

@@ -16,6 +16,21 @@ function ajaxPost(url) {
     if (status == 200) return true;
     else return false;
 }
+function previewMessage() {
+    var divPreview = document.getElementById('sm_entry_preview');
+    if (!divPreview) {
+        alert('Preview not available');
+        return;
+    }
+    var msg = document.getElementsByName('+message')[0];
+    var value = msg.value;
+    // url-encode value TODO
+    var url = '/sm/preview?message=' + encodeURIComponent(value);
+    var request = new XMLHttpRequest();
+    request.open('GET', url, false); // synchronous
+    request.send(null);
+    divPreview.innerHTML = request.response;
+}
 function deleteEntry(urlPrefix, entryId) {
     var r = confirm("Confirm delete?");
     if (r==true) {

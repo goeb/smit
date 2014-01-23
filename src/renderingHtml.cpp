@@ -64,7 +64,7 @@ const Project &ContextParameters::getProject() const
 #define K_SM_DIV_ISSUE "SM_DIV_ISSUE"
 #define K_SM_DIV_ISSUE_SUMMARY "SM_DIV_ISSUE_SUMMARY"
 #define K_SM_DIV_ISSUE_FORM "SM_DIV_ISSUE_FORM"
-
+#define K_SM_DIV_ISSUE_MSG_PREVIEW "SM_DIV_ISSUE_MSG_PREVIEW"
 
 std::string enquoteJs(const std::string &in)
 {
@@ -72,16 +72,6 @@ std::string enquoteJs(const std::string &in)
     out = replaceAll(out, '\'', "\\'"); // escape '
     out = replaceAll(out, '"', "\\\""); // escape "
     return out;
-}
-
-std::string htmlEscape(const std::string &value)
-{
-    std::string result = replaceAll(value, '&', "&#38;");
-    result = replaceAll(result, '"', "&quot;");
-    result = replaceAll(result, '<', "&lt;");
-    result = replaceAll(result, '>', "&gt;");
-    result = replaceAll(result, '\'', "&#39;");
-    return result;
 }
 
 
@@ -231,10 +221,16 @@ public:
 
             } else if (varname == K_SM_DIV_ISSUE_FORM) {
                 Issue issue;
-                RHtml::printIssueForm(ctx, issue, true);
+                if (!currentIssue)  currentIssue = &issue;
+                RHtml::printIssueForm(ctx, currentIssue, true);
 
             } else if (varname == K_SM_DIV_PREDEFINED_VIEWS) {
                 RHtml::printLinksToPredefinedViews(ctx);
+
+            } else if (varname == K_SM_DIV_ISSUE_MSG_PREVIEW) {
+                mg_printf(ctx.conn, "<div id=\"sm_entry_preview\" class=\"sm_entry_message\">"
+                          "%s"
+                          "</div>", htmlEscape(_("...message preview...")).c_str());
 
             } else {
                 // unknown variable name
@@ -1270,7 +1266,7 @@ std::string convertToRichTextInline(const std::string &in, const char *begin, co
   * (optional) Characters before and after block must be [\t \n.;:]
   * A line break in the middle prevents the pattern from being recognized.
   */
-std::string convertToRichText(const std::string &raw)
+std::string RHtml::convertToRichText(const std::string &raw)
 {
     std::string result = convertToRichTextInline(raw, "**", "**", true, false, "strong", "");
     result = convertToRichTextInline(result, "__", "__", true, false, "span", "sm_underline");
@@ -1490,11 +1486,6 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
         e = e->next;
     } // end of entries
 
-    // print the form
-    // -------------------------------------------------
-    if (ctx.userRole == ROLE_ADMIN || ctx.userRole == ROLE_RW) {
-        RHtml::printIssueForm(ctx, issue, false);
-    }
     mg_printf(conn, "</div>\n");
 
 }
@@ -1517,11 +1508,18 @@ void RHtml::printPageNewIssue(const ContextParameters &ctx)
 
 /** print form for adding a message / modifying the issue
   */
-void RHtml::printIssueForm(const ContextParameters &ctx, const Issue &issue, bool autofocus)
+void RHtml::printIssueForm(const ContextParameters &ctx, const Issue *issue, bool autofocus)
 {
+    if (!issue) {
+        LOG_ERROR("printIssueForm: Invalid null issue");
+        return;
+    }
+    if (ctx.userRole != ROLE_ADMIN && ctx.userRole != ROLE_RW) {
+        return;
+    }
+
     struct mg_connection *conn = ctx.conn;
 
-    // enctype=\"multipart/form-data\"
     mg_printf(conn, "<form enctype=\"multipart/form-data\" method=\"post\"  class=\"sm_issue_form\" id=\"edit_form\">");
     // print the fields of the issue in a two-column table
 
@@ -1535,7 +1533,7 @@ void RHtml::printIssueForm(const ContextParameters &ctx, const Issue &issue, boo
     mg_printf(conn, "<td class=\"sm_issue_pinput\" colspan=\"3\">");
 
     mg_printf(conn, "<input class=\"sm_issue_pinput_summary\" required=\"required\" type=\"text\" name=\"summary\" value=\"%s\"",
-              htmlEscape(issue.getSummary()).c_str());
+              htmlEscape(issue->getSummary()).c_str());
     if (autofocus) mg_printf(conn, " autofocus");
     mg_printf(conn, ">");
     mg_printf(conn, "</td>\n");
@@ -1562,9 +1560,9 @@ void RHtml::printIssueForm(const ContextParameters &ctx, const Issue &issue, boo
 
         PropertySpec pspec = propertySpec->second;
 
-        std::map<std::string, std::list<std::string> >::const_iterator p = issue.properties.find(pname);
+        std::map<std::string, std::list<std::string> >::const_iterator p = issue->properties.find(pname);
         std::list<std::string> propertyValues;
-        if (p!=issue.properties.end()) propertyValues = p->second;
+        if (p!=issue->properties.end()) propertyValues = p->second;
 
         std::ostringstream input;
         std::string value;
@@ -1643,7 +1641,7 @@ void RHtml::printIssueForm(const ContextParameters &ctx, const Issue &issue, boo
         mg_printf(conn, "<td></td></tr>\n");
     }
     mg_printf(conn, "<tr>\n");
-    mg_printf(conn, "<td class=\"sm_issue_plabel sm_issue_plabel_message\" >%s: </td>\n", _("Message"));
+    mg_printf(conn, "<td class=\"sm_issue_plabel sm_issue_plabel_message\" >%s: </td>\n",  htmlEscape(_("Message")).c_str());
     mg_printf(conn, "<td colspan=\"3\">\n");
     mg_printf(conn, "<textarea class=\"sm_issue_pinput sm_issue_pinput_message\" placeholder=\"%s\" name=\"%s\" wrap=\"hard\" cols=\"80\">\n",
               _("Enter a message"), K_MESSAGE);
@@ -1660,14 +1658,15 @@ void RHtml::printIssueForm(const ContextParameters &ctx, const Issue &issue, boo
 
     // add file upload input
     mg_printf(conn, "<tr>\n");
-    mg_printf(conn, "<td class=\"sm_issue_plabel sm_issue_plabel_file\" >%s: </td>\n", _("File Upload"));
+    mg_printf(conn, "<td class=\"sm_issue_plabel sm_issue_plabel_file\" >%s: </td>\n", htmlEscape(_("File Upload")).c_str());
     mg_printf(conn, "<td colspan=\"3\">\n");
     mg_printf(conn, "<input type=\"file\" name=\"%s\" class=\"sm_issue_input_file\" onchange=\"updateFileInput('sm_issue_input_file');\">\n", K_FILE);
     mg_printf(conn, "</td></tr>\n");
 
     mg_printf(conn, "<tr><td></td>\n");
     mg_printf(conn, "<td colspan=\"3\">\n");
-    mg_printf(conn, "<input type=\"submit\" value=\"%s\">\n", ctx.getProject().getLabelOfProperty("Add-Message").c_str());
+    mg_printf(conn, "<button onclick=\"previewMessage(); return false;\">%s</button>\n", htmlEscape(_("Preview")).c_str());
+    mg_printf(conn, "<input type=\"submit\" value=\"%s\">\n", htmlEscape(_("Post")).c_str());
     mg_printf(conn, "</td></tr>\n");
 
     mg_printf(conn, "</table>\n");

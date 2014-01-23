@@ -337,6 +337,9 @@ div.sm_entry_files {
     font-weight: bold;
     margin-bottom: 10px;
 }
+#sm_entry_preview {
+    font-size: 10pt;
+}
 .sm_logo {
 	width: 100px;
 }
