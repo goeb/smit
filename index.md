@@ -1,5 +1,5 @@
 
-# Overview
+# Smit Overview
 
 Smit is a free and open-source issue tracker designed to handle issues of projects with speed and efficiency.
 
