@@ -14,6 +14,7 @@ New features:
 
 
 Downloads:
+
 - Source code: [git tag v1.2.0](https://github.com/goeb/smit/tree/v1.2.0)
 - Windows build: [smit-win32-1.2.0.zip](downloads/smit-win32-1.2.0.zip)
 
