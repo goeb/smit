@@ -5,6 +5,7 @@ v1.2
     - show/hide entries with no contents (only properties changes)
     - tag entries
     - preview of message before posting
+    - option "--ssl-cert" for HTTPS and server-side certificate
 
 v1.1.1, 5 Jan 2014
 
