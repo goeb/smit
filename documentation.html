@@ -75,8 +75,10 @@ Commands:
         --project options are cumulative with previously defined projects roles
         for the same user.
 
-    serve [&lt;repository&gt;] [--listen-port &lt;port&gt;]
+    serve [&lt;repository&gt;] [--listen-port &lt;port&gt;] [--ssl-cert &lt;certificate&gt;]
         Default listening port is 8090.
+        The --ssl-cert option forces use of HTTPS.
+        &lt;certificate&gt; must be a PEM certificate, including public and private key.
 
     --version
     --help
@@ -90,7 +92,7 @@ Roles:
     ro          able to read issues
     ref         may not access a project, but may be referenced</code></pre>
 <h2 id="directories-layout">Directories Layout</h2>
-<p>Each instance of Smit serve one repository (also refered below as <code>$REPO</code>).</p>
+<p>Each instance of Smit serves one repository (also refered below as <code>$REPO</code>).</p>
 <p>The Directories layout is typically:</p>
 <pre><code>$REPO
 ├── project-A
@@ -127,19 +129,20 @@ style.css</code></pre>
 <p>Modifiy the <code>$REPO/public/logo.png</code> according to yours needs.</p>
 <h2 id="the-sm-variables">The SM variables</h2>
 <p>In order to let a maximum customization freedom, Smit let the user define the global structure of the HTML pages, and inserts the dynamic contents at users's defined places, indicated by SM variables:</p>
-<pre><code>SM_DIV_NAVIGATION_GLOBAL
+<pre><code>SM_DIV_ISSUE
+SM_DIV_ISSUE_FORM
+SM_DIV_ISSUE_MSG_PREVIEW
+SM_DIV_ISSUES
+SM_DIV_ISSUE_SUMMARY
+SM_DIV_NAVIGATION_GLOBAL
 SM_DIV_NAVIGATION_ISSUES
-SM_URL_PROJECT_NAME
-SM_HTML_PROJECT_NAME
-SM_RAW_ISSUE_ID
-SM_SCRIPT_PROJECT_CONFIG_UPDATE
 SM_DIV_PREDEFINED_VIEWS
 SM_DIV_PROJECTS
 SM_DIV_USERS
-SM_DIV_ISSUES
-SM_DIV_ISSUE_SUMMARY
-SM_DIV_ISSUE
-SM_DIV_ISSUE_FORM</code></pre>
+SM_HTML_PROJECT_NAME
+SM_RAW_ISSUE_ID
+SM_SCRIPT_PROJECT_CONFIG_UPDATE
+SM_URL_PROJECT_NAME</code></pre>
 <p>Some variables make sense only in some particular context. For instance, <code>SM_RAW_ISSUE_ID</code> makes sense only when a single issue is displayed.</p>
 <h2 id="faq">FAQ</h2>
 <h3 id="why-cannot-i-create-a-project-named-public">Why cannot I create a project named 'public'?</h3>
@@ -159,7 +162,7 @@ users</code></pre>
         </div> <!-- div class page -->
         <div class="footer">
             Copyright &copy; 2014, Frédéric Hoerni<br>
-            Page updated on  7 Jan 2014
+            Page updated on 27 Jan 2014
         </div>
     </body>
 </html>

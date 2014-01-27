@@ -44,8 +44,10 @@ And copy the compiled executable `smit` to somewhere in your PATH (for example $
             --project options are cumulative with previously defined projects roles
             for the same user.
     
-        serve [<repository>] [--listen-port <port>]
+        serve [<repository>] [--listen-port <port>] [--ssl-cert <certificate>]
             Default listening port is 8090.
+            The --ssl-cert option forces use of HTTPS.
+            <certificate> must be a PEM certificate, including public and private key.
     
         --version
         --help
@@ -61,7 +63,7 @@ And copy the compiled executable `smit` to somewhere in your PATH (for example $
 
 ## Directories Layout
 
-Each instance of Smit serve one repository (also refered below as `$REPO`).
+Each instance of Smit serves one repository (also refered below as `$REPO`).
 
 The Directories layout is typically:
 
