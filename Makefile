@@ -129,5 +129,11 @@ release: $(EXE)
 		cp $(EXE) bin/*bat smit-win32-$$V/. ; \
 		zip -r smit-win32-$$V.zip smit-win32-$$V
 
+selfSignedCertificate:
+	openssl genrsa > privkey.pem
+	openssl req -new -x509 -key privkey.pem -out cacert.pub.pem -days 1095
+	cat privkey.pem cacert.pub.pem > cacert.pem
+	@echo "cacert.pem ready."
+
 
 include $(DEPENDS)

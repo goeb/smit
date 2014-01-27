@@ -53,8 +53,10 @@ void usage()
            "        --project options are cumulative with previously defined projects roles\n"
            "        for the same user.\n"
            "\n"
-           "    serve [<repository>] [--listen-port <port>]\n"
+           "    serve [<repository>] [--listen-port <port>] [--ssl-cert <certificate>] \n"
            "        Default listening port is 8090.\n"
+           "        The --ssl-cert option forces use of HTTPS.\n"
+           "        <certificate> must be a PEM certificate, including public and private key.\n"
            "\n"
            "    --version\n"
            "    --help\n"
@@ -224,8 +226,9 @@ int serveRepository(int argc, const char **args)
     LOG_INFO("Starting Smit v" VERSION);
 
     int i = 0;
-    const char *listenPort = "8090";
+    std::string listenPort = "8090";
     const char *repo = 0;
+    const char *certificatePemFile = 0;
     while (i<argc) {
         const char *arg = args[i]; i++;
         if (0 == strcmp(arg, "--listen-port")) {
@@ -233,13 +236,22 @@ int serveRepository(int argc, const char **args)
                 listenPort = args[i];
                 i++;
             } else usage();
+
+        } else if (0 == strcmp(arg, "--ssl-cert")) {
+            if (i<argc) {
+                certificatePemFile = args[i];
+                i++;
+            } else usage();
+
         } else if (!repo) {
             repo = arg;
         } else {
             usage();
         }
     }
+
     if (!repo) repo = ".";
+    if (certificatePemFile) listenPort += 's'; // force HTTPS listening
 
     // Load all projects
     int r = dbLoad(repo);
@@ -254,14 +266,21 @@ int serveRepository(int argc, const char **args)
     }
 
     struct mg_context *ctx;
-    const char *options[] = {"listening_ports", listenPort, "document_root", repo, NULL};
+
     struct mg_callbacks callbacks;
 
     memset(&callbacks, 0, sizeof(callbacks));
     callbacks.begin_request = begin_request_handler;
+    callbacks.log_message = log_message_handler;
 
-    LOG_INFO("Starting http server on port %s", options[1]);
-    ctx = mg_start(&callbacks, NULL, options);
+    LOG_INFO("Starting http server on port %s", listenPort.c_str());
+
+    // the reason for this ugly code is that const char *options[] is not dynamic...
+    const char *optionsWithSslCert[] = {"listening_ports", listenPort.c_str(), "document_root", repo, "ssl_certificate", certificatePemFile, NULL};
+    const char *optionsWoSslCert[] = {"listening_ports", listenPort.c_str(), "document_root", repo, NULL};
+
+    if (certificatePemFile) ctx = mg_start(&callbacks, NULL, optionsWithSslCert);
+    else ctx = mg_start(&callbacks, NULL, optionsWoSslCert);
 
     while (1) sleep(1); // block until ctrl-C
     getchar();  // Wait until user hits "enter"

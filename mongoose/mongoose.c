@@ -4806,8 +4806,7 @@ static void close_connection(struct mg_connection *conn) {
 
 #ifndef NO_SSL
   if (conn->ssl != NULL) {
-    // Run SSL_shutdown twice to ensure completly close SSL connection
-    SSL_shutdown(conn->ssl);
+    // close SSL connection
     SSL_shutdown(conn->ssl);
     SSL_free(conn->ssl);
     conn->ssl = NULL;
