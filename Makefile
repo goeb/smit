@@ -5,8 +5,8 @@ ifeq ($(WIN),1)
 	CC = i586-mingw32msvc-gcc
 	CXX = i586-mingw32msvc-g++
 	BUILD_DIR = build_win
-	CFLAGS += -I $(OPENSSL)/include -DHAVE_STDINT
-	LDFLAGS += -lws2_32 $(OPENSSL)/libcrypto.a
+	CFLAGS += -I $(OPENSSL)/include -DHAVE_STDINT -DNO_SSL_DL
+	LDFLAGS += $(OPENSSL)/libssl.a $(OPENSSL)/libcrypto.a -lws2_32 -lgdi32
 	PACK_NAME = smit-win32
 else
 	EXE = smit
