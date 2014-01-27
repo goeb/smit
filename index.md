@@ -20,7 +20,7 @@ Some of the main features of Smit are:
 
 - Easy customization of properties
 - Innovative "one-click" sorting interface, more advanced than most other trackers
-- Rich text
+- Rich text (with preview)
 - Uploaded images displayed as thumbnails
 - Advanced searching (including full text searching)
 - Exporting contents to HTML, CSV, PDF (via the browser's capability)
@@ -37,7 +37,19 @@ Some of the main features of Smit are:
 
 An online demo is available at: [http://smit.herokuapp.com](http://smit.herokuapp.com)
 
-## License
+## License GPLv2
 
-Smit is released under the GNU GENERAL PUBLIC LICENSE v2: [Smit License](http://github.com/goeb/smit/blob/master/LICENSE)
+Small Issue Tracker
+Copyright (C) 2013 Frederic Hoerni
 
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+[Smit License](http://github.com/goeb/smit/blob/master/LICENSE)
