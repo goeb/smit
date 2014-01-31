@@ -1,15 +1,17 @@
 
 v1.2
 
-    in page project config, arrows to reorder the properties
-    show/hide entries with no contents (only properties changes)
-    tag entries
+    - in page project config, arrows to reorder the properties
+    - show/hide entries with no contents (only properties changes)
+    - tag entries
+    - preview of message before posting
+    - option "--ssl-cert" for HTTPS and server-side certificate
 
 v1.1.1, 5 Jan 2014
 
-    have embedded javascript
-    do not overwrite pre-existing entries or files
-    fix new property not taken when creating new project
+    - have embedded javascript
+    - do not overwrite pre-existing entries or files
+    - fix new property not taken when creating new project
     
 
 v1.1.0, 25 Dec 2013

@@ -5,8 +5,8 @@ ifeq ($(WIN),1)
 	CC = i586-mingw32msvc-gcc
 	CXX = i586-mingw32msvc-g++
 	BUILD_DIR = build_win
-	CFLAGS += -I $(OPENSSL)/include -DHAVE_STDINT
-	LDFLAGS += -lws2_32 $(OPENSSL)/libcrypto.a
+	CFLAGS += -I $(OPENSSL)/include -DHAVE_STDINT -DNO_SSL_DL
+	LDFLAGS += $(OPENSSL)/libssl.a $(OPENSSL)/libcrypto.a -lws2_32 -lgdi32
 	PACK_NAME = smit-win32
 else
 	EXE = smit
@@ -128,6 +128,12 @@ release: $(EXE)
 		mkdir "smit-win32-$$V"; \
 		cp $(EXE) bin/*bat smit-win32-$$V/. ; \
 		zip -r smit-win32-$$V.zip smit-win32-$$V
+
+selfSignedCertificate:
+	openssl genrsa > privkey.pem
+	openssl req -new -x509 -key privkey.pem -out cacert.pub.pem -days 1095
+	cat privkey.pem cacert.pub.pem > cacert.pem
+	@echo "cacert.pem ready."
 
 
 include $(DEPENDS)

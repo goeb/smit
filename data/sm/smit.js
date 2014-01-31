@@ -29,7 +29,7 @@ function previewMessage() {
     var request = new XMLHttpRequest();
     request.open('GET', url, false); // synchronous
     request.send(null);
-    divPreview.innerHTML = request.response;
+    divPreview.innerHTML = request.responseText;
 }
 function deleteEntry(urlPrefix, entryId) {
     var r = confirm("Confirm delete?");

@@ -1458,6 +1458,12 @@ void httpPostEntry(struct mg_connection *conn, Project &pro, const std::string &
 
 }
 
+int log_message_handler(const struct mg_connection *conn, const char *msg)
+{
+    LOG_ERROR("[MG] %s", msg);
+    return 1;
+}
+
 
 /** begin_request_handler is the main entry point of an incoming HTTP request
   *
