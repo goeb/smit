@@ -122,8 +122,6 @@ This file describes the users and their priviledges.
 
 ## Roadmap
 
-- v1.2
-    - support of SSL, TLS
 
 - v2.0
     - i18n (gettext)
