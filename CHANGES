@@ -1,4 +1,7 @@
 
+v1.2.1
+    - fix modification of project properties by admin non-superadmin
+
 v1.2
 
     - in page project config, arrows to reorder the properties

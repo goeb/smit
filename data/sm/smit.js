@@ -110,7 +110,9 @@ function createSelect(items, selected, allowVoid) {
 function hideSuperadminZone() {
     var divs = document.getElementsByClassName('sm_user_superadmin_zone');
     for(var i=0; i<divs.length; i++) {
-          divs[i].style.display='none';
+        divs[i].style.display='none';
+        var inputs = divs[i].getElementsByTagName('input');
+        for(var j=0; j<inputs.length; j++) inputs[j].disabled = true;
     }
 }
 function addMoreProperties(n) {
@@ -305,7 +307,9 @@ function setUrl(value) {
 function hideAdminZone() {
     var divs = document.getElementsByClassName('sm_view_admin_zone');
     for(var i=0; i<divs.length; i++) { 
-          divs[i].style.display='none';
+        divs[i].style.display='none';
+        var inputs = divs[i].getElementsByTagName('input');
+        for(var j=0; j<inputs.length; j++) inputs[j].disabled = true;
     }
 }
 function setDefaultCheckbox() {
