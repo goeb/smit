@@ -107,7 +107,6 @@ embedcpio: $(EXE) data/*/* data/sm/version
 	cat $(CPIO_ARCHIVE) >> $(EXE)
 	size=`stat -c %s $(CPIO_ARCHIVE)`; \
 	python -c "import struct; import sys; sys.stdout.write(struct.pack('I', $$size))" >> $(EXE)
-	cp $(CPIO_ARCHIVE) $(EXE) demo/public
 
 
 clean:
