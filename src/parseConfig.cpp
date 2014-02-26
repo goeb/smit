@@ -319,6 +319,19 @@ std::string serializeSimpleToken(const std::string token)
     else return doubleQuote(token); // some characters needs escaping
 }
 
+std::string getBoundary(const std::string &text)
+{
+    std::stringstream randomStr;
+
+    while(1) {
+        randomStr.str(""); // clear the contents
+        randomStr << std::hex << rand() << rand() << rand();
+        if (text.find(randomStr.str()) == std::string::npos) break;
+    }
+    std::string boundary = "boundary:" + randomStr.str();
+    LOG_DEBUG("boundary: %s", boundary.c_str());
+    return boundary;
+}
 
 std::string serializeProperty(const std::string &propertyName, const std::list<std::string> &values)
 {
@@ -327,7 +340,7 @@ std::string serializeProperty(const std::string &propertyName, const std::list<s
 
     if ( (values.size() == 1) && (values.front().find('\n') != std::string::npos) ) {
         // serialize as multi-line
-        const char *delimiter = "-----------endofmsg---"; // TODO manage case where a value contains this delimiter
+        std::string delimiter = getBoundary(values.front());
         s << " < " << delimiter << "\n";
         s << values.front() << "\n";
         s << delimiter;
