@@ -1386,7 +1386,8 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
         // delete button
         time_t delta = time(0) - ee.ctime;
         if ( (delta < DELETE_DELAY_S) && (ee.author == ctx.user.username) &&
-             (e == issue.latest) && e->prev) {
+             (e == issue.latest) && e->prev &&
+             (ctx.userRole == ROLE_ADMIN || ctx.userRole == ROLE_RW) ) {
             // entry was created less than 10 minutes ago, and by same user, and is latest in the issue
             mg_printf(conn, "<a href=\"#\" class=\"sm_entry_delete\" title=\"Delete this entry (at most %d minutes after posting)\" ", (DELETE_DELAY_S/60));
             mg_printf(conn, " onclick=\"deleteEntry('/%s/issues/%s', '%s');return false;\">\n",
@@ -1402,16 +1403,18 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
 
 
         // tag
-        const char *tagTitle = _("Click to tag/untag");
-        const char *tagStyle = "sm_entry_notag";
-        if (ee.tagged) tagStyle = "sm_entry_tagged";
+        if (ctx.userRole == ROLE_ADMIN || ctx.userRole == ROLE_RW) {
+            const char *tagTitle = _("Click to tag/untag");
+            const char *tagStyle = "sm_entry_notag";
+            if (ee.tagged) tagStyle = "sm_entry_tagged";
 
-        mg_printf(conn, "<a href=\"#\" class=\"%s\" id=\"tag%s\" title=\"%s\" ",
-                  tagStyle, ee.id.c_str(), tagTitle);
-        mg_printf(conn, " onclick=\"tagEntry('/%s/tags/%s', '%s');return false;\">\n",
-                  ctx.getProject().getUrlName().c_str(), issue.id.c_str(), ee.id.c_str());
-        mg_printf(conn, "[tag]");
-        mg_printf(conn, "</a>\n");
+            mg_printf(conn, "<a href=\"#\" class=\"%s\" id=\"tag%s\" title=\"%s\" ",
+                      tagStyle, ee.id.c_str(), tagTitle);
+            mg_printf(conn, " onclick=\"tagEntry('/%s/tags/%s', '%s');return false;\">\n",
+                      ctx.getProject().getUrlName().c_str(), issue.id.c_str(), ee.id.c_str());
+            mg_printf(conn, "[tag]");
+            mg_printf(conn, "</a>\n");
+        }
 
         mg_printf(conn, "</div>\n"); // end header
 

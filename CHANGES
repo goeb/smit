@@ -1,4 +1,9 @@
 
+v1.2.2
+
+    - hide 'delete' and 'tag' when read-only
+    - fix trivial boundary with more robust one
+
 v1.2.1
     - fix modification of project properties by admin non-superadmin
 
