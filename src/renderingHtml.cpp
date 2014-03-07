@@ -1676,5 +1676,4 @@ void RHtml::printIssueForm(const ContextParameters &ctx, const Issue *issue, boo
 
     mg_printf(conn, "</form>");
 
-    mg_printf(conn, "</div>");
 }
