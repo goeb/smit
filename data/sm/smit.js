@@ -344,3 +344,10 @@ function moveRowDown(item) {
         parent.insertBefore(nextRow, tr);
     }
 }
+
+function togglePrintPreview()
+{
+    var currCSS = document.getElementById('printCSS');
+    if(currCSS.media == 'all') currCSS.media = 'print';
+    else currCSS.media = 'all';
+}

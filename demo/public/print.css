@@ -13,3 +13,11 @@ form {
 .no_print {
     display: none !important;
 }
+a {
+    pointer-events: none;
+    cursor: default;
+    text-decoration: none;
+}
+.sm_issues_other_formats {
+    display: none !important;
+}
