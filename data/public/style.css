@@ -52,10 +52,6 @@ span.sm_issue_show_properties {
     clear: both;
     border: 0;
     margin: 0;
-    /*border-top: 3px;
-    border-style: solid;
-    border-color: #E0E0E0;
-    */
     padding: 5px;
 }
 .sm_entry_header {
@@ -80,9 +76,7 @@ span.sm_issue_show_properties {
     clear: both;
     display: none;
     color: #777;
-    /*background-color: #E0E0E0;*/
     padding-top: 7px;
-    /*border-radius: 5px 5px 5px 5px;*/
     width: 60em;
     font-size: 80%;
 }
@@ -124,13 +118,13 @@ input {
     border-radius: 5px 5px 5px 5px;
 }
 .sm_issue_header {
-    /*position: fixed;*/
+    clear: both;
     width: 60em;
     padding: 0.3em;
     background-color: #E0E0E0;
-    border-radius: 0.5em 0.5em 0.5em 0.5em;
     font-size: 125%;
     font-weight: bold;
+    border: solid 1px;
 }
 .sm_issue_id {
     color: blue;
@@ -288,17 +282,14 @@ table.sm_projects tr:hover, table.sm_users tr:hover {
 .sm_predefined_view, .sm_link_new_issue {
     padding: 3px;
     margin: 0.5em;
-    /*background-color: #E0E0E0;*/
-    box-shadow: 2px 2px 4px #888888;
 }
 .sm_link_projects, .sm_link_modify_project, .sm_link_views {
     padding: 3px;
     margin: 0.5em;
-    background-color: #E8E8E8;
-    box-shadow: 2px 2px 4px #888888;
+    font-weight: bold;
 }
 .sm_navigation_project {
-    padding: 1em;
+    padding-top: 5px;
 }
 .sm_navigation_global {
 }
@@ -329,9 +320,7 @@ div.sm_entry_file {
     text-align: center;
 }
 div.sm_entry_files {
-    /*background-color: #E0E0E0;*/
     padding: 7px;
-    /*border-radius: 5px 5px 5px 5px;*/
     width: 60em;
     font-size: 80%;
     font-weight: bold;
@@ -347,7 +336,7 @@ div.sm_entry_files {
     background-color: #ccc;
     border: 1px solid #aaa;
     padding: 0.1em 0.2em 0.1em 0.2em; /* top right bottom left */
-    border-radius: 10px;
+    border-radius: 5px;
 }
 .sm_project_propname {
     width: 12em;

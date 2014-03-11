@@ -3,7 +3,8 @@
     <head>
         <title>Issue SM_RAW_ISSUE_ID</title>
         <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
-        <link rel="stylesheet" type="text/css" href="/public/style.css">
+        <link id="screenCSS" media="all" rel="stylesheet" type="text/css" href="/public/style.css">
+        <link id="printCSS" media="print" rel="stylesheet" type="text/css" href="/public/print.css">
         <meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
         <script type="text/javascript" src="/sm/smit.js"></script>
     <style>
@@ -17,32 +18,22 @@
     </head>
     <body>
         <div style="padding-top: 15px; width: 100%; background: white;">
-            <div style="float: left; margin:1em;">
-                <img src="/public/logo.png" class="sm_logo" alt="Logo">
-            </div>
-SM_DIV_NAVIGATION_GLOBAL
-SM_DIV_NAVIGATION_ISSUES
-<br>
+            <table><tr><td><img src="/public/logo.png" class="sm_logo" alt="Logo"></td>
+                    <td>SM_DIV_NAVIGATION_GLOBAL SM_DIV_NAVIGATION_ISSUES</td></tr></table>
 SM_DIV_ISSUE_SUMMARY
-<hr>
         </div>
 <!-- the fixed block is repeated in order to occupy the exact space and not have subsequent HTML hidden behing the fixed block -->
-        <div style="position: fixed; top: 0; padding-top: 15px; width: 100%; background: white;">
-            <div style="float: left; margin:1em;">
-                <img src="/public/logo.png" class="sm_logo" alt="Logo">
-            </div>
-SM_DIV_NAVIGATION_GLOBAL
-SM_DIV_NAVIGATION_ISSUES
-<br>
+        <div class="no_print" style="position: fixed; top: 0; padding-top: 15px; width: 100%; background: white;">
+            <table><tr><td><img src="/public/logo.png" class="sm_logo" alt="Logo"></td>
+                    <td>SM_DIV_NAVIGATION_GLOBAL SM_DIV_NAVIGATION_ISSUES</td></tr></table>
 SM_DIV_ISSUE_SUMMARY
-<hr>
         </div>
-
         <a href="#edit_form">Edit</a> -
         <a href="#" onclick="showPropertiesChanges();return false;">Show properties changes</a> - 
         <a href="#" onclick="hideUntaggedEntries();return false;">Show only tagged</a> 
 
 SM_DIV_ISSUE
+<div class="no_print">
 SM_DIV_ISSUE_FORM
 Message Preview:
 SM_DIV_ISSUE_MSG_PREVIEW
@@ -60,6 +51,7 @@ SM_DIV_ISSUE_MSG_PREVIEW
         <tr><td>{{{ **verbatim text **<br>}}}</td><td><span class="sm_block"> **verbatim text **<br></span></td></tr>
 
     </table>
+</div>
     <br>
     </body>
 </html>
