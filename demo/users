@@ -25,10 +25,9 @@ addUser "not assigned"     project myproject ref \
     project things_to_do ref \
 
 
-addUser xxx     project tutuut ro \
-
-
-addUser yyy sha1 186154712b2d5f6791d85b9a0987b98fa231779c \
+addUser xxxt sha1 186154712b2d5f6791d85b9a0987b98fa231779c \
     project myproject rw \
 
+
+addUser yy 
 

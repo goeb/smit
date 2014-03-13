@@ -275,8 +275,17 @@ int UserBase::updateUser(const std::string &username, User newConfig)
 
     ScopeLocker(UserDb.locker, LOCK_READ_WRITE);
 
-    std::map<std::string, User*>::iterator u = UserDb.configuredUsers.find(username);
-    if (u == UserDb.configuredUsers.end()) return -2;
+    std::map<std::string, User*>::iterator u;
+
+    // if modified name, check that the new name does not exist
+    if (newConfig.username != username) {
+        u = UserDb.configuredUsers.find(newConfig.username);
+        if (u != UserDb.configuredUsers.end()) return -2;
+    }
+
+    // check that modified user exists
+    u = UserDb.configuredUsers.find(username);
+    if (u == UserDb.configuredUsers.end()) return -3;
 
     if (newConfig.hashValue.empty()) {
         // keep the same as before

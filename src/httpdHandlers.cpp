@@ -463,7 +463,7 @@ void httpPostUsers(struct mg_connection *conn, User signedInUser, const std::str
     }
     if (username.empty()) return sendHttpHeader403(conn);
 
-    // parse the posted parameters
+    // get the posted parameters
     const char *contentType = mg_get_header(conn, "Content-Type");
 
     if (0 == strcmp("application/x-www-form-urlencoded", contentType)) {
@@ -513,7 +513,9 @@ void httpPostUsers(struct mg_connection *conn, User signedInUser, const std::str
             sendHttpHeader400(conn, "passwords 1 and 2 do not match");
             return;
 
-        } else if (!signedInUser.superadmin) {
+        }
+
+        if (!signedInUser.superadmin) {
             // if signedInUser is not superadmin, only password is updated
 
             newUserConfig.username = username; // used below for redirection
@@ -535,9 +537,11 @@ void httpPostUsers(struct mg_connection *conn, User signedInUser, const std::str
             } else {
                 r = UserBase::updateUser(username, newUserConfig);
                 if (r == -1) error = "Cannot create user with empty name";
-                else if (r == -2) error = "Cannot update non existing user";
+                else if (r == -2) error = "Cannot change name as new name already exists";
+                else if (r < 0) error = "Cannot update non existing user";
 
             }
+
             if (r != 0) LOG_ERROR("Cannot update user '%s': %s", username.c_str(), error.c_str());
             else if (newUserConfig.username != username) {
                 LOG_INFO("User '%s' renamed '%s'", username.c_str(), newUserConfig.username.c_str());
@@ -545,8 +549,7 @@ void httpPostUsers(struct mg_connection *conn, User signedInUser, const std::str
         }
 
         if (r != 0) {
-            std::string msg = "could not update user's parameters: " + error;
-            sendHttpHeader500(conn, msg.c_str());
+            sendHttpHeader400(conn, error.c_str());
 
         } else {
             // ok, redirect
