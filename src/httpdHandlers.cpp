@@ -500,9 +500,14 @@ void httpPostUsers(struct mg_connection *conn, User signedInUser, const std::str
             }
         }
 
-        if (newUserConfig.username.empty() || newUserConfig.username == "_") {
-            LOG_INFO("Ignore user parameters as username is empty or '_'");
-            return sendHttpHeader400(conn, "Invalid user name");
+        // Check that the username given in the form is not empty.
+        // Only superadmin has priviledge for modifying this.
+        // For other users, the disabled field makes the username empty.
+        if (signedInUser.superadmin) {
+            if (newUserConfig.username.empty() || newUserConfig.username == "_") {
+                LOG_INFO("Ignore user parameters as username is empty or '_'");
+                return sendHttpHeader400(conn, "Invalid user name");
+            }
         }
 
         int r = 0;
@@ -517,13 +522,17 @@ void httpPostUsers(struct mg_connection *conn, User signedInUser, const std::str
 
         if (!signedInUser.superadmin) {
             // if signedInUser is not superadmin, only password is updated
-
             newUserConfig.username = username; // used below for redirection
-            r = UserBase::updatePassword(username, passwd1);
-            if (r != 0) {
-                LOG_ERROR("Cannot update password of user '%s'", username.c_str());
-                error = "Cannot update password";
-            } else LOG_INFO("Password updated for user '%s'", username.c_str());
+
+            if (!passwd1.empty()) {
+                r = UserBase::updatePassword(username, passwd1);
+                if (r != 0) {
+                    LOG_ERROR("Cannot update password of user '%s'", username.c_str());
+                    error = "Cannot update password";
+                } else LOG_INFO("Password updated for user '%s'", username.c_str());
+            } else {
+                LOG_DEBUG("Password not changed (empty)");
+            }
 
         } else {
             // superadmin: update all parameters of the user's configuration

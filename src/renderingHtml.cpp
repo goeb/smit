@@ -565,20 +565,27 @@ void RHtml::printNavigationGlobal(const ContextParameters &ctx)
     username.addContents("%s", htmlEscape(ctx.user.username).c_str());
     userinfo.addContents(username);
     div.addContents(userinfo);
+    div.addContents(" - ");
 
     // form to sign-out
     HtmlNode signout("form");
     signout.addAttribute("action", "/signout");
     signout.addAttribute("method", "post");
     signout.addAttribute("id", "sm_signout");
-    signout.addContents("(");
     HtmlNode linkSignout("a");
     linkSignout.addAttribute("href", "javascript:;");
     linkSignout.addAttribute("onclick", "document.getElementById('sm_signout').submit();");
     linkSignout.addContents("%s", _("Sign out"));
     signout.addContents(linkSignout);
-    signout.addContents(")");
     div.addContents(signout);
+
+    div.addContents(" - ");
+
+    // link to user profile
+    HtmlNode linkToProfile("a");
+    linkToProfile.addAttribute("href", "/users/%s", urlEncode(ctx.user.username).c_str());
+    linkToProfile.addContents(_("Profile"));
+    div.addContents(linkToProfile);
 
     div.print(conn);
 
