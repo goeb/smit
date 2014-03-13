@@ -1012,7 +1012,7 @@ void httpPostView(struct mg_connection *conn, Project &p, const std::string &nam
     std::string deleteMark = getFirstParamFromQueryString(postData, "delete");
     enum Role role = u.getRole(p.getName());
     if (deleteMark == "1") {
-        if (role != ROLE_ADMIN) {
+        if (role != ROLE_ADMIN && !u.superadmin) {
             sendHttpHeader403(conn);
             return;
         } else {
@@ -1077,14 +1077,14 @@ void httpPostView(struct mg_connection *conn, Project &p, const std::string &nam
 
     if (pv.name.empty()) {
         // unnamed view
-        if (role != ROLE_ADMIN && role != ROLE_RO && role != ROLE_RW) {
+        if (role != ROLE_ADMIN && role != ROLE_RO && role != ROLE_RW && !u.superadmin) {
             sendHttpHeader403(conn);
             return;
         }
         // do nothing, just redirect
 
     } else { // named view
-        if (role != ROLE_ADMIN) {
+        if (role != ROLE_ADMIN && !u.superadmin) {
             sendHttpHeader403(conn);
             return;
         }
