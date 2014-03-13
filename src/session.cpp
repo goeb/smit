@@ -224,6 +224,13 @@ int UserBase::addUser(User newUser)
 {
     if (newUser.username.empty()) return -1;
 
+    // check if user already exists
+
+    std::map<std::string, User*>::iterator uit = UserDb.configuredUsers.find(newUser.username);
+    if (uit != UserDb.configuredUsers.end()) {
+        return -2;
+    }
+
     ScopeLocker(UserDb.locker, LOCK_READ_WRITE);
     addUserInArray(newUser);
     return store(Repository);
@@ -269,7 +276,7 @@ int UserBase::updateUser(const std::string &username, User newConfig)
     ScopeLocker(UserDb.locker, LOCK_READ_WRITE);
 
     std::map<std::string, User*>::iterator u = UserDb.configuredUsers.find(username);
-    if (u == UserDb.configuredUsers.end()) return -1;
+    if (u == UserDb.configuredUsers.end()) return -2;
 
     if (newConfig.hashValue.empty()) {
         // keep the same as before

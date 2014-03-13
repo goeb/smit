@@ -53,10 +53,12 @@ void usage()
            "        --project options are cumulative with previously defined projects roles\n"
            "        for the same user.\n"
            "\n"
-           "    serve [<repository>] [--listen-port <port>] [--ssl-cert <certificate>] \n"
+           "    serve [<repository>] [--listen-port <port>] [--ssl-cert <certificate>]\n"
+           "          [--lang <language>]\n"
            "        Default listening port is 8090.\n"
            "        The --ssl-cert option forces use of HTTPS.\n"
            "        <certificate> must be a PEM certificate, including public and private key.\n"
+           "        The language should be one of: en, fr. If omitted then 'en' is selected.\n"
            "\n"
            "    --version\n"
            "    --help\n"
@@ -227,6 +229,7 @@ int serveRepository(int argc, const char **args)
 
     int i = 0;
     std::string listenPort = "8090";
+    const char *lang = "en";
     const char *repo = 0;
     const char *certificatePemFile = 0;
     while (i<argc) {
@@ -234,6 +237,12 @@ int serveRepository(int argc, const char **args)
         if (0 == strcmp(arg, "--listen-port")) {
             if (i<argc) {
                 listenPort = args[i];
+                i++;
+            } else usage();
+
+        } else if (0 == strcmp(arg, "--lang")) {
+            if (i<argc) {
+                lang = args[i];
                 i++;
             } else usage();
 
@@ -249,6 +258,10 @@ int serveRepository(int argc, const char **args)
             usage();
         }
     }
+
+    // TODO set language
+
+
 
     if (!repo) repo = ".";
     if (certificatePemFile) listenPort += 's'; // force HTTPS listening

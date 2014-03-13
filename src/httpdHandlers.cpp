@@ -506,6 +506,7 @@ void httpPostUsers(struct mg_connection *conn, User signedInUser, const std::str
         }
 
         int r = 0;
+        std::string error;
 
         if (passwd1 != passwd2) {
             LOG_INFO("passwd1 (%s) != passwd2 (%s)", passwd1.c_str(), passwd2.c_str());
@@ -517,8 +518,10 @@ void httpPostUsers(struct mg_connection *conn, User signedInUser, const std::str
 
             newUserConfig.username = username; // used below for redirection
             r = UserBase::updatePassword(username, passwd1);
-            if (r != 0) LOG_ERROR("Cannot update password of user '%s'", username.c_str());
-            else LOG_INFO("Password updated for user '%s'", username.c_str());
+            if (r != 0) {
+                LOG_ERROR("Cannot update password of user '%s'", username.c_str());
+                error = "Cannot update password";
+            } else LOG_INFO("Password updated for user '%s'", username.c_str());
 
         } else {
             // superadmin: update all parameters of the user's configuration
@@ -526,17 +529,24 @@ void httpPostUsers(struct mg_connection *conn, User signedInUser, const std::str
 
             if (username == "_") {
                 r = UserBase::addUser(newUserConfig);
+                if (r == -1) error = "Cannot create user with empty name";
+                else if (r == -2) error = "Cannot create new user as name already exists";
+
             } else {
                 r = UserBase::updateUser(username, newUserConfig);
+                if (r == -1) error = "Cannot create user with empty name";
+                else if (r == -2) error = "Cannot update non existing user";
+
             }
-            if (r != 0) LOG_ERROR("Cannot update user '%s'", username.c_str());
+            if (r != 0) LOG_ERROR("Cannot update user '%s': %s", username.c_str(), error.c_str());
             else if (newUserConfig.username != username) {
                 LOG_INFO("User '%s' renamed '%s'", username.c_str(), newUserConfig.username.c_str());
             } else LOG_INFO("Parameters updated for user '%s'", username.c_str());
         }
 
         if (r != 0) {
-            sendHttpHeader500(conn, "could not update user's parameters");
+            std::string msg = "could not update user's parameters: " + error;
+            sendHttpHeader500(conn, msg.c_str());
 
         } else {
             // ok, redirect
