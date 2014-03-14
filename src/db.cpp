@@ -508,6 +508,32 @@ ProjectConfig parseProjectConfig(std::list<std::list<std::string> > &lines)
                 std::string propLabel = line->back();
                 config.propertyLabels[propName] = propLabel;
             }
+
+        } else if (token == "tag") {
+            TagSpec tagspec;
+            tagspec.id = pop(*line);
+            tagspec.label = tagspec.id; // by default label = id
+
+            if (tagspec.id.empty()) {
+                LOG_ERROR("Invalid tag id");
+                continue; // ignore current line and go to next one
+            }
+            while (line->size()) {
+                token = pop(*line);
+                if (token == "-label") {
+                    std::string label = pop(*line);
+                    if (label.empty()) LOG_ERROR("Invalid empty tag label");
+                    else tagspec.label = label;
+                } else if (token == "-display") {
+                    tagspec.display = true;
+                } else {
+                    LOG_ERROR("Invalid token '%s' in tag specification", token.c_str());
+                }
+            }
+            LOG_DEBUG("tag '%s' -label '%s' -display=%d", tagspec.id.c_str(), tagspec.label.c_str(),
+                      tagspec.display);
+            config.tags[tagspec.id] = tagspec;
+
         } else {
             LOG_DEBUG("Unknown function '%s'", token.c_str());
             wellFormatedLines.pop_back(); // remove incorrect line
@@ -622,6 +648,22 @@ int Project::modifyConfig(std::list<std::list<std::string> > &tokens)
     versionLine.push_back(K_SMIT_VERSION);
     versionLine.push_back(VERSION);
     tokens.insert(tokens.begin(), versionLine);
+
+    // at this point tagspecs are not managed by the web interface so they
+    // are not in 'tokens'
+    // add them now.
+    std::map<std::string, TagSpec>::iterator t;
+    std::list<std::string> line;
+    FOREACH(t, config.tags) {
+        line.push_back("tag");
+        line.push_back(t->second.id);
+        if (!t->second.label.empty()) {
+            line.push_back("-label");
+            line.push_back(t->second.label);
+        }
+        if (t->second.display) line.push_back("-display");
+        tokens.push_back(line);
+    }
 
     // write to file
     std::string data = serializeTokens(tokens);
@@ -926,7 +968,8 @@ void Project::loadTags(const char *projectPath)
                 if (0 == strcmp(entryTag->d_name, ".")) continue;
                 if (0 == strcmp(entryTag->d_name, "..")) continue;
 
-                std::string entryId = entryTag->d_name;
+                std::string tag = entryTag->d_name;
+                std::string entryId = popToken(tag, '.');
                 std::map<std::string, Entry*>::iterator eit;
                 eit = i->entries.find(entryId);
                 if (eit == i->entries.end()) {
@@ -934,7 +977,8 @@ void Project::loadTags(const char *projectPath)
                     continue;
                 }
                 Entry *e = eit->second;
-                e->tagged = true;
+                if (tag.empty()) e->tagged = true;
+                else e->tags.insert(tag);
             }
             closedir(issueDirHandle);
         }
@@ -1267,6 +1311,16 @@ bool Issue::searchFullText(const char *text) const
 
     return false; // text not found
 
+}
+
+bool Issue::hasTag(const std::string &tagId) const
+{
+    Entry *e = latest;
+    while (e) {
+        if (e->tags.find(tagId) != e->tags.end()) return true;
+        e = e->prev;
+    }
+    return false;
 }
 
 /** If issueId is empty:

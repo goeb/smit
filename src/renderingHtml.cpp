@@ -1323,19 +1323,16 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
     struct mg_connection *conn = ctx.conn;
     mg_printf(conn, "<div class=\"sm_issue\">");
 
-    // print id and summary
-    //RHtml::printIssueSummary(ctx, issue);
-
     // issue properties in a two-column table
     // -------------------------------------------------
     mg_printf(conn, "<table class=\"sm_issue_properties\">");
     int workingColumn = 1;
     const uint8_t MAX_COLUMNS = 2;
 
-    std::list<std::string> orderedProperties = ctx.getProject().getConfig().orderedProperties;
+    ProjectConfig pconfig = ctx.getProject().getConfig();
 
     std::list<std::string>::const_iterator f;
-    for (f=orderedProperties.begin(); f!=orderedProperties.end(); f++) {
+    FOREACH(f, pconfig.orderedProperties) {
         std::string pname = *f;
         std::string label = ctx.getProject().getLabelOfProperty(pname);
 
@@ -1357,6 +1354,27 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
         }
     }
     mg_printf(conn, "</table>\n");
+
+    // tags of the entries of the issue
+    if (!pconfig.tags.empty()) {
+        mg_printf(conn, "<div class=\"sm_issue_tags\">\n");
+        std::map<std::string, TagSpec>::iterator tspec;
+        FOREACH(tspec, pconfig.tags) {
+            if (tspec->second.display) {
+                if (issue.hasTag(tspec->second.id)) {
+                    // issue has at least one such tagged entry
+                    mg_printf(conn, "<span class=\"sm_issue_tagged\">%s</span>\n",
+                              htmlEscape(tspec->second.label).c_str());
+                } else {
+                    mg_printf(conn, "<span class=\"sm_issue_notag\">%s</span>\n",
+                              htmlEscape(tspec->second.label).c_str());
+                }
+            }
+        }
+
+        mg_printf(conn, "</div>\n");
+    }
+
 
     // entries
     // -------------------------------------------------
@@ -1470,7 +1488,7 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
         }
 
         // other properties
-        FOREACH(f, orderedProperties) {
+        FOREACH(f, pconfig.orderedProperties) {
             std::string pname = *f;
 
             std::map<std::string, std::list<std::string> >::const_iterator p = ee.properties.find(pname);

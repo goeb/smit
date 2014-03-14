@@ -35,6 +35,7 @@ struct Entry {
     struct Entry *next; // child
     struct Entry *prev; // parent
     bool tagged;
+    std::set<std::string> tags;
     Entry() : ctime(0), next(0), prev(0), tagged(false) {}
 };
 
@@ -59,6 +60,15 @@ struct Issue {
     void consolidate();
     void consolidateIssueWithSingleEntry(Entry *e, bool overwrite);
     bool searchFullText(const char *text) const;
+    bool hasTag(const std::string &tagId) const;
+};
+
+
+struct TagSpec {
+    TagSpec(): display(false) {}
+    std::string id;
+    std::string label; // UTF-8 text
+    bool display; // status should be displayed in issue header
 };
 
 enum PropertyType { F_TEXT, F_SELECT, F_MULTISELECT, F_SELECT_USER};
@@ -94,7 +104,7 @@ struct ProjectConfig {
     std::list<std::string> orderedProperties;
     std::map<std::string, std::string> propertyLabels;
     std::map<std::string, PredefinedView> predefinedViews;
-
+    std::map<std::string, TagSpec> tags;
 };
 
 class Project {

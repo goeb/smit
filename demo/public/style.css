@@ -82,13 +82,14 @@ span.sm_issue_show_properties {
 }
 .sm_entry_no_contents { display: none; }
 div.sm_entry_tagged {
-    background-color: #AFA;
+    /*background-color: #AFA;*/
 }
 a.sm_entry_tagged, a.sm_entry_tagged:link, a.sm_entry_tagged:hover {
     font-weight: bold;
     color: green;
     cursor: pointer;
     text-decoration: none;
+    font-size: 200%;
 }
 a.sm_entry_notag, a.sm_entry_notag:link, a.sm_entry_notag:hover {
     font-weight: bold;
@@ -271,6 +272,16 @@ table.sm_projects tr:hover, table.sm_users tr:hover {
 .sm_issues_count {
     font-weight: bold;
     margin-bottom: 1em;
+}
+
+.sm_issue_notag {
+    font-weight: bold;
+    color: grey;
+}
+.sm_issue_tagged {
+    font-weight: bold;
+    color: green;
+    font-size: 200%;
 }
 .sm_users { }
 .sm_users_new { font-weight: bold; }
