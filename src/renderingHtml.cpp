@@ -222,7 +222,7 @@ public:
             } else if (varname == K_SM_DIV_ISSUE_FORM) {
                 Issue issue;
                 if (!currentIssue)  currentIssue = &issue;
-                RHtml::printIssueForm(ctx, currentIssue, true);
+                RHtml::printIssueForm(ctx, currentIssue, false);
 
             } else if (varname == K_SM_DIV_PREDEFINED_VIEWS) {
                 RHtml::printLinksToPredefinedViews(ctx);
@@ -1355,6 +1355,14 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
     }
     mg_printf(conn, "</table>\n");
 
+
+    // debug
+    std::map<std::string, TagSpec>::iterator tspec;
+    FOREACH(tspec, pconfig.tags) {
+        TagSpec ts = tspec->second;
+        LOG_DEBUG("tag: id=%s, label=%s, display=%d", ts.id.c_str(), ts.label.c_str(), ts.display);
+    }
+
     // tags of the entries of the issue
     if (!pconfig.tags.empty()) {
         mg_printf(conn, "<div class=\"sm_issue_tags\">\n");
@@ -1397,10 +1405,22 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
                 classNoContents = "sm_entry_no_contents";
             }
         }
-        const char * classTagged = "sm_entry_notag";
-        if (ee.tagged) classTagged = "sm_entry_tagged";
 
-        mg_printf(conn, "<div class=\"sm_entry %s %s\" id=\"%s\">\n", classNoContents, classTagged, ee.id.c_str());
+        // add tag-related styles, for the tags of the entry
+        std::string classTagged = "sm_entry_notag";
+        if (!ee.tags.empty()) {
+            classTagged.clear();
+            std::set<std::string>::iterator tag;
+            FOREACH(tag, ee.tags) {
+                // check that this tag is declared in project config
+                if (pconfig.tags.find(*tag) != pconfig.tags.end()) {
+                    classTagged += "sm_entry_tag_" + *tag + " ";
+                }
+            }
+        }
+
+        mg_printf(conn, "<div class=\"sm_entry %s %s\" id=\"%s\">\n", classNoContents,
+                  classTagged.c_str(), ee.id.c_str());
 
         mg_printf(conn, "<div class=\"sm_entry_header\">\n");
         mg_printf(conn, "<span class=\"sm_entry_author\">%s</span>", htmlEscape(ee.author).c_str());
@@ -1426,19 +1446,44 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
                   ctx.getProject().getUrlName().c_str(),
                   issue.id.c_str(), ee.id.c_str(), _("raw"));
 
+        // display the tags of the entry
+        if (!pconfig.tags.empty()) {
+            std::map<std::string, TagSpec>::iterator tagIt;
+            FOREACH(tagIt, pconfig.tags) {
+                TagSpec tag = tagIt->second;
+                LOG_DEBUG("tag: id=%s, label=%s", tag.id.c_str(), tag.label.c_str());
+                std::string tagStyle = "sm_entry_notag";
+                if (ee.tags.find(tag.id) != ee.tags.end()) tagStyle = "sm_entry_tag_" + tag.id;
 
-        // tag
-        if (ctx.userRole == ROLE_ADMIN || ctx.userRole == ROLE_RW) {
-            const char *tagTitle = _("Click to tag/untag");
-            const char *tagStyle = "sm_entry_notag";
-            if (ee.tagged) tagStyle = "sm_entry_tagged";
+                if (ctx.userRole == ROLE_ADMIN || ctx.userRole == ROLE_RW) {
+                    const char *tagTitle = _("Click to tag/untag");
 
-            mg_printf(conn, "<a href=\"#\" class=\"%s\" id=\"tag%s\" title=\"%s\" ",
-                      tagStyle, ee.id.c_str(), tagTitle);
-            mg_printf(conn, " onclick=\"tagEntry('/%s/tags/%s', '%s');return false;\">\n",
-                      ctx.getProject().getUrlName().c_str(), issue.id.c_str(), ee.id.c_str());
-            mg_printf(conn, "[tag]");
-            mg_printf(conn, "</a>\n");
+                    mg_printf(conn, "<a href=\"#\" onclick=\"tagEntry('/%s/tags/%s', '%s', '%s');return false;\""
+                              " title=\"%s\" class=\"sm_entry_tag\">",
+                              ctx.getProject().getUrlName().c_str(), issue.id.c_str(), ee.id.c_str(),
+                              tag.id.c_str(), tagTitle);
+
+                    // the tag itself
+                    mg_printf(conn, "<span class=\"%s\" id=\"sm_tag_%s_%s\">",
+                              tagStyle.c_str(), ee.id.c_str(), tag.id.c_str());
+                    mg_printf(conn, "[%s]", tag.label.c_str());
+                    mg_printf(conn, "</span>\n");
+
+                    mg_printf(conn, "</a>\n");
+
+                } else {
+                    // read-only
+                    // if tag is not active, do not display
+                    if (ee.tags.find(tag.id) != ee.tags.end()) {
+                        mg_printf(conn, "<span class=\"%s\">", tagStyle.c_str());
+                        mg_printf(conn, "[%s]", tag.label.c_str());
+                        mg_printf(conn, "</span>\n");
+                    }
+
+                }
+
+            }
+
         }
 
         mg_printf(conn, "</div>\n"); // end header

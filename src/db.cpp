@@ -865,7 +865,7 @@ int Project::createProjectFiles(const char *repositoryPath, const char *projectN
 /** Tag or untag an entry
   *
   */
-int Project::toggleTag(const std::string &issueId, const std::string &entryId)
+int Project::toggleTag(const std::string &issueId, const std::string &entryId, const std::string &tagid)
 {
     ScopeLocker scopeLocker(locker, LOCK_READ_WRITE);
 
@@ -882,25 +882,32 @@ int Project::toggleTag(const std::string &issueId, const std::string &entryId)
             return -1;
         }
         Entry *e = eit->second;
-        e->tagged = !e->tagged; // invert the tag
+
+        // invert the tag
+        std::set<std::string>::iterator tag = e->tags.find(tagid);
+        if (tag == e->tags.end()) e->tags.insert(tagid);
+        else e->tags.erase(tag);
+
+        tag = e->tags.find(tagid); // update tag status after inversion
 
         // store to disk
         std::string path = getPath() + "/" TAGS_DIR "/";
 
         int r;
-        if (e->tagged) {
+        if (tag != e->tags.end()) {
             // create sub directories every time (not optimum)
             mg_mkdir(path.c_str(), S_IRUSR | S_IXUSR | S_IWUSR);
             path += issueId;
             mg_mkdir(path.c_str(), S_IRUSR | S_IXUSR | S_IWUSR);
             path += "/" + entryId;
+            path += "." + tagid;
 
             // create the file
             r = writeToFile(path.c_str(), "");
 
         } else {
             // remove the file
-            path += issueId + "/" + entryId;
+            path += issueId + "/" + entryId + "." + tagid;
             r = unlink(path.c_str());
         }
 
@@ -977,8 +984,9 @@ void Project::loadTags(const char *projectPath)
                     continue;
                 }
                 Entry *e = eit->second;
-                if (tag.empty()) e->tagged = true;
-                else e->tags.insert(tag);
+                if (tag.empty()) tag = "tag"; // keep compatibility with version <= 1.2.x
+
+                e->tags.insert(tag);
             }
             closedir(issueDirHandle);
         }

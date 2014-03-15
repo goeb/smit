@@ -81,21 +81,20 @@ span.sm_issue_show_properties {
     font-size: 80%;
 }
 .sm_entry_no_contents { display: none; }
-div.sm_entry_tagged {
-    /*background-color: #AFA;*/
+a.sm_entry_tag, a.sm_entry_tag:link, a.sm_entry_tag:hover {
+    cursor: pointer;
+    text-decoration: none;
 }
-a.sm_entry_tagged, a.sm_entry_tagged:link, a.sm_entry_tagged:hover {
+span.sm_entry_tag_cause, span.sm_entry_tag_actions, span.sm_entry_tag_tag {
     font-weight: bold;
     color: green;
-    cursor: pointer;
-    text-decoration: none;
-    font-size: 200%;
+    font-size: 150%;
 }
-a.sm_entry_notag, a.sm_entry_notag:link, a.sm_entry_notag:hover {
+div.sm_entry_notag {
+}
+span.sm_entry_notag {
     font-weight: bold;
     color: #ccc;
-    cursor: pointer;
-    text-decoration: none;
 }
 .sm_issue_plabel {
     font-weight: bold;
@@ -274,14 +273,20 @@ table.sm_projects tr:hover, table.sm_users tr:hover {
     margin-bottom: 1em;
 }
 
+.sm_issue_tags {
+    padding: 1em;
+}
 .sm_issue_notag {
     font-weight: bold;
-    color: grey;
+    color: #BBB;
+    border: solid black 1px;
+    padding: 0.5em;
 }
 .sm_issue_tagged {
     font-weight: bold;
     color: green;
-    font-size: 200%;
+    border: solid black 1px;
+    padding: 0.5em;
 }
 .sm_users { }
 .sm_users_new { font-weight: bold; }

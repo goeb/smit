@@ -42,26 +42,39 @@ function deleteEntry(urlPrefix, entryId) {
     }
 }
 
-function tagEntry(urlPrefix, entryId) {
-    var r = ajaxPost(urlPrefix + '/' + entryId);
+function tagEntry(urlPrefix, entryId, tagId) {
+    var r = ajaxPost(urlPrefix + '/' + entryId + '/' + tagId);
     if (r) {
-        var e = document.getElementById('tag' + entryId);
-        var e2 = document.getElementById(entryId);
-        var do_tag = true;
-        var replaceMe = new RegExp('sm_entry_notag');
-        var replaceBy = 'sm_entry_tagged';
-        if (e.className.match(/sm_entry_tagged/)) {
-            do_tag = false; // do untag
-            replaceMe = new RegExp('sm_entry_tagged');
+        var e = document.getElementById('sm_tag_' + entryId + "_" + tagId);
+        var do_tag = false;
+        tagged_style = 'sm_entry_tag_' + tagId;
+
+        if (e.className.match(/sm_entry_notag/)) {
+            do_tag = true;
+            replaceMe = new RegExp('sm_entry_notag');
+            replaceBy = 'sm_entry_tag_' + tagId;
+        } else {
+            replaceMe = new RegExp(tagged_style);
             replaceBy = 'sm_entry_notag';
         }
+
         if (e.className.match(replaceMe)) {
             e.className = e.className.replace(replaceMe, replaceBy);
         } else e.className += ' ' + replaceBy;
 
-        if (e2.className.match(replaceMe)) {
-            e2.className = e2.className.replace(replaceMe, replaceBy);
-        } else e2.className += ' ' + replaceBy;
+        // entry 
+        var e2 = document.getElementById(entryId);
+        if (do_tag) {
+            replaceMe = new RegExp('sm_entry_notag');
+            e2.className = e2.className.replace(replaceMe, '');
+            e2.className += ' ' + tagged_style;
+        } else { // remove tag
+            e2.className = e2.className.replace(tagged_style, '');
+            // if no other tag, add style sm_entry_notag
+            if (!e2.className.match('sm_entry_tag_')) {
+                e2.className += ' ' + 'sm_entry_notag';
+            }
+        }
 
     } else alert('error');
 }
@@ -345,9 +358,9 @@ function moveRowDown(item) {
     }
 }
 
-function togglePrintPreview()
+function togglePrintPreview(id)
 {
-    var currCSS = document.getElementById('printCSS');
+    var currCSS = document.getElementById(id);
     if(currCSS.media == 'all') currCSS.media = 'print';
     else currCSS.media = 'all';
 }

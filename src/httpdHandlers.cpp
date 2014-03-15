@@ -1122,7 +1122,7 @@ void httpPostView(struct mg_connection *conn, Project &p, const std::string &nam
   * If the ref is not tagged, then this will put a tag on the entry.
   * If the ref is already tagged, then this will remove the tag of the entry.
   * @param ref
-  *     The reference of the message: <issue>/<entry>
+  *     The reference of the message: <issue>/<entry>/<tagid>
   *
   */
 void httpPostTag(struct mg_connection *conn, Project &p, std::string &ref, User u)
@@ -1134,9 +1134,10 @@ void httpPostTag(struct mg_connection *conn, Project &p, std::string &ref, User 
     }
 
     std::string issueId = popToken(ref, '/');
-    std::string entryId = ref;
+    std::string entryId = popToken(ref, '/');
+    std::string tagid = ref;
 
-    int r = p.toggleTag(issueId, entryId);
+    int r = p.toggleTag(issueId, entryId, tagid);
     if (r == 0) {
         sendHttpHeader200(conn);
         mg_printf(conn, "\r\n");

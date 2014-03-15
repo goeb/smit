@@ -34,9 +34,8 @@ struct Entry {
     // chainlist pointers
     struct Entry *next; // child
     struct Entry *prev; // parent
-    bool tagged;
     std::set<std::string> tags;
-    Entry() : ctime(0), next(0), prev(0), tagged(false) {}
+    Entry() : ctime(0), next(0), prev(0) {}
 };
 
 // Issue
@@ -137,7 +136,7 @@ public:
     int deletePredefinedView(const std::string &name);
     PredefinedView getDefaultView();
     static int createProjectFiles(const char *repositoryPath, const char *projectName, std::string &resultingPath);
-    int toggleTag(const std::string &issueId, const std::string &entryId);
+    int toggleTag(const std::string &issueId, const std::string &entryId, const std::string &tagid);
 
 
 private:
