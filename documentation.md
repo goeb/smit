@@ -138,6 +138,24 @@ In order to let a maximum customization freedom, Smit let the user define the gl
 Some variables make sense only in some particular context. For instance,
 `SM_RAW_ISSUE_ID` makes sense only when a single issue is displayed.
 
+## Tags
+
+Entries may be tagged (Smit version >= 1.3).
+
+Tags may be defined in the `project` file (no web interface at the moment), as follows:
+
+```
+# tag <id> -label <text> [-display]
+tag test -label "Tests" -display
+```
+
+* `<id>` may contain only letters, digits and underscores.
+* `<text>` is the text displayed in the HTML page
+* `-display` indicates that a synthesis of the tags on various entries should be displayed in the header of the issue.
+
+
+
+
 
 ## FAQ
 

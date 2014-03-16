@@ -28,6 +28,7 @@
 <li><a href='#customize-the-html-pages'>Customize the HTML pages</a></li>
 <li><a href='#customize-the-logo'>Customize the logo</a></li>
 <li><a href='#the-sm-variables'>The SM variables</a></li>
+<li><a href='#tags'>Tags</a></li>
 <li><a href='#faq'>FAQ</a></li>
 </ul>
 </li>
@@ -144,6 +145,16 @@ SM_RAW_ISSUE_ID
 SM_SCRIPT_PROJECT_CONFIG_UPDATE
 SM_URL_PROJECT_NAME</code></pre>
 <p>Some variables make sense only in some particular context. For instance, <code>SM_RAW_ISSUE_ID</code> makes sense only when a single issue is displayed.</p>
+<h2 id="tags">Tags</h2>
+<p>Entries may be tagged (version &gt;= 1.3).</p>
+<p>Tags may be defined in the <code>project</code> file (no web interface at the moment), as follows:</p>
+<pre><code># tag &lt;id&gt; -label &lt;text&gt; [-display]
+tag test -label &quot;Tests&quot; -display</code></pre>
+<ul>
+<li><code>&lt;id&gt;</code> may contain only letters, digits and underscores.</li>
+<li><code>&lt;text&gt;</code> is the text displayed in the HTML page</li>
+<li><code>-display</code> indicates that a synthesis of the tags on various entries should be displayed in the header of the issue.</li>
+</ul>
 <h2 id="faq">FAQ</h2>
 <h3 id="why-cannot-i-create-a-project-named-public">Why cannot I create a project named 'public'?</h3>
 <p><code>public</code> is reserved for storing HTML pages that are public, such as the signin page.</p>
@@ -161,8 +172,7 @@ users</code></pre>
 </div>
         </div> <!-- div class page -->
         <div class="footer">
-            Copyright &copy; 2014, Frédéric Hoerni<br>
-            Page updated on  3 Feb 2014
+            Page updated on 16 Mar 2014
         </div>
     </body>
 </html>
