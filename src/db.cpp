@@ -1423,7 +1423,7 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
     std::string data = e->serialize();
 
     // generate a id for this entry
-    std::string newEntryId = getBase64Id((uint8_t*)data.c_str(), data.size());
+    std::string newEntryId = getSha1(data.c_str(), data.size());
 
     LOG_DEBUG("new entry: %s", newEntryId.c_str());
 
