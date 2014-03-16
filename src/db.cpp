@@ -1321,14 +1321,15 @@ bool Issue::searchFullText(const char *text) const
 
 }
 
-bool Issue::hasTag(const std::string &tagId) const
+int Issue::getNumberOfTaggedIEntries(const std::string &tagId) const
 {
     Entry *e = latest;
+    int n = 0;
     while (e) {
-        if (e->tags.find(tagId) != e->tags.end()) return true;
+        if (e->tags.find(tagId) != e->tags.end()) n++;
         e = e->prev;
     }
-    return false;
+    return n;
 }
 
 /** If issueId is empty:

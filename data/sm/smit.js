@@ -76,6 +76,17 @@ function tagEntry(urlPrefix, entryId, tagId) {
             }
         }
 
+        // update the box of the issue header
+        var box = document.getElementById('sm_issue_tag_' + tagId);
+        if (box) {
+            n = parseInt(box.getAttribute('data-n'), 10);
+            if (do_tag) n = n+1;
+            else n = n-1;
+            box.setAttribute('data-n', n);
+            if (n > 0) box.className = 'sm_issue_tagged';
+            else box.className = 'sm_issue_notag';
+        }
+
     } else alert('error');
 }
 

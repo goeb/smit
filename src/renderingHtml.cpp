@@ -1356,27 +1356,21 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
     mg_printf(conn, "</table>\n");
 
 
-    // debug
-    std::map<std::string, TagSpec>::iterator tspec;
-    FOREACH(tspec, pconfig.tags) {
-        TagSpec ts = tspec->second;
-        LOG_DEBUG("tag: id=%s, label=%s, display=%d", ts.id.c_str(), ts.label.c_str(), ts.display);
-    }
-
     // tags of the entries of the issue
     if (!pconfig.tags.empty()) {
         mg_printf(conn, "<div class=\"sm_issue_tags\">\n");
         std::map<std::string, TagSpec>::iterator tspec;
         FOREACH(tspec, pconfig.tags) {
             if (tspec->second.display) {
-                if (issue.hasTag(tspec->second.id)) {
+                const char *style = "sm_issue_notag";
+                int n = issue.getNumberOfTaggedIEntries(tspec->second.id);
+                if (n > 0) {
                     // issue has at least one such tagged entry
-                    mg_printf(conn, "<span class=\"sm_issue_tagged\">%s</span>\n",
-                              htmlEscape(tspec->second.label).c_str());
-                } else {
-                    mg_printf(conn, "<span class=\"sm_issue_notag\">%s</span>\n",
-                              htmlEscape(tspec->second.label).c_str());
+                    style = "sm_issue_tagged";
                 }
+                mg_printf(conn, "<span id=\"sm_issue_tag_%s\" class=\"%s\" data-n=\"%d\">%s</span>\n",
+                          tspec->second.id.c_str(), style, n, htmlEscape(tspec->second.label).c_str());
+
             }
         }
 

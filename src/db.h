@@ -59,7 +59,7 @@ struct Issue {
     void consolidate();
     void consolidateIssueWithSingleEntry(Entry *e, bool overwrite);
     bool searchFullText(const char *text) const;
-    bool hasTag(const std::string &tagId) const;
+    int getNumberOfTaggedIEntries(const std::string &tagId) const;
 };
 
 
