@@ -1,8 +1,20 @@
 
+v1.3.0
+
+    - identifiers changed from base64 to hexa
+    - generic tags
+
+
 v1.2.2
 
     - hide 'delete' and 'tag' when read-only
     - fix trivial boundary with more robust one
+    - fix change of password by users
+    - superadmin can modify/delete a view on any project
+    - forbid renaming user to same name as existing user
+    - forbid creating user that already exists
+    - add print preview
+    - fix extra </div> after message form
 
 v1.2.1
     - fix modification of project properties by admin non-superadmin
