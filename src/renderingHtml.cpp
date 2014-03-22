@@ -1392,14 +1392,14 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
         std::map<std::string, TagSpec>::iterator tspec;
         FOREACH(tspec, pconfig.tags) {
             if (tspec->second.display) {
-                const char *style = "sm_issue_notag";
+                std::string style = "sm_issue_notag";
                 int n = issue.getNumberOfTaggedIEntries(tspec->second.id);
                 if (n > 0) {
                     // issue has at least one such tagged entry
-                    style = "sm_issue_tagged";
+                    style = "sm_issue_tagged sm_issue_tag_" + tspec->second.id;
                 }
                 mg_printf(conn, "<span id=\"sm_issue_tag_%s\" class=\"%s\" data-n=\"%d\">%s</span>\n",
-                          tspec->second.id.c_str(), style, n, htmlEscape(tspec->second.label).c_str());
+                          tspec->second.id.c_str(), style.c_str(), n, htmlEscape(tspec->second.label).c_str());
 
             }
         }
@@ -1433,7 +1433,7 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
         // add tag-related styles, for the tags of the entry
         std::string classTagged = "sm_entry_notag";
         if (!ee.tags.empty()) {
-            classTagged.clear();
+            classTagged = "sm_entry_tagged";
             std::set<std::string>::iterator tag;
             FOREACH(tag, ee.tags) {
                 // check that this tag is declared in project config
@@ -1477,7 +1477,7 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
                 TagSpec tag = tagIt->second;
                 LOG_DEBUG("tag: id=%s, label=%s", tag.id.c_str(), tag.label.c_str());
                 std::string tagStyle = "sm_entry_notag";
-                if (ee.tags.find(tag.id) != ee.tags.end()) tagStyle = "sm_entry_tag_" + tag.id;
+                if (ee.tags.find(tag.id) != ee.tags.end()) tagStyle = "sm_entry_tagged sm_entry_tag_" + tag.id;
 
                 if (ctx.userRole == ROLE_ADMIN || ctx.userRole == ROLE_RW) {
                     const char *tagTitle = _("Click to tag/untag");

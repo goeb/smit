@@ -85,7 +85,7 @@ a.sm_entry_tag, a.sm_entry_tag:link, a.sm_entry_tag:hover {
     cursor: pointer;
     text-decoration: none;
 }
-span.sm_entry_tag_cause, span.sm_entry_tag_actions, span.sm_entry_tag_tag {
+span.sm_entry_tagged {
     font-weight: bold;
     color: green;
     font-size: 150%;

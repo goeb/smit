@@ -45,42 +45,38 @@ function deleteEntry(urlPrefix, entryId) {
 function tagEntry(urlPrefix, entryId, tagId) {
     var r = ajaxPost(urlPrefix + '/' + entryId + '/' + tagId);
     if (r) {
-        var e = document.getElementById('sm_tag_' + entryId + "_" + tagId);
-        var do_tag = false;
-        tagged_style = 'sm_entry_tag_' + tagId;
+        var etag = document.getElementById('sm_tag_' + entryId + "_" + tagId);
+        var doTag = false;
+        taggedStyle = 'sm_entry_tag_' + tagId;
 
-        if (e.className.match(/sm_entry_notag/)) {
-            do_tag = true;
-            replaceMe = new RegExp('sm_entry_notag');
-            replaceBy = 'sm_entry_tag_' + tagId;
+        if (etag.className.match(/sm_entry_notag/)) doTag = true;
+
+        // tag of the entry
+        if (doTag) {
+            etag.className = etag.className.replace('sm_entry_notag', '');
+            etag.className = etag.className + ' sm_entry_tagged ' + taggedStyle;
         } else {
-            replaceMe = new RegExp(tagged_style);
-            replaceBy = 'sm_entry_notag';
+            etag.className = etag.className.replace('sm_entry_tagged', '');
+            etag.className = etag.className.replace(taggedStyle, '');
+            etag.className = etag.className + ' sm_entry_notag';
         }
 
-        if (e.className.match(replaceMe)) {
-            e.className = e.className.replace(replaceMe, replaceBy);
-        } else e.className += ' ' + replaceBy;
-
-        // entry 
+        // entry
         var e2 = document.getElementById(entryId);
-        if (do_tag) {
-            replaceMe = new RegExp('sm_entry_notag');
-            e2.className = e2.className.replace(replaceMe, '');
-            e2.className += ' ' + tagged_style;
-        } else { // remove tag
-            e2.className = e2.className.replace(tagged_style, '');
-            // if no other tag, add style sm_entry_notag
-            if (!e2.className.match('sm_entry_tag_')) {
-                e2.className += ' ' + 'sm_entry_notag';
-            }
+        if (doTag) {
+            e2.className = e2.className.replace('sm_entry_notag', '');
+            e2.className = e2.className + ' sm_entry_tagged ' + taggedStyle;
+        } else {
+            e2.className = e2.className.replace('sm_entry_tagged', '');
+            e2.className = e2.className.replace(taggedStyle, '');
+            e2.className = e2.className + ' sm_entry_notag';
         }
 
         // update the box of the issue header
         var box = document.getElementById('sm_issue_tag_' + tagId);
         if (box) {
-            n = parseInt(box.getAttribute('data-n'), 10);
-            if (do_tag) n = n+1;
+            var n = parseInt(box.getAttribute('data-n'), 10);
+            if (doTag) n = n+1;
             else n = n-1;
             box.setAttribute('data-n', n);
             if (n > 0) box.className = 'sm_issue_tagged';
