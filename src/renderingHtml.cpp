@@ -866,6 +866,8 @@ void RHtml::printScriptUpdateConfig(const ContextParameters &ctx)
             case F_SELECT: type = "select"; break;
             case F_MULTISELECT: type = "multiselect"; break;
             case F_SELECT_USER: type = "selectUser"; break;
+            case F_TEXTAREA: type = "textarea"; break;
+            case F_TEXTAREA2: type = "textarea2"; break;
             }
 
             std::string label = ctx.getProject().getLabelOfProperty(*p);
@@ -907,7 +909,7 @@ void RHtml::printProjectConfig(const ContextParameters &ctx)
 
 }
 
-/** Get the property name that will be used for gouping
+/** Get the property name that will be used for grouping
 
   * Grouping will occur only :
   *     - on the first property sorted-by
@@ -1343,10 +1345,39 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
         if (workingColumn == 1) {
             mg_printf(conn, "<tr>\n");
         }
-        mg_printf(conn, "<td class=\"sm_issue_plabel sm_issue_plabel_%s\">%s: </td>\n", pname.c_str(), htmlEscape(label).c_str());
-        mg_printf(conn, "<td class=\"sm_issue_pvalue sm_issue_pvalue_%s\">%s</td>\n", pname.c_str(), htmlEscape(value).c_str());
 
-        workingColumn += 1;
+        // if textarea type add specific class, for enabling line breaks in the CSS
+        const char *pvalueStyle = "sm_issue_pvalue";
+        const char *colspan = "";
+        int workingColumnIncrement = 1;
+        std::map<std::string, PropertySpec>::iterator pspec = pconfig.properties.find(pname);
+        if (pspec != pconfig.properties.end()) {
+            enum PropertyType type = pspec->second.type;
+            if (type == F_TEXTAREA || type == F_TEXTAREA2) pvalueStyle = "sm_issue_pvalue_ta";
+
+            if (type == F_TEXTAREA2) {
+                // the property spans over 4 columns (1 col for the label and 3 for the value)
+                if (workingColumn == 1) {
+                    // nothing to do
+                } else {
+                    // add a placeholder in order to align the property with next row
+                    // close current row and start a new row
+                    mg_printf(conn, "<td></td><td></td></tr><tr>\n");
+                }
+                colspan = "colspan=\"3\"";
+                workingColumn = 1;
+                workingColumnIncrement = 2;
+            }
+        }
+        // label
+        mg_printf(conn, "<td class=\"sm_issue_plabel sm_issue_plabel_%s\">%s: </td>\n",
+                  pname.c_str(), htmlEscape(label).c_str());
+
+        // value
+        mg_printf(conn, "<td %s class=\"%s sm_issue_pvalue_%s\">%s</td>\n",
+                  colspan, pvalueStyle, pname.c_str(), htmlEscape(value).c_str());
+
+        workingColumn += workingColumnIncrement;
         if (workingColumn > MAX_COLUMNS) {
             mg_printf(conn, "</tr>\n");
             workingColumn = 1;
@@ -1637,6 +1668,8 @@ void RHtml::printIssueForm(const ContextParameters &ctx, const Issue *issue, boo
 
         std::ostringstream input;
         std::string value;
+        const char *colspan = "";
+        int workingColumnIncrement = 1;
 
         if (pspec.type == F_TEXT) {
             if (propertyValues.size()>0) value = propertyValues.front();
@@ -1688,6 +1721,27 @@ void RHtml::printIssueForm(const ContextParameters &ctx, const Issue *issue, boo
 
             input << "</select>";
 
+        } else if (pspec.type == F_TEXTAREA) {
+            if (propertyValues.size()>0) value = propertyValues.front();
+            input << "<textarea class=\"sm_issue_pinput_" << pname << "\" name=\""
+                  << pname << "\">" << htmlEscape(value) << "</textarea>\n";
+
+        } else if (pspec.type == F_TEXTAREA2) {
+            // the property spans over 4 columns (1 col for the label and 3 for the value)
+            if (workingColumn == 1) {
+                // nothing to do
+            } else {
+                // add a placeholder in order to align the property with next row
+                // close current row and start a new row
+                mg_printf(conn, "<td></td><td></td></tr><tr>\n");
+            }
+            colspan = "colspan=\"3\"";
+            workingColumn = 1;
+            workingColumnIncrement = 2;
+
+            if (propertyValues.size()>0) value = propertyValues.front();
+            input << "<textarea class=\"sm_ta2 sm_issue_pinput_" << pname << "\" name=\""
+                  << pname << "\">" << htmlEscape(value) << "</textarea>\n";
 
         } else {
             LOG_ERROR("invalid fieldSpec->type=%d", pspec.type);
@@ -1697,10 +1751,15 @@ void RHtml::printIssueForm(const ContextParameters &ctx, const Issue *issue, boo
         if (workingColumn == 1) {
             mg_printf(conn, "<tr>\n");
         }
-        mg_printf(conn, "<td class=\"sm_issue_plabel sm_issue_plabel_%s\">%s: </td>\n", pname.c_str(), label.c_str());
-        mg_printf(conn, "<td class=\"sm_issue_pinput\">%s</td>\n", input.str().c_str());
 
-        workingColumn += 1;
+        // label
+        mg_printf(conn, "<td class=\"sm_issue_plabel sm_issue_plabel_%s\">%s: </td>\n",
+                  pname.c_str(), label.c_str());
+
+        // input
+        mg_printf(conn, "<td %s class=\"sm_issue_pinput\">%s</td>\n", colspan, input.str().c_str());
+
+        workingColumn += workingColumnIncrement;
         if (workingColumn > MAX_COLUMNS) {
             mg_printf(conn, "</tr>\n");
             workingColumn = 1;

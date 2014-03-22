@@ -70,7 +70,7 @@ struct TagSpec {
     bool display; // status should be displayed in issue header
 };
 
-enum PropertyType { F_TEXT, F_SELECT, F_MULTISELECT, F_SELECT_USER};
+enum PropertyType { F_TEXT, F_SELECT, F_MULTISELECT, F_SELECT_USER, F_TEXTAREA, F_TEXTAREA2 };
 int strToPropertyType(const std::string &s, PropertyType &out);
 
 struct PropertySpec {

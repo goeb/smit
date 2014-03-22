@@ -106,6 +106,9 @@ input {
     font-family: Verdana,sans-serif;
     font-size: small;
 }
+.sm_issue_pvalue_ta {
+    white-space: pre;
+}
 .sm_issue_pvalue {
     white-space: nowrap;
     padding-right: 6em;
@@ -145,6 +148,10 @@ input {
 }
 textarea {
     vertical-align: top;
+}
+
+textarea.sm_ta2 {
+    width: 50em;
 }
 textarea.sm_issue_pinput_message {
     width: 50em;

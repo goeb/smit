@@ -198,7 +198,7 @@ function addProperty(name, label, type, opts) {
         i.innerHTML = 'reserved';
         cell.appendChild(i);
     } else {
-        var options = ['text', 'select', 'multiselect', 'selectUser'];
+        var options = ['text', 'select', 'multiselect', 'selectUser', 'textarea', 'textarea2'];
         i = createSelect(options, type, false);
         i.name = 'type';
         i.className = "updatable";
@@ -215,6 +215,8 @@ function fupdate(item, value) {
     //alert(item.value);
     var type = item.options[item.selectedIndex].value;
     if (type == "text") show_size_input(item.parentNode, value);
+    else if (type == "textarea") show_size_input(item.parentNode, value);
+    else if (type == "textarea2") show_size_input(item.parentNode, value);
     else if (type == "select") show_list_input(item.parentNode, value);
     else if (type == "multiselect") show_list_input(item.parentNode, value);
     else if (type == "selectUser") show_user_input(item.parentNode);

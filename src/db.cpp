@@ -395,7 +395,11 @@ int strToPropertyType(const std::string &s, PropertyType &out)
     else if (s == "selectUser") out = F_SELECT_USER;
     else if (s == "select") out = F_SELECT;
     else if (s == "multiselect") out = F_MULTISELECT;
+    else if (s == "textarea") out = F_TEXTAREA;
+    else if (s == "textarea2") out = F_TEXTAREA2;
+
     else return -1; // error
+
 
     return 0; // ok
 }
@@ -404,7 +408,7 @@ PropertySpec parsePropertySpec(std::list<std::string> & tokens)
 {
     // Supported syntax:
     // name [label <label>] type params ...
-    // type = text | select | multiselect | selectUser
+    // type = text | select | multiselect | selectUser | ...
     PropertySpec property;
     if (tokens.size() < 2) {
         LOG_ERROR("Not enough tokens");
