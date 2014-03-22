@@ -286,7 +286,7 @@ int Project::loadEntries(const char *path)
 
             // check the maximum id
             int intId = atoi(issueDir->d_name);
-            if (intId > maxIssueId) maxIssueId = intId;
+            updateMaxIssueId(intId);
 
             issues[issue->id] = issue;
 
@@ -512,6 +512,11 @@ ProjectConfig parseProjectConfig(std::list<std::list<std::string> > &lines)
                 config.propertyLabels[propName] = propLabel;
             }
 
+        } else if (token == "numberIssues") {
+            std::string value = pop(*line);
+            if (value == "global") config.numberIssueAcrossProjects = true;
+            else LOG_ERROR("Invalid value '%' for numberIssues.", value.c_str());
+
         } else if (token == "tag") {
             TagSpec tagspec;
             tagspec.id = pop(*line);
@@ -665,6 +670,14 @@ int Project::modifyConfig(std::list<std::list<std::string> > &tokens)
             line.push_back(t->second.label);
         }
         if (t->second.display) line.push_back("-display");
+        tokens.push_back(line);
+    }
+
+    // serialize numberIssues policy
+    if (config.numberIssueAcrossProjects) {
+        line.clear();
+        line.push_back("numberIssues");
+        line.push_back("global");
         tokens.push_back(line);
     }
 
@@ -917,6 +930,22 @@ int Project::toggleTag(const std::string &issueId, const std::string &entryId, c
         return r;
     }
 }
+
+int Project::allocateNewIssueId()
+{
+    if (config.numberIssueAcrossProjects) return Database::allocateNewIssueId();
+
+    maxIssueId++;
+    return maxIssueId;
+}
+
+void Project::updateMaxIssueId(int i)
+{
+    if (config.numberIssueAcrossProjects) return Database::updateMaxIssueId(i);
+
+    if (i > maxIssueId) maxIssueId = i;
+}
+
 
 void Project::loadPredefinedViews(const char *projectPath)
 {
@@ -1440,8 +1469,7 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
 
         const int SIZ = 25;
         char buffer[SIZ];
-        int newId = maxIssueId+1;
-        maxIssueId ++;
+        int newId = allocateNewIssueId();
         snprintf(buffer, SIZ, "%d", newId);
         issueId = buffer;
 
@@ -1679,6 +1707,21 @@ std::list<std::string> Database::getProjects()
 
     return result;
 }
+
+
+int Database::allocateNewIssueId()
+{
+    ScopeLocker scopeLocker(Db.locker, LOCK_READ_WRITE);
+
+    Db.maxIssueId++;
+    return Db.maxIssueId;
+}
+
+void Database::updateMaxIssueId(int i)
+{
+    if (i > Db.maxIssueId) Db.maxIssueId = i;
+}
+
 
 
 std::string PredefinedView::getDirectionName(bool d)

@@ -21,4 +21,4 @@ setPropertyLabel long-line-break-message "Use long lines"
 setPropertyLabel Add-Message "Validate"
 
 tag tested -label Tested -display
-
+numberIssues global  

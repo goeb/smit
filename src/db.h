@@ -99,11 +99,13 @@ struct PredefinedView {
 };
 
 struct ProjectConfig {
+    ProjectConfig() : numberIssueAcrossProjects(false) {}
     std::map<std::string, PropertySpec> properties;
     std::list<std::string> orderedProperties;
     std::map<std::string, std::string> propertyLabels;
     std::map<std::string, PredefinedView> predefinedViews;
     std::map<std::string, TagSpec> tags;
+    bool numberIssueAcrossProjects; // accross project
 };
 
 class Project {
@@ -137,7 +139,8 @@ public:
     PredefinedView getDefaultView();
     static int createProjectFiles(const char *repositoryPath, const char *projectName, std::string &resultingPath);
     int toggleTag(const std::string &issueId, const std::string &entryId, const std::string &tagid);
-
+    int allocateNewIssueId();
+    void updateMaxIssueId(int i);
 
 private:
     int loadConfig(const char *path);
@@ -145,7 +148,6 @@ private:
     void loadPredefinedViews(const char *path);
     void loadTags(const char *path);
     void consolidateIssues();
-
 
     void consolidateIssue(Issue *i);
     int storeViewsToFile();
@@ -163,6 +165,7 @@ private:
 class Database {
 public:
     static Database Db;
+    Database() : maxIssueId(0) {}
     std::map<std::string, Project*> projects;
     static Project *getProject(const std::string &projectName);
     std::string pathToRepository;
@@ -170,9 +173,12 @@ public:
     static std::list<std::string> getProjects();
     static Project *loadProject(const char *path); // load a project
     static Project *createProject(const std::string &projectName);
+    static int allocateNewIssueId();
+    static void updateMaxIssueId(int i);
 
 private:
     Locker locker;
+    int maxIssueId;
 };
 
 
