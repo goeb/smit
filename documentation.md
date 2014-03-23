@@ -61,6 +61,80 @@ And copy the compiled executable `smit` to somewhere in your PATH (for example $
         ro          able to read issues
         ref         may not access a project, but may be referenced
 
+## Project Configuration
+
+This configuration can be managed through the web interface, but a few options cannot be managed this way at the moment (see below).
+
+The configuration of a project is given by the file `project` in the directory of the project.
+
+### addProperty
+```
+addProperty <id> [-label <label>] <type> [values ...]
+```
+
+`addProperty` defines a property.
+
+- `<id>` is an identifier (only characters a-z, A-Z, 0-9, -, _)
+- `<label>` is the text that will be displayed in the HTML pages (optional)
+- `<type>` is one of text, select, multiselect, selectUser, textarea, textarea2
+
+    * `text`: free text
+    * `select`: selection among a list if given values
+    * `multiselect`: same as select, but several may be selected at the same time
+    * `selectUser`: selection among the users of the project
+    * `textarea`: free text, multi-lines
+    * `textarea2`: same as textarea, but spanned on 2 columns in the HTML
+    
+- `value` indicates the allowed values for types select and multiselect.
+
+### setPropertyLabel
+
+```
+setPropertyLabel <propety-id> <label>
+```
+
+`setPropertyLabel` defines the label for a property. This is used for mandatory properties that are not defined by `addProperty`: id, ctime, mtime, summary.
+
+### numberIssues
+(smit version >= 1.4, no web interface)
+
+```
+numberIssues global
+```
+
+`numberIssues` defines the numbering policy of the issues.
+
+If not defined, the issues are numbered reletively to their project: 1, 2, 3,...
+
+If `global` is set, then the numbering is shared by all the projects that have this policy.
+
+
+### tag
+(smit version >= 1.3, no web interface)
+
+Entries may be tagged.
+
+```
+tag <id> -label <text> [-display]
+```
+
+- `<id>` may contain only letters, digits and underscores.
+- `<text>` is the text to display in the HTML page
+- `-display` requires the display of a box in the headers of issues, that indicates if at least one entry of the current issue is tagged (this may be seen as a checkbox, to quickly verify that some quality criterion is met).
+
+### Full example 
+
+```
+setPropertyLabel id "The ID"
+
+addProperty status -label "The Status" select open closed
+addProperty owner -label "The owner" selectUser
+
+numberIssues global
+
+tag test -label "Test Proof" -display
+```
+
 ## Directories Layout
 
 Each instance of Smit serves one repository (also refered below as `$REPO`).
@@ -137,23 +211,6 @@ In order to let a maximum customization freedom, Smit let the user define the gl
  
 Some variables make sense only in some particular context. For instance,
 `SM_RAW_ISSUE_ID` makes sense only when a single issue is displayed.
-
-## Tags
-
-Entries may be tagged (Smit version >= 1.3).
-
-Tags may be defined in the `project` file (no web interface at the moment), as follows:
-
-```
-# tag <id> -label <text> [-display]
-tag test -label "Tests" -display
-```
-
-* `<id>` may contain only letters, digits and underscores.
-* `<text>` is the text displayed in the HTML page
-* `-display` indicates that a synthesis of the tags on various entries should be displayed in the header of the issue.
-
-
 
 
 

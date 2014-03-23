@@ -23,12 +23,12 @@
 <ul class=menu_level2>
 <li><a href='#install'>Install</a></li>
 <li><a href='#usage'>Usage</a></li>
+<li><a href='#project-configuration'>Project Configuration</a></li>
 <li><a href='#directories-layout'>Directories Layout</a></li>
 <li><a href='#create-repo-and-project'>Create repo and project</a></li>
 <li><a href='#customize-the-html-pages'>Customize the HTML pages</a></li>
 <li><a href='#customize-the-logo'>Customize the logo</a></li>
 <li><a href='#the-sm-variables'>The SM variables</a></li>
-<li><a href='#tags'>Tags</a></li>
 <li><a href='#faq'>FAQ</a></li>
 </ul>
 </li>
@@ -92,6 +92,53 @@ Roles:
     rw          able to add and modify issues
     ro          able to read issues
     ref         may not access a project, but may be referenced</code></pre>
+<h2 id="project-configuration">Project Configuration</h2>
+<p>This configuration can be managed through the web interface, but a few options cannot be managed this way at the moment (see below).</p>
+<p>The configuration of a project is given by the file <code>project</code> in the directory of the project.</p>
+<h3 id="addproperty">addProperty</h3>
+<pre><code>addProperty &lt;id&gt; [-label &lt;label&gt;] &lt;type&gt; [values ...]</code></pre>
+<p><code>addProperty</code> defines a property.</p>
+<ul>
+<li><code>&lt;id&gt;</code> is an identifier (only characters a-z, A-Z, 0-9, -, _)</li>
+<li><code>&lt;label&gt;</code> is the text that will be displayed in the HTML pages (optional)</li>
+<li><p><code>&lt;type&gt;</code> is one of text, select, multiselect, selectUser, textarea, textarea2</p>
+<ul>
+<li><code>text</code>: free text</li>
+<li><code>select</code>: selection among a list if given values</li>
+<li><code>multiselect</code>: same as select, but several may be selected at the same time</li>
+<li><code>selectUser</code>: selection among the users of the project</li>
+<li><code>textarea</code>: free text, multi-lines</li>
+<li><code>textarea2</code>: same as textarea, but spanned on 2 columns in the HTML</li>
+</ul></li>
+<li><p><code>value</code> indicates the allowed values for types select and multiselect.</p></li>
+</ul>
+<h3 id="setpropertylabel">setPropertyLabel</h3>
+<pre><code>setPropertyLabel &lt;propety-id&gt; &lt;label&gt;</code></pre>
+<p><code>setPropertyLabel</code> defines the label for a property. This is used for mandatory properties that are not defined by <code>addProperty</code>: id, ctime, mtime, summary.</p>
+<h3 id="numberissues">numberIssues</h3>
+<p>(smit version &gt;= 1.4, no web interface)</p>
+<pre><code>numberIssues global</code></pre>
+<p><code>numberIssues</code> defines the numbering policy of the issues.</p>
+<p>If not defined, the issues are numbered reletively to their project: 1, 2, 3,...</p>
+<p>If <code>global</code> is set, then the numbering is shared by all the projects that have this policy.</p>
+<h3 id="tag">tag</h3>
+<p>(smit version &gt;= 1.3, no web interface)</p>
+<p>Entries may be tagged.</p>
+<pre><code>tag &lt;id&gt; -label &lt;text&gt; [-display]</code></pre>
+<ul>
+<li><code>&lt;id&gt;</code> may contain only letters, digits and underscores.</li>
+<li><code>&lt;text&gt;</code> is the text to display in the HTML page</li>
+<li><code>-display</code> requires the display of a box in the headers of issues, that indicates if at least one entry of the current issue is tagged (this may be seen as a checkbox, to quickly verify that some quality criterion is met).</li>
+</ul>
+<h3 id="full-example">Full example</h3>
+<pre><code>setPropertyLabel id &quot;The ID&quot;
+
+addProperty status -label &quot;The Status&quot; select open closed
+addProperty owner -label &quot;The owner&quot; selectUser
+
+numberIssues global
+
+tag test -label &quot;Test Proof&quot; -display</code></pre>
 <h2 id="directories-layout">Directories Layout</h2>
 <p>Each instance of Smit serves one repository (also refered below as <code>$REPO</code>).</p>
 <p>The Directories layout is typically:</p>
@@ -145,16 +192,6 @@ SM_RAW_ISSUE_ID
 SM_SCRIPT_PROJECT_CONFIG_UPDATE
 SM_URL_PROJECT_NAME</code></pre>
 <p>Some variables make sense only in some particular context. For instance, <code>SM_RAW_ISSUE_ID</code> makes sense only when a single issue is displayed.</p>
-<h2 id="tags">Tags</h2>
-<p>Entries may be tagged (version &gt;= 1.3).</p>
-<p>Tags may be defined in the <code>project</code> file (no web interface at the moment), as follows:</p>
-<pre><code># tag &lt;id&gt; -label &lt;text&gt; [-display]
-tag test -label &quot;Tests&quot; -display</code></pre>
-<ul>
-<li><code>&lt;id&gt;</code> may contain only letters, digits and underscores.</li>
-<li><code>&lt;text&gt;</code> is the text displayed in the HTML page</li>
-<li><code>-display</code> indicates that a synthesis of the tags on various entries should be displayed in the header of the issue.</li>
-</ul>
 <h2 id="faq">FAQ</h2>
 <h3 id="why-cannot-i-create-a-project-named-public">Why cannot I create a project named 'public'?</h3>
 <p><code>public</code> is reserved for storing HTML pages that are public, such as the signin page.</p>
@@ -172,7 +209,7 @@ users</code></pre>
 </div>
         </div> <!-- div class page -->
         <div class="footer">
-            Page updated on 16 Mar 2014
+            Page updated on 23 Mar 2014
         </div>
     </body>
 </html>
