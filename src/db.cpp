@@ -526,7 +526,7 @@ ProjectConfig parseProjectConfig(std::list<std::list<std::string> > &lines)
         } else if (token == "numberIssues") {
             std::string value = pop(*line);
             if (value == "global") config.numberIssueAcrossProjects = true;
-            else LOG_ERROR("Invalid value '%' for numberIssues.", value.c_str());
+            else LOG_ERROR("Invalid value '%s' for numberIssues.", value.c_str());
 
         } else if (token == "tag") {
             TagSpec tagspec;
