@@ -69,13 +69,14 @@ The configuration of a project is given by the file `project` in the directory o
 
 ### addProperty
 ```
-addProperty <id> [-label <label>] <type> [values ...]
+addProperty <id> [-label <label>] [-help <help>] <type> [values ...]
 ```
 
 `addProperty` defines a property.
 
 - `<id>` is an identifier (only characters a-z, A-Z, 0-9, -, _)
 - `<label>` is the text that will be displayed in the HTML pages (optional)
+- `<help>` is a tooltip for properties inputs, displayed above properties labels (optional)
 - `<type>` is one of text, select, multiselect, selectUser, textarea, textarea2
 
     * `text`: free text

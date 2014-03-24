@@ -96,11 +96,12 @@ Roles:
 <p>This configuration can be managed through the web interface, but a few options cannot be managed this way at the moment (see below).</p>
 <p>The configuration of a project is given by the file <code>project</code> in the directory of the project.</p>
 <h3 id="addproperty">addProperty</h3>
-<pre><code>addProperty &lt;id&gt; [-label &lt;label&gt;] &lt;type&gt; [values ...]</code></pre>
+<pre><code>addProperty &lt;id&gt; [-label &lt;label&gt;] [-help &lt;help&gt;] &lt;type&gt; [values ...]</code></pre>
 <p><code>addProperty</code> defines a property.</p>
 <ul>
 <li><code>&lt;id&gt;</code> is an identifier (only characters a-z, A-Z, 0-9, -, _)</li>
 <li><code>&lt;label&gt;</code> is the text that will be displayed in the HTML pages (optional)</li>
+<li><code>&lt;help&gt;</code> is a tooltip for properties inputs, displayed above properties labels (optional)</li>
 <li><p><code>&lt;type&gt;</code> is one of text, select, multiselect, selectUser, textarea, textarea2</p>
 <ul>
 <li><code>text</code>: free text</li>
@@ -209,7 +210,7 @@ users</code></pre>
 </div>
         </div> <!-- div class page -->
         <div class="footer">
-            Page updated on 23 Mar 2014
+            Page updated on 24 Mar 2014
         </div>
     </body>
 </html>
