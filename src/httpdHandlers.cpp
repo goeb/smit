@@ -764,6 +764,7 @@ void httpPostProjectConfig(struct mg_connection *conn, Project &p, User u)
         std::string propertyName;
         std::string type;
         std::string label;
+        std::string help;
         std::string selectOptions;
         std::string projectName;
         ProjectConfig pc;
@@ -798,6 +799,11 @@ void httpPostProjectConfig(struct mg_connection *conn, Project &p, User u)
                             line.push_back("-label");
                             line.push_back(label);
                         }
+                        if (!help.empty()) {
+                            line.push_back("-help");
+                            line.push_back(help);
+                        }
+
                         line.push_back(type);
                         PropertyType ptype;
                         int r = strToPropertyType(type, ptype);
@@ -812,9 +818,11 @@ void httpPostProjectConfig(struct mg_connection *conn, Project &p, User u)
                 propertyName = value;
                 type.clear();
                 label.clear();
+                help.clear();
                 selectOptions.clear();
             } else if (key == "type") { type = value; trimBlanks(type); }
             else if (key == "label") { label = value; trimBlanks(label); }
+            else if (key == "help") { help = value; trimBlanks(help); }
             else if (key == "selectOptions") selectOptions = value;
             else {
                 LOG_ERROR("ProjectConfig: invalid posted parameter: '%s'", key.c_str());

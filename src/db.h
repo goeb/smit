@@ -76,6 +76,7 @@ int strToPropertyType(const std::string &s, PropertyType &out);
 struct PropertySpec {
     std::string name;
     std::string label;
+    std::string help;
     enum PropertyType type;
     std::list<std::string> selectOptions; // for F_SELECT and F_MULTISELECT only
 };
