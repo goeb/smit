@@ -444,17 +444,6 @@ PropertySpec parsePropertySpec(std::list<std::string> & tokens)
         tokens.pop_front();
     }
 
-    if (tokens.front() == "-help") {
-        tokens.pop_front();
-        if (tokens.empty()) {
-            LOG_ERROR("Not enough tokens (-help)");
-            property.name = "";
-            return property; // error, indicated to caller by empty name of property
-        }
-        property.help = tokens.front();
-        tokens.pop_front();
-    }
-
     if (tokens.empty()) {
         LOG_ERROR("Not enough tokens");
         property.name = "";

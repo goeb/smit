@@ -137,10 +137,10 @@ function hideSuperadminZone() {
 }
 function addMoreProperties(n) {
     // add 3 more properties on page
-    for (var i=0; i<n; i++) addProperty('', '', '', '', '');
+    for (var i=0; i<n; i++) addProperty('', '', '', '');
 }
 
-function addProperty(name, label, help, type, opts) {
+function addProperty(name, label, type, opts) {
     var table = document.getElementById('sm_config_properties');
     var n = table.rows.length;
     var row = table.insertRow(n);
@@ -186,19 +186,6 @@ function addProperty(name, label, help, type, opts) {
     i.title = "Label that will be displayed";
     cell.appendChild(i);
 
-    // help message
-    cell = row.insertCell(row.cells.length);
-    if (type == 'reserved') {
-        i = document.createElement('span');
-    } else {
-        i = document.createElement('textarea');
-        i.name = 'help';
-        i.className = 'sm_project_help';
-        i.value = help;
-        i.placeholder = "Help message";
-        i.title = "Help message";
-    }
-    cell.appendChild(i);
 
     cell = row.insertCell(row.cells.length);
     cell.id = 'type_' + n;
