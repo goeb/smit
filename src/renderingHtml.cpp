@@ -70,6 +70,8 @@ std::string enquoteJs(const std::string &in)
     std::string out = replaceAll(in, '\\', "\\\\"); // escape backslahes
     out = replaceAll(out, '\'', "\\'"); // escape '
     out = replaceAll(out, '"', "\\\""); // escape "
+    out = replaceAll(out, '\n', "\\n"); // escape "
+    out = replaceAll(out, '\r', "\\r"); // escape "
     return out;
 }
 
@@ -848,7 +850,7 @@ void RHtml::printScriptUpdateConfig(const ContextParameters &ctx)
     std::list<std::string>::iterator r;
     FOREACH(r, reserved) {
         std::string label = ctx.getProject().getLabelOfProperty(*r);
-        mg_printf(conn, "addProperty('%s', '%s', 'reserved', '');\n", enquoteJs(*r).c_str(),
+        mg_printf(conn, "addProperty('%s', '%s', '', 'reserved', '');\n", enquoteJs(*r).c_str(),
                   enquoteJs(label).c_str());
     }
 
@@ -877,16 +879,16 @@ void RHtml::printScriptUpdateConfig(const ContextParameters &ctx)
                 if (i != pspec.selectOptions.begin()) options += "\\n";
                 options += enquoteJs(*i);
             }
-            mg_printf(conn, "addProperty('%s', '%s', '%s', '%s');\n", p->c_str(),
-                      enquoteJs(label).c_str(),
+            mg_printf(conn, "addProperty('%s', '%s', '%s', '%s', '%s');\n", p->c_str(),
+                      enquoteJs(label).c_str(), enquoteJs(pspec.help).c_str(),
                       type, options.c_str());
         }
     }
 
     // add 3 more empty properties
-    mg_printf(conn, "addProperty('', '', '', '');\n");
-    mg_printf(conn, "addProperty('', '', '', '');\n");
-    mg_printf(conn, "addProperty('', '', '', '');\n");
+    mg_printf(conn, "addProperty('', '', '', '', '');\n");
+    mg_printf(conn, "addProperty('', '', '', '', '');\n");
+    mg_printf(conn, "addProperty('', '', '', '', '');\n");
 
     mg_printf(conn, "replaceContentInContainer();\n");
     mg_printf(conn, "</script>\n");
@@ -1752,9 +1754,13 @@ void RHtml::printIssueForm(const ContextParameters &ctx, const Issue *issue, boo
             mg_printf(conn, "<tr>\n");
         }
 
-        // label
-        mg_printf(conn, "<td class=\"sm_issue_plabel sm_issue_plabel_%s\">%s: </td>\n",
-                  pname.c_str(), label.c_str());
+        // label + help
+        std::string title;
+        if (!pspec.help.empty()) {
+            title = "title=\"" + htmlEscape(pspec.help) + "\"";
+        }
+        mg_printf(conn, "<td class=\"sm_issue_plabel sm_issue_plabel_%s\" %s>%s: </td>\n",
+                  pname.c_str(), title.c_str(), label.c_str());
 
         // input
         mg_printf(conn, "<td %s class=\"sm_issue_pinput\">%s</td>\n", colspan, input.str().c_str());
