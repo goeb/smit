@@ -1298,11 +1298,11 @@ bool isImage(const std::string &filename)
     size_t p = filename.find_last_of('.');
     if (p == std::string::npos) return false;
     extension = filename.substr(p);
-    if (extension == ".gif") return true;
-    if (extension == ".png") return true;
-    if (extension == ".jpg") return true;
-    if (extension == ".jpeg") return true;
-    if (extension == ".svg") return true;
+    if (0 == strcasecmp(extension.c_str(), ".gif")) return true;
+    if (0 == strcasecmp(extension.c_str(), ".png")) return true;
+    if (0 == strcasecmp(extension.c_str(), ".jpg")) return true;
+    if (0 == strcasecmp(extension.c_str(), ".jpeg")) return true;
+    if (0 == strcasecmp(extension.c_str(), ".svg")) return true;
     return false;
 }
 
