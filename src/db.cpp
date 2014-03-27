@@ -1714,6 +1714,7 @@ int Database::allocateNewIssueId()
     ScopeLocker scopeLocker(Db.locker, LOCK_READ_WRITE);
 
     Db.maxIssueId++;
+	LOG_DEBUG("allocateNewIssueId: %d", Db.maxIssueId);
     return Db.maxIssueId;
 }
 
