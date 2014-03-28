@@ -1,6 +1,7 @@
 
 v1.4.0
     
+	- fix lost config items when applying config (tags and numbering policy)
     - textarea properties
     - number of issues across several projects
     - display also upper case images (PNG, ...)
