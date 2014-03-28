@@ -269,7 +269,9 @@ int Project::loadEntries(const char *path)
     }
 
     struct dirent *issueDir;
+	uint32_t localMaxId = 0;
 
+	// walk through all issues
     while ((issueDir = readdir(entriesDirHandle)) != NULL) {
         if (0 == strcmp(issueDir->d_name, ".")) continue;
         if (0 == strcmp(issueDir->d_name, "..")) continue;
@@ -286,7 +288,8 @@ int Project::loadEntries(const char *path)
 
             // check the maximum id
             int intId = atoi(issueDir->d_name);
-            updateMaxIssueId(intId);
+            if (intId > 0) updateMaxIssueId(intId);
+			if (intId > localMaxId) localMaxId = intId;
 
             issues[issue->id] = issue;
 
@@ -313,6 +316,8 @@ int Project::loadEntries(const char *path)
     }
     closedir(entriesDirHandle);
 
+	LOG_INFO("Issues and entries loaded. localMaxId=%d, numbering=%s, globalMaxId=%d", localMaxId,
+			 config.numberIssueAcrossProjects?"global":"local", Database::getMaxIssueId());
     LOG_DEBUG("Max issue id: %d", maxIssueId);
     return 0;
 }
@@ -649,7 +654,11 @@ int Project::modifyConfig(std::list<std::list<std::string> > &tokens)
 
     // verify the syntax of the tokens
     ProjectConfig c = parseProjectConfig(tokens);
-    c.predefinedViews = config.predefinedViews; // keep those unchanged
+
+	// keep unchanged the configuration items not managed via this modifyConfig
+    c.predefinedViews = config.predefinedViews;
+	c.tags = config.tags;
+	c.numberIssueAcrossProjects = config.numberIssueAcrossProjects;
 
     // add version
     std::list<std::string> versionLine;
@@ -673,7 +682,7 @@ int Project::modifyConfig(std::list<std::list<std::string> > &tokens)
         tokens.push_back(line);
     }
 
-    // serialize numberIssues policy
+	// serialize numbering policy (not managed by the web interface)
     if (config.numberIssueAcrossProjects) {
         line.clear();
         line.push_back("numberIssues");
@@ -931,15 +940,16 @@ int Project::toggleTag(const std::string &issueId, const std::string &entryId, c
     }
 }
 
-int Project::allocateNewIssueId()
+uint32_t Project::allocateNewIssueId()
 {
     if (config.numberIssueAcrossProjects) return Database::allocateNewIssueId();
 
     maxIssueId++;
+	if (maxIssueId == 0) LOG_ERROR("Project: max issue id zero: wrapped");
     return maxIssueId;
 }
 
-void Project::updateMaxIssueId(int i)
+void Project::updateMaxIssueId(uint32_t i)
 {
     if (config.numberIssueAcrossProjects) return Database::updateMaxIssueId(i);
 
@@ -1462,7 +1472,7 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
     std::string pathOfNewEntry;
     std::string pathOfIssue;
 
-    // write this entry to disk, update _HEAD
+    // write this entry to disk
     // if issueId is empty, generate a new issueId
     if (issueId.empty()) {
         // create new directory for this issue
@@ -1709,16 +1719,17 @@ std::list<std::string> Database::getProjects()
 }
 
 
-int Database::allocateNewIssueId()
+uint32_t Database::allocateNewIssueId()
 {
     ScopeLocker scopeLocker(Db.locker, LOCK_READ_WRITE);
 
     Db.maxIssueId++;
+	if (Db.maxIssueId == 0) LOG_ERROR("Database: max issue id zero: wrapped");
 	LOG_DEBUG("allocateNewIssueId: %d", Db.maxIssueId);
     return Db.maxIssueId;
 }
 
-void Database::updateMaxIssueId(int i)
+void Database::updateMaxIssueId(uint32_t i)
 {
     if (i > Db.maxIssueId) Db.maxIssueId = i;
 }

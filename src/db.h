@@ -139,8 +139,8 @@ public:
     PredefinedView getDefaultView();
     static int createProjectFiles(const char *repositoryPath, const char *projectName, std::string &resultingPath);
     int toggleTag(const std::string &issueId, const std::string &entryId, const std::string &tagid);
-    int allocateNewIssueId();
-    void updateMaxIssueId(int i);
+    uint32_t allocateNewIssueId();
+    void updateMaxIssueId(uint32_t i);
 
 private:
     int loadConfig(const char *path);
@@ -158,7 +158,7 @@ private:
     mutable Locker lockerForConfig; // mutext for config
     std::string name; //< name of the project, plain text
     std::string path; //< path to the project, in which the basename is the urlencoded name
-    int maxIssueId;
+    uint32_t maxIssueId;
 };
 
 
@@ -173,12 +173,13 @@ public:
     static std::list<std::string> getProjects();
     static Project *loadProject(const char *path); // load a project
     static Project *createProject(const std::string &projectName);
-    static int allocateNewIssueId();
-    static void updateMaxIssueId(int i);
+    static uint32_t allocateNewIssueId();
+    static void updateMaxIssueId(uint32_t i);
+	inline static uint32_t getMaxIssueId() { return Db.maxIssueId; }
 
 private:
     Locker locker;
-    int maxIssueId;
+    uint32_t maxIssueId;
 };
 
 
