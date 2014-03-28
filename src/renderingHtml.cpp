@@ -1549,32 +1549,21 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
         // print other modified properties
         // -------------------------------------------------
         std::ostringstream otherProperties;
-        bool firstInList = true;
 
         // process summary first as it is not part of orderedFields
-        std::map<std::string, std::list<std::string> >::const_iterator p = ee.properties.find(K_SUMMARY);
-        std::string value;
-        if (p != ee.properties.end()) {
-            value = toString(p->second);
-            otherProperties << "<span class=\"sm_entry_pname\">" << ctx.getProject().getLabelOfProperty(K_SUMMARY) << ": </span>";
+        std::map<std::string, std::list<std::string> >::const_iterator p;
+        bool first = true;
+        FOREACH(p, ee.properties) {
+            if (p->first == K_MESSAGE) continue;
+
+            if (!first) otherProperties << ", "; // separate properties by a comma
+            first = false;
+
+            std::string value = toString(p->second);
+            otherProperties << "<span class=\"sm_entry_pname\">" << ctx.getProject().getLabelOfProperty(p->first)
+                            << ": </span>";
             otherProperties << "<span class=\"sm_entry_pvalue\">" << htmlEscape(value) << "</span>";
-            firstInList = false;
-        }
 
-        // other properties
-        FOREACH(f, pconfig.orderedProperties) {
-            std::string pname = *f;
-
-            std::map<std::string, std::list<std::string> >::const_iterator p = ee.properties.find(pname);
-            if (p != ee.properties.end()) {
-                // the entry has this property
-                value = toString(p->second);
-
-                if (!firstInList) otherProperties << ", "; // separate properties by a comma
-                otherProperties << "<span class=\"sm_entry_pname\">" << ctx.getProject().getLabelOfProperty(pname) << ": </span>";
-                otherProperties << "<span class=\"sm_entry_pvalue\">" << htmlEscape(value) << "</span>";
-                firstInList = false;
-            }
         }
 
         if (otherProperties.str().size() > 0) {

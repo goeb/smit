@@ -269,9 +269,9 @@ int Project::loadEntries(const char *path)
     }
 
     struct dirent *issueDir;
-	uint32_t localMaxId = 0;
+    uint32_t localMaxId = 0;
 
-	// walk through all issues
+    // walk through all issues
     while ((issueDir = readdir(entriesDirHandle)) != NULL) {
         if (0 == strcmp(issueDir->d_name, ".")) continue;
         if (0 == strcmp(issueDir->d_name, "..")) continue;
@@ -289,7 +289,7 @@ int Project::loadEntries(const char *path)
             // check the maximum id
             int intId = atoi(issueDir->d_name);
             if (intId > 0) updateMaxIssueId(intId);
-			if (intId > localMaxId) localMaxId = intId;
+            if (intId > 0 && intId > localMaxId) localMaxId = intId;
 
             issues[issue->id] = issue;
 
@@ -316,8 +316,8 @@ int Project::loadEntries(const char *path)
     }
     closedir(entriesDirHandle);
 
-	LOG_INFO("Issues and entries loaded. localMaxId=%d, numbering=%s, globalMaxId=%d", localMaxId,
-			 config.numberIssueAcrossProjects?"global":"local", Database::getMaxIssueId());
+    LOG_INFO("Issues and entries loaded. localMaxId=%d, numbering=%s, globalMaxId=%d", localMaxId,
+             config.numberIssueAcrossProjects?"global":"local", Database::getMaxIssueId());
     LOG_DEBUG("Max issue id: %d", maxIssueId);
     return 0;
 }
@@ -655,10 +655,10 @@ int Project::modifyConfig(std::list<std::list<std::string> > &tokens)
     // verify the syntax of the tokens
     ProjectConfig c = parseProjectConfig(tokens);
 
-	// keep unchanged the configuration items not managed via this modifyConfig
+    // keep unchanged the configuration items not managed via this modifyConfig
     c.predefinedViews = config.predefinedViews;
-	c.tags = config.tags;
-	c.numberIssueAcrossProjects = config.numberIssueAcrossProjects;
+    c.tags = config.tags;
+    c.numberIssueAcrossProjects = config.numberIssueAcrossProjects;
 
     // add version
     std::list<std::string> versionLine;
@@ -682,7 +682,7 @@ int Project::modifyConfig(std::list<std::list<std::string> > &tokens)
         tokens.push_back(line);
     }
 
-	// serialize numbering policy (not managed by the web interface)
+    // serialize numbering policy (not managed by the web interface)
     if (config.numberIssueAcrossProjects) {
         line.clear();
         line.push_back("numberIssues");
@@ -945,7 +945,7 @@ uint32_t Project::allocateNewIssueId()
     if (config.numberIssueAcrossProjects) return Database::allocateNewIssueId();
 
     maxIssueId++;
-	if (maxIssueId == 0) LOG_ERROR("Project: max issue id zero: wrapped");
+    if (maxIssueId == 0) LOG_ERROR("Project: max issue id zero: wrapped");
     return maxIssueId;
 }
 
@@ -1203,9 +1203,9 @@ bool Issue::isInFilter(const std::map<std::string, std::list<std::string> > &fil
   *     => filterOut takes precedence, valueA1 is excluded from the result
   */
 std::vector<Issue*> Project::search(const char *fulltextSearch,
-                                  const std::map<std::string, std::list<std::string> > &filterIn,
-                                  const std::map<std::string, std::list<std::string> > &filterOut,
-                                  const char *sortingSpec)
+                                    const std::map<std::string, std::list<std::string> > &filterIn,
+                                    const std::map<std::string, std::list<std::string> > &filterOut,
+                                    const char *sortingSpec)
 {
     ScopeLocker scopeLocker(locker, LOCK_READ_ONLY);
 
@@ -1247,31 +1247,31 @@ std::vector<Issue*> Project::search(const char *fulltextSearch,
   * @return -1, 0, +1
   */
 int compareProperties(const std::map<std::string, std::list<std::string> > &plist1,
-					   const std::map<std::string, std::list<std::string> > &plist2,
-					   const std::string &name)
+                      const std::map<std::string, std::list<std::string> > &plist2,
+                      const std::string &name)
 {
     std::map<std::string, std::list<std::string> >::const_iterator p1 = plist1.find(name);
     std::map<std::string, std::list<std::string> >::const_iterator p2 = plist2.find(name);
-	
-	if (p1 == plist1.end() && p2 == plist2.end()) return 0;
-	else if (p1 == plist1.end()) return -1; // arbitrary choice
-	else if (p2 == plist2.end()) return +1; // arbitrary choice
-	else {
-		std::list<std::string>::const_iterator v1 = p1->second.begin();
-		std::list<std::string>::const_iterator v2 = p2->second.begin();
-		while (v1 != p1->second.end() && v2	!= p2->second.end()) {
-			int lt = v1->compare(*v2);
-			if (lt < 0) return -1;
-			else if (lt > 0) return +1;
-			// else continue
-			v1++;
-			v2++;
-		}
-		if (v1 == p1->second.end() && v2 == p2->second.end()) {
-			return 0; // they are equal
-		} else if (v1 == p1->second.end()) return -1; // arbitrary choice
-		else return +1; // arbitrary choice
-	}
+
+    if (p1 == plist1.end() && p2 == plist2.end()) return 0;
+    else if (p1 == plist1.end()) return -1; // arbitrary choice
+    else if (p2 == plist2.end()) return +1; // arbitrary choice
+    else {
+        std::list<std::string>::const_iterator v1 = p1->second.begin();
+        std::list<std::string>::const_iterator v2 = p2->second.begin();
+        while (v1 != p1->second.end() && v2	!= p2->second.end()) {
+            int lt = v1->compare(*v2);
+            if (lt < 0) return -1;
+            else if (lt > 0) return +1;
+            // else continue
+            v1++;
+            v2++;
+        }
+        if (v1 == p1->second.end() && v2 == p2->second.end()) {
+            return 0; // they are equal
+        } else if (v1 == p1->second.end()) return -1; // arbitrary choice
+        else return +1; // arbitrary choice
+    }
     return 0; // not reached normally
 }
 
@@ -1307,7 +1307,7 @@ bool Issue::lessThan(const Issue* other, const std::list<std::pair<bool, std::st
             else result = 0;
         } else {
             // the other properties
-			
+
             result = compareProperties(properties, other->properties, s->second);
         }
         if (!s->first) result = -result; // descending order
@@ -1724,8 +1724,8 @@ uint32_t Database::allocateNewIssueId()
     ScopeLocker scopeLocker(Db.locker, LOCK_READ_WRITE);
 
     Db.maxIssueId++;
-	if (Db.maxIssueId == 0) LOG_ERROR("Database: max issue id zero: wrapped");
-	LOG_DEBUG("allocateNewIssueId: %d", Db.maxIssueId);
+    if (Db.maxIssueId == 0) LOG_ERROR("Database: max issue id zero: wrapped");
+    LOG_DEBUG("allocateNewIssueId: %d", Db.maxIssueId);
     return Db.maxIssueId;
 }
 
