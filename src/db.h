@@ -118,7 +118,7 @@ public:
                                const std::map<std::string, std::list<std::string> > &filterIn,
                                const std::map<std::string, std::list<std::string> > &filterOut,
                                const char *sortingSpec);
-    int get(const char *issueId, Issue &issue);
+    int get(const char *issueId, Issue &issue) const;
     int addEntry(std::map<std::string, std::list<std::string> > properties, std::string &iid, std::string &eid, std::string username);
     Issue *getIssue(const std::string &id) const;
     Entry *getEntry(const std::string &id) const;
@@ -128,7 +128,7 @@ public:
     inline static std::string urlNameEncode(const std::string &name) { return urlEncode(name, '=', "._-"); }
     inline static std::string urlNameDecode(const std::string &name) { return urlDecode(name, false, '='); }
     inline std::string getPath() const { return path; }
-    inline ProjectConfig getConfig() const { return config; }
+    ProjectConfig getConfig() const;
     inline void setConfig(ProjectConfig pconfig) { config = pconfig; }
     int deleteEntry(const std::string &issueId, const std::string &entryId, const std::string &username);
     int modifyConfig(std::list<std::list<std::string> > &tokens);

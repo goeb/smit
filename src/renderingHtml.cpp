@@ -29,6 +29,7 @@
 ContextParameters::ContextParameters(struct mg_connection *cnx, User u, Project &p)
 {
     project = &p;
+    projectConfig = p.getConfig();
     user = u;
     userRole = u.getRole(p.getName());
     conn = cnx;
@@ -122,7 +123,7 @@ public:
         userRolesByProject = 0;
 
         int n;
-        if (ctx.project) n = loadProjectPage(ctx.conn, ctx.project->getPath(), basename, &buffer);
+        if (ctx.project) n = loadProjectPage(ctx.conn, ctx.getProject().getPath(), basename, &buffer);
         else {
             std::string path = Database::Db.getRootDir() + "/public/" + basename;
             n = loadFile(path.c_str(), &buffer);
@@ -181,18 +182,18 @@ public:
             if (varname.empty()) break;
 
             if (varname == K_SM_HTML_PROJECT_NAME && ctx.project) {
-                if (ctx.project->getName().empty()) mg_printf(ctx.conn, "(new)");
-                else mg_printf(ctx.conn, "%s", htmlEscape(ctx.project->getName()).c_str());
+                if (ctx.getProject().getName().empty()) mg_printf(ctx.conn, "(new)");
+                else mg_printf(ctx.conn, "%s", htmlEscape(ctx.getProject().getName()).c_str());
 
             } else if (varname == K_SM_URL_PROJECT_NAME && ctx.project) {
-                    mg_printf(ctx.conn, "%s", ctx.project->getUrlName().c_str());
+                    mg_printf(ctx.conn, "%s", ctx.getProject().getUrlName().c_str());
 
             } else if (varname == K_SM_DIV_NAVIGATION_GLOBAL) {
                 RHtml::printNavigationGlobal(ctx);
 
             } else if (varname == K_SM_DIV_NAVIGATION_ISSUES && ctx.project) {
                 // do not print this in case a a new project
-                if (! ctx.project->getName().empty()) RHtml::printNavigationIssues(ctx, false);
+                if (! ctx.getProject().getName().empty()) RHtml::printNavigationIssues(ctx, false);
 
             } else if (varname == K_SM_DIV_PROJECTS && projectList) {
                 RHtml::printProjects(ctx, *projectList, userRolesByProject);
@@ -330,10 +331,10 @@ void RHtml::printPageView(const ContextParameters &ctx, const PredefinedView &pv
         mg_printf(conn, "setName('%s');\n", enquoteJs(pv.name).c_str());
     }
     if (pv.isDefault) mg_printf(conn, "setDefaultCheckbox();\n");
-    std::list<std::string> properties = ctx.project->getConfig().getPropertiesNames();
+    std::list<std::string> properties = ctx.getProject().getConfig().getPropertiesNames();
     mg_printf(conn, "Properties = %s;\n", toJavascriptArray(properties).c_str());
     mg_printf(conn, "setSearch('%s');\n", enquoteJs(pv.search).c_str());
-    mg_printf(conn, "setUrl('/%s/issues/?%s');\n", ctx.project->getUrlName().c_str(),
+    mg_printf(conn, "setUrl('/%s/issues/?%s');\n", ctx.getProject().getUrlName().c_str(),
               pv.generateQueryString().c_str());
 
     // filter in and out
@@ -540,7 +541,7 @@ void RHtml::printNavigationGlobal(const ContextParameters &ctx)
         // link for modifying project structure
         HtmlNode linkToModify("a");
         linkToModify.addAttribute("class", "sm_link_modify_project");
-        linkToModify.addAttribute("href", "/%s/config", ctx.project->getUrlName().c_str());
+        linkToModify.addAttribute("href", "/%s/config", ctx.getProject().getUrlName().c_str());
         linkToModify.addContents("%s", _("Project configuration"));
         div.addContents(" ");
         div.addContents(linkToModify);
@@ -548,7 +549,7 @@ void RHtml::printNavigationGlobal(const ContextParameters &ctx)
         // link to config of predefined views
         HtmlNode linkToViews("a");
         linkToViews.addAttribute("class", "sm_link_views");
-        linkToViews.addAttribute("href", "/%s/views/", ctx.project->getUrlName().c_str());
+        linkToViews.addAttribute("href", "/%s/views/", ctx.getProject().getUrlName().c_str());
         linkToViews.addContents("%s", _("Predefined Views"));
         div.addContents(" ");
         div.addContents(linkToViews);
@@ -604,17 +605,17 @@ void RHtml::printNavigationIssues(const ContextParameters &ctx, bool autofocus)
     div.addAttribute("class", "sm_navigation_project");
     if (ctx.userRole == ROLE_ADMIN || ctx.userRole == ROLE_RW || ctx.user.superadmin) {
         HtmlNode a("a");
-        a.addAttribute("href", "/%s/issues/new", ctx.project->getUrlName().c_str());
+        a.addAttribute("href", "/%s/issues/new", ctx.getProject().getUrlName().c_str());
         a.addAttribute("class", "sm_link_new_issue");
         a.addContents("%s", _("Create new issue"));
         div.addContents(a);
     }
 
     std::map<std::string, PredefinedView>::iterator pv;
-    ProjectConfig config = ctx.project->getConfig();
+    ProjectConfig config = ctx.getProject().getConfig();
     FOREACH (pv, config.predefinedViews) {
         HtmlNode a("a");
-        a.addAttribute("href", "/%s/issues/?%s", ctx.project->getUrlName().c_str(),
+        a.addAttribute("href", "/%s/issues/?%s", ctx.getProject().getUrlName().c_str(),
                        makeQueryString(pv->second).c_str());
         a.addAttribute("class", "sm_predefined_view");
         a.addContents("%s", pv->first.c_str());
@@ -623,7 +624,7 @@ void RHtml::printNavigationIssues(const ContextParameters &ctx, bool autofocus)
 
     HtmlNode form("form");
     form.addAttribute("class", "sm_searchbox");
-    form.addAttribute("action", "/%s/issues", ctx.project->getUrlName().c_str());
+    form.addAttribute("action", "/%s/issues", ctx.getProject().getUrlName().c_str());
     form.addAttribute("method", "get");
 
     HtmlNode input("input");
@@ -637,7 +638,7 @@ void RHtml::printNavigationIssues(const ContextParameters &ctx, bool autofocus)
 
     // advanced search
     HtmlNode a("a");
-    a.addAttribute("href", "/%s/views/_", ctx.project->getUrlName().c_str());
+    a.addAttribute("href", "/%s/views/_", ctx.getProject().getUrlName().c_str());
     a.addAttribute("class", "sm_advanced_search");
     a.addContents(_("Advanced Search"));
     div.addContents(a);
@@ -898,7 +899,7 @@ void RHtml::printProjectConfig(const ContextParameters &ctx)
         // hide what is reserved to superadmin
         mg_printf(ctx.conn, "hideSuperadminZone();\n");
     } else {
-        if (ctx.project) mg_printf(ctx.conn, "setProjectName('%s');\n", enquoteJs(ctx.project->getName()).c_str());
+        if (ctx.project) mg_printf(ctx.conn, "setProjectName('%s');\n", enquoteJs(ctx.getProject().getName()).c_str());
     }
     mg_printf(ctx.conn, "</script>");
 
@@ -969,7 +970,7 @@ void RHtml::printIssueListFullContents(const ContextParameters &ctx, std::vector
 
     FOREACH (i, issueList) {
         Issue issue;
-        int r = ctx.project->get((*i)->id.c_str(), issue);
+        int r = ctx.getProject().get((*i)->id.c_str(), issue);
         if (r < 0) {
             // issue not found (or other error)
             LOG_INFO("Issue disappeared: %s", (*i)->id.c_str());
@@ -1021,7 +1022,7 @@ void RHtml::printIssueList(const ContextParameters &ctx, const std::vector<struc
     mg_printf(conn, "<div class=\"sm_issues_count\">%s: <span class=\"sm_issues_count\">%u</span></div>\n",
               _("Issues found"), issueList.size());
 
-    std::string group = getPropertyForGrouping(ctx.project->getConfig(), ctx.sort);
+    std::string group = getPropertyForGrouping(ctx.getProject().getConfig(), ctx.sort);
     std::string currentGroup;
 
     mg_printf(conn, "<table class=\"sm_issues\">\n");

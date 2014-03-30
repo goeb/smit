@@ -28,6 +28,7 @@ public:
     std::list<std::string> filterin;
     std::list<std::string> filterout;
     Project *project;
+    ProjectConfig projectConfig;
     std::list<std::pair<std::string, uint8_t> > htmlFieldDisplay;
     struct mg_connection *conn;
 };

@@ -381,7 +381,7 @@ Issue *Project::getIssue(const std::string &id) const
     else return i->second;
 }
 
-int Project::get(const char *issueId, Issue &issue)
+int Project::get(const char *issueId, Issue &issue) const
 {
     ScopeLocker scopeLocker(locker, LOCK_READ_ONLY);
 
@@ -1590,6 +1590,12 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
 
     entryId = newEntryId;
     return r;
+}
+
+ProjectConfig Project::getConfig() const
+{
+    ScopeLocker(lockerForConfig, LOCK_READ_ONLY);
+    return config;
 }
 
 
