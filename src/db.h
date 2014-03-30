@@ -112,9 +112,9 @@ class Project {
 public:
     static Project *load(const char *path); // load a project
     std::vector<Issue*> search(const char *fulltextSearch,
-                             const std::map<std::string, std::list<std::string> > &filterIn,
-                             const std::map<std::string, std::list<std::string> > &filterOut,
-                             const char *sortingSpec);
+                               const std::map<std::string, std::list<std::string> > &filterIn,
+                               const std::map<std::string, std::list<std::string> > &filterOut,
+                               const char *sortingSpec);
     int get(const char *issueId, Issue &issue);
     int addEntry(std::map<std::string, std::list<std::string> > properties, std::string &iid, std::string &eid, std::string username);
     Issue *getIssue(const std::string &id) const;
@@ -175,7 +175,7 @@ public:
     static Project *createProject(const std::string &projectName);
     static uint32_t allocateNewIssueId();
     static void updateMaxIssueId(uint32_t i);
-	inline static uint32_t getMaxIssueId() { return Db.maxIssueId; }
+    inline static uint32_t getMaxIssueId() { return Db.maxIssueId; }
 
 private:
     Locker locker;
