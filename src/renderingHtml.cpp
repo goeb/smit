@@ -847,7 +847,7 @@ void RHtml::printScriptUpdateConfig(const ContextParameters &ctx)
     std::list<std::string> reserved = ctx.getProject().getConfig().getReservedProperties();
     std::list<std::string>::iterator r;
     FOREACH(r, reserved) {
-        std::string label = ctx.getProject().getLabelOfProperty(*r);
+        std::string label = ctx.getProject().getConfig().getLabelOfProperty(*r);
         mg_printf(conn, "addProperty('%s', '%s', 'reserved', '');\n", enquoteJs(*r).c_str(),
                   enquoteJs(label).c_str());
     }
@@ -866,7 +866,7 @@ void RHtml::printScriptUpdateConfig(const ContextParameters &ctx)
         case F_TEXTAREA2: type = "textarea2"; break;
         }
 
-        std::string label = ctx.getProject().getLabelOfProperty(pspec->name);
+        std::string label = ctx.getProject().getConfig().getLabelOfProperty(pspec->name);
         std::list<std::string>::const_iterator i;
         std::string options;
         FOREACH (i, pspec->selectOptions) {
@@ -1031,7 +1031,7 @@ void RHtml::printIssueList(const ContextParameters &ctx, const std::vector<struc
     std::list<std::string>::const_iterator colname;
     for (colname = colspec.begin(); colname != colspec.end(); colname++) {
 
-        std::string label = ctx.getProject().getLabelOfProperty(*colname);
+        std::string label = ctx.getProject().getConfig().getLabelOfProperty(*colname);
         std::string newQueryString = getNewSortingSpec(conn, *colname, true);
         mg_printf(conn, "<th class=\"sm_issues\"><a class=\"sm_issues_sort\" href=\"?%s\" title=\"Sort ascending\">%s</a>\n",
                   newQueryString.c_str(), label.c_str());
@@ -1052,7 +1052,7 @@ void RHtml::printIssueList(const ContextParameters &ctx, const std::vector<struc
             mg_printf(conn, "<tr class=\"sm_issues_group\">\n");
             currentGroup = getProperty((*i)->properties, group);
             mg_printf(conn, "<td class=\"sm_group\" colspan=\"%u\"><span class=\"sm_issues_group_label\">%s: </span>",
-                      colspec.size(), htmlEscape(ctx.getProject().getLabelOfProperty(group)).c_str());
+                      colspec.size(), htmlEscape(ctx.getProject().getConfig().getLabelOfProperty(group)).c_str());
             mg_printf(conn, "<span class=\"sm_issues_group\">%s</span></td>\n", htmlEscape(currentGroup).c_str());
             mg_printf(conn, "</tr>\n");
         }
@@ -1331,7 +1331,7 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
     std::list<PropertySpec>::const_iterator pspec;
     FOREACH(pspec, pconfig.properties) {
         std::string pname = pspec->name;
-        std::string label = ctx.getProject().getLabelOfProperty(pname);
+        std::string label = ctx.getProject().getConfig().getLabelOfProperty(pname);
 
         std::string value;
         std::map<std::string, std::list<std::string> >::const_iterator p = issue.properties.find(pname);
@@ -1555,7 +1555,7 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
             first = false;
 
             std::string value = toString(p->second);
-            otherProperties << "<span class=\"sm_entry_pname\">" << ctx.getProject().getLabelOfProperty(p->first)
+            otherProperties << "<span class=\"sm_entry_pname\">" << ctx.getProject().getConfig().getLabelOfProperty(p->first)
                             << ": </span>";
             otherProperties << "<span class=\"sm_entry_pvalue\">" << htmlEscape(value) << "</span>";
 
@@ -1615,7 +1615,7 @@ void RHtml::printIssueForm(const ContextParameters &ctx, const Issue *issue, boo
     // summary
     mg_printf(conn, "<table class=\"sm_issue_properties\">");
     mg_printf(conn, "<tr>\n");
-    mg_printf(conn, "<td class=\"sm_issue_plabel sm_issue_plabel_summary\">%s: </td>\n", ctx.getProject().getLabelOfProperty("summary").c_str());
+    mg_printf(conn, "<td class=\"sm_issue_plabel sm_issue_plabel_summary\">%s: </td>\n", ctx.getProject().getConfig().getLabelOfProperty("summary").c_str());
     mg_printf(conn, "<td class=\"sm_issue_pinput\" colspan=\"3\">");
 
     mg_printf(conn, "<input class=\"sm_issue_pinput_summary\" required=\"required\" type=\"text\" name=\"summary\" value=\"%s\"",
@@ -1633,7 +1633,7 @@ void RHtml::printIssueForm(const ContextParameters &ctx, const Issue *issue, boo
 
     FOREACH(pspec, pconfig.properties) {
         std::string pname = pspec->name;
-        std::string label = ctx.getProject().getLabelOfProperty(pname);
+        std::string label = ctx.getProject().getConfig().getLabelOfProperty(pname);
 
         std::map<std::string, std::list<std::string> >::const_iterator p = issue->properties.find(pname);
         std::list<std::string> propertyValues;

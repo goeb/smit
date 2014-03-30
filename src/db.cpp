@@ -139,6 +139,17 @@ std::list<std::string> ProjectConfig::getReservedProperties() const
     return reserved;
 }
 
+std::string ProjectConfig::getLabelOfProperty(const std::string &propertyName) const
+{
+    std::string label;
+    std::map<std::string, std::string>::const_iterator l;
+    l = propertyLabels.find(propertyName);
+    if (l != propertyLabels.end()) label = l->second;
+
+    if (label.size()==0) label = propertyName;
+    return label;
+}
+
 /** load in memory the given project
   * re-load if it was previously loaded
   * @param path
@@ -1076,20 +1087,6 @@ void Project::loadTags(const char *projectPath)
     closedir(tagsDirHandle);
 }
 
-
-std::string Project::getLabelOfProperty(const std::string &propertyName) const
-{
-    ScopeLocker scopeLocker(lockerForConfig, LOCK_READ_ONLY);
-
-    std::string label;
-    std::map<std::string, std::string> labels = config.propertyLabels;
-    std::map<std::string, std::string>::const_iterator l;
-    l = labels.find(propertyName);
-    if (l != labels.end()) label = l->second;
-
-    if (label.size()==0) label = propertyName;
-    return label;
-}
 
 /** Parse the sorting specification
   * Input syntax is:

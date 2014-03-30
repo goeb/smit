@@ -108,6 +108,7 @@ struct ProjectConfig {
     const PropertySpec *getPropertySpec(const std::string name) const;
     std::list<std::string> getPropertiesNames() const;
     std::list<std::string> getReservedProperties() const;
+    std::string getLabelOfProperty(const std::string &propertyName) const;
 };
 
 class Project {
@@ -121,7 +122,6 @@ public:
     int addEntry(std::map<std::string, std::list<std::string> > properties, std::string &iid, std::string &eid, std::string username);
     Issue *getIssue(const std::string &id) const;
     Entry *getEntry(const std::string &id) const;
-    std::string getLabelOfProperty(const std::string &propertyName) const;
 
     inline std::string getName() const { return name; }
     inline std::string getUrlName() const { return urlNameEncode(name); }
