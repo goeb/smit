@@ -100,12 +100,12 @@ struct PredefinedView {
 
 struct ProjectConfig {
     ProjectConfig() : numberIssueAcrossProjects(false) {}
-    std::map<std::string, PropertySpec> properties;
-    std::list<std::string> orderedProperties;
+    std::list<PropertySpec> properties; // user defined properties
     std::map<std::string, std::string> propertyLabels;
     std::map<std::string, PredefinedView> predefinedViews;
     std::map<std::string, TagSpec> tags;
     bool numberIssueAcrossProjects; // accross project
+    const PropertySpec *getPropertySpec(const std::string name) const;
 };
 
 class Project {

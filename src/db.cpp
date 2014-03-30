@@ -98,6 +98,20 @@ std::string Issue::getSummary() const
     return getProperty(properties, "summary");
 }
 
+/** Get the specification of a given property
+  *
+  * @return 0 if not found.
+  */
+const PropertySpec *ProjectConfig::getPropertySpec(const std::string name) const
+{
+    std::list<PropertySpec>::const_iterator p;
+    FOREACH(p, properties) {
+        if (p->name == name) return &(*p);
+    }
+    return 0;
+}
+
+
 /** load in memory the given project
   * re-load if it was previously loaded
   * @param path
@@ -496,9 +510,8 @@ ProjectConfig parseProjectConfig(std::list<std::list<std::string> > &lines)
         } else if (0 == token.compare("addProperty")) {
             PropertySpec property = parsePropertySpec(*line);
             if (property.name.size() > 0) {
-                config.properties[property.name] = property;
-                config.orderedProperties.push_back(property.name);
-                LOG_DEBUG("orderedProperties: added %s", property.name.c_str());
+                config.properties.push_back(property);
+                LOG_DEBUG("properties: added %s", property.name.c_str());
 
                 if (! property.label.empty()) config.propertyLabels[property.name] = property.label;
 
@@ -1394,7 +1407,7 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
         }
 
         // simplify the entry by removing properties that have the same value
-        // in the issue (only the modified fiels are stored)
+        // in the issue (only the modified fields are stored)
         //
         // check that all properties are in the project config
         // and that they bring a modification of the issue
@@ -1410,9 +1423,8 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
                     doErase = true;
                 }
             } else {
-                std::map<std::string, PropertySpec>::iterator f;
-                f = config.properties.find(entryProperty->first);
-                if ( (f == config.properties.end()) && (entryProperty->first != K_SUMMARY) ) {
+                const PropertySpec *pspec = config.getPropertySpec(entryProperty->first);
+                if ( !pspec && (entryProperty->first != K_SUMMARY) ) {
                     // erase property because it is not part of the official fields of the project
                     doErase = true;
                 } else {
@@ -1571,7 +1583,14 @@ std::list<std::string> Project::getReservedProperties() const
 std::list<std::string> Project::getPropertiesNames() const
 {
     ScopeLocker scopeLocker(lockerForConfig, LOCK_READ_ONLY);
-    std::list<std::string> colspec = config.orderedProperties;
+    std::list<std::string> colspec;
+
+    // get user defined properties
+    std::list<PropertySpec>::const_iterator pspec;
+    FOREACH(pspec, config.properties) {
+        colspec.push_back(pspec->name);
+    }
+
     // add mandatory properties that are not included in orderedProperties
     std::list<std::string> reserved = getReservedProperties();
     colspec.insert(colspec.begin(), reserved.begin(), reserved.end());

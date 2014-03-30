@@ -854,33 +854,28 @@ void RHtml::printScriptUpdateConfig(const ContextParameters &ctx)
 
     // other properties
     ProjectConfig c = ctx.getProject().getConfig();
-    std::map<std::string, PropertySpec>::const_iterator ps;
-    std::list<std::string>::const_iterator p;
-    FOREACH(p, c.orderedProperties) {
-        ps = c.properties.find((*p));
-        if (ps != c.properties.end()) {
-            PropertySpec pspec = ps->second;
-            const char *type = "";
-            switch (pspec.type) {
-            case F_TEXT: type = "text"; break;
-            case F_SELECT: type = "select"; break;
-            case F_MULTISELECT: type = "multiselect"; break;
-            case F_SELECT_USER: type = "selectUser"; break;
-            case F_TEXTAREA: type = "textarea"; break;
-            case F_TEXTAREA2: type = "textarea2"; break;
-            }
-
-            std::string label = ctx.getProject().getLabelOfProperty(*p);
-            std::list<std::string>::const_iterator i;
-            std::string options;
-            FOREACH (i, pspec.selectOptions) {
-                if (i != pspec.selectOptions.begin()) options += "\\n";
-                options += enquoteJs(*i);
-            }
-            mg_printf(conn, "addProperty('%s', '%s', '%s', '%s');\n", p->c_str(),
-                      enquoteJs(label).c_str(),
-                      type, options.c_str());
+    std::list<PropertySpec>::const_iterator pspec;
+    FOREACH(pspec, c.properties) {
+        const char *type = "";
+        switch (pspec->type) {
+        case F_TEXT: type = "text"; break;
+        case F_SELECT: type = "select"; break;
+        case F_MULTISELECT: type = "multiselect"; break;
+        case F_SELECT_USER: type = "selectUser"; break;
+        case F_TEXTAREA: type = "textarea"; break;
+        case F_TEXTAREA2: type = "textarea2"; break;
         }
+
+        std::string label = ctx.getProject().getLabelOfProperty(pspec->name);
+        std::list<std::string>::const_iterator i;
+        std::string options;
+        FOREACH (i, pspec->selectOptions) {
+            if (i != pspec->selectOptions.begin()) options += "\\n";
+            options += enquoteJs(*i);
+        }
+        mg_printf(conn, "addProperty('%s', '%s', '%s', '%s');\n", pspec->name.c_str(),
+                  enquoteJs(label).c_str(),
+                  type, options.c_str());
     }
 
     // add 3 more empty properties
@@ -925,18 +920,19 @@ std::string getPropertyForGrouping(const ProjectConfig &pconfig, const std::stri
     size_t i = 0;
     if (strchr(colspecDelimiters, sortingSpec[0])) i = 1;
 
+    // get the first property sorted-by
     std::string property;
     size_t n = sortingSpec.find_first_of(colspecDelimiters, i);
     if (n == std::string::npos) property = sortingSpec.substr(i);
     else property = sortingSpec.substr(i, n-i);
 
-    // check the type of the property
-    std::map<std::string, PropertySpec>::const_iterator propertySpec = pconfig.properties.find(property);
-    if (propertySpec == pconfig.properties.end()) return "";
-    enum PropertyType type = propertySpec->second.type;
+    // check the type of this property
+    const PropertySpec *propertySpec = pconfig.getPropertySpec(property);
+    if (!propertySpec) return "";
+    enum PropertyType type = propertySpec->type;
 
-    if (type == F_TEXT) return "";
-    return property;
+    if (type == F_SELECT || type == F_MULTISELECT || type == F_SELECT_USER) return property;
+    return "";
 }
 
 /** print chosen filters and search parameters
@@ -1332,9 +1328,9 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
 
     ProjectConfig pconfig = ctx.getProject().getConfig();
 
-    std::list<std::string>::const_iterator f;
-    FOREACH(f, pconfig.orderedProperties) {
-        std::string pname = *f;
+    std::list<PropertySpec>::const_iterator pspec;
+    FOREACH(pspec, pconfig.properties) {
+        std::string pname = pspec->name;
         std::string label = ctx.getProject().getLabelOfProperty(pname);
 
         std::string value;
@@ -1350,25 +1346,24 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
         const char *pvalueStyle = "sm_issue_pvalue";
         const char *colspan = "";
         int workingColumnIncrement = 1;
-        std::map<std::string, PropertySpec>::iterator pspec = pconfig.properties.find(pname);
-        if (pspec != pconfig.properties.end()) {
-            enum PropertyType type = pspec->second.type;
-            if (type == F_TEXTAREA || type == F_TEXTAREA2) pvalueStyle = "sm_issue_pvalue_ta";
 
-            if (type == F_TEXTAREA2) {
-                // the property spans over 4 columns (1 col for the label and 3 for the value)
-                if (workingColumn == 1) {
-                    // nothing to do
-                } else {
-                    // add a placeholder in order to align the property with next row
-                    // close current row and start a new row
-                    mg_printf(conn, "<td></td><td></td></tr><tr>\n");
-                }
-                colspan = "colspan=\"3\"";
-                workingColumn = 1;
-                workingColumnIncrement = 2;
+        enum PropertyType type = pspec->type;
+        if (type == F_TEXTAREA || type == F_TEXTAREA2) pvalueStyle = "sm_issue_pvalue_ta";
+
+        if (type == F_TEXTAREA2) {
+            // the property spans over 4 columns (1 col for the label and 3 for the value)
+            if (workingColumn == 1) {
+                // nothing to do
+            } else {
+                // add a placeholder in order to align the property with next row
+                // close current row and start a new row
+                mg_printf(conn, "<td></td><td></td></tr><tr>\n");
             }
+            colspan = "colspan=\"3\"";
+            workingColumn = 1;
+            workingColumnIncrement = 2;
         }
+
         // label
         mg_printf(conn, "<td class=\"sm_issue_plabel sm_issue_plabel_%s\">%s: </td>\n",
                   pname.c_str(), htmlEscape(label).c_str());
@@ -1632,24 +1627,13 @@ void RHtml::printIssueForm(const ContextParameters &ctx, const Issue *issue, boo
 
     int workingColumn = 1;
     const uint8_t MAX_COLUMNS = 2;
-    std::list<std::string>::const_iterator f;
+    std::list<PropertySpec>::const_iterator pspec;
 
-    std::list<std::string> orderedProperties = ctx.getProject().getConfig().orderedProperties;
+    ProjectConfig pconfig = ctx.getProject().getConfig();
 
-    std::map<std::string, PropertySpec> properties = ctx.getProject().getConfig().properties;
-
-
-    for (f=orderedProperties.begin(); f!=orderedProperties.end(); f++) {
-        std::string pname = *f;
+    FOREACH(pspec, pconfig.properties) {
+        std::string pname = pspec->name;
         std::string label = ctx.getProject().getLabelOfProperty(pname);
-
-        std::map<std::string, PropertySpec>::const_iterator propertySpec = properties.find(pname);
-        if (propertySpec == properties.end()) {
-            LOG_ERROR("Property '%s' (of setHtmlFieldDisplay) not found in addField options", pname.c_str());
-            continue;
-        }
-
-        PropertySpec pspec = propertySpec->second;
 
         std::map<std::string, std::list<std::string> >::const_iterator p = issue->properties.find(pname);
         std::list<std::string> propertyValues;
@@ -1660,17 +1644,17 @@ void RHtml::printIssueForm(const ContextParameters &ctx, const Issue *issue, boo
         const char *colspan = "";
         int workingColumnIncrement = 1;
 
-        if (pspec.type == F_TEXT) {
+        if (pspec->type == F_TEXT) {
             if (propertyValues.size()>0) value = propertyValues.front();
             input << "<input class=\"sm_pinput_" << pname << "\" type=\"text\" name=\""
                   << pname << "\" value=\"" << htmlEscape(value) << "\">\n";
 
-        } else if (pspec.type == F_SELECT) {
+        } else if (pspec->type == F_SELECT) {
             if (propertyValues.size()>0) value = propertyValues.front();
-            std::list<std::string>::iterator so;
+            std::list<std::string>::const_iterator so;
             input << "<select class=\"sm_issue_pinput_" << pname << "\" name=\"" << pname << "\">";
 
-            for (so = pspec.selectOptions.begin(); so != pspec.selectOptions.end(); so++) {
+            for (so = pspec->selectOptions.begin(); so != pspec->selectOptions.end(); so++) {
                 input << "<option" ;
                 if (value == *so) input << " selected=\"selected\"";
                 input << ">" << htmlEscape(*so) << "</option>";
@@ -1678,13 +1662,13 @@ void RHtml::printIssueForm(const ContextParameters &ctx, const Issue *issue, boo
 
             input << "</select>";
 
-        } else if (pspec.type == F_MULTISELECT) {
-            std::list<std::string>::iterator so;
+        } else if (pspec->type == F_MULTISELECT) {
+            std::list<std::string>::const_iterator so;
             input << "<select class=\"sm_issue_pinput_" << pname << "\" name=\"" << pname << "\"";
-            if (pspec.type == F_MULTISELECT) input << " multiple=\"multiple\"";
+            if (pspec->type == F_MULTISELECT) input << " multiple=\"multiple\"";
             input << ">";
 
-            for (so = pspec.selectOptions.begin(); so != pspec.selectOptions.end(); so++) {
+            for (so = pspec->selectOptions.begin(); so != pspec->selectOptions.end(); so++) {
                 input << "<option" ;
                 if (inList(propertyValues, *so)) input << " selected=\"selected\"";
                 input << ">" << htmlEscape(*so) << "</option>";
@@ -1692,7 +1676,7 @@ void RHtml::printIssueForm(const ContextParameters &ctx, const Issue *issue, boo
 
             input << "</select>";
 
-        } else if (pspec.type == F_SELECT_USER) {
+        } else if (pspec->type == F_SELECT_USER) {
             if (propertyValues.size()>0) value = propertyValues.front();
             else {
                 // by default, if no selection is made, select the current user
@@ -1710,12 +1694,12 @@ void RHtml::printIssueForm(const ContextParameters &ctx, const Issue *issue, boo
 
             input << "</select>";
 
-        } else if (pspec.type == F_TEXTAREA) {
+        } else if (pspec->type == F_TEXTAREA) {
             if (propertyValues.size()>0) value = propertyValues.front();
             input << "<textarea class=\"sm_issue_pinput_" << pname << "\" name=\""
                   << pname << "\">" << htmlEscape(value) << "</textarea>\n";
 
-        } else if (pspec.type == F_TEXTAREA2) {
+        } else if (pspec->type == F_TEXTAREA2) {
             // the property spans over 4 columns (1 col for the label and 3 for the value)
             if (workingColumn == 1) {
                 // nothing to do
@@ -1733,7 +1717,7 @@ void RHtml::printIssueForm(const ContextParameters &ctx, const Issue *issue, boo
                   << pname << "\">" << htmlEscape(value) << "</textarea>\n";
 
         } else {
-            LOG_ERROR("invalid fieldSpec->type=%d", pspec.type);
+            LOG_ERROR("invalid fieldSpec->type=%d", pspec->type);
             continue;
         }
 

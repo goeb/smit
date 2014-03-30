@@ -676,12 +676,10 @@ void httpGetNewProject(struct mg_connection *conn, User u)
     pspec.type = F_SELECT;
     pspec.selectOptions.push_back("open");
     pspec.selectOptions.push_back("closed");
-    pconfig.properties[pspec.name] = pspec;
+    pconfig.properties.push_back(pspec);
     pspec.name = "owner";
     pspec.type = F_SELECT_USER;
-    pconfig.properties[pspec.name] = pspec;
-    pconfig.orderedProperties.push_back("status");
-    pconfig.orderedProperties.push_back("owner");
+    pconfig.properties.push_back(pspec);
     p.setConfig(pconfig);
     sendHttpHeader200(conn);
     ContextParameters ctx = ContextParameters(conn, u, p);
@@ -866,12 +864,10 @@ void httpPostNewProject(struct mg_connection *conn, User u)
 void replaceUserMe(std::map<std::string, std::list<std::string> > &filters, const Project &p, const std::string &username)
 {
     ProjectConfig pconfig = p.getConfig();
-    std::map<std::string, PropertySpec> propertiesSpec = pconfig.properties;
     std::map<std::string, std::list<std::string> >::iterator filter;
     FOREACH(filter, filters) {
-        std::map<std::string, PropertySpec>::const_iterator ps = propertiesSpec.find(filter->first);
-
-        if ( (ps != propertiesSpec.end()) && (ps->second.type == F_SELECT_USER) ) {
+        const PropertySpec *ps = pconfig.getPropertySpec(filter->first);
+        if ( ps && (ps->type == F_SELECT_USER) ) {
             std::list<std::string>::iterator v;
             FOREACH(v, filter->second) {
                 if ((*v) == K_ME) {
