@@ -106,6 +106,8 @@ struct ProjectConfig {
     std::map<std::string, TagSpec> tags;
     bool numberIssueAcrossProjects; // accross project
     const PropertySpec *getPropertySpec(const std::string name) const;
+    std::list<std::string> getPropertiesNames() const;
+    std::list<std::string> getReservedProperties() const;
 };
 
 class Project {
@@ -129,8 +131,6 @@ public:
     inline ProjectConfig getConfig() const { return config; }
     inline void setConfig(ProjectConfig pconfig) { config = pconfig; }
     int deleteEntry(const std::string &issueId, const std::string &entryId, const std::string &username);
-    std::list<std::string> getReservedProperties() const;
-    std::list<std::string> getPropertiesNames() const;
     int modifyConfig(std::list<std::list<std::string> > &tokens);
     int createProject(std::string name, std::list<std::list<std::string> > &tokens);
     PredefinedView getPredefinedView(const std::string &name);

@@ -330,7 +330,7 @@ void RHtml::printPageView(const ContextParameters &ctx, const PredefinedView &pv
         mg_printf(conn, "setName('%s');\n", enquoteJs(pv.name).c_str());
     }
     if (pv.isDefault) mg_printf(conn, "setDefaultCheckbox();\n");
-    std::list<std::string> properties = ctx.project->getPropertiesNames();
+    std::list<std::string> properties = ctx.project->getConfig().getPropertiesNames();
     mg_printf(conn, "Properties = %s;\n", toJavascriptArray(properties).c_str());
     mg_printf(conn, "setSearch('%s');\n", enquoteJs(pv.search).c_str());
     mg_printf(conn, "setUrl('/%s/issues/?%s');\n", ctx.project->getUrlName().c_str(),
@@ -844,7 +844,7 @@ void RHtml::printScriptUpdateConfig(const ContextParameters &ctx)
     mg_printf(conn, "<script>\n");
 
     // fulfill reserved properties first
-    std::list<std::string> reserved = ctx.getProject().getReservedProperties();
+    std::list<std::string> reserved = ctx.getProject().getConfig().getReservedProperties();
     std::list<std::string>::iterator r;
     FOREACH(r, reserved) {
         std::string label = ctx.getProject().getLabelOfProperty(*r);

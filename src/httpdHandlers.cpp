@@ -920,7 +920,7 @@ void httpGetListOfIssues(struct mg_connection *conn, Project &p, User u)
 
     std::string colspec = getFirstParamFromQueryString(q, "colspec");
     std::list<std::string> cols;
-    std::list<std::string> allCols = p.getPropertiesNames();
+    std::list<std::string> allCols = p.getConfig().getPropertiesNames();
 
     if (colspec.size() > 0) {
         cols = parseColspec(colspec.c_str(), allCols);

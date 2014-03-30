@@ -111,6 +111,33 @@ const PropertySpec *ProjectConfig::getPropertySpec(const std::string name) const
     return 0;
 }
 
+/** Get the list of all properties
+  */
+std::list<std::string> ProjectConfig::getPropertiesNames() const
+{
+    std::list<std::string> colspec;
+
+    // get user defined properties
+    std::list<PropertySpec>::const_iterator pspec;
+    FOREACH(pspec, properties) {
+        colspec.push_back(pspec->name);
+    }
+
+    // add mandatory properties that are not included in orderedProperties
+    std::list<std::string> reserved = getReservedProperties();
+    colspec.insert(colspec.begin(), reserved.begin(), reserved.end());
+    return colspec;
+}
+
+std::list<std::string> ProjectConfig::getReservedProperties() const
+{
+    std::list<std::string> reserved;
+    reserved.push_back("id");
+    reserved.push_back("ctime");
+    reserved.push_back("mtime");
+    reserved.push_back("summary");
+    return reserved;
+}
 
 /** load in memory the given project
   * re-load if it was previously loaded
@@ -1566,35 +1593,6 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
 
     entryId = newEntryId;
     return r;
-}
-
-std::list<std::string> Project::getReservedProperties() const
-{
-    std::list<std::string> reserved;
-    reserved.push_back("id");
-    reserved.push_back("ctime");
-    reserved.push_back("mtime");
-    reserved.push_back("summary");
-    return reserved;
-}
-
-/** Get the list of all properties
-  */
-std::list<std::string> Project::getPropertiesNames() const
-{
-    ScopeLocker scopeLocker(lockerForConfig, LOCK_READ_ONLY);
-    std::list<std::string> colspec;
-
-    // get user defined properties
-    std::list<PropertySpec>::const_iterator pspec;
-    FOREACH(pspec, config.properties) {
-        colspec.push_back(pspec->name);
-    }
-
-    // add mandatory properties that are not included in orderedProperties
-    std::list<std::string> reserved = getReservedProperties();
-    colspec.insert(colspec.begin(), reserved.begin(), reserved.end());
-    return colspec;
 }
 
 
