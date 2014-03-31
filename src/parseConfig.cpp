@@ -393,11 +393,27 @@ std::string serializeTokens(const std::list<std::list<std::string> > &linesOfTok
 
 #ifdef SM_PARSER
 
+/** smparser is a standalone executable that help parsing smit config and entries syntax.
+  * It may be useful for triggers that need parsing of entries.
+  *
+  *
+  */
 #include <iostream>
 void usage()
 {
     printf("Usage:\n"
            "    smparser <file> <key> [<n>]\n"
+           "\n"
+           "<file>  file to parse. Use - to specify standard input.\n"
+           "<n>     value to retrieve. Defaults to 1.\n"
+           "\n"
+           "Example:\n"
+           "cat << EOF | smparser - author 2\n"
+           "author John Harper\n"
+           "ctime 1396295409\n"
+           "EOF\n"
+           "\n"
+           "This shall print 'Harper' (ie: the second value of line with key 'author').\n"
            );
     exit(1);
 }
