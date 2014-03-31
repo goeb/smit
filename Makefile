@@ -1,5 +1,6 @@
 
 ifeq ($(WIN),1)
+	SM_PARSER = bin/smparser.exe
 	EXE = smit.exe
 	OPENSSL = $(HOME)/Downloads/openssl-1.0.1e
 	CC = i586-mingw32msvc-gcc
@@ -9,6 +10,7 @@ ifeq ($(WIN),1)
 	LDFLAGS += $(OPENSSL)/libssl.a $(OPENSSL)/libcrypto.a -lws2_32 -lgdi32
 	PACK_NAME = smit-win32
 else
+	SM_PARSER = bin/smparser
 	EXE = smit
 	CC = gcc
 	CXX = g++
@@ -55,7 +57,11 @@ endif
 
 
 
-all: embedcpio
+all: $(SM_PARSER) embedcpio
+
+.PHONY: $(SM_PARSER)
+$(SM_PARSER):
+	$(CXX) -o $@ src/parseConfig.cpp -DSM_PARSER
 
 print:
 	@echo SRCS=$(SRCS)

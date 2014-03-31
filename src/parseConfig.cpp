@@ -21,8 +21,21 @@
 #include <unistd.h>
 
 #include "parseConfig.h"
-#include "logging.h"
 #include "global.h"
+
+// SM_PARSER is a small executable than helps parsing smit config file and smit entries.
+#ifndef SM_PARSER
+
+#include "logging.h"
+
+#else
+
+#define LOG_DEBUG(...)
+#define LOG_INFO(...)
+#define LOG_ERROR(...)
+
+#endif
+
 
 /** Parse a text buffer and return a list of lines of tokens
   *
@@ -376,3 +389,63 @@ std::string serializeTokens(const std::list<std::list<std::string> > &linesOfTok
     }
     return result;
 }
+
+
+#ifdef SM_PARSER
+
+#include <iostream>
+void usage()
+{
+    printf("Usage:\n"
+           "    smparser <file> <key> [<n>]\n"
+           );
+    exit(1);
+}
+
+int main(int argc, char **argv)
+{
+    if (argc < 3) usage();
+    if (argc > 4) usage();
+    const char *file = argv[1];
+    const char *key = argv[2];
+    int n = 1;
+    if (argc == 4) n = atoi(argv[3]);
+
+    const char *data = 0;
+    int size = 0;
+    std::string stdinContents;
+    if (0 == strcmp(file, "-")) {
+        // read from stdin
+        std::string line;
+        while (getline(std::cin, line)) {
+            if (stdinContents.size()) stdinContents += '\n';
+            stdinContents += line;
+        }
+        data = stdinContents.c_str();
+        size = stdinContents.size();
+        //printf("stdinContents=%s\n, size=%d", data, size);
+    } else {
+        size = loadFile(file, &data);
+        if (size < 0) {
+            fprintf(stderr, "Error: cannot open file '%s': %s\n", file, strerror(errno));
+            return 1;
+        }
+    }
+    std::list<std::list<std::string> > tokens = parseConfigTokens(data, size);
+    std::list<std::list<std::string> >::iterator line;
+    FOREACH(line, tokens) {
+        if (line->size() > 0 && line->front() == key) {
+            // key found
+            if (line->size() > n) {
+                int i;
+                for (i=0; i<n; i++) line->pop_front();
+                printf("%s", line->front().c_str());
+            }
+            printf("\n");
+            return 0;
+        }
+    }
+    return 1;
+}
+
+#endif
