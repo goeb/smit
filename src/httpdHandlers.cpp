@@ -1141,6 +1141,33 @@ void httpPostTag(struct mg_connection *conn, Project &p, std::string &ref, User 
     }
 }
 
+/** Reload a project from disk storage
+  *
+  * This encompasses the configuration and the entries.
+  */
+void httpReloadProject(struct mg_connection *conn, Project &p, User u)
+{
+    enum Role role = u.getRole(p.getName());
+    if (role != ROLE_ADMIN) {
+        sendHttpHeader403(conn);
+        return;
+    }
+    int r = p.reload();
+
+    // redirect to config page of the project
+    if (r == 0) {
+        // success, redirect to
+        std::string redirectUrl = "/" + p.getUrlName() + "/config";
+        sendHttpRedirect(conn, redirectUrl.c_str(), 0);
+
+    } else { // error
+        std::string msg = "Cannot reload project: ";
+        msg += p.getName();
+        LOG_ERROR("%s", msg.c_str());
+        sendHttpHeader500(conn, msg.c_str());
+    }
+}
+
 
 int httpGetIssue(struct mg_connection *conn, Project &p, const std::string &issueId, User u)
 {
@@ -1503,6 +1530,7 @@ int log_message_handler(const struct mg_connection *conn, const char *msg)
   * /myp/issues/123         GET/POST   user              a particular issue: get all entries or add a new entry
   * /myp/issues/x/y/delete  POST       user              delete an entry y of issue x
   * /myp/tags/x/y           POST       user              tag / untag an entry
+  * /myp/reload             POST       admin             reload project from disk storage
   * /any/other/file         GET        user              any existing file (in the repository)
   */
 
@@ -1581,6 +1609,7 @@ int begin_request_handler(struct mg_connection *conn)
                 else if ( (resource == "views") && (method == "GET")) httpGetView(conn, *p, uri, user);
                 else if ( (resource == "views") && (method == "POST") ) httpPostView(conn, *p, uri, user);
                 else if ( (resource == "tags") && (method == "POST") ) httpPostTag(conn, *p, uri, user);
+                else if ( (resource == "reload") && (method == "POST") ) httpReloadProject(conn, *p, user);
                 else handled = false;
 
             } else handled = false; // the resource is not a project

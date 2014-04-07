@@ -150,14 +150,14 @@ std::string ProjectConfig::getLabelOfProperty(const std::string &propertyName) c
     return label;
 }
 
-/** load in memory the given project
-  * re-load if it was previously loaded
+/** init and load in memory the given project
+  *
   * @param path
   *    Full path where the project is stored
-  * @param name
-  *    Name of the project (generally the same as the basename of the path)
   *
-  * @return 0 if success, -1 if failure
+  * @return
+  *    A pointer to the newly created project instance
+  *    Null pointer if error
   *
   * Project names are encoded on the filesystem because we we want to
   * allow / and any other characters in project names.
@@ -168,7 +168,7 @@ std::string ProjectConfig::getLabelOfProperty(const std::string &propertyName) c
   *     url-decoding, so that a double url-encoding would not be enough.
   */
 
-Project *Project::load(const char *path)
+Project *Project::init(const char *path)
 {
     Project *p = new Project;
     LOG_DEBUG("Loading project %s (%p)...", path, p);
@@ -180,29 +180,42 @@ Project *Project::load(const char *path)
     p->path = path;
     p->maxIssueId = 0;
 
-    int r = p->loadConfig(path);
-    if (r == -1) {
+    int r = p->load();
+    if (r != 0) {
         delete p;
-        LOG_DEBUG("Project '%s' not loaded because of errors while reading the config.", path);
-        return 0;
+        p = 0;
     }
-
-    p->loadPredefinedViews(path);
-
-    r = p->loadEntries(path);
-    if (r == -1) {
-        LOG_ERROR("Project '%s' not loaded because of errors while reading the entries.", path);
-        delete p;
-        return 0;
-    }
-
-    p->loadTags(path);
-
-    LOG_INFO("Project %s loaded.", path);
-
-    p->consolidateIssues();
-
     return p;
+}
+
+/** Load a project: configuration, views, entries, tags
+  *
+  * @return
+  *     0 on success, -1 on error.
+  */
+int Project::load()
+{
+    int r = loadConfig();
+    if (r == -1) {
+        LOG_DEBUG("Project '%s' not loaded because of errors while reading the config.", path.c_str());
+        return r;
+    }
+
+    loadPredefinedViews();
+
+    r = loadEntries();
+    if (r == -1) {
+        LOG_ERROR("Project '%s' not loaded because of errors while reading the entries.", path.c_str());
+        return r;
+    }
+
+    loadTags();
+
+    LOG_INFO("Project %s loaded.", path.c_str());
+
+    consolidateIssues();
+
+    return 0;
 }
 
 Entry *loadEntry(std::string dir, const char* basename)
@@ -309,7 +322,7 @@ void Project::consolidateIssues()
     }
     LOG_DEBUG("consolidateIssues() done.");
 }
-int Project::loadEntries(const char *path)
+int Project::loadEntries()
 {
     // load files path/issues/*/*
     std::string pathToEntries = path;
@@ -675,7 +688,7 @@ std::map<std::string, PredefinedView> PredefinedView::parsePredefinedViews(std::
 
 
 // @return 0 if OK, -1 on error
-int Project::loadConfig(const char *path)
+int Project::loadConfig()
 {
     LOG_FUNC();
     std::string pathToProjectFile = path;
@@ -1007,17 +1020,36 @@ void Project::updateMaxIssueId(uint32_t i)
     if (i > maxIssueId) maxIssueId = i;
 }
 
+int Project::reload()
+{
+    LOG_INFO("Reloading project '%s'...", getName().c_str());
+    ScopeLocker L1(locker, LOCK_READ_WRITE);
+    ScopeLocker L2(lockerForConfig, LOCK_READ_WRITE);
 
-void Project::loadPredefinedViews(const char *projectPath)
+    // free all issues and entries
+    std::map<std::string, Issue*>::iterator issue;
+    FOREACH(issue, issues) {
+        std::map<std::string, Entry*>::iterator entry;
+        FOREACH(entry, issue->second->entries) {
+            delete entry->second;
+        }
+        delete issue->second;
+    }
+    issues.clear();
+
+    // load the project again
+    int r = load();
+    return r;
+}
+
+void Project::loadPredefinedViews()
 {
     LOG_FUNC();
 
-    std::string path = projectPath;
-    path += '/';
-    path += VIEWS_FILE;
+    std::string viewsPath = path + '/' + VIEWS_FILE;
 
     const char *buf = 0;
-    int n = loadFile(path.c_str(), &buf);
+    int n = loadFile(viewsPath.c_str(), &buf);
 
     if (n > 0) {
 
@@ -1034,13 +1066,12 @@ void Project::loadPredefinedViews(const char *projectPath)
 /** Look for tags: files <project>/tags/<issue>/<entry>
   *
   */
-void Project::loadTags(const char *projectPath)
+void Project::loadTags()
 {
-    std::string path = projectPath;
-    path += "/" TAGS_DIR "/";
+    std::string tagsPath = path + "/" TAGS_DIR "/";
     DIR *tagsDirHandle;
-    if ((tagsDirHandle = opendir(path.c_str())) == NULL) {
-        LOG_DEBUG("No tags directory '%s'", path.c_str());
+    if ((tagsDirHandle = opendir(tagsPath.c_str())) == NULL) {
+        LOG_DEBUG("No tags directory '%s'", tagsPath.c_str());
         return;
     }
 
@@ -1057,8 +1088,7 @@ void Project::loadTags(const char *projectPath)
             continue;
         }
 
-        std::string issuePath = path;
-        issuePath += "/" + issueId;
+        std::string issuePath = path + "/" + issueId;
         // open this subdir and look for all files of this subdir
         DIR *issueDirHandle;
         if ((issueDirHandle = opendir(issuePath.c_str())) == NULL) continue; // not a directory
@@ -1705,7 +1735,7 @@ Project *Database::createProject(const std::string &name)
 
 Project *Database::loadProject(const char *path)
 {
-    Project *p = Project::load(path);
+    Project *p = Project::init(path);
     if (!p) return 0;
 
     {

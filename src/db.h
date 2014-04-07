@@ -113,7 +113,7 @@ struct ProjectConfig {
 
 class Project {
 public:
-    static Project *load(const char *path); // load a project
+    static Project *init(const char *path); // init and load a project
     std::vector<Issue*> search(const char *fulltextSearch,
                                const std::map<std::string, std::list<std::string> > &filterIn,
                                const std::map<std::string, std::list<std::string> > &filterOut,
@@ -141,12 +141,15 @@ public:
     int toggleTag(const std::string &issueId, const std::string &entryId, const std::string &tagid);
     uint32_t allocateNewIssueId();
     void updateMaxIssueId(uint32_t i);
+    int reload(); // reload a project from disk storage
+
 
 private:
-    int loadConfig(const char *path);
-    int loadEntries(const char *path);
-    void loadPredefinedViews(const char *path);
-    void loadTags(const char *path);
+    int load(); // load a project: config, views, entries, tags
+    int loadConfig();
+    int loadEntries();
+    void loadPredefinedViews();
+    void loadTags();
     void consolidateIssues();
 
     void consolidateIssue(Issue *i);

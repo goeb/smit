@@ -35,7 +35,7 @@ signin() {
     username="$2"
     passwd="$3"
 
-    curl -d "username=$username&password=$passwd" -c $SMITC_COOKIE "$serverurl/signin?format=text"
+    curl -X POST -d "username=$username&password=$passwd" -c $SMITC_COOKIE "$serverurl/signin?format=text"
 }
 
 get() {
@@ -48,6 +48,7 @@ get() {
         else q="?"; fi
         q="${q}format=text"
     fi
+    set -x
     curl -s -b $SMITC_COOKIE "$url$q"
 }
 
@@ -55,11 +56,12 @@ post() {
     #echo "post... args=$@" 
     uri="$1"
     shift
+    data=""
     while [ "$1" != "" ]; do
         data="$data -F $1"
         shift
     done
-    curl -H Expect: -s $data -b $SMITC_COOKIE "$uri?format=text"
+    curl -X POST -H Expect: -s $data -b $SMITC_COOKIE "$uri?format=text"
 }
 
 eval $command $args

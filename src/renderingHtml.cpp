@@ -144,7 +144,11 @@ public:
     }
 
     ~VariableNavigator() {
-        if (buffer) free((void*)buffer);
+        if (buffer) {
+            LOG_DEBUG("Freeing buffer %p", buffer);
+            free((void*)buffer); // the buffer was allocated in loadFile or in loadProjectPage
+            buffer = 0;
+        }
     }
 
     std::string getNextVariable() {
