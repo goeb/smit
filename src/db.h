@@ -107,6 +107,7 @@ struct ProjectConfig {
     std::map<std::string, PredefinedView> predefinedViews;
     std::map<std::string, TagSpec> tags;
     bool numberIssueAcrossProjects; // accross project
+    std::string trigger;
 
     // methods
     const PropertySpec *getPropertySpec(const std::string name) const;

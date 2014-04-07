@@ -586,6 +586,15 @@ ProjectConfig parseProjectConfig(std::list<std::list<std::string> > &lines)
             if (value == "global") config.numberIssueAcrossProjects = true;
             else LOG_ERROR("Invalid value '%s' for numberIssues.", value.c_str());
 
+        } else if (token == "trigger") {
+            std::string trigger = pop(*line);
+            if (trigger.empty()) {
+                LOG_ERROR("Invalid empty trigger");
+                wellFormatedLines.pop_back(); // remove incorrect line
+            } else {
+                config.trigger = trigger; // path to program to be launched
+            }
+
         } else if (token == "tag") {
             TagSpec tagspec;
             tagspec.id = pop(*line);
@@ -723,6 +732,7 @@ int Project::modifyConfig(std::list<std::list<std::string> > &tokens)
     c.predefinedViews = config.predefinedViews;
     c.tags = config.tags;
     c.numberIssueAcrossProjects = config.numberIssueAcrossProjects;
+    c.trigger = config.trigger;
 
     // add version
     std::list<std::string> versionLine;
@@ -753,6 +763,15 @@ int Project::modifyConfig(std::list<std::list<std::string> > &tokens)
         line.push_back("global");
         tokens.push_back(line);
     }
+
+    // serialize trigger, if any
+    if (config.trigger.size()) {
+        line.clear();
+        line.push_back("trigger");
+        line.push_back(config.trigger);
+        tokens.push_back(line);
+    }
+
 
     // write to file
     std::string data = serializeTokens(tokens);
@@ -1619,6 +1638,19 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
     } // end of processing of uploaded files
 
     entryId = newEntryId;
+
+    // launch the trigger, if any
+    if (config.trigger.size()) {
+        // command: /path/to/trigger /path/to/entry
+        std::string trigCmd = Database::Db.pathToRepository + '/' + config.trigger + ' ';
+        trigCmd += pathOfNewEntry;
+        LOG_DEBUG("Launching trigger: %s", trigCmd.c_str());
+        int trigCode = system(trigCmd.c_str());
+        if (trigCode != 0) {
+            LOG_ERROR("Trigger returned %d (cmd=%s)", trigCode, trigCmd.c_str());
+        }
+    }
+
     return r;
 }
 
