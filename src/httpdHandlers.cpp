@@ -1174,7 +1174,6 @@ int httpGetIssue(struct mg_connection *conn, Project &p, const std::string &issu
     LOG_DEBUG("httpGetIssue: project=%s, issue=%s", p.getName().c_str(), issueId.c_str());
 
     Issue issue;
-    std::list<Entry*> entries;
     int r = p.get(issueId.c_str(), issue);
     if (r < 0) {
         // issue not found or other error

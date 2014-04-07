@@ -35,7 +35,7 @@
 ContextParameters::ContextParameters(struct mg_connection *cnx, User u, Project &p)
 {
     project = &p;
-    projectConfig = p.getConfig();
+    projectConfig = p.getConfig(); // take a copy of the config
     user = u;
     userRole = u.getRole(p.getName());
     conn = cnx;
@@ -107,6 +107,9 @@ int loadProjectPage(struct mg_connection *conn, const std::string &projectPath, 
     return n;
 }
 
+/** class in charge of replacing the SM_ variables in the HTML pages
+  *
+  */
 class VariableNavigator {
 public:
     std::vector<struct Issue*> *issueList;
