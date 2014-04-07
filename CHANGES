@@ -1,3 +1,9 @@
+v1.4.1, April 2014
+
+    - hot reload of project configuration
+    - trigger external program on new entry
+    - tool smparser for parsing smit files
+    - fix thread safety for project config access
 
 v1.4.0
     
