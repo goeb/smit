@@ -48,7 +48,6 @@ get() {
         else q="?"; fi
         q="${q}format=text"
     fi
-    set -x
     curl -s -b $SMITC_COOKIE "$url$q"
 }
 
