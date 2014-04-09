@@ -18,12 +18,11 @@
         <form action="" method="POST">
             <h1>User Configuration</h1>
             <div class="sm_user_superadmin_zone">
-                User name: <input id="name" name="name" type="text" required="required">
-                <br>
-                <label>Superadmin: <input id="sm_superadmin" name="superadmin" type="checkbox"></label>
-
-                <br>
-                <br>
+                <table>
+                    <tr><td>User name:</td><td><input id="name" name="name" type="text" required="required"></td></tr>
+                    <tr><td>Email:</td><td><input id="email" name="email" type="text" pattern="[-\.a-zA-Z0-9@_+$]*"></td></tr>
+                    <tr><td><label for="sm_superadmin">Superadmin:</label></td><td><input id="sm_superadmin" name="superadmin" type="checkbox"></td></tr>
+                </table>
                 <br>
 
                 Roles on projects:<br>

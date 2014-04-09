@@ -38,7 +38,9 @@ std::string User::serialize()
 
     result += "addUser ";
     result += serializeSimpleToken(username) + " ";
-    if (superadmin) result += "superadmin \\\n";
+    if (superadmin) result += "superadmin ";
+    if (email.size()) result += "email " + serializeSimpleToken(email) + " ";
+    result += "\\\n";
     if (!hashType.empty()) {
         result += serializeSimpleToken(hashType) + " ";
         result += serializeSimpleToken(hashValue) + " \\\n";
@@ -151,10 +153,18 @@ int UserBase::init(const char *path)
                     }
                     u.rolesOnProjects[project] = r;
 
+                } else if (token == "email") {
+                    std::string email = popListToken(*line);
+                    if (email.empty()) {
+                        LOG_ERROR("Empty email for user %s", u.username.c_str());
+                        continue;
+                    }
+                    u.email = email;
+
                 } else if (token == "sha1") {
                     std::string hash = popListToken(*line);
                     if (hash.empty()) {
-                        LOG_ERROR("Empty hash");
+                        LOG_ERROR("Empty hash for user %s", u.username.c_str());
                         continue;
                     }
                     u.hashType = token;

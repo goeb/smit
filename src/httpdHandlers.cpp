@@ -486,6 +486,7 @@ void httpPostUsers(struct mg_connection *conn, User signedInUser, const std::str
             else if (key == "passwd2") passwd2 = value;
             else if (key == "project") project = value;
             else if (key == "role") role = value;
+            else if (key == "email") newUserConfig.email = value;
             else {
                 LOG_ERROR("httpPostUsers: unexpected parameter '%s'", key.c_str());
             }
