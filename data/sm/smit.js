@@ -270,11 +270,6 @@ function addProject(divname, selectedProject, selectedRole) {
     div.appendChild(i);
     div.appendChild(document.createElement('br'));
 }
-function setEmail(value) {
-    var id = 'email';
-    var input = document.getElementById(id);
-    input.value = value;
-}
 function setName(value) {
     var iname = 'name';
     var input = document.getElementById(iname);

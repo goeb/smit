@@ -27,7 +27,6 @@ std::list<std::string> getAvailableRoles();
 
 struct User {
     std::string username;
-    std::string email;
     std::string hashType;
     std::string hashValue;
     std::map<std::string, enum Role> rolesOnProjects;

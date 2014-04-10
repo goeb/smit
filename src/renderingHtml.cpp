@@ -304,7 +304,6 @@ void RHtml::printPageUser(const ContextParameters &ctx, const User *u)
         if (u) mg_printf(conn, "setName('%s');\n", enquoteJs(u->username).c_str());
     }
 
-    if (u && u->email.size()) mg_printf(conn, "setEmail('%s');\n", enquoteJs(u->email).c_str());
     if (u && u->superadmin) {
         mg_printf(conn, "setSuperadminCheckbox();\n");
     }
