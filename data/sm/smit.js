@@ -280,17 +280,44 @@ function setSuperadminCheckbox() {
     input.checked = true;
 }
 
+function removeElement(node) {
+    if (node) node.parentNode.removeChild(node);
+}
+
+PropertiesList = {};
+PropertiesList['owner'] = ['toto', 'tata', 'john'];
+PropertiesList['target_version'] = ['v1.1', 'v1.2', 'v2.0'];
+function updateFilterValue(divObject, value) {
+    // divObject must have 1 or 2 children: a select a optionnaly another input
+    // remove the second one, and recalculate it
+    removeElement(divObject.childNodes.item(1));
+    var selectedKey = divObject.childNodes.item(0);
+    var values = PropertiesList[selectedKey.value];
+    if (values) {
+        // build select
+        var select = createSelect(values, value, true);
+        select.name = 'filter_value';
+        divObject.appendChild(select);
+    } else {
+        // build text input
+        var i = document.createElement('input');
+        i.type = "text";
+        i.value = value;
+        i.name = 'filter_value';
+        divObject.appendChild(i);
+    }
+}
+
 function addFilter(divname, selected, value) {
     var div = document.getElementById(divname);
     var select = createSelect(Properties, selected, true);
     select.name = divname;
-    div.appendChild(select);
-    var i = document.createElement('input');
-    i.type = "text";
-    i.value = value;
-    i.name = 'filter_value';
-    div.appendChild(i);
-    div.appendChild(document.createElement('br'));
+
+    var container = document.createElement('div');
+    container.className = 'sm_filter';
+    container.appendChild(select);
+    select.onchange = function() { updateFilterValue(container, value); };
+    div.appendChild(container);
 }
 function addColspec(selected) {
     var divname = 'colspec';
