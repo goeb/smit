@@ -154,7 +154,7 @@ int UserBase::init(const char *path)
                 } else if (token == "sha1") {
                     std::string hash = popListToken(*line);
                     if (hash.empty()) {
-                        LOG_ERROR("Empty hash");
+                        LOG_ERROR("Empty hash for user %s", u.username.c_str());
                         continue;
                     }
                     u.hashType = token;
