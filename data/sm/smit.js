@@ -284,15 +284,12 @@ function removeElement(node) {
     if (node) node.parentNode.removeChild(node);
 }
 
-PropertiesList = {};
-PropertiesList['owner'] = ['toto', 'tata', 'john'];
-PropertiesList['target_version'] = ['v1.1', 'v1.2', 'v2.0'];
 function updateFilterValue(divObject, value) {
     // divObject must have 1 or 2 children: a select a optionnaly another input
     // remove the second one, and recalculate it
     removeElement(divObject.childNodes.item(1));
     var selectedKey = divObject.childNodes.item(0);
-    var values = PropertiesList[selectedKey.value];
+    var values = PropertiesLists[selectedKey.value];
     if (values) {
         // build select
         var select = createSelect(values, value, true);
@@ -317,6 +314,8 @@ function addFilter(divname, selected, value) {
     container.className = 'sm_filter';
     container.appendChild(select);
     select.onchange = function() { updateFilterValue(container, value); };
+    // update now
+    updateFilterValue(container, value);
     div.appendChild(container);
 }
 function addColspec(selected) {
