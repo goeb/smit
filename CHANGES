@@ -1,3 +1,11 @@
+
+
+v1.5.0, 11 Apr 2014
+
+    - advanced search: filter-in/out select lists
+    - advanced search: filters on part of value, case insensitive
+    - fix storage of several tags in project config
+
 v1.4.1, April 2014
 
     - hot reload of project configuration
