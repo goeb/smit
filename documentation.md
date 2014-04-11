@@ -4,15 +4,14 @@
 
 ### Windows Platform
 
-- Download [smit-win32-1.1.1.zip](downloads/smit-win32-1.1.1.zip)
-- Unzip `smit-win32-1.1.1.zip`
+- Unzip
 - `smit.exe` is ready to use
 
 ### Linux
 
 Requirements:
 
-- libcrypto (provided by OpenSSL for instance)
+- OpenSSL
 
 Installation instructions:
 
@@ -20,9 +19,9 @@ Installation instructions:
     cd smit
     make
 
-And copy the compiled executable `smit` to somewhere in your PATH (for example $HOME/bin).
+And copy the compiled executable `smit` to your PATH (for example /usr/bin).
 
-## Usage
+## Command Line Usage
 
     Usage: smit [--version] [--help]
                 <command> [<args>]
@@ -61,11 +60,38 @@ And copy the compiled executable `smit` to somewhere in your PATH (for example $
         ro          able to read issues
         ref         may not access a project, but may be referenced
 
+### Example: Create repo and project
+```
+    mkdir myrepo
+    smit init myrepo
+    smit addproject -d myrepo myproject1
+    smit adduser homer -d myrepo --superadmin --passwd homer --project myproject1 admin
+    smit serve myrepo --listen-port 9090
+```
+
+And with your browser, go to: [http://localhost:9090](http://localhost:9090)
+
+Note that on Windows the scripts `bin/init.bat` and `start.bat` help perform these steps, but you still may want to customize the repository name and admin user name.
+
+
+
 ## Project Configuration
 
-This configuration can be managed through the web interface, but a few options cannot be managed this way at the moment (see below).
+The project configuration defines:
 
-The configuration of a project is given by the file `project` in the directory of the project.
+- the properties of the issues
+- the tags
+- the numbering scheme of the issues (local or global to several projects)
+- the trigger (an external program to launch on new entries)
+
+The configuration may be modified in two ways:
+
+- via the web interface
+    - only the properties may be managed this way
+    - hot reload 
+- via editing directly the configuration file, and performing a hot reload via the web interface
+
+The configuration of a project is given by the file `project` in the directory of the project. 
 
 ### addProperty
 ```
@@ -123,6 +149,19 @@ tag <id> -label <text> [-display]
 - `<text>` is the text to display in the HTML page
 - `-display` requires the display of a box in the headers of issues, that indicates if at least one entry of the current issue is tagged (this may be seen as a checkbox, to quickly verify that some quality criterion is met).
 
+### trigger
+(smit version >= 1.5, no web interface)
+
+The trigger defines an external program to be launch after each new entry.
+
+```
+trigger <path>
+```
+
+- `<path>` must be a relative path inside the repository.
+
+The external program will be given by smit the path to the new entry as first argument.
+
 ### Full example 
 
 ```
@@ -134,10 +173,14 @@ addProperty owner -label "The owner" selectUser
 numberIssues global
 
 tag test -label "Test Proof" -display
+
+trigger public/sendEmail.sh
 ```
 
-## Directories Layout
 
+## Customize the HTML pages
+
+One may customize the HTML and CSS pages. Some knowledge of HTML and CSS are needed.
 Each instance of Smit serves one repository (also refered below as `$REPO`).
 
 The Directories layout is typically:
@@ -149,51 +192,37 @@ The Directories layout is typically:
     ├── project-B
     │   └── html
     │
-    ├── project-C
-    │   └── html
-    │
     └── public
-    
 
 
-## Create repo and project
+Smit grants read access to files under the `$REPO/public`, without restriction. Do not put confidential data in here.
 
-    mkdir myrepo
-    smit init myrepo
-    smit addproject -d myrepo myproject1
-    smit adduser homer -d myrepo --superadmin --passwd homer --project myproject1 admin
-    smit serve myrepo --listen-port 9090
-
-And with your browser, go to: [http://localhost:9090](http://localhost:9090)
-
-Note that on Windows the scripts `bin/init.bat` and `start.bat` help perform these steps, but you still may want to customize the repository name and admin user name.
-
-
-
-
-## Customize the HTML pages
-
-Feel free to customize the HTML and CSS. These files are in `$REPO/public`:
+By default the core HTML files are in `$REPO/public` and shared by all the projects of the repository: 
 
     signin.html
     issue.html
     issues.html
+    newIssue.html
     project.html
+    projects.html
     user.html
     view.html
     views.html
-    newIssue.html
-    projects.html
-    style.css
 
+After a page modification, there is no need to restart Smit. Just reload the page.
 
-## Customize the logo
+### Customize the logo
 
-Modifiy the `$REPO/public/logo.png` according to yours needs.
+Modify the `$REPO/public/logo.png` according to yours needs, or modify the HTML files to point to another logo.
+
+### Customize the CSS
+
+Modify `$REPO/public/style.css` and `print.css` according to your needs.
+
     
-## The SM variables
+### The SM variables
 
-In order to let a maximum customization freedom, Smit let the user define the global structure of the HTML pages, and inserts the dynamic contents at users's defined places, indicated by SM variables:
+In order to let a maximum customization freedom, Smit lets the user define the global structure of the HTML pages, and inserts the dynamic contents at users' defined places, indicated by SM variables:
 
     SM_DIV_ISSUE
     SM_DIV_ISSUE_FORM
@@ -213,7 +242,23 @@ In order to let a maximum customization freedom, Smit let the user define the gl
 Some variables make sense only in some particular context. For instance,
 `SM_RAW_ISSUE_ID` makes sense only when a single issue is displayed.
 
+### Setting different HTML pages for 2 projects in the same repository.
 
+The core HTML pages are first looked after in `$REPO/<project>/html/.` and, if not present, Smit looks in the `$REPO/public` directory.
+
+Therefore, if you want to customize (for example) the 'issues' page for a project:
+
+- copy `$REPO/public/issues.html` to `$REPO/<project>/html/issues.html`
+- edit `$REPO/<project>/html/issues.html` to suit your needs
+
+### Interface constraints
+
+Be sure to not modify the following topics in the HTML pages, as they insure proper operation of Smit:
+
+- keep the inclusion of `/sm/smit.js`. Smit uses this to update some dynamic contents on some pages (this file is included in the Smit executable).
+- keep the name of the `SM_` variables 
+- keep the `id="sm_..."`
+- keep the `class="sm_..."`
 
 ## FAQ
 
@@ -226,14 +271,4 @@ The reserve keywords that cannot be used as project names are:
     public
     sm
     users
-
-### How to set up different pages for two projects?
-
-HTML pages are first looked after in `$REPO/<project>/html/.` and, if not present, Smit looks in the `$REPO/public` directory.
-
-So, for example, if you want to customize the 'issues' page for a project:
-
-- copy `$REPO/public/issues.html` to `$REPO/<project>/html/issues.html`
-- edit `$REPO/<project>/html/issues.html` to suit your needs
-
 
