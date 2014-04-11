@@ -1649,8 +1649,14 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
         int trigCode = system(trigCmd.c_str());
         if (trigCode == -1) {
             LOG_ERROR("Trigger failed -1 (%s)", trigCmd.c_str());
+#if defined(_WIN32)
+        } else if (trigCode != 0) {
+            LOG_ERROR("Trigger failed with exit status %d (%s)", trigCode, trigCmd.c_str());
+
+#else
         } else if (WEXITSTATUS(trigCode) != 0) {
             LOG_ERROR("Trigger failed with exit status %d (%s)", WEXITSTATUS(trigCode), trigCmd.c_str());
+#endif
         }
     }
 
