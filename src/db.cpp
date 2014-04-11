@@ -1211,7 +1211,7 @@ bool isPropertyInFilter(const std::list<std::string> &propertyValue,
 
     FOREACH (fv, filteredValues) {
         FOREACH (v, propertyValue) {
-            if (*v == *fv) return PROPERTY_FILTERED_FOUND;
+            if (mg_strcasestr(v->c_str(), fv->c_str())) return PROPERTY_FILTERED_FOUND;
         }
         if (fv->empty() && propertyValue.empty()) {
             // allow filtering for empty values

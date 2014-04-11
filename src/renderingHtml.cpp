@@ -346,6 +346,28 @@ void RHtml::printPageView(const ContextParameters &ctx, const PredefinedView &pv
     if (pv.isDefault) mg_printf(conn, "setDefaultCheckbox();\n");
     std::list<std::string> properties = ctx.projectConfig.getPropertiesNames();
     mg_printf(conn, "Properties = %s;\n", toJavascriptArray(properties).c_str());
+
+    // add PropertiesLists, for proposing the values in filterin/out
+    mg_printf(conn, "PropertiesLists = {};\n");
+    std::list<PropertySpec>::const_iterator pspec;
+    FOREACH(pspec, ctx.projectConfig.properties) {
+        PropertyType t = pspec->type;
+        if (t == F_SELECT || t == F_MULTISELECT) {
+            mg_printf(conn, "PropertiesLists['%s'] = %s;\n", pspec->name.c_str(),
+                      toJavascriptArray(pspec->selectOptions).c_str());
+
+        } else if (t == F_SELECT_USER) {
+            std::set<std::string>::const_iterator u;
+            std::set<std::string> users = UserBase::getUsersOfProject(ctx.getProject().getName());
+            // convert to std::list
+            std::list<std::string> userList;
+            userList.push_back("me");
+            FOREACH(u, users) { userList.push_back(*u); }
+            mg_printf(conn, "PropertiesLists['%s'] = %s;\n", pspec->name.c_str(),
+                      toJavascriptArray(userList).c_str());
+        }
+    }
+
     mg_printf(conn, "setSearch('%s');\n", enquoteJs(pv.search).c_str());
     mg_printf(conn, "setUrl('/%s/issues/?%s');\n", ctx.getProject().getUrlName().c_str(),
               pv.generateQueryString().c_str());

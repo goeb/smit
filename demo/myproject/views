@@ -1,4 +1,4 @@
-+smv 1.1.1
++smv 1.4.1-rc1
 addView "Deleted issues" \
     filterin status deleted \
 
@@ -8,7 +8,8 @@ addView "Open issues" \
     sort +mtime \
 
 addView "test xxx-abb-renaed" \
-    filterin id "" \
-    filterout id 2121 \
+    filterin id 1 \
+    filterin owner fred \
+    filterout multi-a 42 \
     search toto
 

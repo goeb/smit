@@ -1045,6 +1045,9 @@ void httpPostView(struct mg_connection *conn, Project &p, const std::string &nam
         std::string key = popToken(tokenPair, '=');
         std::string value = urlDecode(tokenPair);
 
+        trimBlanks(key);
+        trimBlanks(value);
+
         if (key == "name") pv.name = value;
         else if (key == "colspec" && !value.empty()) {
             if (! pv.colspec.empty()) pv.colspec += "+";
@@ -1301,6 +1304,7 @@ void parseMultipartAndStoreUploadedFiles(const std::string &data, std::string bo
             return;
         }
         name = name.substr(0, quotePos);
+        trimBlanks(name);
 
         // get filename (optional)
         // filename containing " (double-quote) is not supported
@@ -1447,7 +1451,7 @@ void httpPostEntry(struct mg_connection *conn, Project &pro, const std::string &
     const char *contentType = mg_get_header(conn, "Content-Type");
     if (0 == strcmp("application/x-www-form-urlencoded", contentType)) {
 
-        // this branch is obsolete. It was the old code before file-upload capability
+        // this branch is obsolete. It was the old code without file-upload capability
 
         // application/x-www-form-urlencoded
         // post_data is "var1=val1&var2=val2...".
