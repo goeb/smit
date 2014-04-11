@@ -746,6 +746,7 @@ int Project::modifyConfig(std::list<std::list<std::string> > &tokens)
     std::map<std::string, TagSpec>::iterator t;
     std::list<std::string> line;
     FOREACH(t, config.tags) {
+        line.clear();
         line.push_back("tag");
         line.push_back(t->second.id);
         if (!t->second.label.empty()) {
