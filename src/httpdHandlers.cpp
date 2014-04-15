@@ -40,26 +40,34 @@
 
 std::string exeFile; // path to the executable (used for extracting embedded files)
 #define K_ME "me"
+#define MAX_SIZE_UPLOAD (10*1024*1024)
 
-std::string readMgConn(struct mg_connection *conn, size_t maxSize)
+/** Read bytes from the socket, and store in data
+  *
+  * @return
+  *    0 on success
+  *   -1 on error (data too big)
+  */
+int readMgConn(struct mg_connection *conn, std::string &data, size_t maxSize)
 {
-    std::string postData;
+    data.clear();
     const int SIZ = 4096;
     char postFragment[SIZ+1];
     int n; // number of bytes read
 
     while ( (n = mg_read(conn, postFragment, SIZ)) > 0) {
         LOG_DEBUG("postFragment size=%d", n);
-        if (postData.size() > maxSize) {
-            // 10 MByte is too much. overflow. abort.
-            LOG_ERROR("Too much POST data. Abort.");
-            break;
+        data.append(std::string(postFragment, n));
+        if (data.size() > maxSize) {
+            // data too big. overflow. abort.
+            LOG_ERROR("Too much POST data. Abort. maxSize=%u", maxSize);
+            return -1;
         }
-        postData.append(std::string(postFragment, n));
-    }
-    LOG_DEBUG("postData size=%u", postData.size());
 
-    return postData;
+    }
+    LOG_DEBUG("data size=%u", data.size());
+
+    return 0; // ok
 }
 
 
@@ -88,7 +96,8 @@ std::string request2string(struct mg_connection *conn)
 
     L += snprintf(content+L, SIZEX-L, "</pre>");
 
-    std::string postData = readMgConn(conn, 10*1024*1024);
+    std::string postData;
+    readMgConn(conn, postData, 10*1024*1024);
 
     return std::string(content) + postData;
 
@@ -110,6 +119,13 @@ void sendHttpHeader403(struct mg_connection *conn)
     mg_printf(conn, "HTTP/1.1 403 Forbidden\r\n\r\n");
     mg_printf(conn, "403 Forbidden\r\n");
 }
+
+void sendHttpHeader413(struct mg_connection *conn, const char *msg)
+{
+    mg_printf(conn, "HTTP/1.1 413 Request Entity Too Large\r\n\r\n");
+    mg_printf(conn, "413 Request Entity Too Large\r\n%s\r\n", msg);
+}
+
 void sendHttpHeader404(struct mg_connection *conn)
 {
     mg_printf(conn, "HTTP/1.1 404 Not Found\r\n\r\n");
@@ -469,7 +485,12 @@ void httpPostUsers(struct mg_connection *conn, User signedInUser, const std::str
         // application/x-www-form-urlencoded
         // post_data is "var1=val1&var2=val2...".
 
-        std::string postData = readMgConn(conn, 4096);
+        std::string postData;
+        int rc = readMgConn(conn, postData, 4096);
+        if (rc < 0) {
+            sendHttpHeader413(conn, "You tried to upload too much data. Max is 4096 bytes.");
+            return;
+        }
 
         User newUserConfig;
         std::string passwd1, passwd2;
@@ -755,7 +776,13 @@ void httpPostProjectConfig(struct mg_connection *conn, Project &p, User u)
         // application/x-www-form-urlencoded
         // post_data is "var1=val1&var2=val2...".
 
-        postData = readMgConn(conn, 4096);
+        int rc = readMgConn(conn, postData, 4096);
+        if (rc < 0) {
+            std::ostringstream s;
+            sendHttpHeader413(conn, "You tried to upload too much data. Max is 4096 bytes.");
+            return;
+        }
+
 
         LOG_DEBUG("postData=%s", postData.c_str());
         // parse the posted data
@@ -1009,9 +1036,14 @@ void httpPostView(struct mg_connection *conn, Project &p, const std::string &nam
     if (0 == strcmp("application/x-www-form-urlencoded", contentType)) {
         // application/x-www-form-urlencoded
         // post_data is "var1=val1&var2=val2...".
-        postData = readMgConn(conn, 10*1024*1024);
+        int rc = readMgConn(conn, postData, MAX_SIZE_UPLOAD);
+        if (rc < 0) {
+            sendHttpHeader413(conn, "You tried to upload too much data. Max is 10 MB.");
+            return;
+        }
+
     }
-    LOG_DEBUG("postData=%s\n<br>", postData.c_str());
+    //LOG_DEBUG("postData=%s\n<br>", postData.c_str());
 
     std::string deleteMark = getFirstParamFromQueryString(postData, "delete");
     enum Role role = u.getRole(p.getName());
@@ -1433,7 +1465,6 @@ void parseQueryString(const std::string &queryString, std::map<std::string, std:
 }
 
 
-#define MAX_SIZE_UPLOAD (10*1024*1024)
 
 /** Handle the posting of an entry
   * If issueId is empty, then a new issue is created.
@@ -1457,7 +1488,13 @@ void httpPostEntry(struct mg_connection *conn, Project &pro, const std::string &
         // post_data is "var1=val1&var2=val2...".
         // multiselect is like: "tags=v4.1&tags=v5.0" (same var repeated)
 
-        std::string postData = readMgConn(conn, MAX_SIZE_UPLOAD);
+        std::string postData;
+        int rc = readMgConn(conn, postData, MAX_SIZE_UPLOAD);
+        if (rc < 0) {
+            sendHttpHeader413(conn, "You tried to upload too much data. Max is 10 MB.");
+            return;
+        }
+
         parseQueryString(postData, vars);
 
     } else if (0 == strncmp(multipart, contentType, strlen(multipart))) {
@@ -1475,7 +1512,13 @@ void httpPostEntry(struct mg_connection *conn, Project &pro, const std::string &
         std::string boundary = p;
         LOG_DEBUG("Boundary: %s", boundary.c_str());
 
-        std::string postData = readMgConn(conn, MAX_SIZE_UPLOAD);
+        std::string postData;
+        int rc = readMgConn(conn, postData, MAX_SIZE_UPLOAD);
+        if (rc < 0) {
+            sendHttpHeader413(conn, "You tried to upload too much data. Max is 10 MB.");
+            return;
+        }
+
         std::string tmpDir = pro.getPath() + "/tmp";
         parseMultipartAndStoreUploadedFiles(postData, boundary, vars, tmpDir);
 
