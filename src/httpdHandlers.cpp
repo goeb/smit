@@ -906,6 +906,52 @@ void replaceUserMe(std::map<std::string, std::list<std::string> > &filters, cons
     }
 }
 
+enum IssueNavigation { ISSUE_NEXT, ISSUE_PREVIOUS };
+const char *GOTO_NEXT = "next";
+const char *GOTO_PREVIOUS = "previous";
+/** Redirect to next or previous issue
+  *
+  * @return
+  *     0 if the next or previous the redirection could be done
+  *    -1 otherwise
+  */
+int redirectToIssue(mg_connection *conn, const Project &p, std::vector<struct Issue*> issueList,
+                    const std::string &issueId, IssueNavigation direction, std::string qs)
+{
+    // get next issue
+    std::vector<struct Issue*>::const_iterator i;
+    FOREACH(i, issueList) {
+        if ((*i)->id == issueId) {
+            break;
+        }
+    }
+    if (direction == ISSUE_NEXT) {
+        if (i != issueList.end()) i++; // get next
+
+    } else {
+        if (i != issueList.begin()) i--; // get previous
+        else i = issueList.end();
+    }
+    if (i != issueList.end()) {
+        // redirect
+        std::string redirectUrl = "/" + p.getUrlName() + "/issues/" + (*i)->id;
+        // remove other redirections from the querystring
+        std::string newQueryString;
+        while (qs.size() > 0) {
+            std::string part = popToken(qs, '&');
+            if (0 != strncmp(GOTO_NEXT, part.c_str(), strlen(GOTO_NEXT)) &&
+                0 != strncmp(GOTO_NEXT, part.c_str(), strlen(GOTO_NEXT)) ) {
+                if (!newQueryString.empty()) newQueryString += "&";
+                newQueryString += part;
+            }
+        }
+        redirectUrl += "?view=" + urlEncode(newQueryString);
+        sendHttpRedirect(conn, redirectUrl.c_str(), 0);
+        return 0;
+
+    } else return -1;
+}
+
 void httpGetListOfIssues(struct mg_connection *conn, Project &p, User u)
 {
     // get query string parameters:
@@ -941,6 +987,18 @@ void httpGetListOfIssues(struct mg_connection *conn, Project &p, User u)
 
 
     std::vector<struct Issue*> issueList = p.search(fulltextSearch.c_str(), filterIn, filterOut, sorting.c_str());
+
+    // check for redirection to specific issue (used for previous/next)
+    std::string next = getFirstParamFromQueryString(q, GOTO_NEXT);
+    std::string previous = getFirstParamFromQueryString(q, GOTO_PREVIOUS);
+    if (next.size()) {
+        int rc = redirectToIssue(conn, p, issueList, next, ISSUE_NEXT, q);
+        if (rc == 0) return; // redirection occurred
+    } else if (previous.size()) {
+        int rc = redirectToIssue(conn, p, issueList, previous, ISSUE_PREVIOUS, q);
+        if (rc == 0) return; // redirection occurred
+    }
+
 
     std::string full = getFirstParamFromQueryString(q, "full"); // full-contents indicator
 
@@ -1590,7 +1648,8 @@ int begin_request_handler(struct mg_connection *conn)
     LOG_DEBUG("uri=%s, method=%s", uri.c_str(), method.c_str());
 
     std::string resource = popToken(uri, '/');
-    LOG_DEBUG("resource=%s, method=%s", resource.c_str(), method.c_str());
+    const char *referer = mg_get_header(conn, "Referer");
+    LOG_INFO("resource=%s, method=%s, referer=%s", resource.c_str(), method.c_str(), referer);
 
     if ((resource == "public") && (method == "GET")) return 0; // let mongoose handle the file request directly
     if ((resource == "sm") && (method == "GET")) return httpGetSm(conn, uri);
