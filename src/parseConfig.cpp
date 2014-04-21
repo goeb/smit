@@ -236,7 +236,7 @@ int writeToFile(const char *filepath, const char *data, size_t len)
 {
     int result = 0;
     mode_t mode = O_CREAT | O_TRUNC | O_WRONLY;
-    int flags = S_IRUSR;
+    int flags = S_IRUSR | S_IRGRP | S_IROTH;
 #if defined(_WIN32)
     mode |= O_BINARY;
     flags |= S_IWUSR;
