@@ -907,8 +907,6 @@ void replaceUserMe(std::map<std::string, std::list<std::string> > &filters, cons
 }
 
 enum IssueNavigation { ISSUE_NEXT, ISSUE_PREVIOUS };
-const char *GOTO_NEXT = "next";
-const char *GOTO_PREVIOUS = "previous";
 /** Redirect to next or previous issue
   *
   * @return
@@ -939,13 +937,13 @@ int redirectToIssue(mg_connection *conn, const Project &p, std::vector<struct Is
         std::string newQueryString;
         while (qs.size() > 0) {
             std::string part = popToken(qs, '&');
-            if (0 != strncmp(GOTO_NEXT, part.c_str(), strlen(GOTO_NEXT)) &&
-                0 != strncmp(GOTO_NEXT, part.c_str(), strlen(GOTO_NEXT)) ) {
+            if (0 != strncmp(QS_GOTO_NEXT, part.c_str(), strlen(QS_GOTO_NEXT)) &&
+                0 != strncmp(QS_GOTO_PREVIOUS, part.c_str(), strlen(QS_GOTO_PREVIOUS)) ) {
                 if (!newQueryString.empty()) newQueryString += "&";
                 newQueryString += part;
             }
         }
-        redirectUrl += "?view=" + urlEncode(newQueryString);
+        redirectUrl = redirectUrl + "?" + QS_ORIGIN_VIEW + "=" + urlEncode(newQueryString);
         sendHttpRedirect(conn, redirectUrl.c_str(), 0);
         return 0;
 
@@ -989,8 +987,8 @@ void httpGetListOfIssues(struct mg_connection *conn, Project &p, User u)
     std::vector<struct Issue*> issueList = p.search(fulltextSearch.c_str(), filterIn, filterOut, sorting.c_str());
 
     // check for redirection to specific issue (used for previous/next)
-    std::string next = getFirstParamFromQueryString(q, GOTO_NEXT);
-    std::string previous = getFirstParamFromQueryString(q, GOTO_PREVIOUS);
+    std::string next = getFirstParamFromQueryString(q, QS_GOTO_NEXT);
+    std::string previous = getFirstParamFromQueryString(q, QS_GOTO_PREVIOUS);
     if (next.size()) {
         int rc = redirectToIssue(conn, p, issueList, next, ISSUE_NEXT, q);
         if (rc == 0) return; // redirection occurred
@@ -1026,6 +1024,7 @@ void httpGetListOfIssues(struct mg_connection *conn, Project &p, User u)
         ctx.filterout = filteroutRaw;
         ctx.search = fulltextSearch;
         ctx.sort = sorting;
+        ctx.originView = q;
 
         if (full == "1") {
             RHtml::printPageIssuesFullContents(ctx, issueList);
@@ -1280,6 +1279,12 @@ int httpGetIssue(struct mg_connection *conn, Project &p, const std::string &issu
         if (format == RENDERING_TEXT) RText::printIssue(conn, issue);
         else {
             ContextParameters ctx = ContextParameters(conn, u, p);
+            const struct mg_request_info *req = mg_get_request_info(conn);
+            if (req->query_string) {
+                ctx.originView = getFirstParamFromQueryString(req->query_string, QS_ORIGIN_VIEW);
+                urlDecode(ctx.originView);
+                LOG_DEBUG("originView=%s", ctx.originView.c_str());
+            }
             RHtml::printPageIssue(ctx, issue);
         }
         return 1; // done
@@ -1649,7 +1654,7 @@ int begin_request_handler(struct mg_connection *conn)
 
     std::string resource = popToken(uri, '/');
     const char *referer = mg_get_header(conn, "Referer");
-    LOG_INFO("resource=%s, method=%s, referer=%s", resource.c_str(), method.c_str(), referer);
+    LOG_DEBUG("resource=%s, method=%s, referer=%s", resource.c_str(), method.c_str(), referer);
 
     if ((resource == "public") && (method == "GET")) return 0; // let mongoose handle the file request directly
     if ((resource == "sm") && (method == "GET")) return httpGetSm(conn, uri);

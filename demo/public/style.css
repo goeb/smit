@@ -137,6 +137,12 @@ input {
     font-family: monospace;
     font-size: 125%;
 }
+.sm_issue_previous, .sm_issue_next {
+    color: green;
+}
+.sm_issue_previous_disabled, .sm_issue_next_disabled {
+    display: none;
+}
 .sm_issue_pinput_summary {
     width: 100%;
 }

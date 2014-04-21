@@ -10,6 +10,11 @@
 #include "session.h"
 
 
+#define QS_GOTO_NEXT "next"
+#define QS_GOTO_PREVIOUS "previous"
+#define QS_ORIGIN_VIEW "view"
+
+
 /** SmitData is used to manage the values in the HTML
   * The HTML items marked with class "smit_data" will have
   * their value replaced by client-side scripting.
@@ -32,6 +37,7 @@ public:
     std::set<std::string> usersOfProject;
     std::list<std::pair<std::string, uint8_t> > htmlFieldDisplay;
     struct mg_connection *conn;
+    std::string originView; // query string format
 };
 
 class RHtml {
@@ -65,6 +71,8 @@ public:
     static void printScriptUpdateConfig(const ContextParameters &ctx);
     static std::string convertToRichText(const std::string &raw);
     static void printIssueSummary(const ContextParameters &ctx, const Issue &issue);
+    static void printIssueNext(const ContextParameters &ctx, const Issue &issue);
+    static void printIssuePrevious(const ContextParameters &ctx, const Issue &issue);
     static void printIssue(const ContextParameters &ctx, const Issue &issue);
     static void printIssueListFullContents(const ContextParameters &ctx, std::vector<struct Issue*> issueList);
     static void printIssueList(const ContextParameters &ctx,

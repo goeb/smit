@@ -71,6 +71,8 @@ const Project &ContextParameters::getProject() const
 #define K_SM_DIV_ISSUE_SUMMARY "SM_DIV_ISSUE_SUMMARY"
 #define K_SM_DIV_ISSUE_FORM "SM_DIV_ISSUE_FORM"
 #define K_SM_DIV_ISSUE_MSG_PREVIEW "SM_DIV_ISSUE_MSG_PREVIEW"
+#define K_SM_SPAN_ISSUE_NEXT "SM_SPAN_ISSUE_NEXT"
+#define K_SM_SPAN_ISSUE_PREVIOUS "SM_SPAN_ISSUE_PREVIOUS"
 
 std::string enquoteJs(const std::string &in)
 {
@@ -231,6 +233,12 @@ public:
 
             } else if (varname == K_SM_DIV_ISSUE_SUMMARY && currentIssue) {
                 RHtml::printIssueSummary(ctx, *currentIssue);
+
+            } else if (varname == K_SM_SPAN_ISSUE_NEXT && currentIssue) {
+                RHtml::printIssueNext(ctx, *currentIssue);
+
+            } else if (varname == K_SM_SPAN_ISSUE_PREVIOUS && currentIssue) {
+                RHtml::printIssuePrevious(ctx, *currentIssue);
 
             } else if (varname == K_SM_DIV_ISSUE_FORM) {
                 Issue issue;
@@ -1115,8 +1123,13 @@ void RHtml::printIssueList(const ContextParameters &ctx, const std::vector<struc
             std::string href_rhs = "";
             if ( (column == "id") || (column == "summary") ) {
                 href_lhs = "<a href=\"";
-                href_lhs = href_lhs + "/" + ctx.getProject().getUrlName() + "/issues/";
-                href_lhs = href_lhs + (char*)(*i)->id.c_str() + "\">";
+                std::string href = "/" + ctx.getProject().getUrlName() + "/issues/";
+                href += (char*)(*i)->id.c_str();
+                href += "?" QS_ORIGIN_VIEW "=" + urlEncode(ctx.originView);
+                href_lhs = href_lhs + href;
+                href_lhs = href_lhs +  + "\">";
+                // add origin view
+
                 href_rhs = "</a>";
             }
 
@@ -1350,6 +1363,42 @@ void RHtml::printIssueSummary(const ContextParameters &ctx, const Issue &issue)
     mg_printf(conn, "</div>\n");
 
 }
+
+
+/** print link to next issue
+  *
+  * this has meaning only when ctx.originView is not empty
+  * (ie: coming from a view, not via a direct link)
+  */
+void RHtml::printIssueNext(const ContextParameters &ctx, const Issue &issue)
+{
+    struct mg_connection *conn = ctx.conn;
+    if (ctx.originView.empty()) {
+        mg_printf(conn, "<span class=\"sm_issue_next_disabled\">%s</span>", _("Next"));
+    } else {
+        std::string qs;
+        qs = ctx.originView + "&" QS_GOTO_NEXT "=" + urlEncode(issue.id);
+        mg_printf(conn, "<span class=\"sm_issue_next\"><a href=\"./?%s\">%s</a></span>", qs.c_str(), _("Next"));
+    }
+}
+
+/** print link to previous issue
+  *
+  * this has meaning only when ctx.originView is not empty
+  * (ie: coming from a view, not via a direct link)
+  */
+void RHtml::printIssuePrevious(const ContextParameters &ctx, const Issue &issue)
+{
+    struct mg_connection *conn = ctx.conn;
+    if (ctx.originView.empty()) {
+        mg_printf(conn, "<span class=\"sm_issue_previous_disabled\">%s</span>", _("Previous"));
+    } else {
+        std::string qs;
+        qs = ctx.originView + "&" QS_GOTO_PREVIOUS "=" + urlEncode(issue.id);
+        mg_printf(conn, "<span class=\"sm_issue_previous\"><a href=\"./?%s\">%s</a></span>", qs.c_str(), _("Previous"));
+    }
+}
+
 
 void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
 {
