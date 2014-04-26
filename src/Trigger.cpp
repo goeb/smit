@@ -19,6 +19,8 @@
   */
 std::string Trigger::formatEntry(const Project &project, const Issue &issue, const Entry &entry)
 {
+    ProjectConfig pconfig = project.getConfig();
+
     std::ostringstream s;
     s << "+project " << project.getName() << "\n";
     s << "+issue " << issue.id << "\n";
@@ -60,7 +62,7 @@ void Trigger::notifyEntry(const Project &project, const std::string issueId, con
     LOG_FUNC();
     // load the 'trigger' file, in order to get the path of the external program
     std::string programPath;
-    std::string trigger = Database::Db.pathToRepository + "/" + K_TRIGGER;
+    std::string trigger = project.getPath() + "/" + K_TRIGGER;
     std::ifstream triggerFile(trigger.c_str());
     std::getline(triggerFile, programPath);
 
@@ -99,6 +101,12 @@ void Trigger::run(const std::string &program, const std::string &toStdin)
         // in parent
         // do nothing
     } else {
+        int r = chdir(Database::Db.pathToRepository.c_str());
+        if (r != 0) {
+            LOG_ERROR("Cannot chdir to repo '%s': %s", Database::Db.pathToRepository.c_str(),
+                      strerror(errno));
+            return;
+        }
         FILE *fp;
         fp = popen(program.c_str(), "w");
         if (fp == NULL) {

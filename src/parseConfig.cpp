@@ -52,57 +52,28 @@ std::list<std::list<std::string> > parseConfigTokens(const char *buf, size_t len
     std::list<std::list<std::string> > linesOftokens;
     size_t i = 0;
     enum State {
-        P_READY,
-        P_IN_DOUBLE_QUOTES,
-        P_IN_BACKSLASH,
+        P_NONE,
+        P_IN_TOKEN,
         P_IN_COMMENT,
-        P_IN_BACKSLASH_IN_DOUBLE_QUOTES,
         P_IN_BOUNDARY_HEADER,
         P_IN_BOUNDARY
     };
-    enum State state = P_READY;
+    enum State state = P_NONE;
     std::string token; // current token
     std::list<std::string> line; // current line
     std::string boundary;
     std::string boundedText;
-    bool tokenPending = false;
+    bool doubleQuoted = false;
+    bool backslash = false;
+    bool percent = false;
 
     for (i=0; i<len; i++) {
         char c = buf[i];
         switch (state) {
         case P_IN_COMMENT:
-            if (c == '\n') {
-                if (line.size() > 0) { linesOftokens.push_back(line); line.clear(); }
-                state = P_READY;
-            }
+            if (c == '\n') state = P_NONE;
             break;
 
-        case P_IN_BACKSLASH:
-            if (c == '\n') { // new line escaped
-                // nothing particular here, continue on next line
-                state = P_READY;
-            } else if (c == '\r') { // ignore this
-
-            } else {
-                tokenPending = true;
-                token += c;
-                state = P_READY;
-            }
-            break;
-
-        case P_IN_DOUBLE_QUOTES:
-            if (c == '\\') {
-                state = P_IN_BACKSLASH_IN_DOUBLE_QUOTES;
-            } else if (c == '"') {
-                // end of double-quoted string
-
-                state = P_READY;
-            } else token += c;
-            break;
-        case P_IN_BACKSLASH_IN_DOUBLE_QUOTES:
-            token += c;
-            state = P_IN_DOUBLE_QUOTES;
-            break;
         case P_IN_BOUNDARY_HEADER:
             if (c == '\n') {
                 state = P_IN_BOUNDARY;
@@ -113,6 +84,7 @@ std::list<std::list<std::string> > parseConfigTokens(const char *buf, size_t len
                 boundary += c;
             }
             break;
+
         case P_IN_BOUNDARY:
             // check if boundary was reached
             if (boundedText.size() >= boundary.size()) { // leading \n already added
@@ -122,50 +94,95 @@ std::list<std::list<std::string> > parseConfigTokens(const char *buf, size_t len
                     // boundary found
                     // substract the boundary fro the text
                     boundedText = boundedText.substr(0, offset);
-                    state = P_READY;
+                    state = P_NONE;
                     line.push_back(boundedText);
                     boundedText.clear();
                     linesOftokens.push_back(line);
                     line.clear();
-                    tokenPending = false;
                 }
             }
             // accumulate character if still in same state
             if (state == P_IN_BOUNDARY) boundedText += c;
 
             break;
-        case P_READY:
+
+        case P_IN_TOKEN:
+            if (backslash) {
+                if (c == 'n') token += '\n';
+                else if (c == 'r') token += '\r';
+                else if (c == 't') token += '\t';
+                else if (c == '\n') ; // nothing particular here, continue on next line
+                else token += c;
+
+                backslash = false;
+
+            } else if (percent) {
+                token += '%';
+                percent = false;
+
+                if (c == '%') ; // correct syntax, do nothing more
+                else i--; // incorrect syntax, replay this character
+
+            } else if (doubleQuoted) {
+                if (c == '"') doubleQuoted = false; // end of the "..." portion
+                else if (c == '%') percent = true;
+                else if (c == '\\') backslash = true;
+                else token += c;
+
+            } else {
+                if (c == '"') doubleQuoted = true;
+                else if (c == '%') percent = true;
+                else if (c == '\\') backslash = true;
+                else if (c == '\t' || c == ' ') {
+                    // end of token
+                    line.push_back(token);
+                    token.clear();
+                    state = P_NONE;
+
+                } else if (c == '\r' || c == '\n') {
+                    // end of token and end of line
+                    line.push_back(token);
+                    token.clear();
+                    linesOftokens.push_back(line);
+                    line.clear();
+                    state = P_NONE;
+
+                } else token += c;
+            }
+            break;
+
+        case P_NONE:
         default:
-            if (c == '\n') {
-                if (tokenPending) { line.push_back(token); token.clear(); tokenPending = false;}
-                if (line.size() > 0) { linesOftokens.push_back(line); line.clear(); }
-            } else if (c == ' ' || c == '\t' || c == '\r') {
-                // current toke is done (because c is a token delimiter)
-                if (tokenPending) { line.push_back(token); token.clear(); tokenPending = false;}
-            } else if (c == '#') {
-                if (tokenPending) { line.push_back(token); token.clear(); tokenPending = false;}
+            if (c == '\r') ; // do nothing, ignore this
+            else if (backslash) {
+                if (c == '\n') backslash = false; // do nothing (concatenate next line with current line)
+                else {
+                    // this is part of a token
+                    // replay this character in P_IN_TOKEN
+                    i--;
+                    state = P_IN_TOKEN;
+                }
+            } else if (c == '\n') { // go to next line
+                if (line.size()) { linesOftokens.push_back(line); line.clear(); }
+            } else if (c == ' ' || c == '\t') ; // do nothing
+            else if (c == '#') {
+                if (line.size()) { linesOftokens.push_back(line); line.clear(); }
                 state = P_IN_COMMENT;
-            } else if (c == '\\') {
-                state = P_IN_BACKSLASH;
-            } else if (c == '"') {
-                tokenPending = true;
-                state = P_IN_DOUBLE_QUOTES;
-            } else if (c == '<') {
-                tokenPending = true;
+            } else if (c == '\\')  backslash = true;
+            else if (c == '<') {
                 state = P_IN_BOUNDARY_HEADER;
                 boundary.clear();
-            } else if (c == '\r') {
-                // ignore
             } else {
-                tokenPending = true;
-                token += c;
+                // replay this character in P_IN_TOKEN
+                state = P_IN_TOKEN;
+                i--;
             }
             break;
         }
     }
     // purge remaininig token and line
-    if (tokenPending) line.push_back(token);
-    if (line.size() > 0) linesOftokens.push_back(line);
+    if (state == P_IN_TOKEN) line.push_back(token);
+    if (line.size()) linesOftokens.push_back(line);
 
     return linesOftokens;
 }
@@ -274,6 +291,8 @@ int writeToFile(const char *filepath, const char *data, size_t len)
     return result;
 }
 
+/** Look if a list contains a specific item
+  */
 bool has(const std::list<std::string> &L, const std::string item)
 {
     std::list<std::string>::const_iterator i;
@@ -308,7 +327,10 @@ std::list<std::string> parseColspec(const char *colspec, const std::list<std::st
     return result;
 }
 
-/** Double quotes are needed whenever the value contains one of: \n \t \r "
+/** Double quotes are needed whenever the value contains one of: \n \t \r " %
+  *
+  * The resulting can be passed to printf for deserializing.
+  * Except some rare characters that are not managed (\a, \b \xHH, etc.)
   */
 std::string doubleQuote(const std::string &input)
 {
@@ -319,6 +341,10 @@ std::string doubleQuote(const std::string &input)
     for (i=0; i<n; i++) {
         if (input[i] == '\\') result += "\\\\";
         else if (input[i] == '"') result += "\\\"";
+        else if (input[i] == '\n') result += "\\n";
+        else if (input[i] == '\t') result += "\\t";
+        else if (input[i] == '\r') result += "\\r";
+        else if (input[i] == '%') result += "%%";
         else result += input[i];
     }
     result += '"';
@@ -328,7 +354,7 @@ std::string doubleQuote(const std::string &input)
 std::string serializeSimpleToken(const std::string token)
 {
     if (token.empty()) return "\"\"";
-    else if (token.find_first_of("#\n \t\r\"") == std::string::npos) return token;
+    else if (token.find_first_of("#\n \t\r\"<") == std::string::npos) return token;
     else return doubleQuote(token); // some characters needs escaping
 }
 

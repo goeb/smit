@@ -11,6 +11,7 @@ $SM_PARSER T_smparser1.in a 1 >> $OUT
 $SM_PARSER T_smparser1.in a 2 >> $OUT
 $SM_PARSER T_smparser1.in a 3 >> $OUT
 $SM_PARSER T_smparser1.in a 4 >> $OUT
+$SM_PARSER T_smparser1.in a 5 >> $OUT
 
 $SM_PARSER T_smparser1.in "a b c" >> $OUT
 $SM_PARSER T_smparser1.in "a b c" 2 >> $OUT
