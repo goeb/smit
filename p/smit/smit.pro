@@ -19,7 +19,8 @@ SOURCES += \
     ../../src/mutexTools.cpp \
     ../../src/dateTools.cpp \
     ../../src/logging.cpp \
-    ../../src/renderingCsv.cpp
+    ../../src/renderingCsv.cpp \
+    ../../src/Trigger.cpp
 
 HEADERS += \
     ../../mongoose/mongoose.h \
@@ -38,5 +39,6 @@ HEADERS += \
     ../../src/dateTools.h \
     ../../src/global.h \
     ../../src/renderingCsv.h \
-    ../../mongoose/mg_win32.h
+    ../../mongoose/mg_win32.h \
+    ../../src/Trigger.h
 

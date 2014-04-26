@@ -30,7 +30,7 @@ struct Entry {
     std::map<std::string, std::list<std::string> > properties;
     std::string serialize();
     int getCtime() const;
-    std::string getMessage();
+    std::string getMessage() const;
     // chainlist pointers
     struct Entry *next; // child
     struct Entry *prev; // parent
@@ -60,6 +60,7 @@ struct Issue {
     void consolidateIssueWithSingleEntry(Entry *e, bool overwrite);
     bool searchFullText(const char *text) const;
     int getNumberOfTaggedIEntries(const std::string &tagId) const;
+    Entry *getEntry(const std::string id);
 };
 
 
@@ -123,9 +124,8 @@ public:
                                const std::map<std::string, std::list<std::string> > &filterIn,
                                const std::map<std::string, std::list<std::string> > &filterOut,
                                const char *sortingSpec);
-    int get(const char *issueId, Issue &issue) const;
+    int get(const std::string &issueId, Issue &issue) const;
     int addEntry(std::map<std::string, std::list<std::string> > properties, std::string &iid, std::string &eid, std::string username);
-    Issue *getIssue(const std::string &id) const;
     Entry *getEntry(const std::string &id) const;
 
     inline std::string getName() const { return name; }
@@ -159,6 +159,7 @@ private:
 
     void consolidateIssue(Issue *i);
     int storeViewsToFile();
+    Issue *getIssue(const std::string &id) const;
 
     ProjectConfig config;
     std::map<std::string, Issue*> issues;
