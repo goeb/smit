@@ -19,6 +19,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <fstream>
 
 #include "parseConfig.h"
 #include "global.h"
@@ -185,6 +186,17 @@ std::list<std::list<std::string> > parseConfigTokens(const char *buf, size_t len
     if (line.size()) linesOftokens.push_back(line);
 
     return linesOftokens;
+}
+
+
+int loadFile(const char *filepath, std::string &data)
+{
+    std::ifstream f(filepath);
+    if (!f.good()) return -1;
+    std::stringstream buffer;
+    buffer << f.rdbuf();
+    data = buffer.str();
+    return 0;
 }
 
 // Allocate a buffer (malloc) and load a file into this buffer.
@@ -429,7 +441,7 @@ std::string serializeTokens(const std::list<std::list<std::string> > &linesOfTok
 void usage()
 {
     printf("Usage:\n"
-           "    smparser <file> <key> [<n>]\n"
+           "    smparser <file> [<key>] [<n>]\n"
            "\n"
            "<file>  file to parse. Use - to specify standard input.\n"
            "<n>     value to retrieve. Defaults to 1.\n"
@@ -447,48 +459,66 @@ void usage()
 
 int main(int argc, char **argv)
 {
-    if (argc < 3) usage();
+    if (argc < 2) usage();
     if (argc > 4) usage();
     const char *file = argv[1];
-    const char *key = argv[2];
+    const char *key = 0;
+    if (argc >= 2) key = argv[2];
     int n = 1;
     if (argc == 4) n = atoi(argv[3]);
 
-    const char *data = 0;
-    int size = 0;
-    std::string stdinContents;
+    std::string data;
     if (0 == strcmp(file, "-")) {
         // read from stdin
         std::string line;
         while (getline(std::cin, line)) {
-            if (stdinContents.size()) stdinContents += '\n';
-            stdinContents += line;
+            if (data.size()) data += '\n';
+            data += line;
         }
-        data = stdinContents.c_str();
-        size = stdinContents.size();
-        //printf("stdinContents=%s\n, size=%d", data, size);
     } else {
-        size = loadFile(file, &data);
-        if (size < 0) {
-            fprintf(stderr, "Error: cannot open file '%s': %s\n", file, strerror(errno));
+        int r = loadFile(file, data);
+        if (r < 0) {
+            fprintf(stderr, "Error: cannot open file '%s'\n", file);
             return 1;
         }
     }
-    std::list<std::list<std::string> > tokens = parseConfigTokens(data, size);
+
+    std::list<std::list<std::string> > tokens = parseConfigTokens(data.c_str(), data.size());
     std::list<std::list<std::string> >::iterator line;
-    FOREACH(line, tokens) {
-        if (line->size() > 0 && line->front() == key) {
-            // key found
-            if (line->size() > n) {
-                int i;
-                for (i=0; i<n; i++) line->pop_front();
-                printf("%s", line->front().c_str());
+
+    if (key) {
+        FOREACH(line, tokens) {
+            if (line->size() > 0 && line->front() == key) {
+                // key found
+                if (line->size() > n) {
+                    int i;
+                    for (i=0; i<n; i++) line->pop_front();
+                    printf("%s", line->front().c_str());
+                }
+                printf("\n");
+                return 0;
             }
-            printf("\n");
-            return 0;
+        }
+
+        return 1;
+    } else {
+        // print each value prefiex by line.column
+        // 1.1 ...
+        // 1.2 ...
+        // 1.3 ...
+        // 2.1 ...
+        int row = 1;
+        FOREACH(line, tokens) {
+            std::list<std::string>::const_iterator tok;
+            int column = 1;
+            FOREACH(tok, (*line)) {
+                printf("smp.%d.%d %s\n", row, column, tok->c_str());
+                column++;
+            }
+            row++;
         }
     }
-    return 1;
+
 }
 
 #endif

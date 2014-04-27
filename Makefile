@@ -62,7 +62,7 @@ all: $(SM_PARSER) embedcpio
 
 .PHONY: $(SM_PARSER)
 $(SM_PARSER):
-	$(CXX) -o $@ src/parseConfig.cpp -DSM_PARSER
+	$(CXX) -g -o $@ src/parseConfig.cpp -DSM_PARSER
 
 print:
 	@echo SRCS=$(SRCS)
