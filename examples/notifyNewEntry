@@ -11,12 +11,20 @@ processLine() {
     key="$1"
     shift
     i=1
-    while [ x"$1" != x ]; do
-        arg="$1"
-        printf "$key.$i $arg\n"
-        i=`expr $i + 1`
-        shift
-    done
+    if [ x"$key" = x+message ]; then
+        echo "<<-------------- message -------------->>"
+        while read -r line; do
+            echo $line
+        done
+        echo "<<--------------   end   -------------->>"
+    else
+        while [ x"$1" != x ]; do
+            arg="$1"
+            printf "$key.$i $arg\n"
+            i=`expr $i + 1`
+            shift
+        done
+    fi
 }
 
 echo "$0 starting...................."
