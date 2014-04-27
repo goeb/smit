@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <errno.h>
+#include <signal.h>
 
 #include "Trigger.h"
 #include "stringTools.h"
@@ -49,7 +50,7 @@ std::string Trigger::formatEntry(const Project &project, const Issue &issue, con
         case ROLE_RO: users_ro += " " + uname; break;
         case ROLE_RW: users_rw += " " + uname; break;
         case ROLE_ADMIN: users_admin += " " + uname; break;
-        // default: ignore
+        default: break; // ignore
         }
     }
     s << "+user.admin" << users_admin << "\n";
@@ -139,6 +140,7 @@ void Trigger::run(const std::string &program, const std::string &toStdin)
 {
     LOG_FUNC();
 #ifndef _WIN32
+    signal(SIGCHLD, SIG_IGN); // ignore return values from child processes
     pid_t p = fork();
     if (p) {
         // in parent
@@ -161,8 +163,8 @@ void Trigger::run(const std::string &program, const std::string &toStdin)
                 LOG_ERROR("fwrite error: %d bytes sent (%d requested)", n, toStdin.size());
             }
             pclose(fp);
-            exit(0);
         }
+        exit(0);
     }
 #endif
 }
