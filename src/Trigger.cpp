@@ -12,12 +12,24 @@
 #include "db.h"
 #include "logging.h"
 #include "global.h"
+#include "session.h"
 
 #define K_TRIGGER "trigger"
 
 /** Format the text for the external program
+  *
+  * First, some info that is not in the properties of the issue:
+  *     project name, issue id, entry id, author,
+  *     users of the project
+  *     files attached to the entry
+  *     modified properties
+  * Then, all the properties, in the form: logical-name label value ...
+  *     all on one line
+  * Finally, the message, if any
+  *
   */
-std::string Trigger::formatEntry(const Project &project, const Issue &issue, const Entry &entry)
+std::string Trigger::formatEntry(const Project &project, const Issue &issue, const Entry &entry,
+                                 const std::map<std::string, Role> &users)
 {
     ProjectConfig pconfig = project.getConfig();
 
@@ -26,6 +38,24 @@ std::string Trigger::formatEntry(const Project &project, const Issue &issue, con
     s << "+issue " << issue.id << "\n";
     s << "+entry " << entry.id << "\n";
     s << "+author " << entry.author << "\n";
+
+    // put the users of the project
+    std::map<std::string, Role>::const_iterator u;
+    std::string users_rw, users_ro, users_admin, users_ref;
+    FOREACH(u, users) {
+        std::string uname = serializeSimpleToken(u->first);
+        switch (u->second) {
+        case ROLE_REFERENCED: users_ref += " " + uname; break;
+        case ROLE_RO: users_ro += " " + uname; break;
+        case ROLE_RW: users_rw += " " + uname; break;
+        case ROLE_ADMIN: users_admin += " " + uname; break;
+        // default: ignore
+        }
+    }
+    s << "+user.admin" << users_admin << "\n";
+    s << "+user.rw" << users_rw << "\n";
+    s << "+user.ro" << users_ro << "\n";
+    s << "+user.ref" << users_ref << "\n";
 
     std::map<std::string, std::list<std::string> >::const_iterator p;
 
@@ -44,8 +74,19 @@ std::string Trigger::formatEntry(const Project &project, const Issue &issue, con
     s << "\n";
 
     // put the properties of the issue
-    FOREACH(p, issue.properties) {
-        s << p->first << " " << toString(p->second, " ") << "\n";
+    std::list<PropertySpec>::const_iterator pspec;
+    FOREACH(pspec, pconfig.properties) {
+        // check if
+        s << pspec->name << " ";
+        s << serializeSimpleToken(pspec->label);
+        p = issue.properties.find(pspec->name);
+        if (p != issue.properties.end()) {
+            std::list<std::string>::const_iterator value;
+            FOREACH(value, p->second) {
+                s << " " << serializeSimpleToken(*value);
+            }
+        }
+        s << "\n";
     }
 
     // put the message, if any
@@ -86,7 +127,9 @@ void Trigger::notifyEntry(const Project &project, const std::string issueId, con
         }
 
         // TODO add the users of the project
-        std::string text = formatEntry(project, i, *e);
+
+        std::map<std::string, Role> users = UserBase::getUsersRolesOfProject(project.getName());
+        std::string text = formatEntry(project, i, *e, users);
 
         run(programPath, text);
     }
@@ -101,6 +144,7 @@ void Trigger::run(const std::string &program, const std::string &toStdin)
         // in parent
         // do nothing
     } else {
+        LOG_DEBUG("chdir '%s'...", Database::Db.pathToRepository.c_str());
         int r = chdir(Database::Db.pathToRepository.c_str());
         if (r != 0) {
             LOG_ERROR("Cannot chdir to repo '%s': %s", Database::Db.pathToRepository.c_str(),

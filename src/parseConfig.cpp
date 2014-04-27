@@ -366,7 +366,7 @@ std::string doubleQuote(const std::string &input)
 std::string serializeSimpleToken(const std::string token)
 {
     if (token.empty()) return "\"\"";
-    else if (token.find_first_of("#\n \t\r\"<%") == std::string::npos) return token;
+    else if (token.find_first_of("!()[]&#\n \t\r\"<%") == std::string::npos) return token;
     else return doubleQuote(token); // some characters needs escaping
 }
 
