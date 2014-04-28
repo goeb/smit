@@ -17,7 +17,38 @@
 
 #define K_TRIGGER "trigger"
 
-/** Format the text for the external program
+std::string toJson(const std::string &text)
+{
+    std::string json = text;
+    json = replaceAll(json, '\\', "\\\\");
+    json = replaceAll(json, '"', "\\\"");
+    json = replaceAll(json, '/', "\\/");
+    json = replaceAll(json, '\b', "\\b");
+    json = replaceAll(json, '\f', "\\f");
+    json = replaceAll(json, '\n', "\\n");
+    json = replaceAll(json, '\r', "\\r");
+    json = replaceAll(json, '\t', "\\t");
+    json = "\"" + json + "\"";
+    return json;
+}
+
+std::string toJson(const std::list<std::string> &items)
+{
+    std::string jarray = "[";
+    std::list<std::string>::const_iterator v;
+    FOREACH(v, items) {
+        if (v != items.begin()) {
+            jarray += ", ";
+        }
+        jarray += toJson(*v);
+    }
+    jarray += "]";
+    return jarray;
+
+}
+
+
+/** Format the text ti JSON, for the external program
   *
   * First, some info that is not in the properties of the issue:
   *     project name, issue id, entry id, author,
@@ -35,65 +66,69 @@ std::string Trigger::formatEntry(const Project &project, const Issue &issue, con
     ProjectConfig pconfig = project.getConfig();
 
     std::ostringstream s;
-    s << "+project " << project.getName() << "\n";
-    s << "+issue " << issue.id << "\n";
-    s << "+entry " << entry.id << "\n";
-    s << "+author " << entry.author << "\n";
+    s << "{\n" << toJson("project") << ":" << toJson(project.getName()) << ",\n";
+    s << toJson("issue") << ":" << toJson(issue.id) << ",\n";
+    s << toJson("entry") << ":" << toJson(entry.id) << ",\n";
+    s << toJson("author") << ":" << toJson(entry.author) << ",\n";
 
     // put the users of the project
     std::map<std::string, Role>::const_iterator u;
-    std::string users_rw, users_ro, users_admin, users_ref;
+    s << toJson("users") << ":" << "{\n";
     FOREACH(u, users) {
-        std::string uname = serializeSimpleToken(u->first);
-        switch (u->second) {
-        case ROLE_REFERENCED: users_ref += " " + uname; break;
-        case ROLE_RO: users_ro += " " + uname; break;
-        case ROLE_RW: users_rw += " " + uname; break;
-        case ROLE_ADMIN: users_admin += " " + uname; break;
-        default: break; // ignore
-        }
+        if (u != users.begin()) s << ",\n";
+        s << "  " << toJson(u->first) << ":" << toJson(roleToString(u->second));
     }
-    s << "+user.admin" << users_admin << "\n";
-    s << "+user.rw" << users_rw << "\n";
-    s << "+user.ro" << users_ro << "\n";
-    s << "+user.ref" << users_ref << "\n";
+    s << "}";
 
     std::map<std::string, std::list<std::string> >::const_iterator p;
 
     // put the uploaded files, if any
     std::ostringstream files;
     FOREACH(p, entry.properties) {
-        if (p->first == K_FILE) files << " " << p->second.front();
+        if (p->first == K_FILE) {
+            if (files.str().size()) files << ",";
+            files << toJson(p->second.front());
+        }
     }
-    if (files.str().size()) s << K_FILE << files;
+    if (files.str().size()) s << ",\n" << toJson("files") << ":[" << files << "]\n";
 
     // put the list of the properties modified by the entry
-    s << "+modified";
+    s << ",\n" << toJson("modified") << ":[";
+    std::ostringstream modifiedProperties;
     FOREACH(p, entry.properties) {
-        if (p->first[0] != '+') s << " " << p->first;
+        if (p->first[0] != '+') {
+            if (modifiedProperties.str().size()) modifiedProperties << ",";
+            modifiedProperties << toJson(p->first);
+        }
     }
-    s << "\n";
+    s << modifiedProperties.str() << "]";
 
     // put the properties of the issue
-    std::list<PropertySpec>::const_iterator pspec;
-    FOREACH(pspec, pconfig.properties) {
-        // check if
-        s << pspec->name << " ";
-        s << serializeSimpleToken(pspec->label);
-        p = issue.properties.find(pspec->name);
-        if (p != issue.properties.end()) {
-            std::list<std::string>::const_iterator value;
-            FOREACH(value, p->second) {
-                s << " " << serializeSimpleToken(*value);
-            }
+    // { property1 : [ label, value ],
+    //   property2 : [ label, value ],
+    //   ... }
+    // (value may be a list, for multiselect)
+    s << ",\n" << toJson("properties") << ":{\n";
+    FOREACH(p, issue.properties) {
+        if (!pconfig.isValidPropertyName(p->first)) continue;
+
+        if (p != issue.properties.begin()) s << ",\n";
+        s << "  " << toJson(p->first) << ":[";
+        s << toJson(pconfig.getLabelOfProperty(p->first)) << ",";
+        if (p->second.size() == 1) {
+            s << toJson(p->second.front());
+        } else {
+            // multiple values
+            s << toJson(p->second);
         }
-        s << "\n";
+        s << "]";
     }
+    s << "\n}";
 
     // put the message, if any
-    std::string msg = entry.getMessage();
-    if (msg.size()) s << K_MESSAGE << "\n" << msg << "\n";
+    s << ",\n" << toJson("message") << ":" << toJson(entry.getMessage());
 
+    s << "\n}\n";
     return s.str();
 }
 

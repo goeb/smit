@@ -108,13 +108,13 @@ struct ProjectConfig {
     std::map<std::string, PredefinedView> predefinedViews;
     std::map<std::string, TagSpec> tags;
     bool numberIssueAcrossProjects; // accross project
-    std::string trigger;
 
     // methods
     const PropertySpec *getPropertySpec(const std::string name) const;
     std::list<std::string> getPropertiesNames() const;
     std::list<std::string> getReservedProperties() const;
     std::string getLabelOfProperty(const std::string &propertyName) const;
+    bool isValidPropertyName(const std::string &name) const;
 };
 
 class Project {

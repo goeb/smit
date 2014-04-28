@@ -150,6 +150,24 @@ std::string ProjectConfig::getLabelOfProperty(const std::string &propertyName) c
     return label;
 }
 
+bool ProjectConfig::isValidPropertyName(const std::string &name) const
+{
+    // get user defined properties
+    std::list<PropertySpec>::const_iterator pspec;
+    FOREACH(pspec, properties) {
+        if (pspec->name == name) return true;
+    }
+
+    // look in reserved properties
+    std::list<std::string> reserved = getReservedProperties();
+    std::list<std::string>::const_iterator p;
+    FOREACH(p, reserved) {
+        if ((*p) == name) return true;
+    }
+    return false;
+
+}
+
 /** init and load in memory the given project
   *
   * @param path
@@ -586,15 +604,6 @@ ProjectConfig parseProjectConfig(std::list<std::list<std::string> > &lines)
             if (value == "global") config.numberIssueAcrossProjects = true;
             else LOG_ERROR("Invalid value '%s' for numberIssues.", value.c_str());
 
-        } else if (token == "trigger") {
-            std::string trigger = pop(*line);
-            if (trigger.empty()) {
-                LOG_ERROR("Invalid empty trigger");
-                wellFormatedLines.pop_back(); // remove incorrect line
-            } else {
-                config.trigger = trigger; // path to program to be launched
-            }
-
         } else if (token == "tag") {
             TagSpec tagspec;
             tagspec.id = pop(*line);
@@ -732,7 +741,6 @@ int Project::modifyConfig(std::list<std::list<std::string> > &tokens)
     c.predefinedViews = config.predefinedViews;
     c.tags = config.tags;
     c.numberIssueAcrossProjects = config.numberIssueAcrossProjects;
-    c.trigger = config.trigger;
 
     // add version
     std::list<std::string> versionLine;
@@ -764,15 +772,6 @@ int Project::modifyConfig(std::list<std::list<std::string> > &tokens)
         line.push_back("global");
         tokens.push_back(line);
     }
-
-    // serialize trigger, if any
-    if (config.trigger.size()) {
-        line.clear();
-        line.push_back("trigger");
-        line.push_back(config.trigger);
-        tokens.push_back(line);
-    }
-
 
     // write to file
     std::string data = serializeTokens(tokens);
