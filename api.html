@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Smit API</title>
+        <link rel="stylesheet" type="text/css" href="style.css">
+        <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/>
+    </head>
+
+    <body>
+        <div class="header">
+            <img src="logo.png" alt="Logo" width="150">
+            <span class="header_text">The Small Issue Tracker</span>
+        </div>
+        <div class="page">
+<aside class='menu'>
+<ul>
+<li><a href='index.html'>Smit Overview</a></li>
+<li><a href='getting_started.html'>Getting Started</a></li>
+<li><a href='screenshots.html'>Screenshots</a></li>
+<li><a href='downloads.html'>Downloads</a></li>
+<li><a href='issue_tracking.html'>Issue Tracking</a></li>
+<li><a href='documentation.html'>Documentation</a></li>
+<li><a href='news.html'>News</a></li>
+<li class='active'>Smit API
+<ul class=menu_level2>
+<li><a href='#signing-in'>Signing in</a></li>
+<li><a href='#listing-issues'>Listing Issues</a></li>
+<li><a href='#showing-an-issue'>Showing an issue</a></li>
+<li><a href='#creating-an-issue'>Creating an issue</a></li>
+<li><a href='#updating-an-issue'>Updating an issue</a></li>
+<li><a href='#deleting-an-issue'>Deleting an issue</a></li>
+<li><a href='#trigger'>Trigger</a></li>
+</ul>
+</li>
+<li><a href='developers.html'>Developers' Corner</a></li>
+</ul>
+</aside>
+<div class='contents'>
+<h1 id="smit-api">Smit API</h1>
+<p>Smit exposes some of its data through a REST API, and others through the trigger API.</p>
+<h2 id="signing-in">Signing in</h2>
+<p>REST API:</p>
+<pre><code>POST /signin</code></pre>
+<p>Parameters:</p>
+<ul>
+<li><code>username</code>: the user name</li>
+<li><code>password</code>: the password</li>
+</ul>
+<p>Syntax: application/x-www-form-urlencoded</p>
+<p>Return in a cookie:</p>
+<ul>
+<li><code>sessid</code>: the session id</li>
+</ul>
+<h2 id="listing-issues">Listing Issues</h2>
+<p>REST API:</p>
+<pre><code>GET /&lt;project&gt;/issues</code></pre>
+<p>Returns a list of issues. Without any parameter, it returns all the issues.</p>
+<h3 id="parameters">Parameters</h3>
+<ul>
+<li><code>filterin</code>: get issues that have a specific property
+<ul>
+<li>Syntax: property<code>:</code>value</li>
+<li>Example: filterin=status:open&amp;filterin=status:in_progress</li>
+</ul></li>
+<li><code>filterout</code>: get issues that do not have a specific property
+<ul>
+<li>Syntax: same as <code>filterin</code></li>
+<li>Example: filterout=status:closed</li>
+</ul></li>
+<li><code>search</code>: search some text through all messages and properties
+<ul>
+<li>Example: search=my tailor is rich</li>
+</ul></li>
+<li><code>colspec</code>: select which columns should be returned
+<ul>
+<li>Syntax: properties names separated by spaces</li>
+<li>Example: colspec=id+summary</li>
+</ul></li>
+<li><code>sort</code>: sort against speficic columns. Several columns are allowed.
+<ul>
+<li>Syntax: columns, prefixed by <code>+</code> (ascending order) or <code>-</code> (descending order)</li>
+<li>Example: sort=+target_version-mtime</li>
+</ul></li>
+<li><code>full</code>: display issues with their full contents. Value must be <code>1</code>
+<ul>
+<li>Syntax: full=1</li>
+</ul></li>
+<li><code>format</code>: select format of response: <code>html</code> (the default), <code>text</code>, <code>csv</code></li>
+</ul>
+<p>Examples:</p>
+<pre><code>GET /things_to_do/issues?search=john&amp;sort=-mtime&amp;filterin=status:open
+GET /things_to_do/issues?search=john&amp;sort=-mtime&amp;filterin=status:open?format=csv</code></pre>
+<h2 id="showing-an-issue">Showing an issue</h2>
+<p>REST API:</p>
+<pre><code>GET /&lt;project&gt;/issues/&lt;id&gt;</code></pre>
+<h3 id="parameters-1">Parameters</h3>
+<ul>
+<li><code>format</code>: select format of response: <code>html</code> (the default), <code>text</code></li>
+</ul>
+<p>Examples:</p>
+<pre><code>GET /things_to_do/issues/543
+GET /things_to_do/issues/89?format=text</code></pre>
+<h2 id="creating-an-issue">Creating an issue</h2>
+<p>REST API:</p>
+<pre><code>POST /&lt;project&gt;/issues/new</code></pre>
+<p>Parameters:</p>
+<ul>
+<li>A hash of the issue properties
+<ul>
+<li>Syntax: multipart/form-data</li>
+</ul></li>
+</ul>
+<p>Files can be attached.</p>
+<h2 id="updating-an-issue">Updating an issue</h2>
+<p>REST API:</p>
+<pre><code>POST /&lt;project&gt;/issues/&lt;id&gt;</code></pre>
+<p>Parameters:</p>
+<ul>
+<li>the issue properties
+<ul>
+<li>Syntax: multipart/form-data</li>
+</ul></li>
+</ul>
+<p>Files can be attached.</p>
+<h2 id="deleting-an-issue">Deleting an issue</h2>
+<p>REST API:</p>
+<p>work in progress...</p>
+<h2 id="trigger">Trigger</h2>
+<p>A trigger is a program called by Smit. The data is passed to this program on its standard input in JSON format.</p>
+<p>work in progress...</p>
+<p>Example:</p>
+<pre><code>{
+&quot;project&quot;:&quot;myproject&quot;,
+&quot;issue&quot;:&quot;13&quot;,
+&quot;entry&quot;:&quot;ed3eda2976914998cf2fcd759adf71753d0aa5f8&quot;,
+&quot;author&quot;:&quot;fred&quot;,
+&quot;users&quot;:{
+  &quot;fred&quot;:&quot;admin&quot;,
+  &quot;not assigned&quot;:&quot;ref&quot;,
+  &quot;xxxt&quot;:&quot;rw&quot;},
+&quot;modified&quot;:[&quot;a-b-c&quot;,&quot;multi-a&quot;,&quot;new-ttt&quot;,&quot;owner&quot;,&quot;test-reload&quot;,&quot;textarea2&quot;,&quot;xx&quot;],
+&quot;properties&quot;:{
+  &quot;a-b-c&quot;:[&quot;a-b-xx66&quot;,&quot;&quot;],
+  &quot;multi-a&quot;:[&quot;%multi-h&quot;,&quot;42&quot;],
+  &quot;new-ttt&quot;:[&quot;new-ttt&quot;,&quot;&quot;],
+  &quot;owner&quot;:[&quot;owner&#39;44r%&quot;,&quot;fred&quot;],
+  &quot;summary&quot;:[&quot;summary&quot;,&quot;fatal error x8&quot;],
+  &quot;target_version&quot;:[&quot;target_version\&quot;22&quot;,&quot;v0.1&quot;],
+  &quot;test-reload&quot;:[&quot;test-reloadx&quot;,&quot;&quot;],
+  &quot;textarea2&quot;:[&quot;textarea2&quot;,&quot;&quot;],
+  &quot;xx&quot;:[&quot;xx(yy)__99&quot;,&quot;&quot;]
+},
+&quot;message&quot;:&quot;...&quot;
+}</code></pre>
+</div>
+        </div> <!-- div class page -->
+        <div class="footer">
+            Page updated on  1 May 2014
+        </div>
+    </body>
+</html>

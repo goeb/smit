@@ -112,11 +112,11 @@ pre code {
     line-height: normal;
 }
 .tag, code {
-    background-color: #eee;
-    border: 1px solid #bbb;
-    padding: 0.1em 0.5em 0.1em 0.5em; /* top right bottom left */
-    border-radius: 5px;
-    line-height: 1.8em;
+    background-color: #ddd;
+    /*border: 1px solid #bbb;*/
+    /*padding: 0.1em 0.5em 0.1em 0.5em; /* top right bottom left */
+    /*border-radius: 5px;*/
+    /*line-height: 1.8em;*/
 }
 
 blockquote {

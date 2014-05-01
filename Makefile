@@ -7,6 +7,7 @@ SRCS += downloads.md
 SRCS += issue_tracking.md
 SRCS += documentation.md
 SRCS += news.md
+SRCS += api.md
 SRCS += developers.md
 
 BUILD_DIR=.
