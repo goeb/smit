@@ -681,7 +681,11 @@ void RHtml::printNavigationIssues(const ContextParameters &ctx, bool autofocus)
 
     // advanced search
     HtmlNode a("a");
-    a.addAttribute("href", "/%s/views/_", ctx.getProject().getUrlName().c_str());
+    std::string view;
+    if (!ctx.originView.empty()) {
+        view = "?" QS_ORIGIN_VIEW "=" + urlEncode(ctx.originView);
+    }
+    a.addAttribute("href", "/%s/views/_%s", ctx.getProject().getUrlName().c_str(), view.c_str());
     a.addAttribute("class", "sm_advanced_search");
     a.addContents(_("Advanced Search"));
     div.addContents(a);

@@ -293,3 +293,53 @@ std::string getBasename(const std::string &path)
     else if (i == path.size()-1) return getBasename(path.substr(0, path.size()-1));
     else return path.substr(i+1);
 }
+
+
+
+/** If uri is "x=y&a=bc+d" and param is "a"
+  * then return "bc d".
+  * @param param
+  *     Must be url-encoded.
+  *
+  * @return
+  *     Url-decoded value
+  */
+std::string getFirstParamFromQueryString(const std::string & queryString, const char *param)
+{
+    std::string q = queryString;
+    std::string paramEqual = param;
+    paramEqual += "=";
+    std::string token;
+    while ((token = popToken(q, '&')) != "") {
+        if (0 == token.compare(0, paramEqual.size(), paramEqual.c_str())) {
+            popToken(token, '='); // remove the 'param=' part
+            token = urlDecode(token);
+
+            return token;
+        }
+    }
+    return "";
+}
+
+/** if uri is "x=y&a=bcd&a=efg" and param is "a"
+  * then return a list [ "bcd", "efg" ]
+  * @return
+  *     Url-decoded values
+  */
+std::list<std::string> getParamListFromQueryString(const std::string & queryString, const char *param)
+{
+    std::list<std::string> result;
+    std::string q = queryString;
+    std::string paramEqual = param;
+    paramEqual += "=";
+    std::string token;
+    while ((token = popToken(q, '&')) != "") {
+        if (0 == token.compare(0, paramEqual.size(), paramEqual.c_str())) {
+            popToken(token, '='); // remove the param= part
+            token = urlDecode(token);
+
+            result.push_back(token);
+        }
+    }
+    return result;
+}

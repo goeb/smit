@@ -94,6 +94,7 @@ struct PredefinedView {
     static std::string getDirectionName(bool d);
     static std::string getDirectionSign(const std::string &text);
     std::string generateQueryString() const;
+    static PredefinedView loadFromQueryString(const std::string &q);
     std::string serialize() const;
     static std::map<std::string, PredefinedView> parsePredefinedViews(std::list<std::list<std::string> > lines);
 

@@ -1853,6 +1853,46 @@ std::string PredefinedView::generateQueryString() const
     return qs;
 }
 
+
+/** @param filter
+  *     [ "version:v1.0", "version:1.0", "owner:John Doe" ]
+  */
+std::map<std::string, std::list<std::string> > parseFilter(const std::list<std::string> &filters)
+{
+    std::map<std::string, std::list<std::string> > result;
+    std::list<std::string>::const_iterator i;
+    for (i = filters.begin(); i != filters.end(); i++) {
+        // split apart from the first colon
+        size_t colon = (*i).find_first_of(":");
+        std::string propertyName = (*i).substr(0, colon);
+        std::string propertyValue = "";
+        if (colon != std::string::npos && colon < (*i).size()-1) propertyValue = (*i).substr(colon+1);
+
+        if (result.find(propertyName) == result.end()) result[propertyName] = std::list<std::string>();
+
+        result[propertyName].push_back(propertyValue);
+    }
+
+    return result;
+}
+
+/** Load parameters related to a view
+  *
+  * filterin/out, sort, search, colspec
+  */
+PredefinedView PredefinedView::loadFromQueryString(const std::string &q)
+{
+    std::list<std::string> filterinRaw = getParamListFromQueryString(q, "filterin");
+    std::list<std::string> filteroutRaw = getParamListFromQueryString(q, "filterout");
+    PredefinedView v; // unamed view, used as handler on the viewing parameters
+    v.filterin = parseFilter(filterinRaw);
+    v.filterout = parseFilter(filteroutRaw);
+    v.search = getFirstParamFromQueryString(q, "search");
+    v.sort = getFirstParamFromQueryString(q, "sort");
+    v.colspec = getFirstParamFromQueryString(q, "colspec");
+    return v;
+}
+
 std::string PredefinedView::serialize() const
 {
     std::string out;

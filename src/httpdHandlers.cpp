@@ -187,53 +187,6 @@ int sendHttpHeaderInvalidResource(struct mg_connection *conn)
 }
 
 
-/** If uri is "x=y&a=bc+d" and param is "a"
-  * then return "bc d".
-  * @param param
-  *     Must be url-encoded.
-  *
-  * @return
-  *     Url-decoded value
-  */
-std::string getFirstParamFromQueryString(const std::string & queryString, const char *param)
-{
-    std::string q = queryString;
-    std::string paramEqual = param;
-    paramEqual += "=";
-    std::string token;
-    while ((token = popToken(q, '&')) != "") {
-        if (0 == token.compare(0, paramEqual.size(), paramEqual.c_str())) {
-            popToken(token, '='); // remove the 'param=' part
-            token = urlDecode(token);
-
-            return token;
-        }
-    }
-    return "";
-}
-
-/** if uri is "x=y&a=bcd&a=efg" and param is "a"
-  * then return a list [ "bcd", "efg" ]
-  * @return
-  *     Url-decoded values
-  */
-std::list<std::string> getParamListFromQueryString(const std::string & queryString, const char *param)
-{
-    std::list<std::string> result;
-    std::string q = queryString;
-    std::string paramEqual = param;
-    paramEqual += "=";
-    std::string token;
-    while ((token = popToken(q, '&')) != "") {
-        if (0 == token.compare(0, paramEqual.size(), paramEqual.c_str())) {
-            popToken(token, '='); // remove the param= part
-            token = urlDecode(token);
-
-            result.push_back(token);
-        }
-    }
-    return result;
-}
 
 enum RenderingFormat { RENDERING_HTML, RENDERING_TEXT, RENDERING_CSV };
 enum RenderingFormat getFormat(struct mg_connection *conn)
@@ -663,28 +616,6 @@ void httpGetRoot(struct mg_connection *conn, User u)
     }
 }
 
-/** @param filter
-  *     [ "version:v1.0", "version:1.0", "owner:John Doe" ]
-  */
-std::map<std::string, std::list<std::string> > parseFilter(const std::list<std::string> &filters)
-{
-    std::map<std::string, std::list<std::string> > result;
-    std::list<std::string>::const_iterator i;
-    for (i = filters.begin(); i != filters.end(); i++) {
-        // split apart from the first colon
-        size_t colon = (*i).find_first_of(":");
-        std::string propertyName = (*i).substr(0, colon);
-        std::string propertyValue = "";
-        if (colon != std::string::npos && colon < (*i).size()-1) propertyValue = (*i).substr(colon+1);
-
-        if (result.find(propertyName) == result.end()) result[propertyName] = std::list<std::string>();
-
-        result[propertyName].push_back(propertyValue);
-    }
-
-    return result;
-}
-
 void httpGetNewProject(struct mg_connection *conn, User u)
 {
     if (! u.superadmin) return sendHttpHeader403(conn);
@@ -983,19 +914,16 @@ void httpGetListOfIssues(struct mg_connection *conn, Project &p, User u)
         }
     }
 
-    std::list<std::string> filterinRaw = getParamListFromQueryString(q, "filterin");
-    std::list<std::string> filteroutRaw = getParamListFromQueryString(q, "filterout");
-    std::map<std::string, std::list<std::string> > filterIn = parseFilter(filterinRaw);
-    std::map<std::string, std::list<std::string> > filterOut = parseFilter(filteroutRaw);
-    std::string fulltextSearch = getFirstParamFromQueryString(q, "search");
-    std::string sorting = getFirstParamFromQueryString(q, "sort");
+    // should use loadViewFromQueryString (code maintainability improvement)
+    PredefinedView v = PredefinedView::loadFromQueryString(q); // unamed view, used as handler on the viewing parameters
 
     // replace user "me" if any...
-    replaceUserMe(filterIn, p, u.username);
-    replaceUserMe(filterOut, p, u.username);
+    replaceUserMe(v.filterin, p, u.username);
+    replaceUserMe(v.filterout, p, u.username);
 
 
-    std::vector<struct Issue*> issueList = p.search(fulltextSearch.c_str(), filterIn, filterOut, sorting.c_str());
+    std::vector<struct Issue*> issueList = p.search(v.search.c_str(),
+                                                    v.filterin, v.filterout, v.sort.c_str());
 
     // check for redirection to specific issue (used for previous/next)
     std::string next = getFirstParamFromQueryString(q, QS_GOTO_NEXT);
@@ -1008,16 +936,13 @@ void httpGetListOfIssues(struct mg_connection *conn, Project &p, User u)
         if (rc == 0) return; // redirection occurred
     }
 
-
     std::string full = getFirstParamFromQueryString(q, "full"); // full-contents indicator
 
-
-    std::string colspec = getFirstParamFromQueryString(q, "colspec");
+    // get the colspec
     std::list<std::string> cols;
     std::list<std::string> allCols = p.getConfig().getPropertiesNames();
-
-    if (colspec.size() > 0) {
-        cols = parseColspec(colspec.c_str(), allCols);
+    if (v.colspec.size() > 0) {
+        cols = parseColspec(v.colspec.c_str(), allCols);
     } else {
         // prevent having no columns, by forcing all of them
         cols = allCols;
@@ -1026,15 +951,17 @@ void httpGetListOfIssues(struct mg_connection *conn, Project &p, User u)
 
     sendHttpHeader200(conn);
 
-
     if (format == RENDERING_TEXT) RText::printIssueList(conn, issueList, cols);
     else if (format == RENDERING_CSV) RCsv::printIssueList(conn, issueList, cols);
     else {
         ContextParameters ctx = ContextParameters(conn, u, p);
+        std::list<std::string> filterinRaw = getParamListFromQueryString(q, "filterin");
+        std::list<std::string> filteroutRaw = getParamListFromQueryString(q, "filterout");
+        // it would be better for code maintainability to pass v.filterin/out
         ctx.filterin = filterinRaw;
         ctx.filterout = filteroutRaw;
-        ctx.search = fulltextSearch;
-        ctx.sort = sorting;
+        ctx.search = v.search;
+        ctx.sort = v.sort;
         ctx.originView = q;
 
         if (full == "1") {
@@ -1085,6 +1012,16 @@ void httpGetView(struct mg_connection *conn, Project &p, const std::string &view
         std::string viewName = urlDecode(view);
         PredefinedView pv = p.getPredefinedView(viewName);
 
+        if (pv.name.empty()) {
+            // in this case (unnamed view, ie: advanced search)
+            // handle the optional origin view
+            const mg_request_info *req = mg_get_request_info(conn);
+            if (req && req->query_string) {
+                // build a view from QS_ORIGIN_VIEW
+                std::string originView = getFirstParamFromQueryString(req->query_string, QS_ORIGIN_VIEW);
+                pv = PredefinedView::loadFromQueryString(originView);
+            }
+        }
         ContextParameters ctx = ContextParameters(conn, u, p);
         RHtml::printPageView(ctx, pv);
     }
@@ -1293,7 +1230,6 @@ int httpGetIssue(struct mg_connection *conn, Project &p, const std::string &issu
             const struct mg_request_info *req = mg_get_request_info(conn);
             if (req->query_string) {
                 ctx.originView = getFirstParamFromQueryString(req->query_string, QS_ORIGIN_VIEW);
-                urlDecode(ctx.originView);
                 LOG_DEBUG("originView=%s", ctx.originView.c_str());
             }
             RHtml::printPageIssue(ctx, issue);
