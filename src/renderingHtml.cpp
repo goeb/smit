@@ -1013,7 +1013,7 @@ void RHtml::printIssueListFullContents(const ContextParameters &ctx, std::vector
 
     FOREACH (i, issueList) {
         Issue issue;
-        int r = ctx.getProject().get((*i)->id.c_str(), issue);
+        int r = ctx.getProject().get((*i)->id, issue);
         if (r < 0) {
             // issue not found (or other error)
             LOG_INFO("Issue disappeared: %s", (*i)->id.c_str());

@@ -36,7 +36,7 @@
 #include "global.h"
 #include "mg_win32.h"
 #include "cpio.h"
-
+#include "Trigger.h"
 
 std::string exeFile; // path to the executable (used for extracting embedded files)
 #define K_ME "me"
@@ -1277,7 +1277,7 @@ int httpGetIssue(struct mg_connection *conn, Project &p, const std::string &issu
     LOG_DEBUG("httpGetIssue: project=%s, issue=%s", p.getName().c_str(), issueId.c_str());
 
     Issue issue;
-    int r = p.get(issueId.c_str(), issue);
+    int r = p.get(issueId, issue);
     if (r < 0) {
         // issue not found or other error
         return 0; // let mongoose handle it
@@ -1610,6 +1610,13 @@ void httpPostEntry(struct mg_connection *conn, Project &pro, const std::string &
         sendHttpHeader500(conn, "Cannot add entry");
 
     } else {
+
+        // launch the trigger, if any
+#if !defined(_WIN32)
+        Trigger::notifyEntry(pro, issueId, entryId);
+#endif
+
+
         if (getFormat(conn) == RENDERING_HTML) {
             // HTTP redirect
             std::string redirectUrl = "/" + pro.getUrlName() + "/issues/" + id;

@@ -35,7 +35,8 @@ SRCS_CPP = src/db.cpp  \
 		   src/mutexTools.cpp \
 		   src/session.cpp \
 		   src/dateTools.cpp \
-		   src/logging.cpp
+		   src/logging.cpp \
+		   src/Trigger.cpp
 
 
 OBJS = $(SRCS_CPP:%.cpp=$(BUILD_DIR)/%.o) $(SRCS:%.c=$(BUILD_DIR)/%.o)
@@ -61,7 +62,7 @@ all: $(SM_PARSER) embedcpio
 
 .PHONY: $(SM_PARSER)
 $(SM_PARSER):
-	$(CXX) -o $@ src/parseConfig.cpp -DSM_PARSER
+	$(CXX) -g -o $@ src/parseConfig.cpp -DSM_PARSER
 
 print:
 	@echo SRCS=$(SRCS)

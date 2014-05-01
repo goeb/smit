@@ -1,11 +1,11 @@
 
 
-a a1 a2 a3
-"a b c"  "a b c 1"  "a b c 2"  "a b c 3"
+a a1 a2 a3% a4%%
+"a b c"  "a b c 1%%"  "a b c\n 2"  "a b c 3"
 
 zzz < ---zzz
-zzz1
-zzz2
+zzz1%%
+zzz2\n
 zzz3
 ---zzz
 

@@ -150,6 +150,24 @@ std::string ProjectConfig::getLabelOfProperty(const std::string &propertyName) c
     return label;
 }
 
+bool ProjectConfig::isValidPropertyName(const std::string &name) const
+{
+    // get user defined properties
+    std::list<PropertySpec>::const_iterator pspec;
+    FOREACH(pspec, properties) {
+        if (pspec->name == name) return true;
+    }
+
+    // look in reserved properties
+    std::list<std::string> reserved = getReservedProperties();
+    std::list<std::string>::const_iterator p;
+    FOREACH(p, reserved) {
+        if ((*p) == name) return true;
+    }
+    return false;
+
+}
+
 /** init and load in memory the given project
   *
   * @param path
@@ -394,14 +412,14 @@ Issue *Project::getIssue(const std::string &id) const
     else return i->second;
 }
 
-int Project::get(const char *issueId, Issue &issue) const
+int Project::get(const std::string &issueId, Issue &issue) const
 {
     ScopeLocker scopeLocker(locker, LOCK_READ_ONLY);
 
     Issue *i = getIssue(issueId);
     if (!i) {
         // issue not found
-        LOG_DEBUG("Issue not found: %s", issueId);
+        LOG_DEBUG("Issue not found: %s", issueId.c_str());
         return -1;
     } else {
         issue = *i;
@@ -586,15 +604,6 @@ ProjectConfig parseProjectConfig(std::list<std::list<std::string> > &lines)
             if (value == "global") config.numberIssueAcrossProjects = true;
             else LOG_ERROR("Invalid value '%s' for numberIssues.", value.c_str());
 
-        } else if (token == "trigger") {
-            std::string trigger = pop(*line);
-            if (trigger.empty()) {
-                LOG_ERROR("Invalid empty trigger");
-                wellFormatedLines.pop_back(); // remove incorrect line
-            } else {
-                config.trigger = trigger; // path to program to be launched
-            }
-
         } else if (token == "tag") {
             TagSpec tagspec;
             tagspec.id = pop(*line);
@@ -732,7 +741,6 @@ int Project::modifyConfig(std::list<std::list<std::string> > &tokens)
     c.predefinedViews = config.predefinedViews;
     c.tags = config.tags;
     c.numberIssueAcrossProjects = config.numberIssueAcrossProjects;
-    c.trigger = config.trigger;
 
     // add version
     std::list<std::string> versionLine;
@@ -764,15 +772,6 @@ int Project::modifyConfig(std::list<std::list<std::string> > &tokens)
         line.push_back("global");
         tokens.push_back(line);
     }
-
-    // serialize trigger, if any
-    if (config.trigger.size()) {
-        line.clear();
-        line.push_back("trigger");
-        line.push_back(config.trigger);
-        tokens.push_back(line);
-    }
-
 
     // write to file
     std::string data = serializeTokens(tokens);
@@ -1461,6 +1460,13 @@ int Issue::getNumberOfTaggedIEntries(const std::string &tagId) const
     return n;
 }
 
+Entry *Issue::getEntry(const std::string id)
+{
+    std::map<std::string, Entry*>::const_iterator e = entries.find(id);
+    if (e == entries.end()) return 0;
+    return e->second;
+}
+
 /** If issueId is empty:
   *     - a new issue is created
   *     - its ID is returned within parameter 'issueId'
@@ -1639,27 +1645,6 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
     } // end of processing of uploaded files
 
     entryId = newEntryId;
-
-    // launch the trigger, if any
-    if (config.trigger.size()) {
-        // command: /path/to/trigger /path/to/entry
-        std::string trigCmd = Database::Db.pathToRepository + '/' + config.trigger + ' ';
-        trigCmd += pathOfNewEntry;
-        LOG_DEBUG("Launching trigger: %s", trigCmd.c_str());
-        int trigCode = system(trigCmd.c_str());
-        if (trigCode == -1) {
-            LOG_ERROR("Trigger failed -1 (%s)", trigCmd.c_str());
-#if defined(_WIN32)
-        } else if (trigCode != 0) {
-            LOG_ERROR("Trigger failed with exit status %d (%s)", trigCode, trigCmd.c_str());
-
-#else
-        } else if (WEXITSTATUS(trigCode) != 0) {
-            LOG_ERROR("Trigger failed with exit status %d (%s)", WEXITSTATUS(trigCode), trigCmd.c_str());
-#endif
-        }
-    }
-
     return r;
 }
 
@@ -1734,7 +1719,7 @@ int Project::deleteEntry(const std::string &issueId, const std::string &entryId,
     return 0;
 }
 
-std::string Entry::getMessage()
+std::string Entry::getMessage() const
 {
     return getProperty(properties, K_MESSAGE);
 }

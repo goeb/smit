@@ -1,7 +1,7 @@
 
-single # comment 
-columns owner select user
-columns status select "open" "closed" #"deleted"
+single% # comment 
+columns%% owner select user
+columns status select "open" "closed%%" #"deleted"
 columns target_version select \
     "non #renseigne" \
     "v0.1" \

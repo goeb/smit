@@ -32,7 +32,7 @@ main()
     for (i=tokens.begin(); i!=tokens.end(); i++) {
         std::list<std::string> line = *i;
         std::list<std::string>::iterator tok;
-        printf("line: ");
+        printf("line (%d): ", line.size());
         for (tok=line.begin(); tok!= line.end(); tok++) {
             printf(" [%s] ", tok->c_str());
         }
@@ -113,7 +113,7 @@ main()
     ASSERT(line->size() == 2);
 
     std::string s = doubleQuote("a b\nc d\\");
-    ASSERT(s == "\"a b\nc d\\\\\"");
+    ASSERT(s == "\"a b\\nc d\\\\\"");
 
     s = doubleQuote("a \"b\"");
     ASSERT(s == "\"a \\\"b\\\"\"");
@@ -125,7 +125,7 @@ main()
     values.push_back("a..\"..b");
 
     s = serializeProperty("xyz", values);
-    ASSERT(s == "xyz toto \"a\nb\" \"a b c\" \"a..\\\"..b\"\n");
+    ASSERT(s == "xyz toto \"a\\nb\" \"a b c\" \"a..\\\"..b\"\n");
 
     utestEnd();
 }
