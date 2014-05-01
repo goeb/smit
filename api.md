@@ -9,14 +9,14 @@ REST API:
 POST /signin
 ```
 
-Parameters:
+*Parameters:*
 
 - `username`: the user name
 - `password`: the password
 
 Syntax: application/x-www-form-urlencoded
 
-Return in a cookie:
+*Response:*
 
 - `sessid`: the session id
 
@@ -32,7 +32,7 @@ GET /<project>/issues
 
 Returns a list of issues. Without any parameter, it returns all the issues.
 
-### Parameters
+*Parameters*
 
 - `filterin`: get issues that have a specific property
     * Syntax: property`:`value
@@ -53,7 +53,7 @@ Returns a list of issues. Without any parameter, it returns all the issues.
     * Syntax: full=1
 - `format`: select format of response: `html` (the default), `text`, `csv`
 
-Examples:
+*Examples:*
 
 ```
 GET /things_to_do/issues?search=john&sort=-mtime&filterin=status:open
@@ -67,11 +67,11 @@ REST API:
 GET /<project>/issues/<id>
 ```
 
-### Parameters
+*Parameters:*
 
 - `format`: select format of response: `html` (the default), `text`
 
-Examples:
+*Examples:*
 
 ```
 GET /things_to_do/issues/543
@@ -86,7 +86,7 @@ REST API:
 POST /<project>/issues/new
 ```
 
-Parameters:
+*Parameters:*
 
 - A hash of the issue properties
     * Syntax: multipart/form-data
@@ -102,7 +102,7 @@ REST API:
 POST /<project>/issues/<id>
 ```
 
-Parameters:
+*Parameters:*
 
 - the issue properties
     * Syntax: multipart/form-data
@@ -121,7 +121,7 @@ A trigger is a program called by Smit. The data is passed to this program on its
 
 work in progress...
 
-Example:
+*Example:*
 
 ```
 {

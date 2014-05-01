@@ -41,13 +41,13 @@
 <h2 id="signing-in">Signing in</h2>
 <p>REST API:</p>
 <pre><code>POST /signin</code></pre>
-<p>Parameters:</p>
+<p><em>Parameters:</em></p>
 <ul>
 <li><code>username</code>: the user name</li>
 <li><code>password</code>: the password</li>
 </ul>
 <p>Syntax: application/x-www-form-urlencoded</p>
-<p>Return in a cookie:</p>
+<p><em>Response:</em></p>
 <ul>
 <li><code>sessid</code>: the session id</li>
 </ul>
@@ -55,7 +55,7 @@
 <p>REST API:</p>
 <pre><code>GET /&lt;project&gt;/issues</code></pre>
 <p>Returns a list of issues. Without any parameter, it returns all the issues.</p>
-<h3 id="parameters">Parameters</h3>
+<p><em>Parameters</em></p>
 <ul>
 <li><code>filterin</code>: get issues that have a specific property
 <ul>
@@ -87,23 +87,23 @@
 </ul></li>
 <li><code>format</code>: select format of response: <code>html</code> (the default), <code>text</code>, <code>csv</code></li>
 </ul>
-<p>Examples:</p>
+<p><em>Examples:</em></p>
 <pre><code>GET /things_to_do/issues?search=john&amp;sort=-mtime&amp;filterin=status:open
 GET /things_to_do/issues?search=john&amp;sort=-mtime&amp;filterin=status:open?format=csv</code></pre>
 <h2 id="showing-an-issue">Showing an issue</h2>
 <p>REST API:</p>
 <pre><code>GET /&lt;project&gt;/issues/&lt;id&gt;</code></pre>
-<h3 id="parameters-1">Parameters</h3>
+<p><em>Parameters:</em></p>
 <ul>
 <li><code>format</code>: select format of response: <code>html</code> (the default), <code>text</code></li>
 </ul>
-<p>Examples:</p>
+<p><em>Examples:</em></p>
 <pre><code>GET /things_to_do/issues/543
 GET /things_to_do/issues/89?format=text</code></pre>
 <h2 id="creating-an-issue">Creating an issue</h2>
 <p>REST API:</p>
 <pre><code>POST /&lt;project&gt;/issues/new</code></pre>
-<p>Parameters:</p>
+<p><em>Parameters:</em></p>
 <ul>
 <li>A hash of the issue properties
 <ul>
@@ -114,7 +114,7 @@ GET /things_to_do/issues/89?format=text</code></pre>
 <h2 id="updating-an-issue">Updating an issue</h2>
 <p>REST API:</p>
 <pre><code>POST /&lt;project&gt;/issues/&lt;id&gt;</code></pre>
-<p>Parameters:</p>
+<p><em>Parameters:</em></p>
 <ul>
 <li>the issue properties
 <ul>
@@ -128,7 +128,7 @@ GET /things_to_do/issues/89?format=text</code></pre>
 <h2 id="trigger">Trigger</h2>
 <p>A trigger is a program called by Smit. The data is passed to this program on its standard input in JSON format.</p>
 <p>work in progress...</p>
-<p>Example:</p>
+<p><em>Example:</em></p>
 <pre><code>{
 &quot;project&quot;:&quot;myproject&quot;,
 &quot;issue&quot;:&quot;13&quot;,

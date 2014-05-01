@@ -134,6 +134,7 @@ blockquote p, blockquote ul {
     margin: 0;
 }
 em {
-    font-weight: bold;
+    /*font-weight: bold;*/
     font-style: normal;
+    text-decoration: underline;
 }
