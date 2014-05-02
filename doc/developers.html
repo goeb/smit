@@ -1,30 +1,27 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <title>Developers' Corner</title>
-        <link rel="stylesheet" type="text/css" href="style.css">
+        <title>Developer Guide</title>
+        <link rel="stylesheet" type="text/css" href="../style.css">
         <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/>
     </head>
 
     <body>
         <div class="header">
-            <img src="logo.png" alt="Logo" width="150">
-            <span class="header_text">The Small Issue Tracker</span>
+            <img src="../logo.png" alt="Logo" width="150">
+            <span class="header_text">The Small Issue Tracker - Documentation</span>
         </div>
         <div class="page">
 <aside class='menu'>
 <ul>
-<li><a href='index.html'>Smit Overview</a></li>
-<li><a href='getting_started.html'>Getting Started</a></li>
-<li><a href='screenshots.html'>Screenshots</a></li>
-<li><a href='downloads.html'>Downloads</a></li>
-<li><a href='issue_tracking.html'>Issue Tracking</a></li>
-<li><a href='documentation.html'>Documentation</a></li>
-<li><a href='news.html'>News</a></li>
+<li><a href='overview.html'>Overview</a></li>
+<li><a href='install.html'>Installation</a></li>
+<li><a href='admin.html'>Administration</a></li>
+<li><a href='user_guide.html'>User Guide</a></li>
 <li><a href='api.html'>Smit API</a></li>
-<li class='active'>Developers' Corner
+<li class='active'>Developer Guide
 <ul class=menu_level2>
-<li><a href='#rest-api'>REST API</a></li>
+<li><a href='#software-architecture'>Software Architecture</a></li>
 <li><a href='#directories-and-files'>Directories and files</a></li>
 <li><a href='#roadmap'>Roadmap</a></li>
 </ul>
@@ -32,24 +29,12 @@
 </ul>
 </aside>
 <div class='contents'>
-<h1 id="developers-corner">Developers' Corner</h1>
-<p>Smit is built on top of <a href="http://code.google.com/p/mongoose/">Mongoose HTTP server</a>.</p>
-<h2 id="rest-api">REST API</h2>
-<p>The requests are driven by the Query String:</p>
-<p>Examples:</p>
+<h1 id="developer-guide">Developer Guide</h1>
+<h2 id="software-architecture">Software Architecture</h2>
+<p>Smit:</p>
 <ul>
-<li><p><code>colspec=status+release+assignee</code></p>
-<p>The properties specified by colspec shall be displayed in the table.</p></li>
-<li><p><code>sort=aaa-bbb+ccc</code></p>
-<p>The specified properties shall drive the sorting order (<code>+</code> for ascending order, and <code>-</code> for descending order).</p></li>
-<li><p><code>search=hello world</code></p>
-<p>Full text search on all properties and messages.</p></li>
-<li><p><code>filterin=status:open&amp;filterin=assignee:John Smith&amp;filterout=release:undefined</code></p>
-<p>'filterin' and 'filterout' may be specified several times on the query string.</p></li>
-<li><p><code>format= text | html | csv</code></p>
-<p>The default format is HTML.</p></li>
-<li><p><code>full=1</code></p>
-<p>This makes sense only for the <code>issues</code> pages, and makes the page display all issues and their contents on the page.</p></li>
+<li>is built on top of <a href="http://code.google.com/p/mongoose/">Mongoose HTTP server</a></li>
+<li>relies on OpenSSL for TLS authentication and encryption</li>
 </ul>
 <h2 id="directories-and-files">Directories and files</h2>
 <p>The database is made of directories and files. The layout is as follows:</p>
@@ -128,7 +113,7 @@ addUser alice sha1 522b276a356bdf39013dfabea2cd43e141ecc9e8 \
 </div>
         </div> <!-- div class page -->
         <div class="footer">
-            Page updated on  1 May 2014
+            Page updated on  2 May 2014
         </div>
     </body>
 </html>

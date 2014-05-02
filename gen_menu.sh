@@ -84,7 +84,7 @@ if [ -z "$PAGE" ]; then usage; fi
 # start outputting HTML
 
 TITLE=`grep -m 1 "^#" "$PAGE" | pandoc | grep "^<h1" | sed -e "s;</h1>;;" -e "s;.*>;;"`
-sed -e "s;__TITLE__;$TITLE;g" < "$HEADER"
+perl -p -i -e "s/__TITLE__/$TITLE/g" < "$HEADER"
 
 generate_menu "$PAGE" $@
 

@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Documentation</title>
+        <link rel="stylesheet" type="text/css" href="../style.css">
+        <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/>
+    </head>
+
+    <body>
+        <div class="header">
+            <img src="../logo.png" alt="Logo" width="150">
+            <span class="header_text">The Small Issue Tracker - Documentation</span>
+        </div>
+        <div class="page">
+<aside class='menu'>
+<ul>
+<li class='active'>Documentation
+<ul class=menu_level2>
+<li><a href='#install'>Install</a></li>
+<li><a href='#command-line-usage'>Command Line Usage</a></li>
+<li><a href='#project-configuration'>Project Configuration</a></li>
+<li><a href='#customize-the-html-pages'>Customize the HTML pages</a></li>
+<li><a href='#faq'>FAQ</a></li>
+</ul>
+</li>
+<li><a href='install.html'>Installation &amp; Administration</a></li>
+<li><a href='api.html'>Smit API</a></li>
+<li><a href='developers.html'>Developers' Corner</a></li>
+</ul>
+</aside>
+<div class='contents'>
+<h1 id="documentation">Documentation</h1>
+<h2 id="install">Install</h2>
+<h3 id="windows-platform">Windows Platform</h3>
+<ul>
+<li>Unzip</li>
+<li><code>smit.exe</code> is ready to use</li>
+</ul>
+<h3 id="linux">Linux</h3>
+<p>Requirements:</p>
+<ul>
+<li>OpenSSL</li>
+</ul>
+<p>Installation instructions:</p>
+<pre><code>git clone http://github.com/goeb/smit
+cd smit
+make</code></pre>
+<p>And copy the compiled executable <code>smit</code> to your PATH (for example /usr/bin).</p>
+<h2 id="command-line-usage">Command Line Usage</h2>
+<pre><code>Usage: smit [--version] [--help]
+            &lt;command&gt; [&lt;args&gt;]
+
+Commands:
+
+    init [&lt;directory&gt;]
+        Initialize a repository in an existing empty directory. A repository
+        is a directory where the projects are stored.
+
+    addproject &lt;project-name&gt; [-d &lt;repository&gt;]
+        Add a new project, with a default structure. The structure
+        may be modified online by an admin user.
+
+    adduser &lt;user-name&gt; [--passwd &lt;password&gt;] [--project &lt;project-name&gt; &lt;role&gt;]
+                        [--superadmin] [-d &lt;repository&gt;]
+        Add a user on one or several projects.
+        The role must be one of: admin, rw, ro, ref.
+        --project options are cumulative with previously defined projects roles
+        for the same user.
+
+    serve [&lt;repository&gt;] [--listen-port &lt;port&gt;] [--ssl-cert &lt;certificate&gt;]
+        Default listening port is 8090.
+        The --ssl-cert option forces use of HTTPS.
+        &lt;certificate&gt; must be a PEM certificate, including public and private key.
+
+    --version
+    --help
+
+When a repository is not specified, the current working directory is assumed.
+
+Roles:
+    superadmin  able to create projects and manage users
+    admin       able to modify an existing project
+    rw          able to add and modify issues
+    ro          able to read issues
+    ref         may not access a project, but may be referenced</code></pre>
+<h3 id="example-create-repo-and-project">Example: Create repo and project</h3>
+<pre><code>    mkdir myrepo
+    smit init myrepo
+    smit addproject -d myrepo myproject1
+    smit adduser homer -d myrepo --superadmin --passwd homer --project myproject1 admin
+    smit serve myrepo --listen-port 9090</code></pre>
+<p>And with your browser, go to: <a href="http://localhost:9090">http://localhost:9090</a></p>
+<p>Note that on Windows the scripts <code>bin/init.bat</code> and <code>start.bat</code> help perform these steps, but you still may want to customize the repository name and admin user name.</p>
+<h2 id="project-configuration">Project Configuration</h2>
+<p>The project configuration defines:</p>
+<ul>
+<li>the properties of the issues</li>
+<li>the tags</li>
+<li>the numbering scheme of the issues (local or global to several projects)</li>
+<li>the trigger (an external program to launch on new entries)</li>
+</ul>
+<p>The configuration may be modified in two ways:</p>
+<ul>
+<li>via the web interface
+<ul>
+<li>only the properties may be managed this way</li>
+<li>hot reload</li>
+</ul></li>
+<li>via editing directly the configuration file, and performing a hot reload via the web interface</li>
+</ul>
+<p>The configuration of a project is given by the file <code>project</code> in the directory of the project.</p>
+<h3 id="addproperty">addProperty</h3>
+<pre><code>addProperty &lt;id&gt; [-label &lt;label&gt;] [-help &lt;help&gt;] &lt;type&gt; [values ...]</code></pre>
+<p><code>addProperty</code> defines a property.</p>
+<ul>
+<li><code>&lt;id&gt;</code> is an identifier (only characters a-z, A-Z, 0-9, -, _)</li>
+<li><code>&lt;label&gt;</code> is the text that will be displayed in the HTML pages (optional)</li>
+<li><code>&lt;help&gt;</code> is a tooltip for properties inputs, displayed above properties labels (optional)</li>
+<li><p><code>&lt;type&gt;</code> is one of text, select, multiselect, selectUser, textarea, textarea2</p>
+<ul>
+<li><code>text</code>: free text</li>
+<li><code>select</code>: selection among a list if given values</li>
+<li><code>multiselect</code>: same as select, but several may be selected at the same time</li>
+<li><code>selectUser</code>: selection among the users of the project</li>
+<li><code>textarea</code>: free text, multi-lines</li>
+<li><code>textarea2</code>: same as textarea, but spanned on 2 columns in the HTML</li>
+</ul></li>
+<li><p><code>value</code> indicates the allowed values for types select and multiselect.</p></li>
+</ul>
+<h3 id="setpropertylabel">setPropertyLabel</h3>
+<pre><code>setPropertyLabel &lt;propety-id&gt; &lt;label&gt;</code></pre>
+<p><code>setPropertyLabel</code> defines the label for a property. This is used for mandatory properties that are not defined by <code>addProperty</code>: id, ctime, mtime, summary.</p>
+<h3 id="numberissues">numberIssues</h3>
+<p>(smit version &gt;= 1.4, no web interface)</p>
+<pre><code>numberIssues global</code></pre>
+<p><code>numberIssues</code> defines the numbering policy of the issues.</p>
+<p>If not defined, the issues are numbered reletively to their project: 1, 2, 3,...</p>
+<p>If <code>global</code> is set, then the numbering is shared by all the projects that have this policy.</p>
+<h3 id="tag">tag</h3>
+<p>(smit version &gt;= 1.3, no web interface)</p>
+<p>Entries may be tagged.</p>
+<pre><code>tag &lt;id&gt; -label &lt;text&gt; [-display]</code></pre>
+<ul>
+<li><code>&lt;id&gt;</code> may contain only letters, digits and underscores.</li>
+<li><code>&lt;text&gt;</code> is the text to display in the HTML page</li>
+<li><code>-display</code> requires the display of a box in the headers of issues, that indicates if at least one entry of the current issue is tagged (this may be seen as a checkbox, to quickly verify that some quality criterion is met).</li>
+</ul>
+<h3 id="trigger">trigger</h3>
+<p>(smit version &gt;= 1.5, no web interface)</p>
+<p>The trigger defines an external program to be launch after each new entry.</p>
+<pre><code>trigger &lt;path&gt;</code></pre>
+<ul>
+<li><code>&lt;path&gt;</code> must be a relative path inside the repository.</li>
+</ul>
+<p>The external program will be given by smit the path to the new entry as first argument.</p>
+<h3 id="full-example">Full example</h3>
+<pre><code>setPropertyLabel id &quot;The ID&quot;
+
+addProperty status -label &quot;The Status&quot; select open closed
+addProperty owner -label &quot;The owner&quot; selectUser
+
+numberIssues global
+
+tag test -label &quot;Test Proof&quot; -display
+
+trigger public/sendEmail.sh</code></pre>
+<h2 id="customize-the-html-pages">Customize the HTML pages</h2>
+<p>One may customize the HTML and CSS pages. Some knowledge of HTML and CSS are needed. Each instance of Smit serves one repository (also refered below as <code>$REPO</code>).</p>
+<p>The Directories layout is typically:</p>
+<pre><code>$REPO
+├── project-A
+│   └── html
+│
+├── project-B
+│   └── html
+│
+└── public</code></pre>
+<p>Smit grants read access to files under the <code>$REPO/public</code>, without restriction. Do not put confidential data in here.</p>
+<p>By default the core HTML files are in <code>$REPO/public</code> and shared by all the projects of the repository:</p>
+<pre><code>signin.html
+issue.html
+issues.html
+newIssue.html
+project.html
+projects.html
+user.html
+view.html
+views.html</code></pre>
+<p>After a page modification, there is no need to restart Smit. Just reload the page.</p>
+<h3 id="customize-the-logo">Customize the logo</h3>
+<p>Modify the <code>$REPO/public/logo.png</code> according to yours needs, or modify the HTML files to point to another logo.</p>
+<h3 id="customize-the-css">Customize the CSS</h3>
+<p>Modify <code>$REPO/public/style.css</code> and <code>print.css</code> according to your needs.</p>
+<h3 id="the-sm-variables">The SM variables</h3>
+<p>In order to let a maximum customization freedom, Smit lets the user define the global structure of the HTML pages, and inserts the dynamic contents at users' defined places, indicated by SM variables:</p>
+<pre><code>SM_DIV_ISSUE
+SM_DIV_ISSUE_FORM
+SM_DIV_ISSUE_MSG_PREVIEW
+SM_DIV_ISSUES
+SM_DIV_ISSUE_SUMMARY
+SM_DIV_NAVIGATION_GLOBAL
+SM_DIV_NAVIGATION_ISSUES
+SM_DIV_PREDEFINED_VIEWS
+SM_DIV_PROJECTS
+SM_DIV_USERS
+SM_HTML_PROJECT_NAME
+SM_RAW_ISSUE_ID
+SM_SCRIPT_PROJECT_CONFIG_UPDATE
+SM_URL_PROJECT_NAME</code></pre>
+<p>Some variables make sense only in some particular context. For instance, <code>SM_RAW_ISSUE_ID</code> makes sense only when a single issue is displayed.</p>
+<h3 id="setting-different-html-pages-for-2-projects-in-the-same-repository.">Setting different HTML pages for 2 projects in the same repository.</h3>
+<p>The core HTML pages are first looked after in <code>$REPO/&lt;project&gt;/html/.</code> and, if not present, Smit looks in the <code>$REPO/public</code> directory.</p>
+<p>Therefore, if you want to customize (for example) the 'issues' page for a project:</p>
+<ul>
+<li>copy <code>$REPO/public/issues.html</code> to <code>$REPO/&lt;project&gt;/html/issues.html</code></li>
+<li>edit <code>$REPO/&lt;project&gt;/html/issues.html</code> to suit your needs</li>
+</ul>
+<h3 id="interface-constraints">Interface constraints</h3>
+<p>Be sure to not modify the following topics in the HTML pages, as they insure proper operation of Smit:</p>
+<ul>
+<li>keep the inclusion of <code>/sm/smit.js</code>. Smit uses this to update some dynamic contents on some pages (this file is included in the Smit executable).</li>
+<li>keep the name of the <code>SM_</code> variables</li>
+<li>keep the <code>id=&quot;sm_...&quot;</code></li>
+<li>keep the <code>class=&quot;sm_...&quot;</code></li>
+</ul>
+<h2 id="faq">FAQ</h2>
+<h3 id="why-cannot-i-create-a-project-named-public">Why cannot I create a project named 'public'?</h3>
+<p><code>public</code> is reserved for storing HTML pages that are public, such as the signin page.</p>
+<p>The reserve keywords that cannot be used as project names are:</p>
+<pre><code>public
+sm
+users</code></pre>
+</div>
+        </div> <!-- div class page -->
+        <div class="footer">
+            Page updated on  2 May 2014
+        </div>
+    </body>
+</html>
