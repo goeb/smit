@@ -1,7 +1,6 @@
 # Generate HTML pages with a menu
 
-SRCS = 
-SRCS += overview.md
+SRCS += index.md
 SRCS += install.md
 SRCS += admin.md
 SRCS += user_guide.md
