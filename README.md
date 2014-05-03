@@ -5,15 +5,6 @@ Smit is a free and open-source issue tracker designed to handle issues of projec
 
 Smit is easy to install and customize and has a tiny footprint with lightning fast performance.
 
-Smit will help you:
-
-- organize issues
-- assign work
-- follow team activity
-- capitalize knowledge
-
-Issues are to be understood in the broad sense: tasks, ideas, requests, experiments, bugs, etc.
-
 More documentation at: http://goeb.github.io/smit/
 
 ## Features
@@ -21,13 +12,17 @@ More documentation at: http://goeb.github.io/smit/
 Some of the main features of Smit are:
 
 - Easy customization of properties
-- Innovative "one-click" sorting interface, more advanced than most other trackers
-- Rich text
+- "One-click" multi-column sorting
 - Uploaded images displayed as thumbnails
 - Advanced searching (including full text searching)
+- Rich text, with preview
 - Exporting contents to HTML, CSV, PDF (via the browser's capability)
 - Multiple projects support
+- Bookmark-friendly URL
+- Trigger of external program on new entry
+- Custom tags on entries
 - Self-Contained: Smit is a single stand-alone executable
+
 
 ## Supported platforms
 
@@ -41,5 +36,5 @@ An online demo is available at: [http://smit.herokuapp.com](http://smit.herokuap
 
 ## License
 
-Smit is released under the GNU GENERAL PUBLIC LICENSE v2: [Smit License](http://github.com/goeb/smit/blob/master/LICENSE)
+Smit is released under the GNU GENERAL PUBLIC LICENSE v2.
 
