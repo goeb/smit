@@ -7,8 +7,6 @@ SRCS += downloads.md
 SRCS += issue_tracking.md
 SRCS += documentation.md
 SRCS += news.md
-SRCS += api.md
-SRCS += developers.md
 
 BUILD_DIR=.
 
@@ -22,4 +20,4 @@ all: $(HTMLS)
 	sh gen_menu.sh --header header.html --footer footer.html --page $< -- $(SRCS) > $@
 	
 clean:
-	rm $(HTMLS)
+	rm -f $(HTMLS)
