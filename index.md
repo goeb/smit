@@ -52,3 +52,6 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 [Smit License](http://github.com/goeb/smit/blob/master/LICENSE)
+
+[Source Code on Github: http://github.com/goeb/smit](http://github.com/goeb/smit)
+
