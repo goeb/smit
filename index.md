@@ -19,12 +19,13 @@ Issues are to be understood in the broad sense: tasks, ideas, requests, experime
 Some of the main features of Smit are:
 
 - Easy customization of properties
-- Uploaded images displayed as thumbnails
 - "One-click" multi-column sorting
+- Uploaded images displayed as thumbnails
 - Advanced searching (including full text searching)
 - Rich text, with preview
 - Exporting contents to HTML, CSV, PDF (via the browser's capability)
 - Multiple projects support
+- Bookmark-friendly URL
 - Trigger of external program on new entry
 - Custom tags on entries
 - Self-Contained: Smit is a single stand-alone executable

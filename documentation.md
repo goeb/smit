@@ -1,3 +1,3 @@
 # Documentation
 
-Visit the [Documentation Page](doc/overview.html).
+Visit the [Documentation Page](doc/index.html).
