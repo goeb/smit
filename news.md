@@ -1,5 +1,22 @@
 # News
 
+## 3 May 2014
+
+Smit 1.6.0 is released.
+
+New features:
+
+- navigation to next/previous issue
+- improve filter-in/out with select lists
+- hot reload of project configuration
+- trigger external program on new entry
+- numbering of issues global to several projects
+- textarea properties
+- tags
+- print preview
+- various bug fixes
+
+
 ## 27 Jan 2014
 
 Smit v1.2 is released.
