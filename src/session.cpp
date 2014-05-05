@@ -92,7 +92,7 @@ std::list<std::string> getAvailableRoles()
 
 /** Load the users from file storage
   */
-int UserBase::init(const char *path)
+int UserBase::init(const char *path, bool checkProject)
 {
     // init random seed
     srand(time(0));
@@ -138,10 +138,12 @@ int UserBase::init(const char *path)
                         continue;
                     }
                     // check if project exists
-                    Project *p = Database::getProject(project);
-                    if (!p) {
-                        LOG_ERROR("Invalid project name '%s' for user %s", project.c_str(), u.username.c_str());
-                        continue;
+                    if (checkProject) {
+                        Project *p = Database::getProject(project);
+                        if (!p) {
+                            LOG_ERROR("Invalid project name '%s' for user %s", project.c_str(), u.username.c_str());
+                            continue;
+                        }
                     }
 
                     Role r = stringToRole(role);
@@ -268,6 +270,14 @@ std::map<std::string, Role> UserBase::getUsersRolesOfProject(const std::string &
     return result;
 }
 
+/** Update a users's configuration
+  *
+  * @param username
+  * @param newConfig
+  *
+  * In case of renaming, username is the old name, and
+  * newConfig.name is the new name.
+  */
 int UserBase::updateUser(const std::string &username, User newConfig)
 {
     if (username.empty() || newConfig.username.empty()) return -1;

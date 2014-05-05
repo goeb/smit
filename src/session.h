@@ -41,7 +41,7 @@ struct User {
 
 class UserBase {
 public:
-    static int init(const char *repository);
+    static int init(const char *repository, bool checkProject = true);
     static int store(const std::string &repository);
     static int initUsersFile(const char *repository);
     static User* getUser(const std::string &username);

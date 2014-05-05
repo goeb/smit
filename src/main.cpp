@@ -45,12 +45,9 @@ void usage()
            "        Add a new project, with a default structure. The structure\n"
            "        may be modified online by an admin user.\n"
            "\n"
-           "    adduser <user-name> [--passwd <password>] [--project <project-name> <role>]\n"
-           "                        [--superadmin] [-d <repository>]\n"
-           "        Add a user on one or several projects.\n"
-           "        The role must be one of: admin, rw, ro, ref.\n"
-           "        --project options are cumulative with previously defined projects roles\n"
-           "        for the same user.\n"
+           "    user [<name>] [--passwd <password>] [--project <project-name> <role>]\n"
+           "                  [--superadmin] [-d <repository>]\n"
+           "        Enter smit help user for more details.\n"
            "\n"
            "    serve [<repository>] [--listen-port <port>] [--ssl-cert <certificate>]\n"
            "          [--lang <language>]\n"
@@ -59,8 +56,8 @@ void usage()
            "        <certificate> must be a PEM certificate, including public and private key.\n"
            "        The language should be one of: en, fr. If omitted then 'en' is selected.\n"
            "\n"
-           "    --version\n"
-           "    --help\n"
+           "    version\n"
+           "    help\n"
            "\n"
            "When a repository is not specified, the current working directory is assumed.\n"
            "\n"
@@ -140,84 +137,143 @@ int addProject(int argc, const char **args)
     return 0;
 }
 
-int addUser(int argc, const char **args)
+
+int helpUser()
+{
+    printf("smit user: get or set users' configuration.\n"
+           "Usage: 1. smit user\n"
+           "       2. smit user <name> [options] [global-options]\n"
+           "\n"
+           "  1. List all users and their configuration.\n"
+           "  2. With no option, get the configuration of a user.\n"
+           "     With options, see below.\n"
+           "\n"
+           "Options:\n"
+           "  --passwd <pw>     set the password\n"
+           "  --project <project-name> <role>\n"
+           "                    set a role (ref, ro, rw, admin) on a project\n"
+           "  --superadmin      set the superadmin priviledge\n"
+           "  --no-superadmin   remove the superadmin priviledge\n"
+           "\n"
+           "Global Options\n"
+           "  -d <repo>   select a repository by its path\n"
+           "\n");
+
+}
+
+int showUser(const User &u)
+{
+    printf("%s", u.username.c_str());
+    if (u.hashValue.empty()) printf(", no password");
+    if (u.superadmin) printf(", superadmin");
+    printf("\n");
+
+    std::map<std::string, enum Role>::const_iterator project;
+    FOREACH(project, u.rolesOnProjects) {
+        printf("    %s: %s\n", project->first.c_str(), roleToString(project->second).c_str());
+    }
+    printf("\n");
+    return 0;
+}
+
+int cmdUser(int argc, const char **args)
 {
     int i = 0;
     const char *repo = ".";
     const char *username = 0;
+    std::string superadmin;
+    enum UserConfigAction { GET_CONFIG, SET_CONFIG };
+    UserConfigAction action = GET_CONFIG;
     User u;
 
-    while (i<argc) {
+    while (i < argc) {
         const char *arg = args[i]; i++;
         if (0 == strcmp(arg, "-d")) {
             if (i<argc) {
                 repo = args[i];
                 i++;
-            } else usage();
+            } else return helpUser();
 
         } else if (0 == strcmp(arg, "--passwd")) {
             if (i<argc) {
                 u.setPasswd(args[i]);
                 i++;
-            } else usage();
+                action = SET_CONFIG;
+            } else return helpUser();
 
         } else if (0 == strcmp(arg, "--superadmin")) {
-            u.superadmin = true;
+            superadmin = "yes";
+            action = SET_CONFIG;
+
+        } else if (0 == strcmp(arg, "--no-superadmin")) {
+            superadmin = "no";
+            action = SET_CONFIG;
 
         } else if (0 == strcmp(arg, "--project")) {
             if (i+1<argc) {
                 std::string project = args[i];
                 std::string role = args[i+1];
-                if (role == "ref") u.rolesOnProjects[project] = ROLE_REFERENCED;
-                else if (role == "ro") u.rolesOnProjects[project] = ROLE_RO;
-                else if (role == "rw") u.rolesOnProjects[project] = ROLE_RW;
-                else if (role == "admin") u.rolesOnProjects[project] = ROLE_ADMIN;
-                else if (role == "none") u.rolesOnProjects[project] = ROLE_NONE; // role to be erase below
-                else {
-                    LOG_ERROR("Invalid role '%s' for project '%s'", role.c_str(), project.c_str());
-                    usage();
-                }
+                u.rolesOnProjects[project] = stringToRole(role);
+                // role "none" to be erase below
                 i += 2;
-            } else usage();
+                action = SET_CONFIG;
+            } else return helpUser();
 
         } else if (!username) {
             username = arg;
 
-        } else {
-            usage();
-        }
+        } else return helpUser();
     }
 
-    if (!username) usage();
-    u.username = username;
-
-    int r = UserBase::init(repo);
+    int r = UserBase::init(repo, false);
     if (r < 0) {
         LOG_ERROR("Cannot loads users of repository '%s'. Aborting.", repo);
         exit(1);
     }
 
-    User *old = UserBase::getUser(username);
-    if (old) {
-        old->superadmin = u.superadmin;
-        if (!u.hashType.empty()) {
-            old->hashType = u.hashType;
-            old->hashValue = u.hashValue;
-        }
-        // update modified roles (and keep the others unchanged)
-        std::map<std::string, enum Role>::iterator newRole;
-        FOREACH(newRole, u.rolesOnProjects) {
-            if (newRole->second == ROLE_NONE) old->rolesOnProjects.erase(newRole->first);
-            else old->rolesOnProjects[newRole->first] = newRole->second;
-        }
-        r = UserBase::updateUser(username, *old);
+    if (!username) {
+        // list all users
+        if (action == SET_CONFIG) return helpUser();
+
+        std::list<User> users = UserBase::getAllUsers();
+        std::list<User>::const_iterator u;
+        FOREACH(u, users) showUser(*u);
 
     } else {
-        r = UserBase::addUser(u);
-    }
-    if (r < 0) {
-        LOG_ERROR("Abort.");
-        return 1;
+        if (action == GET_CONFIG) {
+            const User *u = UserBase::getUser(username);
+            if (!u) {
+                printf("No such user: %s\n", username);
+                return 1;
+            } else return showUser(*u);
+        }
+
+        // create or update user
+        u.username = username;
+        if (superadmin == "no") u.superadmin = false;
+        else if (superadmin == "yes") u.superadmin = true;
+        User *old = UserBase::getUser(username);
+        if (old) {
+            if (!superadmin.empty()) old->superadmin = u.superadmin;
+            if (!u.hashType.empty()) {
+                old->hashType = u.hashType;
+                old->hashValue = u.hashValue;
+            }
+            // update modified roles (and keep the others unchanged)
+            std::map<std::string, enum Role>::iterator newRole;
+            FOREACH(newRole, u.rolesOnProjects) {
+                if (newRole->second == ROLE_NONE) old->rolesOnProjects.erase(newRole->first);
+                else old->rolesOnProjects[newRole->first] = newRole->second;
+            }
+            r = UserBase::updateUser(username, *old);
+
+        } else {
+            r = UserBase::addUser(u);
+        }
+        if (r < 0) {
+            LOG_ERROR("Abort.");
+            return 1;
+        }
     }
 
     return 0;
@@ -332,7 +388,7 @@ int main(int argc, const char **argv)
 
     int i = 1;
     const char *command = 0;
-    while (i<argc) {
+    while (i < argc) {
 
         command = argv[1]; i++;
 
@@ -341,7 +397,7 @@ int main(int argc, const char **argv)
             if (i < argc) dir = argv[i];
             return initRepository(exeFile, dir);
 
-        } else if (0 == strcmp(command, "--version")) {
+        } else if (0 == strcmp(command, "version")) {
             return showVersion();
 
         } else if (0 == strcmp(command, "serve")) {
@@ -350,9 +406,14 @@ int main(int argc, const char **argv)
         } else if (0 == strcmp(command, "addproject")) {
             return addProject(argc-2, argv+2);
 
-        } else if (0 == strcmp(command, "adduser")) {
-            return addUser(argc-2, argv+2);
+        } else if (0 == strcmp(command, "user")) {
+            return cmdUser(argc-2, argv+2);
 
+        } else if (0 == strcmp(command, "help")) {
+            if (i < argc) {
+                if (0 == strcmp(argv[i], "user")) return helpUser();
+                //else if (0 == strcmp(command, "init")) helpUser();
+            } else usage();
         } else usage();
 
     }
