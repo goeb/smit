@@ -20,8 +20,7 @@ sha1 8a30fca9ea5b46722cbdad24c7470a442718cac8 \
     project things_to_do admin \
 
 
-addUser "not assigned" sha1 11f6ad8ec52a2984abaafd7c3b516503785c2072 \
-    project myproject ref \
+addUser "not assigned"     project myproject ref \
     project smit ref \
     project things_to_do ref \
 

@@ -150,6 +150,7 @@ int helpUser()
            "\n"
            "Options:\n"
            "  --passwd <pw>     set the password\n"
+           "  --no-passwd       delete the password (leading to impossible login)\n"
            "  --project <project-name> <role>\n"
            "                    set a role (ref, ro, rw, admin) on a project\n"
            "  --superadmin      set the superadmin priviledge\n"
@@ -181,6 +182,7 @@ int cmdUser(int argc, const char **args)
     int i = 0;
     const char *repo = ".";
     const char *username = 0;
+    bool deletePasswd = false;
     std::string superadmin;
     enum UserConfigAction { GET_CONFIG, SET_CONFIG };
     UserConfigAction action = GET_CONFIG;
@@ -193,6 +195,10 @@ int cmdUser(int argc, const char **args)
                 repo = args[i];
                 i++;
             } else return helpUser();
+
+        } else if (0 == strcmp(arg, "--no-passwd")) {
+            deletePasswd = true;
+            action = SET_CONFIG;
 
         } else if (0 == strcmp(arg, "--passwd")) {
             if (i<argc) {
@@ -255,7 +261,10 @@ int cmdUser(int argc, const char **args)
         User *old = UserBase::getUser(username);
         if (old) {
             if (!superadmin.empty()) old->superadmin = u.superadmin;
-            if (!u.hashType.empty()) {
+            if (deletePasswd) {
+                old->hashType.clear();
+                old->hashValue.clear();
+            } else if (!u.hashType.empty()) {
                 old->hashType = u.hashType;
                 old->hashValue = u.hashValue;
             }
