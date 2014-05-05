@@ -74,7 +74,7 @@ void usage()
     exit(1);
 }
 
-int initRepository(const char *exec, const char *directory)
+int initRepository(const std::string &exec, const char *directory)
 {
     DIR *dirp;
     dirp = opendir(directory);
@@ -95,7 +95,7 @@ int initRepository(const char *exec, const char *directory)
     closedir(dirp);
 
     // ok, extract the files for the new repository
-    int r = cpioExtractFile(exec, "public", directory);
+    int r = cpioExtractFile(exec.c_str(), "public", directory);
     if (r < 0) {
         LOG_ERROR("Error while extracting files. r=%d", r);
         return 3;
@@ -210,7 +210,7 @@ int addUser(int argc, const char **args)
             if (newRole->second == ROLE_NONE) old->rolesOnProjects.erase(newRole->first);
             else old->rolesOnProjects[newRole->first] = newRole->second;
         }
-        r = UserBase::addUser(*old);
+        r = UserBase::updateUser(username, *old);
 
     } else {
         r = UserBase::addUser(u);
@@ -322,7 +322,14 @@ int main(int argc, const char **argv)
 {
     if (argc < 2) usage();
 
+#ifdef _WIN32
     exeFile = argv[0];
+#else  // Linux
+    char exePath[1024];
+    ssize_t len = readlink( "/proc/self/exe", exePath, sizeof(exePath));
+    exeFile.assign(exePath, len);
+#endif
+
     int i = 1;
     const char *command = 0;
     while (i<argc) {
@@ -332,7 +339,7 @@ int main(int argc, const char **argv)
         if (0 == strcmp(command, "init")) {
             const char *dir = ".";
             if (i < argc) dir = argv[i];
-            return initRepository(argv[0], dir);
+            return initRepository(exeFile, dir);
 
         } else if (0 == strcmp(command, "--version")) {
             return showVersion();
