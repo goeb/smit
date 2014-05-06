@@ -148,7 +148,7 @@ public:
     uint32_t allocateNewIssueId();
     void updateMaxIssueId(uint32_t i);
     int reload(); // reload a project from disk storage
-
+    int getNumIssues();
 
 private:
     int load(); // load a project: config, views, entries, tags

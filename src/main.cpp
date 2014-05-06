@@ -40,9 +40,9 @@ void usage()
            "        Initialize a repository in an existing empty directory. A repository\n"
            "        is a directory where the projects are stored.\n"
            "\n"
-           "    addproject <project-name> [-d <repository>]\n"
-           "        Add a new project, with a default structure. The structure\n"
-           "        may be modified online by an admin user.\n"
+           "    project [<project-name>] [-c] [-d <repository>]\n"
+           "        -c  Create a project, with a default structure. The structure\n"
+           "            may be modified online by an admin user.\n"
            "\n"
            "    user [<name>] [--passwd <password>] [--project <project-name> <role>]\n"
            "                  [--superadmin] [-d <repository>]\n"
@@ -106,11 +106,12 @@ int initRepository(const std::string &exec, const char *directory)
     return 0;
 }
 
-int addProject(int argc, const char **args)
+int cmdProject(int argc, const char **args)
 {
     int i = 0;
     const char *repo = ".";
     const char *projectName = 0;
+    bool create = false;
     while (i<argc) {
         const char *arg = args[i]; i++;
         if (0 == strcmp(arg, "-d")) {
@@ -118,6 +119,9 @@ int addProject(int argc, const char **args)
                 repo = args[i];
                 i++;
             } else usage();
+
+        } else if (0 == strcmp(arg, "-c")) {
+            create = true;
 
         } else if (!projectName) {
             projectName = arg;
@@ -127,12 +131,45 @@ int addProject(int argc, const char **args)
         }
     }
 
-    if (!projectName) usage();
+    // set log level to hide INFO logs
+    putenv("SMIT_DEBUG=ERROR");
 
-    std::string resultingPath;
-    int r = Project::createProjectFiles(repo, projectName, resultingPath);
-    if (r < 0) return 1;
-    LOG_INFO("Project created: %s", resultingPath.c_str());
+    // Load all projects
+    int r = dbLoad(repo);
+    if (r < 0) {
+        LOG_ERROR("Cannot load projects of repository '%s'. Aborting.", repo);
+        return 1;
+    }
+
+    if (!projectName) {
+        if (create) {
+            LOG_ERROR("Cannot create project with no name.\n");
+            return 1;
+        }
+        // list projects
+        std::map<std::string, Project*>::const_iterator p;
+        FOREACH(p, Database::Db.projects) {
+            printf("%s: %d issues\n", p->first.c_str(), p->second->getNumIssues());
+        }
+        printf("%d project(s)\n", Database::Db.projects.size());
+        return 0;
+    }
+
+    if (create) {
+        std::string resultingPath;
+        r = Project::createProjectFiles(repo, projectName, resultingPath);
+        if (r < 0) return 1;
+        printf("Project created: %s\n", resultingPath.c_str());
+    } else {
+        // print project
+        std::map<std::string, Project*>::const_iterator p;
+        p = Database::Db.projects.find(projectName);
+        if (p == Database::Db.projects.end()) {
+            printf("No such project: %s", projectName);
+            return 1;
+        }
+        printf("%s: %d issues\n", p->first.c_str(), p->second->getNumIssues());
+    }
     return 0;
 }
 
@@ -158,7 +195,7 @@ int helpUser()
            "Global Options\n"
            "  -d <repo>   select a repository by its path\n"
            "\n");
-
+    return 0;
 }
 
 int showUser(const User &u)
@@ -411,8 +448,8 @@ int main(int argc, const char **argv)
         } else if (0 == strcmp(command, "serve")) {
             return serveRepository(argc-2, argv+2);
 
-        } else if (0 == strcmp(command, "addproject")) {
-            return addProject(argc-2, argv+2);
+        } else if (0 == strcmp(command, "project")) {
+            return cmdProject(argc-2, argv+2);
 
         } else if (0 == strcmp(command, "user")) {
             return cmdUser(argc-2, argv+2);

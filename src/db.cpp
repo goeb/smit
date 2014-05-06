@@ -1061,6 +1061,12 @@ int Project::reload()
     return r;
 }
 
+int Project::getNumIssues()
+{
+    ScopeLocker scopeLocker(locker, LOCK_READ_ONLY);
+    return issues.size();
+}
+
 void Project::loadPredefinedViews()
 {
     LOG_FUNC();

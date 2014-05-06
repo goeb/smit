@@ -1,7 +1,7 @@
 v1.7.0
 
     - fix smit embedded files on Linux when executable taken from PATH
-    - modify command line
+    - modify command line (user, project)
     - keyword "me" in search text
     - search text also on authors of entries
 
