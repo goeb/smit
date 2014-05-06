@@ -1442,6 +1442,9 @@ bool Issue::searchFullText(const char *text) const
             }
         }
 
+        // look at the author
+        if (mg_strcasestr(e->author.c_str(), text)) return true; // found
+
         e = e->prev;
     }
 

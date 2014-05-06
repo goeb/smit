@@ -920,6 +920,7 @@ void httpGetListOfIssues(struct mg_connection *conn, Project &p, User u)
     // replace user "me" if any...
     replaceUserMe(v.filterin, p, u.username);
     replaceUserMe(v.filterout, p, u.username);
+    if (v.search == "me") v.search = u.username;
 
 
     std::vector<struct Issue*> issueList = p.search(v.search.c_str(),

@@ -363,9 +363,7 @@ div.sm_entry_files {
 }
 .sm_tag {
     background-color: #ccc;
-    border: 1px solid #aaa;
-    padding: 0.1em 0.2em 0.1em 0.2em; /* top right bottom left */
-    border-radius: 5px;
+    font-family: monospace, monospace; /* twice, workaround for firefox bug */
 }
 .sm_project_propname {
     width: 12em;
