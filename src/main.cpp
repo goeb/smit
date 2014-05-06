@@ -32,8 +32,7 @@
 
 void usage()
 {
-    printf("Usage: smit [--version] [--help]\n"
-           "            <command> [<args>]\n"
+    printf("Usage: smit <command> [<args>]\n"
            "\n"
            "Commands:\n"
            "\n"

@@ -1,6 +1,7 @@
-v1.6.1
+v1.7.0
 
     - fix smit embedded files on Linux when executable taken from PATH
+    - modify command line
 
 v1.6.0
 

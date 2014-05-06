@@ -25,6 +25,8 @@ addUser "not assigned"     project myproject ref \
     project things_to_do ref \
 
 
+addUser tyty 
+
 addUser xxxt sha1 0b9c2625dc21ef05f6ad4ddf47c5f203837aa32c \
     project myproject rw \
 
