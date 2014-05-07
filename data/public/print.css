@@ -1,0 +1,23 @@
+.sm_navigation_project {
+    display: none !important;
+}
+.sm_navigation_global {
+    display: none !important;
+}
+form {
+    display: none !important;
+}
+#sm_entry_preview {
+    display: none !important;
+}
+.no_print {
+    display: none !important;
+}
+a {
+    pointer-events: none;
+    cursor: default;
+    text-decoration: none;
+}
+.sm_issues_other_formats {
+    display: none !important;
+}

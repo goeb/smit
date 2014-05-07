@@ -14,8 +14,9 @@ init() {
     REPO=testdir # just to be sure before the rm -rf
     rm -rf $REPO && mkdir $REPO
     $SMIT init $REPO
-    $SMIT addproject $PROJECT -d $REPO
-    $SMIT adduser $USER --passwd $PASSWD --project $PROJECT rw -d $REPO
+    $SMIT project -c $PROJECT -d $REPO
+    $SMIT project $PROJECT -d $REPO
+    $SMIT user $USER --passwd $PASSWD --project $PROJECT rw -d $REPO
 }
 start() {
     $SMIT serve $REPO --listen-port $PORT &
