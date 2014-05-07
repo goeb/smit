@@ -1,4 +1,4 @@
 mkdir IssuesRepo
 smit.exe init IssuesRepo
-smit.exe addproject -d IssuesRepo SampleProject
-smit.exe adduser admin -d IssuesRepo --superadmin --passwd admin --project SampleProject admin
+smit.exe project -c -d IssuesRepo SampleProject
+smit.exe user admin -d IssuesRepo --superadmin --passwd admin --project SampleProject admin
