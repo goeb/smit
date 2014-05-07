@@ -19,6 +19,8 @@
 //#include <arpa/inet.h>
 #include <unistd.h>
 #include <dirent.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 #include "mongoose.h"
 #include "httpdHandlers.h"
@@ -34,49 +36,116 @@ void usage()
 {
     printf("Usage: smit <command> [<args>]\n"
            "\n"
-           "Commands:\n"
+           "The smit commands are:\n"
            "\n"
-           "    init [<directory>]\n"
-           "        Initialize a repository in an existing empty directory. A repository\n"
-           "        is a directory where the projects are stored.\n"
+           "  init        Initialise a smit repository\n"
+           "  project     List, create, or update a smit project\n"
+           "  user        List, create, or update a smit user\n"
+           "  serve       Start a smit web server\n"
+           "  version     Print the version\n"
+           "  help\n"
            "\n"
-           "    project [<project-name>] [-c] [-d <repository>]\n"
-           "        -c  Create a project, with a default structure. The structure\n"
-           "            may be modified online by an admin user.\n"
-           "\n"
-           "    user [<name>] [--passwd <password>] [--project <project-name> <role>]\n"
-           "                  [--superadmin] [-d <repository>]\n"
-           "        Enter smit help user for more details.\n"
-           "\n"
-           "    serve [<repository>] [--listen-port <port>] [--ssl-cert <certificate>]\n"
-           "          [--lang <language>]\n"
-           "        Default listening port is 8090.\n"
-           "        The --ssl-cert option forces use of HTTPS.\n"
-           "        <certificate> must be a PEM certificate, including public and private key.\n"
-           "        The language should be one of: en, fr. If omitted then 'en' is selected.\n"
-           "\n"
-           "    version\n"
-           "    help\n"
-           "\n"
-           "When a repository is not specified, the current working directory is assumed.\n"
-           "\n"
-           "Roles:\n"
-           "    superadmin  able to create projects and manage users\n"
-           "    admin       able to modify an existing project\n"
-           "    rw          able to add and modify issues\n"
-           "    ro          able to read issues\n"
-           "    ref         may not access a project, but may be referenced\n"
-           "\n");
+           "See 'smit help <command>' for more information on a specific command.\n"
+           );
     exit(1);
 }
+
+#define OPT_D "  \n" \
+                    "\n"
+
+
+int helpInit()
+{
+    printf("Usage: smit init [<directory>]\n"
+           "\n"
+           "  Initialize a repository, where the smit projects are to be stored.\n"
+           "\n"
+           "  If the directory exists, it must be empty.\n"
+           "  If the directory does not exist, it is created.\n"
+           "  If the directory is not given, . is used by default.\n"
+           );
+    return 0;
+}
+
+int helpProject()
+{
+    printf("Usage: project [<project-name>] [options]\n"
+           "\n"
+           "  List, create, or update a smit project.\n"
+           "\n"
+           "Options:\n"
+           "  -c         Create a project, with a default structure. The structure\n"
+           "             may be modified online by an admin user.\n"
+           "  -d <repo>  select a repository by its path (by default . is used)\n"
+          );
+    return 0;
+}
+
+
+int helpUser()
+{
+    printf("Usage: 1. smit user\n"
+           "       2. smit user <name> [options] [global-options]\n"
+           "\n"
+           "  1. List all users and their configuration.\n"
+           "  2. With no option, print the configuration of a user.\n"
+           "     With options, create or update a user.\n"
+           "\n"
+           "Options:\n"
+           "  --passwd <pw>     set the password\n"
+           "  --no-passwd       delete the password (leading to impossible login)\n"
+           "  --project <project-name> <role>\n"
+           "                    set a role (ref, ro, rw, admin) on a project\n"
+           "  --superadmin      set the superadmin priviledge (ability to create\n"
+           "                    projects and manage users via the web interface)\n"
+           "  --no-superadmin   remove the superadmin priviledge\n"
+           "  -d <repo>         select a repository by its path (by default . is used)\n"
+           "\n"
+           "Roles:\n"
+           "    admin       able to modify an existing project\n"
+           "    rw          able to create and modify issues\n"
+           "    ro          able to read issues\n"
+           "    ref         may not access the project, but may be referenced\n"
+           "\n");
+    return 0;
+}
+
+int helpServe()
+{
+    printf("Usage: smit serve [<repository>] [options]\n"
+           "\n"
+           "  Start a smit server.\n"
+           "\n"
+           "  <repository>      select a repository to serve (by default . is used)\n"
+           "\n"
+           "Options:\n"
+           "  --listen-port <port>   set TCP listening port (default is 8090)\n"
+           "  --ssl-cert <certificate>\n"
+           "                         set HTTPS.\n"
+           "                         <certificate> must be a PEM certificate,\n"
+           "                         including public and private key.\n"
+           );
+    return 0;
+}
+
 
 int initRepository(const std::string &exec, const char *directory)
 {
     DIR *dirp;
     dirp = opendir(directory);
     if (!dirp) {
-        LOG_ERROR("Cannot open directory '%s': %s", directory, strerror(errno));
-        return 1;
+        // try create it
+        mode_t mode = S_IRUSR | S_IWUSR | S_IXUSR;
+        int r = mg_mkdir(directory, mode);
+        if (r != 0) {
+            LOG_ERROR("Cannot create directory '%s': %s", directory, strerror(errno));
+            return 1;
+        }
+        dirp = opendir(directory);
+        if (!dirp) {
+            LOG_ERROR("Cannot open just created directory '%s': %s", directory, strerror(errno));
+            return 1;
+        }
     }
 
     // check that the directory is empty
@@ -173,30 +242,6 @@ int cmdProject(int argc, const char **args)
     return 0;
 }
 
-
-int helpUser()
-{
-    printf("smit user: get or set users' configuration.\n"
-           "Usage: 1. smit user\n"
-           "       2. smit user <name> [options] [global-options]\n"
-           "\n"
-           "  1. List all users and their configuration.\n"
-           "  2. With no option, get the configuration of a user.\n"
-           "     With options, see below.\n"
-           "\n"
-           "Options:\n"
-           "  --passwd <pw>     set the password\n"
-           "  --no-passwd       delete the password (leading to impossible login)\n"
-           "  --project <project-name> <role>\n"
-           "                    set a role (ref, ro, rw, admin) on a project\n"
-           "  --superadmin      set the superadmin priviledge\n"
-           "  --no-superadmin   remove the superadmin priviledge\n"
-           "\n"
-           "Global Options\n"
-           "  -d <repo>   select a repository by its path\n"
-           "\n");
-    return 0;
-}
 
 int showUser(const User &u)
 {
@@ -456,8 +501,15 @@ int main(int argc, const char **argv)
 
         } else if (0 == strcmp(command, "help")) {
             if (i < argc) {
-                if (0 == strcmp(argv[i], "user")) return helpUser();
-                //else if (0 == strcmp(command, "init")) helpUser();
+                const char *help = argv[i];
+                if      (0 == strcmp(help, "init")) return helpInit();
+                else if (0 == strcmp(help, "project")) return helpProject();
+                else if (0 == strcmp(help, "user")) return helpUser();
+                else if (0 == strcmp(help, "serve")) return helpServe();
+                else {
+                    printf("No help for '%s'\n", help);
+                    exit(1);
+                }
             } else usage();
         } else usage();
 
