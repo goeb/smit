@@ -21,29 +21,11 @@ Unzip the smit package, and run:
     init.bat
     start.bat
 
-By default these scripts initiate a repository with a superadmin with username `admin` and password `admin`.
+By default these scripts:
 
-### init.bat
-There is what `init.bat` looks like:
+- initiate a repository with a superadmin with username `admin` and password `admin`.
+- start smit server on port `8090`
+- start a browser at address [http://127.0.0.1:8090](http://127.0.0.1:8090)
 
-    REM create a new empty directory
-    mkdir IssuesRepo 
 
-    REM Initiate this directory as a Smit repository
-    smit.exe init IssuesRepo
-
-    REM Create in this repository a project named "SampleProject"
-    smit.exe addproject -d IssuesRepo SampleProject
-
-    REM Create in this repository a user, that has administrator priviledges
-    smit.exe adduser admin -d IssuesRepo --superadmin --passwd admin --project SampleProject admin
-    
-### start.bat
-There is the `start.bat` script:
-
-    REM Start the Smit server locally
-    start /B smit serve IssuesRepo --listen-port 8090
-
-    REM Start your favorite browser
-    start http://127.0.0.1:8090
 

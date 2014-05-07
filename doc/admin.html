@@ -18,8 +18,12 @@
 <li><a href='install.html'>Installation</a></li>
 <li class='active'>Administration
 <ul class=menu_level2>
+<li><a href='#initiate-a-repository'>Initiate a Repository</a></li>
+<li><a href='#create-a-project'>Create a Project</a></li>
+<li><a href='#start-a-smit-web-server'>Start a smit web server</a></li>
 <li><a href='#command-line-usage'>Command Line Usage</a></li>
 <li><a href='#project-configuration'>Project Configuration</a></li>
+<li><a href='#set-up-a-trigger'>Set up a trigger</a></li>
 <li><a href='#customize-the-html-pages'>Customize the HTML pages</a></li>
 <li><a href='#faq'>FAQ</a></li>
 </ul>
@@ -31,58 +35,77 @@
 </aside>
 <div class='contents'>
 <h1 id="administration">Administration</h1>
+<h2 id="initiate-a-repository">Initiate a Repository</h2>
+<pre><code>REPO=/path/to/some/dir
+mkdir $REPO
+smit init $REPO</code></pre>
+<h2 id="create-a-project">Create a Project</h2>
+<pre><code>cd $REPO
+smit project -c &lt;project-name&gt;
+smit user &lt;user-name&gt; --passwd &lt;pass&gt;
+smit user &lt;user-name&gt; --project &lt;project-name&gt; admin</code></pre>
+<h2 id="start-a-smit-web-server">Start a smit web server</h2>
+<pre><code>smit serve</code></pre>
 <h2 id="command-line-usage">Command Line Usage</h2>
-<pre><code>Usage: smit [--version] [--help]
-            &lt;command&gt; [&lt;args&gt;]
+<pre><code>Usage: smit &lt;command&gt; [&lt;args&gt;]
 
-Commands:
+The smit commands are:
 
-    init [&lt;directory&gt;]
-        Initialize a repository in an existing empty directory. A repository
-        is a directory where the projects are stored.
+  init        Initialise a smit repository
+  project     List, create, or update a smit project
+  user        List, create, or update a smit user
+  serve       Start a smit web server
+  version     Print the version
+  help
 
-    addproject &lt;project-name&gt; [-d &lt;repository&gt;]
-        Add a new project, with a default structure. The structure
-        may be modified online by an admin user.
+See &#39;smit help &lt;command&gt;&#39; for more information on a specific command.</code></pre>
+<h3 id="init">init</h3>
+<pre><code>Usage: smit init [&lt;directory&gt;]
 
-    adduser &lt;user-name&gt; [--passwd &lt;password&gt;] [--project &lt;project-name&gt; &lt;role&gt;]
-                        [--superadmin] [-d &lt;repository&gt;]
-        Add a user on one or several projects.
-        The role must be one of: admin, rw, ro, ref.
-        --project options are cumulative with previously defined projects roles
-        for the same user.
+  Initialize a repository, where the smit projects are to be stored.
 
-    serve [&lt;repository&gt;] [--listen-port &lt;port&gt;] [--ssl-cert &lt;certificate&gt;]
-        Default listening port is 8090.
-        The --ssl-cert option forces use of HTTPS.
-        &lt;certificate&gt; must be a PEM certificate, including public and private key.
+  If the directory exists, it must be empty.
+  If the directory does not exist, it is created.
+  If the directory is not given, . is used by default.</code></pre>
+<h3 id="project">project</h3>
+<pre><code>Usage: project [&lt;project-name&gt;] [options]
 
-    --version
-    --help
+  List, create, or update a smit project.
 
-When a repository is not specified, the current working directory is assumed.
+Options:
+  -c         Create a project, with a default structure. The structure
+             may be modified online by an admin user.
+  -d &lt;repo&gt;  select a repository by its path (by default . is used)</code></pre>
+<h3 id="user">user</h3>
+<pre><code>Usage: 1. smit user
+       2. smit user &lt;name&gt; [options] [global-options]
+
+  1. List all users and their configuration.
+  2. With no option, print the configuration of a user.
+     With options, create or update a user.
+
+Options:
+  --passwd &lt;pw&gt;     set the password
+  --no-passwd       delete the password (leading to impossible login)
+  --project &lt;project-name&gt; &lt;role&gt;
+                    set a role (ref, ro, rw, admin) on a project
+  --superadmin      set the superadmin priviledge (ability to create
+                    projects and manage users via the web interface)
+  --no-superadmin   remove the superadmin priviledge
+  -d &lt;repo&gt;         select a repository by its path (by default . is used)
 
 Roles:
-    superadmin  able to create projects and manage users
     admin       able to modify an existing project
-    rw          able to add and modify issues
+    rw          able to create and modify issues
     ro          able to read issues
-    ref         may not access a project, but may be referenced</code></pre>
-<h3 id="example-create-repo-and-project">Example: Create repo and project</h3>
-<pre><code>    mkdir myrepo
-    smit init myrepo
-    smit addproject -d myrepo myproject1
-    smit adduser homer -d myrepo --superadmin --passwd homer --project myproject1 admin
-    smit serve myrepo --listen-port 9090</code></pre>
-<p>And with your browser, go to: <a href="http://localhost:9090">http://localhost:9090</a></p>
-<p>Note that on Windows the scripts <code>bin/init.bat</code> and <code>start.bat</code> help perform these steps, but you still may want to customize the repository name and admin user name.</p>
+    ref         may not access the project, but may be referenced</code></pre>
 <h2 id="project-configuration">Project Configuration</h2>
+<p>At the moment some configuration parameters are not driven by the web interface. Thus this paragraph explains how to set them.</p>
 <p>The project configuration defines:</p>
 <ul>
 <li>the properties of the issues</li>
 <li>the tags</li>
 <li>the numbering scheme of the issues (local or global to several projects)</li>
-<li>the trigger (an external program to launch on new entries)</li>
 </ul>
 <p>The configuration may be modified in two ways:</p>
 <ul>
@@ -130,14 +153,6 @@ Roles:
 <li><code>&lt;text&gt;</code> is the text to display in the HTML page</li>
 <li><code>-display</code> requires the display of a box in the headers of issues, that indicates if at least one entry of the current issue is tagged (this may be seen as a checkbox, to quickly verify that some quality criterion is met).</li>
 </ul>
-<h3 id="trigger">trigger</h3>
-<p>(smit version &gt;= 1.5, no web interface)</p>
-<p>The trigger defines an external program to be launch after each new entry.</p>
-<pre><code>trigger &lt;path&gt;</code></pre>
-<ul>
-<li><code>&lt;path&gt;</code> must be a relative path inside the repository.</li>
-</ul>
-<p>The external program will be given by smit the path to the new entry as first argument.</p>
 <h3 id="full-example">Full example</h3>
 <pre><code>setPropertyLabel id &quot;The ID&quot;
 
@@ -149,6 +164,43 @@ numberIssues global
 tag test -label &quot;Test Proof&quot; -display
 
 trigger public/sendEmail.sh</code></pre>
+<h2 id="set-up-a-trigger">Set up a trigger</h2>
+<p>A trigger defines an external program to be launched after each new entry. It is typically useful for sending email notifications when some condition occur.</p>
+<p>Triggers are not supported on Windows.</p>
+<p>The file <code>trigger</code> in a smit project defines the path to the external program, on the first line.</p>
+<p>Example:</p>
+<pre><code>$ cat $REPO/project-X1/trigger
+notifyNewEntry.py</code></pre>
+<p>Notes:</p>
+<ul>
+<li>if the path is relative, it is considered relatively to the smit repository</li>
+<li>the external program must be executable</li>
+</ul>
+<p>On creation or modification of an issue, the trigger will be called, and passed a JSON structure on its standard input, like this example:</p>
+<pre><code>{
+&quot;project&quot;:&quot;myproject&quot;,
+&quot;issue&quot;:&quot;13&quot;,
+&quot;entry&quot;:&quot;ed3eda2976914998cf2fcd759adf71753d0aa5f8&quot;,
+&quot;author&quot;:&quot;fred&quot;,
+&quot;users&quot;:{
+  &quot;fred&quot;:&quot;admin&quot;,
+  &quot;not assigned&quot;:&quot;ref&quot;,
+  &quot;xxxt&quot;:&quot;rw&quot;},
+&quot;modified&quot;:[&quot;a-b-c&quot;,&quot;multi-a&quot;,&quot;new-ttt&quot;,&quot;owner&quot;,&quot;test-reload&quot;,&quot;textarea2&quot;,&quot;xx&quot;],
+&quot;properties&quot;:{
+  &quot;a-b-c&quot;:[&quot;a-b-xx66&quot;,&quot;&quot;],
+  &quot;multi-a&quot;:[&quot;%multi-h&quot;,&quot;42&quot;],
+  &quot;new-ttt&quot;:[&quot;new-ttt&quot;,&quot;&quot;],
+  &quot;owner&quot;:[&quot;owner&#39;44r%&quot;,&quot;fred&quot;],
+  &quot;summary&quot;:[&quot;summary&quot;,&quot;fatal error x8&quot;],
+  &quot;target_version&quot;:[&quot;target_version\&quot;22&quot;,&quot;v0.1&quot;],
+  &quot;test-reload&quot;:[&quot;test-reloadx&quot;,&quot;&quot;],
+  &quot;textarea2&quot;:[&quot;textarea2&quot;,&quot;&quot;],
+  &quot;xx&quot;:[&quot;xx(yy)__99&quot;,&quot;&quot;]
+},
+&quot;message&quot;:&quot;...&quot;
+}</code></pre>
+<p>Example of trigger program is given: <a href="../downloads/notifyNewEntry.py">notifyNewEntry.py</a></p>
 <h2 id="customize-the-html-pages">Customize the HTML pages</h2>
 <p>One may customize the HTML and CSS pages. Some knowledge of HTML and CSS are needed. Each instance of Smit serves one repository (also refered below as <code>$REPO</code>).</p>
 <p>The Directories layout is typically:</p>
@@ -218,7 +270,7 @@ users</code></pre>
 </div>
         </div> <!-- div class page -->
         <div class="footer">
-            Page updated on  3 May 2014
+            Page updated on  7 May 2014
         </div>
     </body>
 </html>

@@ -1,67 +1,109 @@
 # Administration
 
+## Initiate a Repository
+
+```
+REPO=/path/to/some/dir
+mkdir $REPO
+smit init $REPO
+```
+
+## Create a Project
+
+```
+cd $REPO
+smit project -c <project-name>
+smit user <user-name> --passwd <pass>
+smit user <user-name> --project <project-name> admin
+```
+
+## Start a smit web server
+
+```
+smit serve
+```
+
+
 ## Command Line Usage
 
-    Usage: smit [--version] [--help]
-                <command> [<args>]
-
-    Commands:
-
-        init [<directory>]
-            Initialize a repository in an existing empty directory. A repository
-            is a directory where the projects are stored.
-
-        addproject <project-name> [-d <repository>]
-            Add a new project, with a default structure. The structure
-            may be modified online by an admin user.
-    
-        adduser <user-name> [--passwd <password>] [--project <project-name> <role>]
-                            [--superadmin] [-d <repository>]
-            Add a user on one or several projects.
-            The role must be one of: admin, rw, ro, ref.
-            --project options are cumulative with previously defined projects roles
-            for the same user.
-    
-        serve [<repository>] [--listen-port <port>] [--ssl-cert <certificate>]
-            Default listening port is 8090.
-            The --ssl-cert option forces use of HTTPS.
-            <certificate> must be a PEM certificate, including public and private key.
-    
-        --version
-        --help
-    
-    When a repository is not specified, the current working directory is assumed.
-    
-    Roles:
-        superadmin  able to create projects and manage users
-        admin       able to modify an existing project
-        rw          able to add and modify issues
-        ro          able to read issues
-        ref         may not access a project, but may be referenced
-
-### Example: Create repo and project
 ```
-    mkdir myrepo
-    smit init myrepo
-    smit addproject -d myrepo myproject1
-    smit adduser homer -d myrepo --superadmin --passwd homer --project myproject1 admin
-    smit serve myrepo --listen-port 9090
+Usage: smit <command> [<args>]
+
+The smit commands are:
+
+  init        Initialise a smit repository
+  project     List, create, or update a smit project
+  user        List, create, or update a smit user
+  serve       Start a smit web server
+  version     Print the version
+  help
+
+See 'smit help <command>' for more information on a specific command.
 ```
 
-And with your browser, go to: [http://localhost:9090](http://localhost:9090)
+### init
 
-Note that on Windows the scripts `bin/init.bat` and `start.bat` help perform these steps, but you still may want to customize the repository name and admin user name.
+```
+Usage: smit init [<directory>]
 
+  Initialize a repository, where the smit projects are to be stored.
+
+  If the directory exists, it must be empty.
+  If the directory does not exist, it is created.
+  If the directory is not given, . is used by default.
+```
+
+### project
+
+```
+Usage: project [<project-name>] [options]
+
+  List, create, or update a smit project.
+
+Options:
+  -c         Create a project, with a default structure. The structure
+             may be modified online by an admin user.
+  -d <repo>  select a repository by its path (by default . is used)
+```
+
+### user
+
+```
+Usage: 1. smit user
+       2. smit user <name> [options] [global-options]
+
+  1. List all users and their configuration.
+  2. With no option, print the configuration of a user.
+     With options, create or update a user.
+
+Options:
+  --passwd <pw>     set the password
+  --no-passwd       delete the password (leading to impossible login)
+  --project <project-name> <role>
+                    set a role (ref, ro, rw, admin) on a project
+  --superadmin      set the superadmin priviledge (ability to create
+                    projects and manage users via the web interface)
+  --no-superadmin   remove the superadmin priviledge
+  -d <repo>         select a repository by its path (by default . is used)
+
+Roles:
+    admin       able to modify an existing project
+    rw          able to create and modify issues
+    ro          able to read issues
+    ref         may not access the project, but may be referenced
+```
 
 
 ## Project Configuration
+
+At the moment some configuration parameters are not driven by the web interface.
+Thus this paragraph explains how to set them.
 
 The project configuration defines:
 
 - the properties of the issues
 - the tags
 - the numbering scheme of the issues (local or global to several projects)
-- the trigger (an external program to launch on new entries)
 
 The configuration may be modified in two ways:
 
@@ -128,18 +170,6 @@ tag <id> -label <text> [-display]
 - `<text>` is the text to display in the HTML page
 - `-display` requires the display of a box in the headers of issues, that indicates if at least one entry of the current issue is tagged (this may be seen as a checkbox, to quickly verify that some quality criterion is met).
 
-### trigger
-(smit version >= 1.5, no web interface)
-
-The trigger defines an external program to be launch after each new entry.
-
-```
-trigger <path>
-```
-
-- `<path>` must be a relative path inside the repository.
-
-The external program will be given by smit the path to the new entry as first argument.
 
 ### Full example 
 
@@ -155,6 +185,57 @@ tag test -label "Test Proof" -display
 
 trigger public/sendEmail.sh
 ```
+
+## Set up a trigger
+
+A trigger defines an external program to be launched after each new entry. It is typically useful for sending email notifications when some condition occur.
+
+Triggers are not supported on Windows.
+
+The file `trigger` in a smit project defines the path to the external program, on the first line.
+
+Example:
+
+```
+$ cat $REPO/project-X1/trigger
+notifyNewEntry.py
+```
+
+
+Notes:
+
+- if the path is relative, it is considered relatively to the smit repository
+- the external program must be executable
+
+On creation or modification of an issue, the trigger will be called, and passed a JSON structure on its standard input, like this example:
+
+```
+{
+"project":"myproject",
+"issue":"13",
+"entry":"ed3eda2976914998cf2fcd759adf71753d0aa5f8",
+"author":"fred",
+"users":{
+  "fred":"admin",
+  "not assigned":"ref",
+  "xxxt":"rw"},
+"modified":["a-b-c","multi-a","new-ttt","owner","test-reload","textarea2","xx"],
+"properties":{
+  "a-b-c":["a-b-xx66",""],
+  "multi-a":["%multi-h","42"],
+  "new-ttt":["new-ttt",""],
+  "owner":["owner'44r%","fred"],
+  "summary":["summary","fatal error x8"],
+  "target_version":["target_version\"22","v0.1"],
+  "test-reload":["test-reloadx",""],
+  "textarea2":["textarea2",""],
+  "xx":["xx(yy)__99",""]
+},
+"message":"..."
+}
+```
+
+Example of trigger program is given: [notifyNewEntry.py](../downloads/notifyNewEntry.py)
 
 
 ## Customize the HTML pages

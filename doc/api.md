@@ -116,35 +116,3 @@ REST API:
 work in progress...
 
 
-## Trigger
-A trigger is a program called by Smit. The data is passed to this program on its standard input in JSON format.
-
-work in progress...
-
-*Example:*
-
-```
-{
-"project":"myproject",
-"issue":"13",
-"entry":"ed3eda2976914998cf2fcd759adf71753d0aa5f8",
-"author":"fred",
-"users":{
-  "fred":"admin",
-  "not assigned":"ref",
-  "xxxt":"rw"},
-"modified":["a-b-c","multi-a","new-ttt","owner","test-reload","textarea2","xx"],
-"properties":{
-  "a-b-c":["a-b-xx66",""],
-  "multi-a":["%multi-h","42"],
-  "new-ttt":["new-ttt",""],
-  "owner":["owner'44r%","fred"],
-  "summary":["summary","fatal error x8"],
-  "target_version":["target_version\"22","v0.1"],
-  "test-reload":["test-reloadx",""],
-  "textarea2":["textarea2",""],
-  "xx":["xx(yy)__99",""]
-},
-"message":"..."
-}
-```
