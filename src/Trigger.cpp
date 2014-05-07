@@ -162,8 +162,6 @@ void Trigger::notifyEntry(const Project &project, const std::string issueId, con
             return;
         }
 
-        // TODO add the users of the project
-
         std::map<std::string, Role> users = UserBase::getUsersRolesOfProject(project.getName());
         std::string text = formatEntry(project, i, *e, users);
 
