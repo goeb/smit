@@ -68,18 +68,21 @@ const Project &ContextParameters::getProject() const
 #define K_SM_DIV_USERS "SM_DIV_USERS"
 #define K_SM_DIV_ISSUES "SM_DIV_ISSUES"
 #define K_SM_DIV_ISSUE "SM_DIV_ISSUE"
-#define K_SM_DIV_ISSUE_SUMMARY "SM_DIV_ISSUE_SUMMARY"
+#define K_SM_DIV_ISSUE_SUMMARY "SM_DIV_ISSUE_SUMMARY" // deprecated
+#define K_SM_HTML_ISSUE_SUMMARY "SM_HTML_ISSUE_SUMMARY"
 #define K_SM_DIV_ISSUE_FORM "SM_DIV_ISSUE_FORM"
 #define K_SM_DIV_ISSUE_MSG_PREVIEW "SM_DIV_ISSUE_MSG_PREVIEW"
-#define K_SM_SPAN_ISSUE_NEXT "SM_SPAN_ISSUE_NEXT"
-#define K_SM_SPAN_ISSUE_PREVIOUS "SM_SPAN_ISSUE_PREVIOUS"
+#define K_SM_CLASS_ISSUE_NEXT "K_SM_CLASS_ISSUE_NEXT"
+#define K_SM_CLASS_ISSUE_PREVIOUS "K_SM_CLASS_ISSUE_PREVIOUS"
 
 std::string enquoteJs(const std::string &in)
 {
     std::string out = replaceAll(in, '\\', "\\\\"); // escape backslahes
     out = replaceAll(out, '\'', "\\'"); // escape '
     out = replaceAll(out, '"', "\\\""); // escape "
+    out = replaceAll(out, '\n', "\\n"); // escape \n
     return out;
+
 }
 
 
@@ -220,7 +223,10 @@ public:
                 RHtml::printScriptUpdateConfig(ctx);
 
             } else if (varname == K_SM_RAW_ISSUE_ID && currentIssue) {
-                mg_printf(ctx.conn, "%s", currentIssue->id.c_str());
+                mg_printf(ctx.conn, "%s", htmlEscape(currentIssue->id).c_str());
+
+            } else if (varname == K_SM_HTML_ISSUE_SUMMARY && currentIssue) {
+                mg_printf(ctx.conn, "%s", htmlEscape(currentIssue->getSummary()).c_str());
 
             } else if (varname == K_SM_DIV_ISSUES && issueList && colspec) {
                 RHtml::printIssueList(ctx, *issueList, *colspec);
@@ -233,12 +239,6 @@ public:
 
             } else if (varname == K_SM_DIV_ISSUE_SUMMARY && currentIssue) {
                 RHtml::printIssueSummary(ctx, *currentIssue);
-
-            } else if (varname == K_SM_SPAN_ISSUE_NEXT && currentIssue) {
-                RHtml::printIssueNext(ctx, *currentIssue);
-
-            } else if (varname == K_SM_SPAN_ISSUE_PREVIOUS && currentIssue) {
-                RHtml::printIssuePrevious(ctx, *currentIssue);
 
             } else if (varname == K_SM_DIV_ISSUE_FORM) {
                 Issue issue;
@@ -1368,42 +1368,6 @@ void RHtml::printIssueSummary(const ContextParameters &ctx, const Issue &issue)
 
 }
 
-
-/** print link to next issue
-  *
-  * this has meaning only when ctx.originView is not empty
-  * (ie: coming from a view, not via a direct link)
-  */
-void RHtml::printIssueNext(const ContextParameters &ctx, const Issue &issue)
-{
-    struct mg_connection *conn = ctx.conn;
-    if (ctx.originView.empty()) {
-        mg_printf(conn, "<span class=\"sm_issue_next_disabled\">%s</span>", _("Next"));
-    } else {
-        std::string qs;
-        qs = ctx.originView + "&" QS_GOTO_NEXT "=" + urlEncode(issue.id);
-        mg_printf(conn, "<span class=\"sm_issue_next\"><a href=\"./?%s\">%s</a></span>", qs.c_str(), _("Next"));
-    }
-}
-
-/** print link to previous issue
-  *
-  * this has meaning only when ctx.originView is not empty
-  * (ie: coming from a view, not via a direct link)
-  */
-void RHtml::printIssuePrevious(const ContextParameters &ctx, const Issue &issue)
-{
-    struct mg_connection *conn = ctx.conn;
-    if (ctx.originView.empty()) {
-        mg_printf(conn, "<span class=\"sm_issue_previous_disabled\">%s</span>", _("Previous"));
-    } else {
-        std::string qs;
-        qs = ctx.originView + "&" QS_GOTO_PREVIOUS "=" + urlEncode(issue.id);
-        mg_printf(conn, "<span class=\"sm_issue_previous\"><a href=\"./?%s\">%s</a></span>", qs.c_str(), _("Previous"));
-    }
-}
-
-
 void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
 {
     struct mg_connection *conn = ctx.conn;
@@ -1670,6 +1634,25 @@ void RHtml::printPageIssue(const ContextParameters &ctx, const Issue &issue)
     VariableNavigator vn("issue.html", ctx);
     vn.currentIssue = &issue;
     vn.printPage();
+
+    // update the next/previous links
+    struct mg_connection *conn = ctx.conn;
+    // class name of the HTML nodes to be updated
+    const char* SM_ISSUE_NEXT = "sm_issue_next";
+    const char* SM_ISSUE_PREVIOUS = "sm_issue_previous";
+    mg_printf(conn, "<script>");
+    if (ctx.originView.empty()) {
+        // disable the next/previous links
+        mg_printf(conn, "updateHref('%s', null);\n", SM_ISSUE_NEXT);
+        mg_printf(conn, "updateHref('%s', null);\n", SM_ISSUE_PREVIOUS);
+    } else {
+        std::string qs;
+        qs = ctx.originView + "&" QS_GOTO_NEXT "=" + urlEncode(issue.id);
+        mg_printf(conn, "updateHref('%s', './?%s');\n", SM_ISSUE_NEXT, enquoteJs(qs).c_str());
+        qs = ctx.originView + "&" QS_GOTO_PREVIOUS "=" + urlEncode(issue.id);
+        mg_printf(conn, "updateHref('%s', './?%s');\n", SM_ISSUE_PREVIOUS, enquoteJs(qs).c_str());
+    }
+    mg_printf(conn, "</script>");
 }
 
 

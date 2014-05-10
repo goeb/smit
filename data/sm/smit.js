@@ -399,3 +399,10 @@ function togglePrintPreview(id)
     if(currCSS.media == 'all') currCSS.media = 'print';
     else currCSS.media = 'all';
 }
+function updateHref(className, href) {
+    var items = document.getElementsByClassName(className);
+    for(var i=0; i<items.length; i++) {
+        if (!href) items[i].style.display = 'none';
+        else if (items[i].nodeName == 'A') items[i].href = href;
+    }
+}
