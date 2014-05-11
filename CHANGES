@@ -4,6 +4,7 @@ v1.7.0
     - modify command line (user, project)
     - keyword "me" in search text
     - search text also on authors of entries
+    - navigation next/previous issue redesigned (class sm_issue_next/previous)
 
 
 v1.6.0
