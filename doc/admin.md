@@ -1,5 +1,7 @@
 # Administration
 
+The commands given in this chapter are to be issued in a shell in a Linux OS. They may need some adaptation on Windows.
+
 ## Initiate a Repository
 
 ```
@@ -237,88 +239,13 @@ On creation or modification of an issue, the trigger will be called, and passed 
 
 Example of trigger program is given: [notifyNewEntry.py](../downloads/notifyNewEntry.py)
 
+## Make a Backup
 
-## Customize the HTML pages
+Do a zip or tar of the repository, as follows:
 
-One may customize the HTML and CSS pages. Some knowledge of HTML and CSS are needed.
-Each instance of Smit serves one repository (also refered below as `$REPO`).
-
-The Directories layout is typically:
-
-    $REPO
-    ├── project-A
-    │   └── html
-    │
-    ├── project-B
-    │   └── html
-    │
-    └── public
-
-
-Smit grants read access to files under the `$REPO/public`, without restriction. Do not put confidential data in here.
-
-By default the core HTML files are in `$REPO/public` and shared by all the projects of the repository: 
-
-    signin.html
-    issue.html
-    issues.html
-    newIssue.html
-    project.html
-    projects.html
-    user.html
-    view.html
-    views.html
-
-After a page modification, there is no need to restart Smit. Just reload the page.
-
-### Customize the logo
-
-Modify the `$REPO/public/logo.png` according to yours needs, or modify the HTML files to point to another logo.
-
-### Customize the CSS
-
-Modify `$REPO/public/style.css` and `print.css` according to your needs.
-
-    
-### The SM variables
-
-In order to let a maximum customization freedom, Smit lets the user define the global structure of the HTML pages, and inserts the dynamic contents at users' defined places, indicated by SM variables:
-
-    SM_DIV_ISSUE
-    SM_DIV_ISSUE_FORM
-    SM_DIV_ISSUE_MSG_PREVIEW
-    SM_DIV_ISSUES
-    SM_DIV_ISSUE_SUMMARY
-    SM_DIV_NAVIGATION_GLOBAL
-    SM_DIV_NAVIGATION_ISSUES
-    SM_DIV_PREDEFINED_VIEWS
-    SM_DIV_PROJECTS
-    SM_DIV_USERS
-    SM_HTML_PROJECT_NAME
-    SM_RAW_ISSUE_ID
-    SM_SCRIPT_PROJECT_CONFIG_UPDATE
-    SM_URL_PROJECT_NAME
- 
-Some variables make sense only in some particular context. For instance,
-`SM_RAW_ISSUE_ID` makes sense only when a single issue is displayed.
-
-### Setting different HTML pages for 2 projects in the same repository.
-
-The core HTML pages are first looked after in `$REPO/<project>/html/.` and, if not present, Smit looks in the `$REPO/public` directory.
-
-Therefore, if you want to customize (for example) the 'issues' page for a project:
-
-- copy `$REPO/public/issues.html` to `$REPO/<project>/html/issues.html`
-- edit `$REPO/<project>/html/issues.html` to suit your needs
-
-### Interface constraints
-
-Be sure to not modify the following topics in the HTML pages, as they insure proper operation of Smit:
-
-- keep the inclusion of `/sm/smit.js`. Smit uses this to update some dynamic contents on some pages (this file is included in the Smit executable).
-- keep the name of the `SM_` variables 
-- keep the `id="sm_..."`
-- keep the `class="sm_..."`
+```
+tar cvfz $REPO.tar.gz $REPO
+```
 
 ## FAQ
 
@@ -331,4 +258,16 @@ The reserve keywords that cannot be used as project names are:
     public
     sm
     users
+
+### How do I delete an issue?
+
+This can be achieved by an administrator as follows (but be careful, and make a backup first):
+
+```
+rm -rf $REPO/<project>/issues/<issue-id>
+```
+
+And hot-reload the project.
+
+
 

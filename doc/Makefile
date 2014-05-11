@@ -4,6 +4,7 @@ SRCS += index.md
 SRCS += install.md
 SRCS += admin.md
 SRCS += user_guide.md
+SRCS += html.md
 SRCS += api.md
 SRCS += developers.md
 

@@ -24,17 +24,19 @@
 <li><a href='#command-line-usage'>Command Line Usage</a></li>
 <li><a href='#project-configuration'>Project Configuration</a></li>
 <li><a href='#set-up-a-trigger'>Set up a trigger</a></li>
-<li><a href='#customize-the-html-pages'>Customize the HTML pages</a></li>
+<li><a href='#make-a-backup'>Make a Backup</a></li>
 <li><a href='#faq'>FAQ</a></li>
 </ul>
 </li>
 <li><a href='user_guide.html'>User Guide</a></li>
+<li><a href='html.html'>Customize HTML</a></li>
 <li><a href='api.html'>Smit API</a></li>
 <li><a href='developers.html'>Developer Guide</a></li>
 </ul>
 </aside>
 <div class='contents'>
 <h1 id="administration">Administration</h1>
+<p>The commands given in this chapter are to be issued in a shell in a Linux OS. They may need some adaptation on Windows.</p>
 <h2 id="initiate-a-repository">Initiate a Repository</h2>
 <pre><code>REPO=/path/to/some/dir
 mkdir $REPO
@@ -201,65 +203,9 @@ notifyNewEntry.py</code></pre>
 &quot;message&quot;:&quot;...&quot;
 }</code></pre>
 <p>Example of trigger program is given: <a href="../downloads/notifyNewEntry.py">notifyNewEntry.py</a></p>
-<h2 id="customize-the-html-pages">Customize the HTML pages</h2>
-<p>One may customize the HTML and CSS pages. Some knowledge of HTML and CSS are needed. Each instance of Smit serves one repository (also refered below as <code>$REPO</code>).</p>
-<p>The Directories layout is typically:</p>
-<pre><code>$REPO
-├── project-A
-│   └── html
-│
-├── project-B
-│   └── html
-│
-└── public</code></pre>
-<p>Smit grants read access to files under the <code>$REPO/public</code>, without restriction. Do not put confidential data in here.</p>
-<p>By default the core HTML files are in <code>$REPO/public</code> and shared by all the projects of the repository:</p>
-<pre><code>signin.html
-issue.html
-issues.html
-newIssue.html
-project.html
-projects.html
-user.html
-view.html
-views.html</code></pre>
-<p>After a page modification, there is no need to restart Smit. Just reload the page.</p>
-<h3 id="customize-the-logo">Customize the logo</h3>
-<p>Modify the <code>$REPO/public/logo.png</code> according to yours needs, or modify the HTML files to point to another logo.</p>
-<h3 id="customize-the-css">Customize the CSS</h3>
-<p>Modify <code>$REPO/public/style.css</code> and <code>print.css</code> according to your needs.</p>
-<h3 id="the-sm-variables">The SM variables</h3>
-<p>In order to let a maximum customization freedom, Smit lets the user define the global structure of the HTML pages, and inserts the dynamic contents at users' defined places, indicated by SM variables:</p>
-<pre><code>SM_DIV_ISSUE
-SM_DIV_ISSUE_FORM
-SM_DIV_ISSUE_MSG_PREVIEW
-SM_DIV_ISSUES
-SM_DIV_ISSUE_SUMMARY
-SM_DIV_NAVIGATION_GLOBAL
-SM_DIV_NAVIGATION_ISSUES
-SM_DIV_PREDEFINED_VIEWS
-SM_DIV_PROJECTS
-SM_DIV_USERS
-SM_HTML_PROJECT_NAME
-SM_RAW_ISSUE_ID
-SM_SCRIPT_PROJECT_CONFIG_UPDATE
-SM_URL_PROJECT_NAME</code></pre>
-<p>Some variables make sense only in some particular context. For instance, <code>SM_RAW_ISSUE_ID</code> makes sense only when a single issue is displayed.</p>
-<h3 id="setting-different-html-pages-for-2-projects-in-the-same-repository.">Setting different HTML pages for 2 projects in the same repository.</h3>
-<p>The core HTML pages are first looked after in <code>$REPO/&lt;project&gt;/html/.</code> and, if not present, Smit looks in the <code>$REPO/public</code> directory.</p>
-<p>Therefore, if you want to customize (for example) the 'issues' page for a project:</p>
-<ul>
-<li>copy <code>$REPO/public/issues.html</code> to <code>$REPO/&lt;project&gt;/html/issues.html</code></li>
-<li>edit <code>$REPO/&lt;project&gt;/html/issues.html</code> to suit your needs</li>
-</ul>
-<h3 id="interface-constraints">Interface constraints</h3>
-<p>Be sure to not modify the following topics in the HTML pages, as they insure proper operation of Smit:</p>
-<ul>
-<li>keep the inclusion of <code>/sm/smit.js</code>. Smit uses this to update some dynamic contents on some pages (this file is included in the Smit executable).</li>
-<li>keep the name of the <code>SM_</code> variables</li>
-<li>keep the <code>id=&quot;sm_...&quot;</code></li>
-<li>keep the <code>class=&quot;sm_...&quot;</code></li>
-</ul>
+<h2 id="make-a-backup">Make a Backup</h2>
+<p>Do a zip or tar of the repository, as follows:</p>
+<pre><code>tar cvfz $REPO.tar.gz $REPO</code></pre>
 <h2 id="faq">FAQ</h2>
 <h3 id="why-cannot-i-create-a-project-named-public">Why cannot I create a project named 'public'?</h3>
 <p><code>public</code> is reserved for storing HTML pages that are public, such as the signin page.</p>
@@ -267,10 +213,14 @@ SM_URL_PROJECT_NAME</code></pre>
 <pre><code>public
 sm
 users</code></pre>
+<h3 id="how-do-i-delete-an-issue">How do I delete an issue?</h3>
+<p>This can be achieved by an administrator as follows (but be careful, and make a backup first):</p>
+<pre><code>rm -rf $REPO/&lt;project&gt;/issues/&lt;issue-id&gt;</code></pre>
+<p>And hot-reload the project.</p>
 </div>
         </div> <!-- div class page -->
         <div class="footer">
-            Page updated on  7 May 2014
+            Page updated on 11 May 2014
         </div>
     </body>
 </html>
