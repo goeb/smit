@@ -7,7 +7,7 @@
     </head>
     <body>
         <div style="padding-top: 15px;">
-            <table><tr><td><img src="/public/logo.png" class="sm_logo" alt="Logo"></td>
+            <table><tr><td><img src="/public/logo.png" class="logo" alt="Logo"></td>
                     <td>SM_DIV_NAVIGATION_GLOBAL</td></tr></table>
         </div>
 
@@ -18,17 +18,17 @@
         <form action="" method="POST">
             <h1>User Configuration</h1>
             <div class="sm_user_superadmin_zone">
-                User name: <input id="name" name="name" type="text" required="required">
-                <br>
-                <label>Superadmin: <input id="sm_superadmin" name="superadmin" type="checkbox"></label>
-
+                <table>
+                    <tr><td>User name:</td><td><input id="name" name="name" type="text" required="required"></td></tr>
+                    <tr><td><label for="sm_superadmin">Superadmin:</label></td><td><input id="sm_superadmin" name="superadmin" type="checkbox"></td></tr>
+                </table>
                 <br>
                 <br>
                 <br>
 
                 Roles on projects:<br>
                 <div id="roles_on_projects"></div>
-                <div onclick="addProject('roles_on_projects', '', '');" class="sm_clickable">+ Click for more...</div>
+                <div onclick="addProject('roles_on_projects', '', '');" class="clickable">+ Click for more...</div>
                 <br>
             </div>
 

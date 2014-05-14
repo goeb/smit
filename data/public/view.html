@@ -14,7 +14,7 @@
     </head>
     <body>
         <div style="position: fixed; top: 0; padding-top: 15px; width: 100%; background: white;">
-            <table><tr><td><img src="/public/logo.png" class="sm_logo" alt="Logo"></td>
+            <table><tr><td><img src="/public/logo.png" class="logo" alt="Logo"></td>
                     <td>SM_DIV_NAVIGATION_GLOBAL SM_DIV_NAVIGATION_ISSUES</td></tr></table>
         </div>
 
@@ -54,7 +54,7 @@
                         <h2>Search text</h2>
                         The search is done through all
                         messages, names of uploaded files, 
-                        and properties.<br>
+                        properties, and authors of entries.<br>
                         (case insensitive)
                     </td>
                     <td>
@@ -66,7 +66,7 @@
                         Select the properties/values for which the issues shall be returned.
                         </td><td>
                         <div id="filterin"></div>
-                        <div onclick="addFilter('filterin', '', '');" class="sm_clickable">+ Click for more...</div>
+                        <div onclick="addFilter('filterin', '', '');" class="clickable">+ Click for more...</div>
                 </td></tr>
                 <tr>
                     <td class="align_right">
@@ -75,14 +75,14 @@
                     </td>
                     <td>
                         <div id="filterout"></div>
-                        <div onclick="addFilter('filterout', '', '');" class="sm_clickable">+ Click for more...</div>
+                        <div onclick="addFilter('filterout', '', '');" class="clickable">+ Click for more...</div>
 
                     </td>
                 </tr>
                 <tr>
                     <td colspan="2">
-                        Notes on filters (in or out):
-                        <ul><li>The keyword <span class="sm_tag">me</span> may be used on selectUser-typed properties to indicate the current signed-in user.
+                        Notes on search text and filters (in or out):
+                        <ul><li>The keyword <span class="tag">me</span> may be used on selectUser-typed properties to indicate the current signed-in user.
                         </ul>
                     </td>
                 </tr>
@@ -94,7 +94,7 @@
                     </td>
                     <td>
                         <div id="colspec"></div>
-                        <div onclick="addColspec('');" class="sm_clickable">+ Click for more...</div>
+                        <div onclick="addColspec('');" class="clickable">+ Click for more...</div>
                     </td>
                 </tr>
                 <tr>
@@ -103,7 +103,7 @@
                     </td>
                     <td>
                         <div id="sort"></div>
-                        <div onclick="addSort();" class="sm_clickable">+ Click for more...</div>
+                        <div onclick="addSort();" class="clickable">+ Click for more...</div>
                     </td>
                 </tr>
                 <tr>

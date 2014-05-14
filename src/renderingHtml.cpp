@@ -72,8 +72,6 @@ const Project &ContextParameters::getProject() const
 #define K_SM_HTML_ISSUE_SUMMARY "SM_HTML_ISSUE_SUMMARY"
 #define K_SM_DIV_ISSUE_FORM "SM_DIV_ISSUE_FORM"
 #define K_SM_DIV_ISSUE_MSG_PREVIEW "SM_DIV_ISSUE_MSG_PREVIEW"
-#define K_SM_CLASS_ISSUE_NEXT "K_SM_CLASS_ISSUE_NEXT"
-#define K_SM_CLASS_ISSUE_PREVIOUS "K_SM_CLASS_ISSUE_PREVIOUS"
 
 std::string enquoteJs(const std::string &in)
 {
@@ -1679,7 +1677,7 @@ void RHtml::printIssueForm(const ContextParameters &ctx, const Issue *issue, boo
     struct mg_connection *conn = ctx.conn;
     const ProjectConfig &pconfig = ctx.projectConfig;
 
-    mg_printf(conn, "<form enctype=\"multipart/form-data\" method=\"post\"  class=\"sm_issue_form\" id=\"edit_form\">");
+    mg_printf(conn, "<form enctype=\"multipart/form-data\" method=\"post\"  class=\"sm_issue_form\">");
     // print the fields of the issue in a two-column table
 
     // The form is made over a table with 4 columns.
@@ -1768,7 +1766,7 @@ void RHtml::printIssueForm(const ContextParameters &ctx, const Issue *issue, boo
 
         } else if (pspec->type == F_TEXTAREA) {
             if (propertyValues.size()>0) value = propertyValues.front();
-            input << "<textarea class=\"sm_issue_pinput_" << pname << "\" name=\""
+            input << "<textarea class=\"sm_ta sm_issue_pinput_" << pname << "\" name=\""
                   << pname << "\">" << htmlEscape(value) << "</textarea>\n";
 
         } else if (pspec->type == F_TEXTAREA2) {
