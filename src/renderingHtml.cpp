@@ -910,7 +910,7 @@ void RHtml::printScriptUpdateConfig(const ContextParameters &ctx)
         case F_SELECT_USER: type = "selectUser"; break;
         case F_TEXTAREA: type = "textarea"; break;
         case F_TEXTAREA2: type = "textarea2"; break;
-        case F_RELATIONSHIP: type = "relationship"; break;
+        case F_ASSOCIATION: type = "association"; break;
         }
 
         std::string label = ctx.projectConfig.getLabelOfProperty(pspec->name);
@@ -921,8 +921,8 @@ void RHtml::printScriptUpdateConfig(const ContextParameters &ctx)
 				if (i != pspec->selectOptions.begin()) options += "\\n";
 				options += enquoteJs(*i);
 			}
-		} else if (pspec->type == F_RELATIONSHIP) {
-			options = pspec->oppositeRelationship;
+        } else if (pspec->type == F_ASSOCIATION) {
+            options = pspec->reverseLabel;
 		}
         mg_printf(conn, "addProperty('%s', '%s', '%s', '%s');\n", pspec->name.c_str(),
                   enquoteJs(label).c_str(),
@@ -1406,7 +1406,7 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
         enum PropertyType type = pspec->type;
         if (type == F_TEXTAREA || type == F_TEXTAREA2) pvalueStyle = "sm_issue_pvalue_ta";
 
-        if (type == F_TEXTAREA2) {
+        if (type == F_TEXTAREA2 || type == F_ASSOCIATION) {
             // the property spans over 4 columns (1 col for the label and 3 for the value)
             if (workingColumn == 1) {
                 // nothing to do
@@ -1425,8 +1425,25 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
                   pname.c_str(), htmlEscape(label).c_str());
 
         // value
-        mg_printf(conn, "<td %s class=\"%s sm_issue_pvalue_%s\">%s</td>\n",
-                  colspan, pvalueStyle, pname.c_str(), htmlEscape(value).c_str());
+        if (type == F_ASSOCIATION) {
+            // split the value
+            std::vector<std::string> issueIds = split(value, " ,;");
+            std::vector<std::string>::const_iterator associatedIssue;
+            mg_printf(conn, "<td %s class=\"%s sm_issue_pvalue_%s\">",
+                      colspan, pvalueStyle, pname.c_str());
+
+            FOREACH(associatedIssue, issueIds) {
+                if (associatedIssue->empty()) continue; // because split may return empty tokens
+                if (associatedIssue != issueIds.begin()) mg_printf(conn, ", ");
+                mg_printf(conn, "<a href=\"%s\">%s</a>", urlEncode(*associatedIssue).c_str(),
+                          htmlEscape(*associatedIssue).c_str());
+            }
+           mg_printf(conn, "</td>\n");
+
+        } else {
+            mg_printf(conn, "<td %s class=\"%s sm_issue_pvalue_%s\">%s</td>\n",
+                      colspan, pvalueStyle, pname.c_str(), htmlEscape(value).c_str());
+        }
 
         workingColumn += workingColumnIncrement;
         if (workingColumn > MAX_COLUMNS) {
@@ -1790,6 +1807,11 @@ void RHtml::printIssueForm(const ContextParameters &ctx, const Issue *issue, boo
             if (propertyValues.size()>0) value = propertyValues.front();
             input << "<textarea class=\"sm_ta2 sm_issue_pinput_" << pname << "\" name=\""
                   << pname << "\">" << htmlEscape(value) << "</textarea>\n";
+
+        } else if (pspec->type == F_ASSOCIATION) {
+            if (propertyValues.size()>0) value = propertyValues.front();
+            input << "<input class=\"sm_pinput_" << pname << "\" type=\"text\" name=\""
+                  << pname << "\" value=\"" << htmlEscape(value) << "\">\n";
 
         } else {
             LOG_ERROR("invalid fieldSpec->type=%d", pspec->type);

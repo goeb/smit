@@ -1,3 +1,6 @@
+Next
+    - logical names of properties cannot have characters '-'
+
 v1.7.0
 
     - fix smit embedded files on Linux when executable taken from PATH

@@ -81,7 +81,7 @@ enum PropertyType {
 	F_SELECT_USER,
 	F_TEXTAREA,
 	F_TEXTAREA2,
-	F_RELATIONSHIP
+    F_ASSOCIATION
 };
 int strToPropertyType(const std::string &s, PropertyType &out);
 
@@ -90,7 +90,7 @@ struct PropertySpec {
     std::string label;
     enum PropertyType type;
     std::list<std::string> selectOptions; // for F_SELECT and F_MULTISELECT only
-	std::string oppositeRelationship; // for F_RELATIONSHIP
+    std::string reverseLabel; // for F_RELATIONSHIP
 };
 
 struct PredefinedView {

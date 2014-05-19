@@ -485,7 +485,7 @@ int strToPropertyType(const std::string &s, PropertyType &out)
     else if (s == "multiselect") out = F_MULTISELECT;
     else if (s == "textarea") out = F_TEXTAREA;
     else if (s == "textarea2") out = F_TEXTAREA2;
-    else if (s == "relationship") out = F_RELATIONSHIP;
+    else if (s == "association") out = F_ASSOCIATION;
 
     else return -1; // error
 
@@ -498,27 +498,27 @@ PropertySpec parsePropertySpec(std::list<std::string> & tokens)
     // Supported syntax:
     // name [label <label>] type params ...
     // type = text | select | multiselect | selectUser | ...
-    PropertySpec property;
+    PropertySpec pspec;
     if (tokens.size() < 2) {
         LOG_ERROR("Not enough tokens");
-        return property; // error, indicated to caller by empty name of property
+        return pspec; // error, indicated to caller by empty name of pspec
     }
 
-    property.name = tokens.front();
+    pspec.name = tokens.front();
     // check that property name contains only [a-zA-Z0-9-_]
-    const char* allowedInPropertyName = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_";
-    if (property.name.find_first_not_of(allowedInPropertyName) != std::string::npos) {
+    const char* allowedInPropertyName = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_";
+    if (pspec.name.find_first_not_of(allowedInPropertyName) != std::string::npos) {
         // invalid character
-        LOG_ERROR("Invalid property name: %s", property.name.c_str());
-        property.name = "";
-        return property;
+        LOG_ERROR("Invalid property name: %s", pspec.name.c_str());
+        pspec.name = "";
+        return pspec;
     }
     tokens.pop_front();
 
     if (tokens.empty()) {
         LOG_ERROR("Not enough tokens");
-        property.name = "";
-        return property; // error, indicated to caller by empty name of property
+        pspec.name = "";
+        return pspec; // error, indicated to caller by empty name of property
     }
 
     // look for optional -label parameter
@@ -526,36 +526,45 @@ PropertySpec parsePropertySpec(std::list<std::string> & tokens)
         tokens.pop_front();
         if (tokens.empty()) {
             LOG_ERROR("Not enough tokens (-label)");
-            property.name = "";
-            return property; // error, indicated to caller by empty name of property
+            pspec.name = "";
+            return pspec; // error, indicated to caller by empty name of property
         }
-        property.label = tokens.front();
+        pspec.label = tokens.front();
         tokens.pop_front();
     }
 
     if (tokens.empty()) {
         LOG_ERROR("Not enough tokens");
-        property.name = "";
-        return property; // error, indicated to caller by empty name of property
+        pspec.name = "";
+        return pspec; // error, indicated to caller by empty name of property
     }
     std::string type = tokens.front();
     tokens.pop_front();
-    int r = strToPropertyType(type, property.type);
+    int r = strToPropertyType(type, pspec.type);
     if (r < 0) { // error, unknown type
         LOG_ERROR("Unkown property type '%s'", type.c_str());
-        property.name.clear();
-        return property; // error, indicated to caller by empty name of property
+        pspec.name.clear();
+        return pspec; // error, indicated to caller by empty name of property
     }
 
-    if (F_SELECT == property.type || F_MULTISELECT == property.type) {
+    if (F_SELECT == pspec.type || F_MULTISELECT == pspec.type) {
         // populate the allowed values
         while (tokens.size() > 0) {
             std::string value = tokens.front();
             tokens.pop_front();
-            property.selectOptions.push_back(value);
+            pspec.selectOptions.push_back(value);
+        }
+    } else if (F_ASSOCIATION == pspec.type) {
+        if (tokens.size() > 1) {
+            // expect -reverseLabel
+            if (tokens.front() == "-reverseLabel") {
+                tokens.pop_front();
+                pspec.reverseLabel = tokens.front();
+                tokens.pop_front();
+            }
         }
     }
-    return property;
+    return pspec;
 }
 
 /** Return a configuration object from a list of lines of tokens

@@ -164,9 +164,9 @@ function addProperty(name, label, type, opts) {
     i.name = 'propertyName';
     i.className = 'sm_project_propname';
     i.value = name;
-    i.pattern = "[-a-zA-Z_0-9]+";
+    i.pattern = "[a-zA-Z_0-9]+";
     i.placeholder = "logical_name";
-    i.title = "Allowed characters: letters, digits, underscore, dash";
+    i.title = "Allowed characters: letters, digits, underscore";
     if (type == 'reserved') {
         i.type = 'hidden';
         cell.appendChild(i);
@@ -194,7 +194,7 @@ function addProperty(name, label, type, opts) {
         i.innerHTML = 'reserved';
         cell.appendChild(i);
     } else {
-        var options = ['text', 'select', 'multiselect', 'selectUser', 'textarea', 'textarea2', 'relationship'];
+        var options = ['text', 'select', 'multiselect', 'selectUser', 'textarea', 'textarea2', 'association'];
         i = createSelect(options, type, false);
         i.name = 'type';
         i.className = "updatable";
@@ -216,7 +216,7 @@ function fupdate(item, value) {
     else if (type == "select") show_list_input(item.parentNode, value);
     else if (type == "multiselect") show_list_input(item.parentNode, value);
     else if (type == "selectUser") show_user_input(item.parentNode);
-    else if (type == "relationship") show_relation_ship_input(item.parentNode, value);
+    else if (type == "association") show_association_input(item.parentNode, value);
 }
 
 function show_size_input(item) {
@@ -237,13 +237,13 @@ function show_list_input(item, value) {
     }
     if (value) i.value = value;
 }
-function show_relation_ship_input(item, value) {
+function show_association_input(item, value) {
 	var i = document.getElementById(item.id + '_opt');
     if (i == null) {
         i = document.createElement('input');
-        i.name = "relationshipOpposite";
+        i.name = 'reverseAssociation';
         i.id = item.id + '_opt';
-        i.placeholder = "Opposite of the relationship";
+        i.placeholder = "label of the reverse association";
         item.appendChild(i);
     }
     if (value) i.value = value;

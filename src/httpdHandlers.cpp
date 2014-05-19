@@ -722,6 +722,7 @@ void httpPostProjectConfig(struct mg_connection *conn, Project &p, User u)
         std::string label;
         std::string selectOptions;
         std::string projectName;
+        std::string reverseAssociationName;
         ProjectConfig pc;
         std::list<std::list<std::string> > tokens;
         while (1) {
@@ -761,6 +762,9 @@ void httpPostProjectConfig(struct mg_connection *conn, Project &p, User u)
                             // add options
                             std::list<std::string> so = splitLinesAndTrimBlanks(selectOptions);
                             line.insert(line.end(), so.begin(), so.end());
+                        } else if  (r== 0 && ptype == F_ASSOCIATION) {
+                            line.push_back("-reverseLabel");
+                            line.push_back(reverseAssociationName);
                         }
                         tokens.push_back(line);
                     }
@@ -772,6 +776,7 @@ void httpPostProjectConfig(struct mg_connection *conn, Project &p, User u)
             } else if (key == "type") { type = value; trimBlanks(type); }
             else if (key == "label") { label = value; trimBlanks(label); }
             else if (key == "selectOptions") selectOptions = value;
+            else if (key == "reverseAssociation") reverseAssociationName = value;
             else {
                 LOG_ERROR("ProjectConfig: invalid posted parameter: '%s'", key.c_str());
             }
