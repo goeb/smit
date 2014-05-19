@@ -194,7 +194,7 @@ function addProperty(name, label, type, opts) {
         i.innerHTML = 'reserved';
         cell.appendChild(i);
     } else {
-        var options = ['text', 'select', 'multiselect', 'selectUser', 'textarea', 'textarea2'];
+        var options = ['text', 'select', 'multiselect', 'selectUser', 'textarea', 'textarea2', 'relationship'];
         i = createSelect(options, type, false);
         i.name = 'type';
         i.className = "updatable";
@@ -210,15 +210,16 @@ function fupdateThis() { fupdate(this); }
 function fupdate(item, value) {
     //alert(item.value);
     var type = item.options[item.selectedIndex].value;
-    if (type == "text") show_size_input(item.parentNode, value);
-    else if (type == "textarea") show_size_input(item.parentNode, value);
-    else if (type == "textarea2") show_size_input(item.parentNode, value);
+    if (type == "text") show_size_input(item.parentNode);
+    else if (type == "textarea") show_size_input(item.parentNode);
+    else if (type == "textarea2") show_size_input(item.parentNode);
     else if (type == "select") show_list_input(item.parentNode, value);
     else if (type == "multiselect") show_list_input(item.parentNode, value);
     else if (type == "selectUser") show_user_input(item.parentNode);
+    else if (type == "relationship") show_relation_ship_input(item.parentNode, value);
 }
 
-function show_size_input(item, value) {
+function show_size_input(item) {
     // hide extra details
     x = document.getElementById(item.id + '_opt');
     if (x != null) item.removeChild(x);
@@ -233,6 +234,17 @@ function show_list_input(item, value) {
         i.className = 'sm_project_list';
         i.value = "one\r\nvalue\nper\nline"
             item.appendChild(i);
+    }
+    if (value) i.value = value;
+}
+function show_relation_ship_input(item, value) {
+	var i = document.getElementById(item.id + '_opt');
+    if (i == null) {
+        i = document.createElement('input');
+        i.name = "relationshipOpposite";
+        i.id = item.id + '_opt';
+        i.placeholder = "Opposite of the relationship";
+        item.appendChild(i);
     }
     if (value) i.value = value;
 }

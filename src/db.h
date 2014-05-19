@@ -46,6 +46,9 @@ struct Issue {
     int ctime; // creation time (the one of the first entry)
     int mtime; // modification time (the one of the last entry)
     std::map<std::string, std::list<std::string> > properties;
+
+	/** { relationship-name : (forward | reverse, [related issues] ) } */
+	std::map<std::string, std::pair<bool, std::list<std::string> > > relationships;
     Issue() : latest(0), ctime(0), mtime(0) {}
 
     // the properties of the issue is the consolidation of all the properties
@@ -71,7 +74,15 @@ struct TagSpec {
     bool display; // status should be displayed in issue header
 };
 
-enum PropertyType { F_TEXT, F_SELECT, F_MULTISELECT, F_SELECT_USER, F_TEXTAREA, F_TEXTAREA2 };
+enum PropertyType {
+	F_TEXT,
+	F_SELECT,
+	F_MULTISELECT,
+	F_SELECT_USER,
+	F_TEXTAREA,
+	F_TEXTAREA2,
+	F_RELATIONSHIP
+};
 int strToPropertyType(const std::string &s, PropertyType &out);
 
 struct PropertySpec {
@@ -79,6 +90,7 @@ struct PropertySpec {
     std::string label;
     enum PropertyType type;
     std::list<std::string> selectOptions; // for F_SELECT and F_MULTISELECT only
+	std::string oppositeRelationship; // for F_RELATIONSHIP
 };
 
 struct PredefinedView {

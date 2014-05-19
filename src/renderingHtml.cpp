@@ -910,15 +910,20 @@ void RHtml::printScriptUpdateConfig(const ContextParameters &ctx)
         case F_SELECT_USER: type = "selectUser"; break;
         case F_TEXTAREA: type = "textarea"; break;
         case F_TEXTAREA2: type = "textarea2"; break;
+        case F_RELATIONSHIP: type = "relationship"; break;
         }
 
         std::string label = ctx.projectConfig.getLabelOfProperty(pspec->name);
         std::list<std::string>::const_iterator i;
         std::string options;
-        FOREACH (i, pspec->selectOptions) {
-            if (i != pspec->selectOptions.begin()) options += "\\n";
-            options += enquoteJs(*i);
-        }
+		if (pspec->type == F_SELECT || pspec->type == F_MULTISELECT) {
+			FOREACH (i, pspec->selectOptions) {
+				if (i != pspec->selectOptions.begin()) options += "\\n";
+				options += enquoteJs(*i);
+			}
+		} else if (pspec->type == F_RELATIONSHIP) {
+			options = pspec->oppositeRelationship;
+		}
         mg_printf(conn, "addProperty('%s', '%s', '%s', '%s');\n", pspec->name.c_str(),
                   enquoteJs(label).c_str(),
                   type, options.c_str());
