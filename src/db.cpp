@@ -1486,6 +1486,64 @@ Entry *Issue::getEntry(const std::string id)
     return e->second;
 }
 
+void Project::updateAssociations(Issue *i, const std::string &associationName, const std::list<std::string> &issues)
+{
+    // lock not acquired as called from protected scopes (addEntry) and load
+
+    if (!i) return;
+
+    if (issues.empty()) {
+        associations[i->id].erase(associationName);
+        if (associations[i->id].empty()) associations.erase(i->id);
+
+    } else associations[i->id][associationName] = issues;
+
+
+    // convert list to set
+    std::set<std::string> otherIssues;
+    std::list<std::string>::const_iterator otherIssue;
+    FOREACH(otherIssue, issues) {
+        otherIssues.insert(*otherIssue);
+    }
+
+    // clean up reverse associations, to cover the case where an association has been removed
+    std::map<std::string, std::map<std::string, std::set<std::string> > >::iterator raIssue;
+    FOREACH(raIssue, reverseAssociations) {
+        std::map<std::string, std::set<std::string> >::iterator raAssoName;
+        FOREACH(raAssoName, raIssue->second) {
+            raAssoName->second.erase(i->id);
+        }
+    }
+
+    // add new reverse associations
+    FOREACH(otherIssue, issues) {
+        reverseAssociations[*otherIssue][associationName].insert(i->id);
+    }
+
+}
+
+void parseAssociation(std::list<std::string> &values)
+{
+    // parse the associated issues
+    // the input is a string like "1, 2, 3".
+    // we want to convert this to a list : ["1", "2", "3"]
+    // and store it as a multi-valued property
+    if (values.size() != 1) {
+        LOG_ERROR("Unexpected association with %zd values", values.size());
+        return;
+    }
+
+    std::string v = values.front();
+    values.clear(); // prepare for new value
+    std::vector<std::string> issueIds = split(v, " ,;");
+    std::vector<std::string>::const_iterator associatedIssue;
+    FOREACH(associatedIssue, issueIds) {
+        if (associatedIssue->empty()) continue; // because split may return empty tokens
+        values.push_back(*associatedIssue);
+    }
+    values.sort();
+}
+
 /** If issueId is empty:
   *     - a new issue is created
   *     - its ID is returned within parameter 'issueId'
@@ -1494,6 +1552,38 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
 {
     ScopeLocker scopeLocker(locker, LOCK_READ_WRITE);
     ScopeLocker scopeLockerConfig(lockerForConfig, LOCK_READ_ONLY);
+
+    // check that all properties are in the project config
+    // else, remove them
+    // and parse the associations, if any
+    std::map<std::string, std::list<std::string> >::iterator p;
+    p = properties.begin();
+    while (p != properties.end()) {
+        bool doErase = false;
+
+        if ( (p->first == K_MESSAGE) || (p->first == K_FILE) )  {
+            if (p->second.size() && p->second.front().empty()) {
+                // erase if message or file is emtpy
+                doErase = true;
+            }
+        } else {
+            const PropertySpec *pspec = config.getPropertySpec(p->first);
+            if (!pspec) {
+                // erase property because it is not part of the user properties of the project
+                doErase = true;
+            } // else do not erase and parse the association
+            else if (pspec->type == F_ASSOCIATION) parseAssociation(p->second);
+        }
+
+        if (doErase) {
+            // here we remove an item from the list that we are walking through
+            // be careful...
+            std::map<std::string, std::list<std::string> >::iterator itemToErase = p;
+            p++;
+            properties.erase(itemToErase);
+        } else p++;
+
+    }
 
     Issue *i = 0;
     if (issueId.size()>0) {
@@ -1507,34 +1597,17 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
 
         // simplify the entry by removing properties that have the same value
         // in the issue (only the modified fields are stored)
-        //
-        // check that all properties are in the project config
-        // and that they bring a modification of the issue
-        // else, remove them
         std::map<std::string, std::list<std::string> >::iterator entryProperty;
         entryProperty = properties.begin();
         while (entryProperty != properties.end()) {
             bool doErase = false;
 
-            if ( (entryProperty->first == K_MESSAGE) || (entryProperty->first == K_FILE) )  {
-                if (entryProperty->second.size() && entryProperty->second.front().empty()) {
-                    // erase if message or file is emtpy
+            std::map<std::string, std::list<std::string> >::iterator issueProperty;
+            issueProperty = i->properties.find(entryProperty->first);
+            if (issueProperty != i->properties.end()) {
+                if (issueProperty->second == entryProperty->second) {
+                    // the value of this property has not changed
                     doErase = true;
-                }
-            } else {
-                const PropertySpec *pspec = config.getPropertySpec(entryProperty->first);
-                if ( !pspec && (entryProperty->first != K_SUMMARY) ) {
-                    // erase property because it is not part of the official fields of the project
-                    doErase = true;
-                } else {
-                    std::map<std::string, std::list<std::string> >::iterator issueProperty;
-                    issueProperty = i->properties.find(entryProperty->first);
-                    if (issueProperty != i->properties.end()) {
-                        if (issueProperty->second == entryProperty->second) {
-                            // the value of this property has not changed
-                            doErase = true;
-                        }
-                    }
                 }
             }
 
@@ -1545,13 +1618,14 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
                 entryProperty++;
                 properties.erase(itemToErase);
             } else entryProperty++;
-
         }
+
         if (properties.size() == 0) {
             LOG_INFO("addEntry: no change. return without adding entry.");
             return 0; // no change
         }
     }
+    // at this point properties have been cleaned up
 
     Entry *parent;
     if (i) parent = i->latest;
@@ -1570,7 +1644,6 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
         e->prev = parent;
         parent->next = e;
     }
-
 
     // serialize the entry
     std::string data = e->serialize();
@@ -1635,6 +1708,14 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
     i->mtime = e->ctime;
     i->latest = e;
 
+    // if some association has been updated, then update the associations tables
+    FOREACH(p, properties) {
+        const PropertySpec *pspec = config.getPropertySpec(p->first);
+        if (pspec && pspec->type == F_ASSOCIATION) {
+            updateAssociations(i, p->first, p->second);
+        }
+    }
+
     // move the uploaded files (if any)
     std::map<std::string, std::list<std::string> >::iterator files = e->properties.find(K_FILE);
     if (files != e->properties.end()) {
@@ -1664,6 +1745,7 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
     } // end of processing of uploaded files
 
     entryId = newEntryId;
+
     return r;
 }
 

@@ -47,8 +47,7 @@ struct Issue {
     int mtime; // modification time (the one of the last entry)
     std::map<std::string, std::list<std::string> > properties;
 
-	/** { relationship-name : (forward | reverse, [related issues] ) } */
-	std::map<std::string, std::pair<bool, std::list<std::string> > > relationships;
+    /** { association-name : [related issues] } */
     Issue() : latest(0), ctime(0), mtime(0) {}
 
     // the properties of the issue is the consolidation of all the properties
@@ -181,6 +180,16 @@ private:
     std::string name; //< name of the project, plain text
     std::string path; //< path to the project, in which the basename is the urlencoded name
     uint32_t maxIssueId;
+
+    // associations table
+    // { issue : { association-name : [other-issues] } }
+    std::map<std::string, std::map<std::string, std::list<std::string> > > associations;
+
+    // reverse associations table
+    //
+    std::map<std::string, std::map<std::string, std::set<std::string> > > reverseAssociations;
+    void updateAssociations(Issue *i, const std::string &associationName, const std::list<std::string> &issues);
+
 };
 
 
