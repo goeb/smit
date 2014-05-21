@@ -1386,7 +1386,15 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
 
     std::list<PropertySpec>::const_iterator pspec;
     FOREACH(pspec, pconfig.properties) {
+
         std::string pname = pspec->name;
+        enum PropertyType type = pspec->type;
+
+        // look if the issue has a value for this property
+        std::map<std::string, std::list<std::string> >::const_iterator p = issue.properties.find(pname);
+        // if the property is an association, but with no associated issues, then do not display
+        if (type == F_ASSOCIATION && p != issue.properties.end() && p->second.empty()) continue;
+
         std::string label = pconfig.getLabelOfProperty(pname);
 
         if (workingColumn == 1) {
@@ -1398,7 +1406,6 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
         const char *colspan = "";
         int workingColumnIncrement = 1;
 
-        enum PropertyType type = pspec->type;
         if (type == F_TEXTAREA || type == F_TEXTAREA2) pvalueStyle = "sm_issue_pvalue_ta";
 
         if (type == F_TEXTAREA2 || type == F_ASSOCIATION) {
@@ -1419,10 +1426,7 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
         mg_printf(conn, "<td class=\"sm_issue_plabel sm_issue_plabel_%s\">%s: </td>\n",
                   pname.c_str(), htmlEscape(label).c_str());
 
-        // value
-        // look if the issue has a value for this property
-        std::map<std::string, std::list<std::string> >::const_iterator p = issue.properties.find(pname);
-
+        // print the value
         if (type == F_ASSOCIATION) {
             std::list<std::string> associatedIssues;
             if (p != issue.properties.end()) associatedIssues = p->second;
