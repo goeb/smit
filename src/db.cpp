@@ -150,6 +150,17 @@ std::string ProjectConfig::getLabelOfProperty(const std::string &propertyName) c
     return label;
 }
 
+std::string ProjectConfig::getReverseLabelOfProperty(const std::string &propertyName) const
+{
+    std::string reverseLabel;
+    std::map<std::string, std::string>::const_iterator rlabel;
+    rlabel = propertyReverseLabels.find(propertyName);
+    if (rlabel != propertyReverseLabels.end()) reverseLabel = rlabel->second;
+
+    if (reverseLabel.size()==0) reverseLabel = propertyName;
+    return reverseLabel;
+}
+
 bool ProjectConfig::isValidPropertyName(const std::string &name) const
 {
     // get user defined properties
@@ -232,6 +243,7 @@ int Project::load()
     LOG_INFO("Project %s loaded.", path.c_str());
 
     consolidateIssues();
+    computeAssociations();
 
     return 0;
 }
@@ -326,13 +338,13 @@ void Issue::consolidate()
     }
 }
 
-// 1. Walk through all loaded issues and compute the head
-//    if it was not found earlier during the loadEntries.
-// 2. Once the head is found, walk through all the entries
-//    and fulfill the properties of the issue.
+/** 1. Walk through all loaded issues and compute the head
+  *    if it was not found earlier during the loadEntries.
+  * 2. Once the head is found, walk through all the entries
+  *    and fulfill the properties of the issue.
+  */
 void Project::consolidateIssues()
 {
-    //LOG_DEBUG("consolidateIssues()...");
     std::map<std::string, Issue*>::iterator i;
     for (i = issues.begin(); i != issues.end(); i++) {
         Issue *currentIssue = i->second;
@@ -340,6 +352,30 @@ void Project::consolidateIssues()
     }
     LOG_DEBUG("consolidateIssues() done.");
 }
+
+/** computeAssociations
+  * For each issue, look if it has some F_ASSOCIATION properties
+  * and if so, then update the associations tables
+  */
+void Project::computeAssociations()
+{
+    std::map<std::string, Issue*>::iterator i;
+    for (i = issues.begin(); i != issues.end(); i++) {
+        Issue *currentIssue = i->second;
+        std::list<PropertySpec>::const_iterator pspec;
+
+        FOREACH(pspec, config.properties) {
+            if (pspec->type == F_ASSOCIATION) {
+                std::map<std::string, std::list<std::string> >::const_iterator p;
+                p = currentIssue->properties.find(pspec->name);
+                if (p != currentIssue->properties.end()) {
+                    updateAssociations(currentIssue, pspec->name, p->second);
+                }
+            }
+        }
+    }
+}
+
 int Project::loadEntries()
 {
     // load files path/issues/*/*
@@ -593,6 +629,7 @@ ProjectConfig parseProjectConfig(std::list<std::list<std::string> > &lines)
                 LOG_DEBUG("properties: added %s", property.name.c_str());
 
                 if (! property.label.empty()) config.propertyLabels[property.name] = property.label;
+                if (! property.reverseLabel.empty()) config.propertyReverseLabels[property.name] = property.reverseLabel;
 
             } else {
                 // parse error, ignore
@@ -1486,6 +1523,16 @@ Entry *Issue::getEntry(const std::string id)
     return e->second;
 }
 
+std::map<std::string, std::set<std::string> > Project::getReverseAssociations(const std::string &issue)
+{
+    ScopeLocker scopeLocker(locker, LOCK_READ_ONLY);
+
+    std::map<std::string, std::map<std::string, std::set<std::string> > >::iterator raIssue;
+    raIssue = reverseAssociations.find(issue);
+    if (raIssue == reverseAssociations.end()) return std::map<std::string, std::set<std::string> >();
+    else return raIssue->second;
+}
+
 void Project::updateAssociations(Issue *i, const std::string &associationName, const std::list<std::string> &issues)
 {
     // lock not acquired as called from protected scopes (addEntry) and load
@@ -1519,7 +1566,6 @@ void Project::updateAssociations(Issue *i, const std::string &associationName, c
     FOREACH(otherIssue, issues) {
         reverseAssociations[*otherIssue][associationName].insert(i->id);
     }
-
 }
 
 void parseAssociation(std::list<std::string> &values)

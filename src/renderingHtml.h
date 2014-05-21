@@ -51,7 +51,8 @@ public:
                                      const std::list<User> &users);
     static void printProjectConfig(const ContextParameters &ctx);
     static void printPageIssuesFullContents(const ContextParameters &ctx, std::vector<struct Issue*> issueList);
-    static void printPageIssueList(const ContextParameters &ctx, std::vector<struct Issue*> issueList, std::list<std::string> colspec);
+    static void printPageIssueList(const ContextParameters &ctx, std::vector<struct Issue*> issueList,
+                                   std::list<std::string> colspec);
     static void printPageIssue(const ContextParameters &ctx, const Issue &issue);
     static void printPageNewIssue(const ContextParameters &ctx);
 

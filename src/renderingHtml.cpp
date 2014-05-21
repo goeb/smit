@@ -1159,7 +1159,7 @@ void RHtml::printPageIssuesFullContents(const ContextParameters &ctx, std::vecto
 }
 
 void RHtml::printPageIssueList(const ContextParameters &ctx,
-                           std::vector<struct Issue*> issueList, std::list<std::string> colspec)
+                               std::vector<struct Issue*> issueList, std::list<std::string> colspec)
 {
     VariableNavigator vn("issues.html", ctx);
     vn.issueList = &issueList;
@@ -1393,7 +1393,11 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
         // look if the issue has a value for this property
         std::map<std::string, std::list<std::string> >::const_iterator p = issue.properties.find(pname);
         // if the property is an association, but with no associated issues, then do not display
-        if (type == F_ASSOCIATION && p != issue.properties.end() && p->second.empty()) continue;
+        if (type == F_ASSOCIATION) {
+            LOG_DEBUG("F_ASSOCIATION: %s, p->second.size()=%d", pname.c_str(), p->second.size());
+            if (p == issue.properties.end()) continue; // this issue has no such property yet
+            if (p->second.empty()) continue;
+        }
 
         std::string label = pconfig.getLabelOfProperty(pname);
 
@@ -1456,6 +1460,32 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
             workingColumn = 1;
         }
     }
+
+    // reverse associated issues, if any
+    std::map<std::string, std::set<std::string> > rAssociatedIssues = ctx.project->getReverseAssociations(issue.id);
+    if (!rAssociatedIssues.empty()) {
+
+        std::map<std::string, std::set<std::string> >::const_iterator ra;
+        FOREACH(ra, rAssociatedIssues) {
+            if (ra->second.empty()) continue;
+            if (!ctx.projectConfig.isValidPropertyName(ra->first)) continue;
+
+            mg_printf(conn, "<tr class=\"sm_issue_reverse_asso\">");
+            std::string rlabel = ctx.projectConfig.getReverseLabelOfProperty(ra->first);
+            mg_printf(conn, "<td class=\"sm_issue_plabel\">%s: </td>", htmlEscape(rlabel).c_str());
+            std::set<std::string>::const_iterator otherIssue;
+            mg_printf(conn, "<td colspan=\"3\">");
+            FOREACH(otherIssue, ra->second) {
+                if (otherIssue != ra->second.begin()) mg_printf(conn, ", ");
+                mg_printf(conn, "<a href=\"%s\">%s</a>", urlEncode(*otherIssue).c_str(),
+                          htmlEscape(*otherIssue).c_str());
+            }
+            mg_printf(conn, "</td>");
+            mg_printf(conn, "</td></tr>");
+        }
+
+    }
+
     mg_printf(conn, "</table>\n");
 
 

@@ -117,6 +117,7 @@ struct ProjectConfig {
     // properties
     std::list<PropertySpec> properties; // user defined properties
     std::map<std::string, std::string> propertyLabels;
+    std::map<std::string, std::string> propertyReverseLabels;
     std::map<std::string, PredefinedView> predefinedViews;
     std::map<std::string, TagSpec> tags;
     bool numberIssueAcrossProjects; // accross project
@@ -126,6 +127,7 @@ struct ProjectConfig {
     std::list<std::string> getPropertiesNames() const;
     std::list<std::string> getReservedProperties() const;
     std::string getLabelOfProperty(const std::string &propertyName) const;
+    std::string getReverseLabelOfProperty(const std::string &propertyName) const;
     bool isValidPropertyName(const std::string &name) const;
 };
 
@@ -160,6 +162,8 @@ public:
     void updateMaxIssueId(uint32_t i);
     int reload(); // reload a project from disk storage
     int getNumIssues();
+    std::map<std::string, std::set<std::string> > getReverseAssociations(const std::string &issue);
+
 
 private:
     int load(); // load a project: config, views, entries, tags
@@ -168,6 +172,7 @@ private:
     void loadPredefinedViews();
     void loadTags();
     void consolidateIssues();
+    void computeAssociations();
 
     void consolidateIssue(Issue *i);
     int storeViewsToFile();
