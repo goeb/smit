@@ -1389,11 +1389,6 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
         std::string pname = pspec->name;
         std::string label = pconfig.getLabelOfProperty(pname);
 
-        std::string value;
-        std::map<std::string, std::list<std::string> >::const_iterator p = issue.properties.find(pname);
-
-        if (p != issue.properties.end()) value = toString(p->second);
-
         if (workingColumn == 1) {
             mg_printf(conn, "<tr>\n");
         }
@@ -1425,22 +1420,28 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
                   pname.c_str(), htmlEscape(label).c_str());
 
         // value
+        // look if the issue has a value for this property
+        std::map<std::string, std::list<std::string> >::const_iterator p = issue.properties.find(pname);
+
         if (type == F_ASSOCIATION) {
+            std::list<std::string> associatedIssues;
+            if (p != issue.properties.end()) associatedIssues = p->second;
             // split the value
-            std::vector<std::string> issueIds = split(value, " ,;");
-            std::vector<std::string>::const_iterator associatedIssue;
             mg_printf(conn, "<td %s class=\"%s sm_issue_pvalue_%s\">",
                       colspan, pvalueStyle, pname.c_str());
 
-            FOREACH(associatedIssue, issueIds) {
-                if (associatedIssue->empty()) continue; // because split may return empty tokens
-                if (associatedIssue != issueIds.begin()) mg_printf(conn, ", ");
-                mg_printf(conn, "<a href=\"%s\">%s</a>", urlEncode(*associatedIssue).c_str(),
-                          htmlEscape(*associatedIssue).c_str());
+            std::list<std::string>::iterator id;
+            FOREACH(id, associatedIssues) {
+                if (id != associatedIssues.begin()) mg_printf(conn, ", ");
+                mg_printf(conn, "<a href=\"%s\">%s</a>", urlEncode(*id).c_str(),
+                          htmlEscape(*id).c_str());
             }
            mg_printf(conn, "</td>\n");
 
         } else {
+            std::string value;
+            if (p != issue.properties.end()) value = toString(p->second);
+
             mg_printf(conn, "<td %s class=\"%s sm_issue_pvalue_%s\">%s</td>\n",
                       colspan, pvalueStyle, pname.c_str(), htmlEscape(value).c_str());
         }
@@ -1809,7 +1810,7 @@ void RHtml::printIssueForm(const ContextParameters &ctx, const Issue *issue, boo
                   << pname << "\">" << htmlEscape(value) << "</textarea>\n";
 
         } else if (pspec->type == F_ASSOCIATION) {
-            if (propertyValues.size()>0) value = propertyValues.front();
+            if (propertyValues.size()>0) value = join(propertyValues, ", ");
             input << "<input class=\"sm_pinput_" << pname << "\" type=\"text\" name=\""
                   << pname << "\" value=\"" << htmlEscape(value) << "\">\n";
 
