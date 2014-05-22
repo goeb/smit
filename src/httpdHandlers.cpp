@@ -1553,9 +1553,10 @@ void httpPostEntry(struct mg_connection *conn, Project &pro, const std::string &
 
     } else {
 
-        // launch the trigger, if any
 #if !defined(_WIN32)
-        Trigger::notifyEntry(pro, issueId, entryId);
+        // launch the trigger, if any
+        // launch the trigger only if a new entry was actually created
+        if (!entryId.empty()) Trigger::notifyEntry(pro, issueId, entryId);
 #endif
 
 

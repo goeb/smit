@@ -1532,14 +1532,16 @@ std::map<std::string, std::set<std::string> > Project::getReverseAssociations(co
     if (raIssue == reverseAssociations.end()) return std::map<std::string, std::set<std::string> >();
     else return raIssue->second;
 }
-
-void Project::updateAssociations(Issue *i, const std::string &associationName, const std::list<std::string> &issues)
+/**
+  * issues may be a list of 1 empty string, meaning that associations have been removed
+  */
+void Project::updateAssociations(const Issue *i, const std::string &associationName, const std::list<std::string> &issues)
 {
     // lock not acquired as called from protected scopes (addEntry) and load
 
     if (!i) return;
 
-    if (issues.empty()) {
+    if (issues.empty() || issues.front() == "") {
         associations[i->id].erase(associationName);
         if (associations[i->id].empty()) associations.erase(i->id);
 
@@ -1550,22 +1552,36 @@ void Project::updateAssociations(Issue *i, const std::string &associationName, c
     std::set<std::string> otherIssues;
     std::list<std::string>::const_iterator otherIssue;
     FOREACH(otherIssue, issues) {
-        otherIssues.insert(*otherIssue);
+        if (! otherIssue->empty()) otherIssues.insert(*otherIssue);
     }
 
     // clean up reverse associations, to cover the case where an association has been removed
     std::map<std::string, std::map<std::string, std::set<std::string> > >::iterator raIssue;
     FOREACH(raIssue, reverseAssociations) {
         std::map<std::string, std::set<std::string> >::iterator raAssoName;
-        FOREACH(raAssoName, raIssue->second) {
-            raAssoName->second.erase(i->id);
-        }
+        raAssoName = raIssue->second.find(associationName);
+        if (raAssoName != raIssue->second.end()) raAssoName->second.erase(i->id);
     }
 
     // add new reverse associations
     FOREACH(otherIssue, issues) {
+        if (otherIssue->empty()) continue;
         reverseAssociations[*otherIssue][associationName].insert(i->id);
     }
+
+    // debug
+    // dump associations
+    FOREACH(raIssue, reverseAssociations) {
+        std::map<std::string, std::set<std::string> >::iterator raAssoName;
+        FOREACH(raAssoName, raIssue->second) {
+            std::set<std::string>::iterator x;
+            FOREACH(x, raAssoName->second) {
+                LOG_INFO("reverseAssociations[%s][%s]=%s", raIssue->first.c_str(),
+                         raAssoName->first.c_str(), x->c_str());
+            }
+        }
+    }
+
 }
 
 void parseAssociation(std::list<std::string> &values)
@@ -1587,17 +1603,24 @@ void parseAssociation(std::list<std::string> &values)
         if (associatedIssue->empty()) continue; // because split may return empty tokens
         values.push_back(*associatedIssue);
     }
-    values.sort();
+
+    if (values.empty()) values.push_back("");
+    else values.sort();
 }
 
 /** If issueId is empty:
   *     - a new issue is created
   *     - its ID is returned within parameter 'issueId'
+  * @return
+  *     0 if no error. The entryId is fullfilled.
+  *       except if no entry was created due to no change.
   */
 int Project::addEntry(std::map<std::string, std::list<std::string> > properties, std::string &issueId, std::string &entryId, std::string username)
 {
     ScopeLocker scopeLocker(locker, LOCK_READ_WRITE);
     ScopeLocker scopeLockerConfig(lockerForConfig, LOCK_READ_ONLY);
+
+    entryId.clear();
 
     // check that all properties are in the project config
     // else, remove them
@@ -1672,6 +1695,11 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
         }
     }
     // at this point properties have been cleaned up
+
+    FOREACH(p, properties) {
+        LOG_DEBUG("properties: %s => %s", p->first.c_str(), join(p->second, ", ").c_str());
+    }
+
 
     Entry *parent;
     if (i) parent = i->latest;

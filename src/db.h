@@ -193,7 +193,7 @@ private:
     // reverse associations table
     //
     std::map<std::string, std::map<std::string, std::set<std::string> > > reverseAssociations;
-    void updateAssociations(Issue *i, const std::string &associationName, const std::list<std::string> &issues);
+    void updateAssociations(const Issue *i, const std::string &associationName, const std::list<std::string> &issues);
 
 };
 

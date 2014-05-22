@@ -1396,6 +1396,7 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
         if (type == F_ASSOCIATION) {
             if (p == issue.properties.end()) continue; // this issue has no such property yet
             if (p->second.empty()) continue; // no associated issue
+            if (p->second.front() == "") continue; // associated issue
         }
 
         std::string label = pconfig.getLabelOfProperty(pname);
@@ -1801,6 +1802,11 @@ void RHtml::printIssueForm(const ContextParameters &ctx, const Issue *issue, boo
             }
 
             input << "</select>";
+
+            // add a hidden field to tell the server that this property was present, even if
+            // no value selected
+            input << "\n";
+            input << "<input type=\"hidden\" name=\"" << pname << "\" value=\"\">";
 
         } else if (pspec->type == F_SELECT_USER) {
             if (propertyValues.size()>0) value = propertyValues.front();
