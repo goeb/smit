@@ -1614,11 +1614,11 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
             }
         } else {
             const PropertySpec *pspec = config.getPropertySpec(p->first);
-            if (!pspec) {
+            if (!pspec && (p->first != K_SUMMARY)) {
                 // erase property because it is not part of the user properties of the project
                 doErase = true;
             } // else do not erase and parse the association
-            else if (pspec->type == F_ASSOCIATION) parseAssociation(p->second);
+            else if (pspec && pspec->type == F_ASSOCIATION) parseAssociation(p->second);
         }
 
         if (doErase) {
