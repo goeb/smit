@@ -1392,11 +1392,10 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
 
         // look if the issue has a value for this property
         std::map<std::string, std::list<std::string> >::const_iterator p = issue.properties.find(pname);
-        // if the property is an association, but with no associated issues, then do not display
+        // if the property is an association, but with no associated issue, then do not display
         if (type == F_ASSOCIATION) {
-            LOG_DEBUG("F_ASSOCIATION: %s, p->second.size()=%d", pname.c_str(), p->second.size());
             if (p == issue.properties.end()) continue; // this issue has no such property yet
-            if (p->second.empty()) continue;
+            if (p->second.empty()) continue; // no associated issue
         }
 
         std::string label = pconfig.getLabelOfProperty(pname);
