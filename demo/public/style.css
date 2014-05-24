@@ -63,6 +63,16 @@ td {
     font-size: small;
     border-collapse:collapse;
 }
+
+tr.sm_issue_asso {
+    /*background-color: #ddd;*/
+    border: solid 1px #bbb;
+    font-size: 80%;
+}
+.sm_not_found {
+    color: #844;
+    font-weight: bold;
+}
 .sm_entry {
     clear: both;
     border: 0;

@@ -1371,6 +1371,43 @@ void RHtml::printIssueSummary(const ContextParameters &ctx, const Issue &issue)
 
 }
 
+/** Print associatied issues
+  *
+  * A <tr> must have been opened by the caller,
+  * and must be closed by the caller.
+  */
+void printAssociations(const ContextParameters &ctx, const std::string &associationName, const std::list<std::string> &issues, bool reverse)
+{
+    struct mg_connection *conn = ctx.conn;
+
+    std::string label;
+    if (reverse) {
+        label = ctx.projectConfig.getReverseLabelOfProperty(associationName);
+    } else {
+        label = ctx.projectConfig.getLabelOfProperty(associationName);
+    }
+
+    mg_printf(conn, "<td class=\"sm_issue_plabel\">%s: </td>", htmlEscape(label).c_str());
+    std::list<std::string>::const_iterator otherIssue;
+    mg_printf(conn, "<td colspan=\"3\" class=\"sm_issue_asso\">");
+    FOREACH(otherIssue, issues) {
+        // separate by a line feed
+        if (otherIssue != issues.begin()) mg_printf(conn, "<br>\n");
+
+        Issue associatedIssue;
+        int r = ctx.getProject().get(*otherIssue, associatedIssue);
+        if (r == 0) { // issue found. print id and summary
+            mg_printf(conn, "<a href=\"%s\">%s %s</a>", urlEncode(associatedIssue.id).c_str(),
+                      htmlEscape(associatedIssue.id).c_str(), htmlEscape(associatedIssue.getSummary()).c_str());
+
+        } else { // not found. no such issue
+            mg_printf(conn, "<span class=\"sm_not_found\">%s</span>\n", htmlEscape(*otherIssue).c_str());
+        }
+    }
+    mg_printf(conn, "</td>");
+}
+
+
 void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
 {
     struct mg_connection *conn = ctx.conn;
@@ -1390,9 +1427,10 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
         std::string pname = pspec->name;
         enum PropertyType type = pspec->type;
 
-        // look if the issue has a value for this property
+        // take the value of this property
         std::map<std::string, std::list<std::string> >::const_iterator p = issue.properties.find(pname);
-        // if the property is an association, but with no associated issue, then do not display
+
+        // if the property is an association, but with no value (ie: no associated issue), then do not display
         if (type == F_ASSOCIATION) {
             if (p == issue.properties.end()) continue; // this issue has no such property yet
             if (p->second.empty()) continue; // no associated issue
@@ -1426,64 +1464,56 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
             workingColumnIncrement = 2;
         }
 
-        // label
-        mg_printf(conn, "<td class=\"sm_issue_plabel sm_issue_plabel_%s\">%s: </td>\n",
-                  pname.c_str(), htmlEscape(label).c_str());
-
         // print the value
         if (type == F_ASSOCIATION) {
             std::list<std::string> associatedIssues;
             if (p != issue.properties.end()) associatedIssues = p->second;
-            // split the value
-            mg_printf(conn, "<td %s class=\"%s sm_issue_pvalue_%s\">",
-                      colspan, pvalueStyle, pname.c_str());
 
-            std::list<std::string>::iterator id;
-            FOREACH(id, associatedIssues) {
-                if (id != associatedIssues.begin()) mg_printf(conn, ", ");
-                mg_printf(conn, "<a href=\"%s\">%s</a>", urlEncode(*id).c_str(),
-                          htmlEscape(*id).c_str());
-            }
-           mg_printf(conn, "</td>\n");
+            mg_printf(conn, "<tr class=\"sm_issue_asso\">");
+
+            printAssociations(ctx, pname, associatedIssues, false);
+            // <tr> closed below
 
         } else {
+            // print label and value of property (other than an association)
+
+            // label
+            mg_printf(conn, "<td class=\"sm_issue_plabel sm_issue_plabel_%s\">%s: </td>\n",
+                      pname.c_str(), htmlEscape(label).c_str());
+
+            // value
             std::string value;
             if (p != issue.properties.end()) value = toString(p->second);
 
             mg_printf(conn, "<td %s class=\"%s sm_issue_pvalue_%s\">%s</td>\n",
                       colspan, pvalueStyle, pname.c_str(), htmlEscape(value).c_str());
+            workingColumn += workingColumnIncrement;
         }
 
-        workingColumn += workingColumnIncrement;
         if (workingColumn > MAX_COLUMNS) {
-            mg_printf(conn, "</tr>\n");
             workingColumn = 1;
         }
     }
 
+    // align wrt missing cells (ie: fulfill missnig columns and close current row)
+    if (workingColumn != 1) mg_printf(conn, "<td></td><td></td>\n");
+
+    mg_printf(conn, "</tr>\n");
+
     // reverse associated issues, if any
     std::map<std::string, std::set<std::string> > rAssociatedIssues = ctx.project->getReverseAssociations(issue.id);
     if (!rAssociatedIssues.empty()) {
-
         std::map<std::string, std::set<std::string> >::const_iterator ra;
         FOREACH(ra, rAssociatedIssues) {
             if (ra->second.empty()) continue;
             if (!ctx.projectConfig.isValidPropertyName(ra->first)) continue;
 
-            mg_printf(conn, "<tr class=\"sm_issue_reverse_asso\">");
-            std::string rlabel = ctx.projectConfig.getReverseLabelOfProperty(ra->first);
-            mg_printf(conn, "<td class=\"sm_issue_plabel\">%s: </td>", htmlEscape(rlabel).c_str());
-            std::set<std::string>::const_iterator otherIssue;
-            mg_printf(conn, "<td colspan=\"3\">");
-            FOREACH(otherIssue, ra->second) {
-                if (otherIssue != ra->second.begin()) mg_printf(conn, ", ");
-                mg_printf(conn, "<a href=\"%s\">%s</a>", urlEncode(*otherIssue).c_str(),
-                          htmlEscape(*otherIssue).c_str());
-            }
-            mg_printf(conn, "</td>");
-            mg_printf(conn, "</td></tr>");
-        }
+            std::list<std::string> issues(ra->second.begin(), ra->second.end()); // convert to list
+            mg_printf(conn, "<tr class=\"sm_issue_asso\">");
 
+            printAssociations(ctx, ra->first, issues, true);
+            mg_printf(conn, "</tr>");
+        }
     }
 
     mg_printf(conn, "</table>\n");
