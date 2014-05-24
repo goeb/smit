@@ -32,6 +32,8 @@ std::string toJson(const std::string &text)
     return json;
 }
 
+/** Convert a list of strings to a JSON array of strings
+  */
 std::string toJson(const std::list<std::string> &items)
 {
     std::string jarray = "[";
@@ -109,21 +111,22 @@ std::string Trigger::formatEntry(const Project &project, const Issue &issue, con
     //   ... }
     // (value may be a list, for multiselect)
     s << ",\n" << toJson("properties") << ":{\n";
+    std::string consolidatedProps;
     FOREACH(p, issue.properties) {
         if (!pconfig.isValidPropertyName(p->first)) continue;
 
-        if (p != issue.properties.begin()) s << ",\n";
-        s << "  " << toJson(p->first) << ":[";
-        s << toJson(pconfig.getLabelOfProperty(p->first)) << ",";
+        if (!consolidatedProps.empty()) consolidatedProps += ",\n";
+        consolidatedProps += "  " + toJson(p->first) + ":[";
+        consolidatedProps += toJson(pconfig.getLabelOfProperty(p->first)) + ",";
         if (p->second.size() == 1) {
-            s << toJson(p->second.front());
+            consolidatedProps += toJson(p->second.front());
         } else {
             // multiple values
-            s << toJson(p->second);
+            consolidatedProps += toJson(p->second);
         }
-        s << "]";
+        consolidatedProps += "]";
     }
-    s << "\n}";
+    s << consolidatedProps << "\n}";
 
     // put the message, if any
     s << ",\n" << toJson("message") << ":" << toJson(entry.getMessage());

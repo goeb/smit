@@ -1576,8 +1576,8 @@ void Project::updateAssociations(const Issue *i, const std::string &associationN
         FOREACH(raAssoName, raIssue->second) {
             std::set<std::string>::iterator x;
             FOREACH(x, raAssoName->second) {
-                LOG_INFO("reverseAssociations[%s][%s]=%s", raIssue->first.c_str(),
-                         raAssoName->first.c_str(), x->c_str());
+                LOG_DEBUG("reverseAssociations[%s][%s]=%s", raIssue->first.c_str(),
+                          raAssoName->first.c_str(), x->c_str());
             }
         }
     }
