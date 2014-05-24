@@ -8,6 +8,14 @@ v1.7.0
     - keyword "me" in search text
     - search text also on authors of entries
     - navigation next/previous issue redesigned (class sm_issue_next/previous)
+    - in html templates:
+        class sm_logo renamed logo
+        class sm_tag renamed tag
+        class sm_clickable renamed clickable
+        class sm_signin_name renamed signin_name
+        class sm_signin_password renamed signin_password
+        class sm_signin renamed signin
+        class sm_signin_title renamed signin_title
 
 
 v1.6.0

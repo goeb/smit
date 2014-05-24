@@ -83,6 +83,7 @@ enum PropertyType {
     F_ASSOCIATION
 };
 int strToPropertyType(const std::string &s, PropertyType &out);
+std::string propertyTypeToStr(PropertyType type);
 
 struct PropertySpec {
     std::string name;

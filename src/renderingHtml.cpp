@@ -902,16 +902,7 @@ void RHtml::printScriptUpdateConfig(const ContextParameters &ctx)
     const ProjectConfig &c = ctx.projectConfig;
     std::list<PropertySpec>::const_iterator pspec;
     FOREACH(pspec, c.properties) {
-        const char *type = "";
-        switch (pspec->type) {
-        case F_TEXT: type = "text"; break;
-        case F_SELECT: type = "select"; break;
-        case F_MULTISELECT: type = "multiselect"; break;
-        case F_SELECT_USER: type = "selectUser"; break;
-        case F_TEXTAREA: type = "textarea"; break;
-        case F_TEXTAREA2: type = "textarea2"; break;
-        case F_ASSOCIATION: type = "association"; break;
-        }
+        std::string type = propertyTypeToStr(pspec->type);
 
         std::string label = ctx.projectConfig.getLabelOfProperty(pspec->name);
         std::list<std::string>::const_iterator i;
@@ -926,7 +917,7 @@ void RHtml::printScriptUpdateConfig(const ContextParameters &ctx)
 		}
         mg_printf(conn, "addProperty('%s', '%s', '%s', '%s');\n", pspec->name.c_str(),
                   enquoteJs(label).c_str(),
-                  type, options.c_str());
+                  type.c_str(), options.c_str());
     }
 
     // add 3 more empty properties
@@ -1439,10 +1430,6 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
 
         std::string label = pconfig.getLabelOfProperty(pname);
 
-        if (workingColumn == 1) {
-            mg_printf(conn, "<tr>\n");
-        }
-
         // if textarea type add specific class, for enabling line breaks in the CSS
         const char *pvalueStyle = "sm_issue_pvalue";
         const char *colspan = "";
@@ -1450,18 +1437,27 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
 
         if (type == F_TEXTAREA || type == F_TEXTAREA2) pvalueStyle = "sm_issue_pvalue_ta";
 
+        const char *trStyle = "";
+        if (type == F_ASSOCIATION) trStyle = "class=\"sm_issue_asso\"";
+
+        if (workingColumn == 1) {
+            mg_printf(conn, "<tr %s>\n", trStyle);
+        }
+
+        // manage the start of the row
         if (type == F_TEXTAREA2 || type == F_ASSOCIATION) {
             // the property spans over 4 columns (1 col for the label and 3 for the value)
             if (workingColumn == 1) {
-                // nothing to do
+                // tr already opened. nothing more to do here
             } else {
                 // add a placeholder in order to align the property with next row
                 // close current row and start a new row
-                mg_printf(conn, "<td></td><td></td></tr><tr>\n");
+                mg_printf(conn, "<td></td><td></td></tr><tr %s>\n", trStyle);
             }
             colspan = "colspan=\"3\"";
             workingColumn = 1;
             workingColumnIncrement = 2;
+
         }
 
         // print the value
@@ -1469,10 +1465,7 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
             std::list<std::string> associatedIssues;
             if (p != issue.properties.end()) associatedIssues = p->second;
 
-            mg_printf(conn, "<tr class=\"sm_issue_asso\">");
-
             printAssociations(ctx, pname, associatedIssues, false);
-            // <tr> closed below
 
         } else {
             // print label and value of property (other than an association)
@@ -1907,8 +1900,8 @@ void RHtml::printIssueForm(const ContextParameters &ctx, const Issue *issue, boo
     }
 
     if (workingColumn != 1) {
-        // add an empty cell
-        mg_printf(conn, "<td></td></tr>\n");
+        // add 2 empty cells
+        mg_printf(conn, "<td></td><td></td></tr>\n");
     }
     mg_printf(conn, "<tr>\n");
     mg_printf(conn, "<td class=\"sm_issue_plabel sm_issue_plabel_message\" >%s: </td>\n",  htmlEscape(_("Message")).c_str());

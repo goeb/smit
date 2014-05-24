@@ -529,6 +529,26 @@ int strToPropertyType(const std::string &s, PropertyType &out)
     return 0; // ok
 }
 
+/** Convert a property type to a string
+  *
+  * @return
+  *     empty string if unknown property type
+  */
+std::string propertyTypeToStr(PropertyType type)
+{
+    switch (type) {
+    case F_TEXT: return "text";
+    case F_SELECT: return "select";
+    case F_MULTISELECT: return "multiselect";
+    case F_SELECT_USER: return "selectUser";
+    case F_TEXTAREA: return "textarea";
+    case F_TEXTAREA2: return "textarea2";;
+    case F_ASSOCIATION: return "association";
+    default: return "";
+    }
+}
+
+
 PropertySpec parsePropertySpec(std::list<std::string> & tokens)
 {
     // Supported syntax:
