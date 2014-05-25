@@ -1123,6 +1123,10 @@ int Project::reload()
     }
     issues.clear();
 
+    // delete all associations
+    associations.clear();
+    reverseAssociations.clear();
+
     // load the project again
     int r = load();
     return r;
