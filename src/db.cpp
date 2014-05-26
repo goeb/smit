@@ -269,13 +269,13 @@ Entry *loadEntry(std::string dir, const char* basename)
     for (line=lines.begin(); line != lines.end(); line++) {
         lineNum++;
         // each line should be a key / value pair
-        if (line->size() < 2) {
-            LOG_ERROR("Invalid line size %d (%s:%d)", line->size(), path.c_str(), lineNum);
-            continue; // ignore this line
-        }
+        if (line->empty()) continue; // ignore this line
+
         std::string key = line->front();
         line->pop_front(); // remove key from tokens
-        std::string firstValue = line->front();
+        std::string firstValue;
+        // it is allowed for multiselects and associations to have no value
+        if (line->size() >= 1) firstValue = line->front();
 
         if (0 == key.compare(K_CTIME)) {
             e->ctime = atoi((char*)firstValue.c_str());
@@ -286,7 +286,7 @@ Entry *loadEntry(std::string dir, const char* basename)
             e->properties[key] = *line;
         }
     }
-    // if value is not 1.x, then raised a warning
+    // if value is not 1.x, then raise a warning
     if (smitVersion.empty() || 0 != strncmp("1.", smitVersion.c_str(), 2)) {
         LOG_INFO("Version of entry %s higher than current Smit version (%s). Check compatibility.",
                  smitVersion.c_str(), VERSION);
@@ -1628,8 +1628,30 @@ void parseAssociation(std::list<std::string> &values)
         values.push_back(*associatedIssue);
     }
 
-    if (values.empty()) values.push_back("");
-    else values.sort();
+    values.sort();
+}
+
+/** Remove "" values from list of multiselect values if "" is not in the allowed range
+  *
+  * This is because the HTML form adds a hidden input with empty value.
+  */
+void Project::cleanupMultiselect(std::list<std::string> &values, const std::list<std::string> &selectOptions)
+{
+    // convert to a set
+    std::set<std::string> allowed(selectOptions.begin(), selectOptions.end());
+    std::list<std::string>::iterator v = values.begin();
+    bool gotEmpty = false;
+    while (v != values.end()) {
+        if ( (allowed.find(*v) == allowed.end()) || (gotEmpty && v->empty()) ) {
+            // erase currect item
+            std::list<std::string>::iterator v0 = v;
+            v++;
+            values.erase(v0);
+        } else {
+            if (v->empty()) gotEmpty = true; // empty is allowed. but we don't w<ant a second one
+            v++;
+        }
+    }
 }
 
 /** If issueId is empty:
@@ -1666,6 +1688,7 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
                 doErase = true;
             } // else do not erase and parse the association
             else if (pspec && pspec->type == F_ASSOCIATION) parseAssociation(p->second);
+            else if (pspec && pspec->type == F_MULTISELECT) cleanupMultiselect(p->second, pspec->selectOptions);
         }
 
         if (doErase) {

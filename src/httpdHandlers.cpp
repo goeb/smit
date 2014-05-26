@@ -1480,8 +1480,6 @@ void parseQueryString(const std::string &queryString, std::map<std::string, std:
     // append the latest parameter (if any)
 }
 
-
-
 /** Handle the posting of an entry
   * If issueId is empty, then a new issue is created.
   */

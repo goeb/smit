@@ -176,6 +176,8 @@ private:
     void computeAssociations();
 
     void consolidateIssue(Issue *i);
+    void cleanupMultiselect(std::list<std::string> &values, const std::list<std::string> &selectOptions);
+
     int storeViewsToFile();
     Issue *getIssue(const std::string &id) const;
 
