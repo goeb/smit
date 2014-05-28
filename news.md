@@ -1,5 +1,16 @@
 # News
 
+## 28 May 2014
+
+Smit 1.7.0 is released.
+
+New features:
+
+- associations between issues
+- keyword "me" in full-text search
+- full-text search also looks through authors of entries
+
+
 ## 3 May 2014
 
 Smit 1.6.0 is released.

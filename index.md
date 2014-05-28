@@ -5,6 +5,13 @@ Smit is a free and open-source issue tracker designed to handle issues of projec
 
 Smit is easy to install and customize and has a tiny footprint with lightning fast performance.
 
+Benefits of Smit:
+
+- fast web interface
+- database may be cloned locally for offline reading
+- highly customizable properties
+
+
 Smit will help you:
 
 - organize issues
@@ -14,6 +21,7 @@ Smit will help you:
 
 Issues are to be understood in the broad sense: tasks, ideas, requests, experiments, bugs, etc.
 
+
 ## Features
 
 Some of the main features of Smit are:
@@ -21,6 +29,7 @@ Some of the main features of Smit are:
 - Easy customization of properties
 - "One-click" multi-column sorting
 - Uploaded images displayed as thumbnails
+- Customizable associations between issues (parenthood, duplicates, etc.)
 - Advanced searching (including full text searching)
 - Rich text, with preview
 - Exporting contents to HTML, CSV, PDF (via the browser's capability)
