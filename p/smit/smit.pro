@@ -20,7 +20,8 @@ SOURCES += \
     ../../src/dateTools.cpp \
     ../../src/logging.cpp \
     ../../src/renderingCsv.cpp \
-    ../../src/Trigger.cpp
+    ../../src/Trigger.cpp \
+    ../../src/filesystem.cpp
 
 HEADERS += \
     ../../mongoose/mongoose.h \
@@ -40,5 +41,6 @@ HEADERS += \
     ../../src/global.h \
     ../../src/renderingCsv.h \
     ../../mongoose/mg_win32.h \
-    ../../src/Trigger.h
+    ../../src/Trigger.h \
+    ../../src/filesystem.hpp
 

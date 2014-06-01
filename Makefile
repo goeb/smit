@@ -36,7 +36,8 @@ SRCS_CPP = src/db.cpp  \
 		   src/session.cpp \
 		   src/dateTools.cpp \
 		   src/logging.cpp \
-		   src/Trigger.cpp
+		   src/Trigger.cpp \
+		   src/filesystem.cpp
 
 
 OBJS = $(SRCS_CPP:%.cpp=$(BUILD_DIR)/%.o) $(SRCS:%.c=$(BUILD_DIR)/%.o)

@@ -30,7 +30,7 @@
 #include "session.h"
 #include "global.h"
 #include "identifiers.h"
-
+#include "filesystem.hpp"
 
 void usage()
 {
@@ -468,13 +468,8 @@ int main(int argc, const char **argv)
 {
     if (argc < 2) usage();
 
-#ifdef _WIN32
-    exeFile = argv[0];
-#else  // Linux
-    char exePath[1024];
-    ssize_t len = readlink( "/proc/self/exe", exePath, sizeof(exePath));
-    exeFile.assign(exePath, len);
-#endif
+    ExeFile = getExePath();
+    LOG_DEBUG("Exe=%s", ExeFile.c_str());
 
     int i = 1;
     const char *command = 0;
@@ -485,7 +480,7 @@ int main(int argc, const char **argv)
         if (0 == strcmp(command, "init")) {
             const char *dir = ".";
             if (i < argc) dir = argv[i];
-            return initRepository(exeFile, dir);
+            return initRepository(ExeFile, dir);
 
         } else if (0 == strcmp(command, "version")) {
             return showVersion();

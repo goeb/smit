@@ -38,7 +38,7 @@
 #include "cpio.h"
 #include "Trigger.h"
 
-std::string exeFile; // path to the executable (used for extracting embedded files)
+std::string ExeFile; // path to the executable (used for extracting embedded files)
 #define K_ME "me"
 #define MAX_SIZE_UPLOAD (10*1024*1024)
 
@@ -337,7 +337,7 @@ int httpGetSm(struct mg_connection *conn, const std::string &file)
         return 1;
     }
 
-    FILE *f = cpioOpenArchive(exeFile.c_str());
+    FILE *f = cpioOpenArchive(ExeFile.c_str());
     if (!f) {
         sendHttpHeader500(conn, "Cannot open CPIO archive");
         return 1;
