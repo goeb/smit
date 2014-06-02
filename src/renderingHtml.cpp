@@ -890,7 +890,7 @@ void RHtml::printScriptUpdateConfig(const ContextParameters &ctx)
     mg_printf(conn, "<script>\n");
 
     // fulfill reserved properties first
-    std::list<std::string> reserved = ctx.projectConfig.getReservedProperties();
+    std::list<std::string> reserved = ProjectConfig::getReservedProperties();
     std::list<std::string>::iterator r;
     FOREACH(r, reserved) {
         std::string label = ctx.projectConfig.getLabelOfProperty(*r);

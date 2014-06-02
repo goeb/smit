@@ -13,9 +13,6 @@
 
 extern "C" {
 
-  #undef errno
-  #define errno   GetLastError()
-
   typedef HANDLE pthread_mutex_t;
   int pthread_mutex_init(pthread_mutex_t *mutex, void *unused);
   int pthread_mutex_destroy(pthread_mutex_t *mutex);

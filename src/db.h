@@ -126,7 +126,8 @@ struct ProjectConfig {
     // methods
     const PropertySpec *getPropertySpec(const std::string name) const;
     std::list<std::string> getPropertiesNames() const;
-    std::list<std::string> getReservedProperties() const;
+    static std::list<std::string> getReservedProperties();
+    static bool isReservedProperty(const std::string &name);
     std::string getLabelOfProperty(const std::string &propertyName) const;
     std::string getReverseLabelOfProperty(const std::string &propertyName) const;
     bool isValidPropertyName(const std::string &name) const;

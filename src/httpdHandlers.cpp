@@ -748,6 +748,17 @@ void httpPostProjectConfig(struct mg_connection *conn, Project &p, User u)
                         }
                     } else {
                         // case of regular properties
+
+                        // check that it is not a reserved property
+                        if (ProjectConfig::isReservedProperty(propertyName)) {
+                            // error
+                            std::string msg = "Cannot add reserved property: ";
+                            msg += propertyName;
+                            sendHttpHeader400(conn, msg.c_str());
+                            return;
+
+                        }
+
                         std::list<std::string> line;
                         line.push_back("addProperty");
                         line.push_back(propertyName);

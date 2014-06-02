@@ -129,7 +129,7 @@ std::list<std::string> ProjectConfig::getPropertiesNames() const
     return colspec;
 }
 
-std::list<std::string> ProjectConfig::getReservedProperties() const
+std::list<std::string> ProjectConfig::getReservedProperties()
 {
     std::list<std::string> reserved;
     reserved.push_back("id");
@@ -137,6 +137,14 @@ std::list<std::string> ProjectConfig::getReservedProperties() const
     reserved.push_back("mtime");
     reserved.push_back("summary");
     return reserved;
+}
+
+bool ProjectConfig::isReservedProperty(const std::string &name)
+{
+    std::list<std::string> reserved = getReservedProperties();
+    std::list<std::string>::iterator i = std::find(reserved.begin(), reserved.end(), name);
+    if (i == reserved.end()) return false;
+    else return true;
 }
 
 std::string ProjectConfig::getLabelOfProperty(const std::string &propertyName) const
