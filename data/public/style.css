@@ -63,6 +63,16 @@ td {
     font-size: small;
     border-collapse:collapse;
 }
+
+tr.sm_issue_asso {
+    /*background-color: #ddd;*/
+    border: solid 1px #bbb;
+    font-size: 80%;
+}
+.sm_not_found {
+    color: #844;
+    font-weight: bold;
+}
 .sm_entry {
     clear: both;
     border: 0;
@@ -354,4 +364,9 @@ div.sm_entry_files {
 .sm_project_list {
     width: 25em;
     height: 4.5em;
+}
+.sm_accross_project {
+    margin-top: 2em;
+    font-style: italic;
+    font-size: 150%;
 }
