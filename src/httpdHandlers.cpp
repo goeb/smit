@@ -908,6 +908,72 @@ int redirectToIssue(mg_connection *conn, const Project &p, std::vector<struct Is
     return 0;
 }
 
+void httpIssuesAccrossProjects(struct mg_connection *conn, User u, const std::string &uri)
+{
+    if (uri != "issues") return sendHttpHeader404(conn);
+
+	// get list of projects for that user
+	std::list<std::pair<std::string, std::string> > projectsAndRoles = u.getProjects();
+
+	// get query string parameters
+    const struct mg_request_info *req = mg_get_request_info(conn);
+    std::string q;
+    if (req->query_string) q = req->query_string;
+    PredefinedView v = PredefinedView::loadFromQueryString(q); // unamed view, used as handle on the viewing parameters
+
+	std::map<std::string, std::vector<struct Issue*> > issues;
+
+	// foreach project, get list of issues
+	std::list<std::pair<std::string, std::string> >::const_iterator p;
+	FOREACH(p, projectsAndRoles) {
+		const std::string &project = p->first;
+
+		Project *p = Database::Db.getProject(project);
+		if (!p) continue;
+
+		// replace user "me" if any...
+		PredefinedView vcopy = v;
+		replaceUserMe(vcopy.filterin, *p, u.username);
+		replaceUserMe(vcopy.filterout, *p, u.username);
+		if (vcopy.search == "me") vcopy.search = u.username;
+
+	    std::vector<struct Issue*> issueList = p->search(vcopy.search.c_str(),
+                                                         vcopy.filterin, vcopy.filterout, vcopy.sort.c_str());
+		issues[project] = issueList;
+	}
+
+    // get the colspec
+    std::list<std::string> cols;
+    std::list<std::string> allCols;
+    if (v.colspec.size() > 0) {
+        cols = parseColspec(v.colspec.c_str(), allCols);
+    } else {
+        // prevent having no columns, by forcing all of them
+        cols = ProjectConfig::getReservedProperties();
+    }
+    enum RenderingFormat format = getFormat(conn);
+
+    sendHttpHeader200(conn);
+
+    if (format == RENDERING_TEXT) mg_printf(conn, "\r\n\r\nnot supported\r\n");
+    else if (format == RENDERING_CSV) mg_printf(conn, "\r\n\r\nnot supported\r\n");
+    else {
+        ContextParameters ctx = ContextParameters(conn, u);
+        std::list<std::string> filterinRaw = getParamListFromQueryString(q, "filterin");
+        std::list<std::string> filteroutRaw = getParamListFromQueryString(q, "filterout");
+        // it would be better for code maintainability to pass v.filterin/out
+        ctx.filterin = filterinRaw;
+        ctx.filterout = filteroutRaw;
+        ctx.search = v.search;
+        ctx.sort = v.sort;
+        ctx.originView = q;
+
+        RHtml::printPageIssueAccrossProjects(ctx, issues, cols);
+    }
+	// display page
+
+}
+
 void httpGetListOfIssues(struct mg_connection *conn, Project &p, User u)
 {
     // get query string parameters:
@@ -1610,6 +1676,7 @@ int log_message_handler(const struct mg_connection *conn, const char *msg)
   * /myp/issues/x/y/delete  POST       user              delete an entry y of issue x
   * /myp/tags/x/y           POST       user              tag / untag an entry
   * /myp/reload             POST       admin             reload project from disk storage
+  * / * /issues               GET        user              issues of all projects
   * /any/other/file         GET        user              any existing file (in the repository)
   */
 
@@ -1653,6 +1720,7 @@ int begin_request_handler(struct mg_connection *conn)
     else if ( (resource == "users") && (method == "POST") ) httpPostUsers(conn, user, uri);
     else if ( (resource == "_") && (method == "GET") ) httpGetNewProject(conn, user);
     else if ( (resource == "_") && (method == "POST") ) httpPostNewProject(conn, user);
+    else if ( (resource == "*") && (method == "GET") ) httpIssuesAccrossProjects(conn, user, uri);
     else {
         // check if it is a valid project resource such as /myp/issues, /myp/users, /myp/config
         std::string projectUrl = resource;

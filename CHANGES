@@ -1,5 +1,12 @@
 
-v1.7.0
+v1.7.1 
+
+    - list of issues accross all projects
+    - reject project config modification if a user property has a reserved name
+    - Windows only: fix path of executable when exe taken on PATH
+
+
+v1.7.0, 28 May 2014
 
     New features:
     - associations between issues

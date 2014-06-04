@@ -164,7 +164,7 @@ public:
     void updateMaxIssueId(uint32_t i);
     int reload(); // reload a project from disk storage
     int getNumIssues();
-    std::map<std::string, std::set<std::string> > getReverseAssociations(const std::string &issue);
+    std::map<std::string, std::set<std::string> > getReverseAssociations(const std::string &issue) const;
 
 
 private:

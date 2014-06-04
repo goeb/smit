@@ -365,3 +365,8 @@ div.sm_entry_files {
     width: 25em;
     height: 4.5em;
 }
+.sm_accross_project {
+    margin-top: 2em;
+    font-style: italic;
+    font-size: 150%;
+}

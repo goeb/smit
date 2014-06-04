@@ -116,6 +116,7 @@ int loadProjectPage(struct mg_connection *conn, const std::string &projectPath, 
 class VariableNavigator {
 public:
     std::vector<struct Issue*> *issueList;
+    std::map<std::string, std::vector<Issue*> > *issuesOfAllProjects;
     std::vector<struct Issue*> *issueListFullContents;
     std::list<std::string> *colspec;
     const ContextParameters &ctx;
@@ -127,6 +128,7 @@ public:
     VariableNavigator(const std::string basename, const ContextParameters &context) : ctx(context) {
         buffer = 0;
         issueList = 0;
+        issuesOfAllProjects = 0;
         issueListFullContents = 0;
         colspec = 0;
         projectList = 0;
@@ -227,7 +229,10 @@ public:
                 mg_printf(ctx.conn, "%s", htmlEscape(currentIssue->getSummary()).c_str());
 
             } else if (varname == K_SM_DIV_ISSUES && issueList && colspec) {
-                RHtml::printIssueList(ctx, *issueList, *colspec);
+                RHtml::printIssueList(ctx, *issueList, *colspec, true);
+
+            } else if (varname == K_SM_DIV_ISSUES && issuesOfAllProjects && colspec) {
+                RHtml::printIssuesAccrossProjects(ctx, *issuesOfAllProjects, *colspec);
 
             } else if (varname == K_SM_DIV_ISSUES && issueListFullContents) {
                 RHtml::printIssueListFullContents(ctx, *issueListFullContents);
@@ -1046,16 +1051,18 @@ std::string urlAdd(struct mg_connection *conn, const char *param)
 }
 
 void RHtml::printIssueList(const ContextParameters &ctx, const std::vector<struct Issue*> &issueList,
-                     const std::list<std::string> &colspec)
+                     const std::list<std::string> &colspec, bool showOtherFormats)
 {
     struct mg_connection *conn = ctx.conn;
 
     mg_printf(conn, "<div class=\"sm_issues\">\n");
 
     // add links to alternate download formats (CSV and full-contents)
-    mg_printf(conn, "<div class=\"sm_issues_other_formats\">");
-    mg_printf(conn, "<a href=\"%s\" class=\"sm_issues_other_formats\">csv</a> ", urlAdd(conn, "format=csv").c_str());
-    mg_printf(conn, "<a href=\"%s\" class=\"sm_issues_other_formats\">full-contents</a></div>\n", urlAdd(conn, "full=1").c_str());
+    if (showOtherFormats) {
+        mg_printf(conn, "<div class=\"sm_issues_other_formats\">");
+        mg_printf(conn, "<a href=\"%s\" class=\"sm_issues_other_formats\">csv</a> ", urlAdd(conn, "format=csv").c_str());
+        mg_printf(conn, "<a href=\"%s\" class=\"sm_issues_other_formats\">full-contents</a></div>\n", urlAdd(conn, "full=1").c_str());
+    }
 
     printFilters(ctx);
 
@@ -1136,8 +1143,26 @@ void RHtml::printIssueList(const ContextParameters &ctx, const std::vector<struc
         mg_printf(conn, "</tr>\n");
     }
     mg_printf(conn, "</table>\n");
-    mg_printf(conn, "</div\n");
+    mg_printf(conn, "</div>\n");
 }
+
+void RHtml::printIssuesAccrossProjects(ContextParameters ctx,
+                                       const std::map<std::string, std::vector<struct Issue*> >&issues,
+                                       const std::list<std::string> &colspec)
+{
+    mg_printf(ctx.conn, "<div class=\"sm_accross_issues\">");
+    std::map<std::string, std::vector<struct Issue*> >::const_iterator i;
+    FOREACH(i, issues) {
+        const Project *p = Database::Db.getProject(i->first);
+        if (!p) continue;
+        ctx.project = p;
+        ctx.projectConfig = p->getConfig();
+        mg_printf(ctx.conn, "<div class=\"sm_accross_project\">%s</div>\n", htmlEscape(p->getName()).c_str());
+        printIssueList(ctx, i->second, colspec, false);
+    }
+    mg_printf(ctx.conn, "</div>");
+}
+
 
 /** Print HTML page with the given issues and their full contents
   *
@@ -1157,6 +1182,16 @@ void RHtml::printPageIssueList(const ContextParameters &ctx,
     vn.colspec = &colspec;
     vn.printPage();
 }
+void RHtml::printPageIssueAccrossProjects(const ContextParameters &ctx, 
+                                   std::map<std::string, std::vector<Issue*> > issues,
+                                   std::list<std::string> colspec)
+{
+    VariableNavigator vn("issuesAccross.html", ctx);
+    vn.issuesOfAllProjects = &issues;
+    vn.colspec = &colspec;
+    vn.printPage();
+}
+
 
 
 bool RHtml::inList(const std::list<std::string> &listOfValues, const std::string &value)

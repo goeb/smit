@@ -32,7 +32,7 @@ public:
     std::string sort;
     std::list<std::string> filterin;
     std::list<std::string> filterout;
-    Project *project;
+    const Project *project;
     ProjectConfig projectConfig;
     std::set<std::string> usersOfProject;
     std::list<std::pair<std::string, uint8_t> > htmlFieldDisplay;
@@ -53,6 +53,9 @@ public:
     static void printPageIssuesFullContents(const ContextParameters &ctx, std::vector<struct Issue*> issueList);
     static void printPageIssueList(const ContextParameters &ctx, std::vector<struct Issue*> issueList,
                                    std::list<std::string> colspec);
+    static void printPageIssueAccrossProjects(const ContextParameters &ctx,
+                                             std::map<std::string, std::vector<Issue*> > issues,
+											 std::list<std::string> colspec);
     static void printPageIssue(const ContextParameters &ctx, const Issue &issue);
     static void printPageNewIssue(const ContextParameters &ctx);
 
@@ -76,8 +79,11 @@ public:
     static void printIssuePrevious(const ContextParameters &ctx, const Issue &issue);
     static void printIssue(const ContextParameters &ctx, const Issue &issue);
     static void printIssueListFullContents(const ContextParameters &ctx, std::vector<struct Issue*> issueList);
-    static void printIssueList(const ContextParameters &ctx,
-                        const std::vector<struct Issue*> &issueList, const std::list<std::string> &colspec);
+    static void printIssueList(const ContextParameters &ctx, const std::vector<struct Issue*> &issueList,
+                               const std::list<std::string> &colspec, bool showOtherFormats);
+    static void printIssuesAccrossProjects(ContextParameters ctx,
+                                           const std::map<std::string, std::vector<struct Issue*> >&issues,
+                                           const std::list<std::string> &colspec);
 
 };
 

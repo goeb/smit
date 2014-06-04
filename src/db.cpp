@@ -1555,11 +1555,11 @@ Entry *Issue::getEntry(const std::string id)
     return e->second;
 }
 
-std::map<std::string, std::set<std::string> > Project::getReverseAssociations(const std::string &issue)
+std::map<std::string, std::set<std::string> > Project::getReverseAssociations(const std::string &issue) const
 {
     ScopeLocker scopeLocker(locker, LOCK_READ_ONLY);
 
-    std::map<std::string, std::map<std::string, std::set<std::string> > >::iterator raIssue;
+    std::map<std::string, std::map<std::string, std::set<std::string> > >::const_iterator raIssue;
     raIssue = reverseAssociations.find(issue);
     if (raIssue == reverseAssociations.end()) return std::map<std::string, std::set<std::string> >();
     else return raIssue->second;
