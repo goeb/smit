@@ -332,12 +332,12 @@ std::list<std::string> parseColspec(const char *colspec, const std::list<std::st
         if (c == ' ' || c == '+') {
             // push previous token if any
             if (currentToken.size() > 0) {
-                if (has(knownProperties, currentToken)) result.push_back(currentToken);
+                if (knownProperties.empty() || has(knownProperties, currentToken)) result.push_back(currentToken);
             }
             currentToken.clear();
         } else currentToken += c;
     }
-    if (currentToken.size() > 0 && has(knownProperties, currentToken)) result.push_back(currentToken);
+    if (currentToken.size() > 0 && (knownProperties.empty() || has(knownProperties, currentToken)) ) result.push_back(currentToken);
     return result;
 }
 
