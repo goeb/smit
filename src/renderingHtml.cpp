@@ -684,11 +684,7 @@ void RHtml::printNavigationIssues(const ContextParameters &ctx, bool autofocus)
 
     // advanced search
     HtmlNode a("a");
-    std::string view;
-    if (!ctx.originView.empty()) {
-        view = "?" QS_ORIGIN_VIEW "=" + urlEncode(ctx.originView);
-    }
-    a.addAttribute("href", "/%s/views/_%s", ctx.getProject().getUrlName().c_str(), view.c_str());
+    a.addAttribute("href", "/%s/views/_", ctx.getProject().getUrlName().c_str());
     a.addAttribute("class", "sm_advanced_search");
     a.addContents(_("Advanced Search"));
     div.addContents(a);
@@ -762,7 +758,7 @@ void RHtml::printUsers(struct mg_connection *conn, const std::list<User> &usersL
 
         mg_printf(conn, "</tr>\n");
 
-    }    
+    }
     mg_printf(conn, "</table><br>\n");
     mg_printf(conn, "<div class=\"sm_users_new\">"
               "<a href=\"/users/_\" class=\"sm_users_new\">%s</a></div><br>",
@@ -912,14 +908,14 @@ void RHtml::printScriptUpdateConfig(const ContextParameters &ctx)
         std::string label = ctx.projectConfig.getLabelOfProperty(pspec->name);
         std::list<std::string>::const_iterator i;
         std::string options;
-		if (pspec->type == F_SELECT || pspec->type == F_MULTISELECT) {
-			FOREACH (i, pspec->selectOptions) {
-				if (i != pspec->selectOptions.begin()) options += "\\n";
-				options += enquoteJs(*i);
-			}
+        if (pspec->type == F_SELECT || pspec->type == F_MULTISELECT) {
+            FOREACH (i, pspec->selectOptions) {
+                if (i != pspec->selectOptions.begin()) options += "\\n";
+                options += enquoteJs(*i);
+            }
         } else if (pspec->type == F_ASSOCIATION) {
             options = pspec->reverseLabel;
-		}
+        }
         mg_printf(conn, "addProperty('%s', '%s', '%s', '%s');\n", pspec->name.c_str(),
                   enquoteJs(label).c_str(),
                   type.c_str(), options.c_str());
@@ -1130,10 +1126,8 @@ void RHtml::printIssueList(const ContextParameters &ctx, const std::vector<struc
                 href_lhs = "<a href=\"";
                 std::string href = "/" + ctx.getProject().getUrlName() + "/issues/";
                 href += (char*)(*i)->id.c_str();
-                href += "?" QS_ORIGIN_VIEW "=" + urlEncode(ctx.originView);
                 href_lhs = href_lhs + href;
                 href_lhs = href_lhs +  + "\">";
-                // add origin view
 
                 href_rhs = "</a>";
             }
@@ -1182,7 +1176,7 @@ void RHtml::printPageIssueList(const ContextParameters &ctx,
     vn.colspec = &colspec;
     vn.printPage();
 }
-void RHtml::printPageIssueAccrossProjects(const ContextParameters &ctx, 
+void RHtml::printPageIssueAccrossProjects(const ContextParameters &ctx,
                                    std::map<std::string, std::vector<Issue*> > issues,
                                    std::list<std::string> colspec)
 {
@@ -1677,7 +1671,7 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
         if (! m.empty()) {
             mg_printf(conn, "<div class=\"sm_entry_message\">");
             mg_printf(conn, "%s\n", convertToRichText(htmlEscape(m)).c_str());
-			mg_printf(conn, "</div>\n"); // end message
+            mg_printf(conn, "</div>\n"); // end message
         }
 
 

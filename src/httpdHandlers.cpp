@@ -41,6 +41,7 @@
 std::string ExeFile; // path to the executable (used for extracting embedded files)
 #define K_ME "me"
 #define MAX_SIZE_UPLOAD (10*1024*1024)
+#define SESSID "sessid"
 
 /** Read bytes from the socket, and store in data
   *
@@ -138,6 +139,12 @@ void sendHttpHeader500(struct mg_connection *conn, const char *msg)
     mg_printf(conn, "500 Internal Server Error\r\n");
     mg_printf(conn, "%s\r\n", msg);
 }
+
+void sendCookie(mg_connection *conn, const std::string &key, const std::string &value)
+{
+    mg_printf(conn, "Set-Cookie: %s=%s\r\n", key.c_str(), value.c_str());
+}
+
 
 /**
   * @redirectUrl
@@ -276,7 +283,7 @@ void httpPostSignin(struct mg_connection *conn)
         }
 
         if (redirect.empty()) redirect = "/";
-        setCookieAndRedirect(conn, "sessid", sessionId.c_str(), redirect.c_str());
+        setCookieAndRedirect(conn, SESSID, sessionId.c_str(), redirect.c_str());
 
     } else {
         LOG_ERROR("Unsupported Content-Type in httpPostSignin: %s", contentType);
@@ -544,7 +551,7 @@ void httpPostUsers(struct mg_connection *conn, User signedInUser, const std::str
     }
 }
 
-std::string getSessionIdFromCookie(struct mg_connection *conn)
+std::string getFromCookie(struct mg_connection *conn, const std::string &key)
 {
     const char *cookie = mg_get_header(conn, "Cookie");
     if (cookie) {
@@ -557,7 +564,7 @@ std::string getSessionIdFromCookie(struct mg_connection *conn)
             trim(value, " "); // remove spaces around
 
             LOG_DEBUG("Cookie: name=%s, value=%s", name.c_str(), value.c_str());
-            if (name == "sessid") return value;
+            if (name == key) return value;
         }
 
     } else {
@@ -865,18 +872,6 @@ enum IssueNavigation { ISSUE_NEXT, ISSUE_PREVIOUS };
 int redirectToIssue(mg_connection *conn, const Project &p, std::vector<struct Issue*> issueList,
                     const std::string &issueId, IssueNavigation direction, std::string qs)
 {
-
-    // remove the next/previous redirections from the query string
-    std::string newQueryString;
-    while (qs.size() > 0) {
-        std::string part = popToken(qs, '&');
-        if (0 != strncmp(QS_GOTO_NEXT, part.c_str(), strlen(QS_GOTO_NEXT)) &&
-            0 != strncmp(QS_GOTO_PREVIOUS, part.c_str(), strlen(QS_GOTO_PREVIOUS)) ) {
-            if (!newQueryString.empty()) newQueryString += "&";
-            newQueryString += part;
-        }
-    }
-
     // get next issue
     std::vector<struct Issue*>::const_iterator i;
     FOREACH(i, issueList) {
@@ -896,12 +891,22 @@ int redirectToIssue(mg_connection *conn, const Project &p, std::vector<struct Is
     if (i != issueList.end()) {
         // redirect
         std::string redirectUrl = "/" + p.getUrlName() + "/issues/" + (*i)->id;
-        redirectUrl = redirectUrl + "?" + QS_ORIGIN_VIEW + "=" + urlEncode(newQueryString);
         sendHttpRedirect(conn, redirectUrl.c_str(), 0);
 
     } else {
         // no next nor previous issue.
         // redirect to the plain view without the next= nor previous= parameter
+            // remove the next/previous redirections from the query string
+        std::string newQueryString;
+        while (qs.size() > 0) {
+            std::string part = popToken(qs, '&');
+            if (0 != strncmp(QS_GOTO_NEXT, part.c_str(), strlen(QS_GOTO_NEXT)) &&
+                    0 != strncmp(QS_GOTO_PREVIOUS, part.c_str(), strlen(QS_GOTO_PREVIOUS)) ) {
+                if (!newQueryString.empty()) newQueryString += "&";
+                newQueryString += part;
+            }
+        }
+
         std::string redirectUrl = "/" + p.getUrlName() + "/issues/" + "?" + newQueryString;
         sendHttpRedirect(conn, redirectUrl.c_str(), 0);
     }
@@ -912,35 +917,35 @@ void httpIssuesAccrossProjects(struct mg_connection *conn, User u, const std::st
 {
     if (uri != "issues") return sendHttpHeader404(conn);
 
-	// get list of projects for that user
-	std::list<std::pair<std::string, std::string> > projectsAndRoles = u.getProjects();
+    // get list of projects for that user
+    std::list<std::pair<std::string, std::string> > projectsAndRoles = u.getProjects();
 
-	// get query string parameters
+    // get query string parameters
     const struct mg_request_info *req = mg_get_request_info(conn);
     std::string q;
     if (req->query_string) q = req->query_string;
     PredefinedView v = PredefinedView::loadFromQueryString(q); // unamed view, used as handle on the viewing parameters
 
-	std::map<std::string, std::vector<struct Issue*> > issues;
+    std::map<std::string, std::vector<struct Issue*> > issues;
 
-	// foreach project, get list of issues
-	std::list<std::pair<std::string, std::string> >::const_iterator p;
-	FOREACH(p, projectsAndRoles) {
-		const std::string &project = p->first;
+    // foreach project, get list of issues
+    std::list<std::pair<std::string, std::string> >::const_iterator p;
+    FOREACH(p, projectsAndRoles) {
+        const std::string &project = p->first;
 
-		Project *p = Database::Db.getProject(project);
-		if (!p) continue;
+        Project *p = Database::Db.getProject(project);
+        if (!p) continue;
 
-		// replace user "me" if any...
-		PredefinedView vcopy = v;
-		replaceUserMe(vcopy.filterin, *p, u.username);
-		replaceUserMe(vcopy.filterout, *p, u.username);
-		if (vcopy.search == "me") vcopy.search = u.username;
+        // replace user "me" if any...
+        PredefinedView vcopy = v;
+        replaceUserMe(vcopy.filterin, *p, u.username);
+        replaceUserMe(vcopy.filterout, *p, u.username);
+        if (vcopy.search == "me") vcopy.search = u.username;
 
-	    std::vector<struct Issue*> issueList = p->search(vcopy.search.c_str(),
+        std::vector<struct Issue*> issueList = p->search(vcopy.search.c_str(),
                                                          vcopy.filterin, vcopy.filterout, vcopy.sort.c_str());
-		issues[project] = issueList;
-	}
+        issues[project] = issueList;
+    }
 
     // get the colspec
     std::list<std::string> cols;
@@ -966,11 +971,10 @@ void httpIssuesAccrossProjects(struct mg_connection *conn, User u, const std::st
         ctx.filterout = filteroutRaw;
         ctx.search = v.search;
         ctx.sort = v.sort;
-        ctx.originView = q;
 
         RHtml::printPageIssueAccrossProjects(ctx, issues, cols);
     }
-	// display page
+    // display page
 
 }
 
@@ -1045,11 +1049,11 @@ void httpGetListOfIssues(struct mg_connection *conn, Project &p, User u)
         ctx.filterout = filteroutRaw;
         ctx.search = v.search;
         ctx.sort = v.sort;
-        ctx.originView = q;
 
         if (full == "1") {
             RHtml::printPageIssuesFullContents(ctx, issueList);
         } else {
+            sendCookie(conn, QS_ORIGIN_VIEW, q);
             RHtml::printPageIssueList(ctx, issueList, cols);
         }
     }
@@ -1310,11 +1314,8 @@ int httpGetIssue(struct mg_connection *conn, Project &p, const std::string &issu
         if (format == RENDERING_TEXT) RText::printIssue(conn, issue);
         else {
             ContextParameters ctx = ContextParameters(conn, u, p);
-            const struct mg_request_info *req = mg_get_request_info(conn);
-            if (req->query_string) {
-                ctx.originView = getFirstParamFromQueryString(req->query_string, QS_ORIGIN_VIEW);
-                LOG_DEBUG("originView=%s", ctx.originView.c_str());
-            }
+            ctx.originView = getFromCookie(conn, QS_ORIGIN_VIEW);
+            LOG_DEBUG("originView=%s", ctx.originView.c_str());
             RHtml::printPageIssue(ctx, issue);
         }
         return 1; // done
@@ -1697,7 +1698,7 @@ int begin_request_handler(struct mg_connection *conn)
     if ((resource == "sm") && (method == "GET")) return httpGetSm(conn, uri);
 
     // check acces rights
-    std::string sessionId = getSessionIdFromCookie(conn);
+    std::string sessionId = getFromCookie(conn, SESSID);
     LOG_DEBUG("session id: %s", sessionId.c_str());
     User user = SessionBase::getLoggedInUser(sessionId);
     // if username is empty, then no access is granted (only public pages will be available)
