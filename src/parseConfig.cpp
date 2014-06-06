@@ -467,10 +467,11 @@ void usage()
 int encodeStdin()
 {
     std::string data;
-    std::string line;
-    while (getline(std::cin, line)) {
-        if (data.size()) data += '\n';
-        data += line;
+    while (1) {
+        char c;
+        std::cin.read(&c, 1);
+        if (std::cin.eof()) break;
+        data += c;
     }
     printf("%s", serializeSimpleToken(data).c_str());
     return 0;

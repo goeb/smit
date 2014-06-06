@@ -19,5 +19,12 @@ T_smparser:
 	sh T_smparser
 	@echo OK
 
+.PHONY: T_smp_encode_decode
+T_smp_encode_decode:
+	gcc get_random_value.c -o get_random_value
+	sh T_smp_encode_decode.sh
+
+
+
 functest:
 	sh functest.sh
