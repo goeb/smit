@@ -443,8 +443,10 @@ std::string serializeTokens(const std::list<std::list<std::string> > &linesOfTok
 void usage()
 {
     printf("Usage:\n"
-           "    smparser <file> [<key>] [<n>]\n"
+           "   1. smparser <file> [<key>] [<n>]\n"
+           "   2. smparser -e\n"
            "\n"
+           "1.\n"
            "<file>  file to parse. Use - to specify standard input.\n"
            "<n>     value to retrieve. Defaults to 1.\n"
            "\n"
@@ -455,14 +457,34 @@ void usage()
            "EOF\n"
            "\n"
            "This shall print 'Harper' (ie: the second value of line with key 'author').\n"
+           "\n"
+           "2. smparser -e\n"
+           "    Take on stdin a value, and encode it.\n"
            );
     exit(1);
 }
 
+int encodeStdin()
+{
+    std::string data;
+    std::string line;
+    while (getline(std::cin, line)) {
+        if (data.size()) data += '\n';
+        data += line;
+    }
+    printf("%s", serializeSimpleToken(data).c_str());
+    return 0;
+}
+
 int main(int argc, char **argv)
 {
+
     if (argc < 2) usage();
     if (argc > 4) usage();
+
+    if (0 == strcmp (argv[1], "-e")) {
+        return encodeStdin();
+    }
     const char *file = argv[1];
     const char *key = 0;
     if (argc >= 2) key = argv[2];
