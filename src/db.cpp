@@ -415,8 +415,7 @@ int Project::loadEntries()
 
             // check the maximum id
             int intId = atoi(issueDir->d_name);
-            if (intId > 0) updateMaxIssueId(intId);
-            if (intId > 0 && intId > localMaxId) localMaxId = intId;
+            if (intId > 0 && (uint32_t)intId > localMaxId) localMaxId = intId;
 
             issues[issue->id] = issue;
 
@@ -441,6 +440,9 @@ int Project::loadEntries()
             issue->computeLatestEntry();
         }
     }
+
+    updateMaxIssueId(localMaxId);
+
     closedir(entriesDirHandle);
 
     LOG_INFO("Issues and entries loaded. localMaxId=%d, numbering=%s, globalMaxId=%d", localMaxId,
