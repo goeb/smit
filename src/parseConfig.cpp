@@ -368,7 +368,7 @@ std::string doubleQuote(const std::string &input)
 std::string serializeSimpleToken(const std::string token)
 {
     if (token.empty()) return "\"\"";
-    else if (token.find_first_of("!()[]&#\n \t\r\"<%") == std::string::npos) return token;
+    else if (token.find_first_of("\\!()[]&#\n \t\r\"<%") == std::string::npos) return token;
     else return doubleQuote(token); // some characters needs escaping
 }
 
@@ -464,7 +464,7 @@ void usage()
     exit(1);
 }
 
-int encodeStdin()
+std::string getStdin()
 {
     std::string data;
     while (1) {
@@ -473,6 +473,12 @@ int encodeStdin()
         if (std::cin.eof()) break;
         data += c;
     }
+    return data;
+}
+
+int encodeStdin()
+{
+    std::string data = getStdin();
     printf("%s", serializeSimpleToken(data).c_str());
     return 0;
 }
@@ -495,11 +501,7 @@ int main(int argc, char **argv)
     std::string data;
     if (0 == strcmp(file, "-")) {
         // read from stdin
-        std::string line;
-        while (getline(std::cin, line)) {
-            if (data.size()) data += '\n';
-            data += line;
-        }
+        data = getStdin();
     } else {
         int r = loadFile(file, data);
         if (r < 0) {

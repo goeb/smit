@@ -1,5 +1,5 @@
 
-all: T_parseConfig T_stringTools T_smparser
+all: T_parseConfig T_stringTools T_smparser T_smp_encode_decode
 
 SRCS_T_parseConfig = T_parseConfig.cpp ../src/parseConfig.cpp
 SRCS_T_stringTools = T_stringTools.cpp ../src/stringTools.cpp
