@@ -10,7 +10,7 @@
  *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *   GNU General Public License for more details.
  */
-
+#include "config.h"
 
 /** The read/write mutex pattern has been influenced by
   * Windows weak mutex architecture: a thread cannot release

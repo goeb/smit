@@ -18,10 +18,12 @@ endif
 
 if WINDOWS
     AM_CFLAGS += -static -static-libgcc
-    AM_CFLAGS += -DHAVE_STDINT -DNO_SSL_DL
+    AM_CFLAGS += -Dopenssl_EXPORTS
     
     AM_CXXFLAGS += -static -static-libgcc
-    AM_CXXFLAGS += -DHAVE_STDINT -DNO_SSL_DL
+    AM_CXXFLAGS += -Dopenssl_EXPORTS
+else
+    AM_LDFLAGS += -pthread
 endif
 
 
@@ -47,9 +49,15 @@ smit_SOURCES = \
     src/filesystem.cpp
 
 
-smit_CPPFLAGS = -I mongoose
-smit_LDFLAGS = -pthread
-smit_LDADD = -ldl -lcrypto
+smit_CPPFLAGS = -I @srcdir@/mongoose @OPENSSL_CFLAGS@
+#smit_LDFLAGS = -pthread
+smit_LDADD = @OPENSSL_LIBS@
+
+if WINDOWS
+else
+    smit_LDADD += -ldl
+endif
+
 
 # specific subdirs
 SUBDIRS = test

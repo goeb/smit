@@ -10,6 +10,7 @@
  *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *   GNU General Public License for more details.
  */
+#include "config.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -460,7 +461,7 @@ int showVersion()
            "but WITHOUT ANY WARRANTY; without even the implied warranty of\n"
            "MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the\n"
            "GNU General Public License for more details.\n"
-           , VERSION);
+           , PACKAGE_STRING);
     exit(1);
 }
 
