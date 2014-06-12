@@ -48,6 +48,15 @@ smit_SOURCES = \
     src/Trigger.cpp \
     src/filesystem.cpp
 
+nodist_smit_SOURCES = embedcpio.c embedcpio.h 
+BUILT_SOURCES = embedcpio.c embedcpio.h
+CLEANFILES = embedcpio.c embedcpio.h
+embedcpio.c embedcpio.h: convertToC
+	cp -r @srcdir@/data embedded_data
+	echo TODO add version
+	cd embedded_data && find * | cpio -o > ../embedcpio
+	./convertToC embedcpio
+
 
 smit_CPPFLAGS = -I @srcdir@/mongoose @OPENSSL_CFLAGS@
 #smit_LDFLAGS = -pthread
@@ -70,7 +79,10 @@ smparser_SOURCES = src/parseConfig.cpp
 smparser_CPPFLAGS = -DSM_PARSER
 smparser_LDADD =
 
-noinst_PROGRAMS = smparser
+# Tools (will not be packaged)
+convertToC_SOURCES = tools/convertToC.cpp
+
+noinst_PROGRAMS = smparser convertToC
 
 # Windows installer
 if WINDOWS

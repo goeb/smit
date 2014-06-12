@@ -26,6 +26,8 @@
 #include "logging.h"
 #include "mg_win32.h"
 
+#include "embedcpio.h" // generated
+
 // http://people.freebsd.org/~kientzle/libarchive/man/cpio.5.txt
 struct header_old_cpio {
     unsigned short   c_magic;

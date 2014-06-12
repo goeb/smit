@@ -47,7 +47,7 @@ target_triplet = @target@
 @WINDOWS_FALSE@am__append_9 = -pthread
 bin_PROGRAMS = smit$(EXEEXT)
 @WINDOWS_FALSE@am__append_10 = -ldl
-noinst_PROGRAMS = smparser$(EXEEXT)
+noinst_PROGRAMS = smparser$(EXEEXT) convertToC$(EXEEXT)
 subdir = .
 DIST_COMMON = README $(am__configure_deps) $(dist_pkgdata_DATA) \
 	$(srcdir)/Makefile.am $(srcdir)/Makefile.in \
@@ -68,6 +68,9 @@ CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)" "$(DESTDIR)$(pkgdatadir)"
 PROGRAMS = $(bin_PROGRAMS) $(noinst_PROGRAMS)
 am__dirstamp = $(am__leading_dot)dirstamp
+am_convertToC_OBJECTS = tools/convertToC.$(OBJEXT)
+convertToC_OBJECTS = $(am_convertToC_OBJECTS)
+convertToC_LDADD = $(LDADD)
 am_smit_OBJECTS = mongoose/smit-mongoose.$(OBJEXT) \
 	src/smit-db.$(OBJEXT) src/smit-parseConfig.$(OBJEXT) \
 	src/smit-identifiers.$(OBJEXT) src/smit-main.$(OBJEXT) \
@@ -79,7 +82,8 @@ am_smit_OBJECTS = mongoose/smit-mongoose.$(OBJEXT) \
 	src/smit-session.$(OBJEXT) src/smit-dateTools.$(OBJEXT) \
 	src/smit-logging.$(OBJEXT) src/smit-Trigger.$(OBJEXT) \
 	src/smit-filesystem.$(OBJEXT)
-smit_OBJECTS = $(am_smit_OBJECTS)
+nodist_smit_OBJECTS = smit-embedcpio.$(OBJEXT)
+smit_OBJECTS = $(am_smit_OBJECTS) $(nodist_smit_OBJECTS)
 am__DEPENDENCIES_1 =
 smit_DEPENDENCIES = $(am__DEPENDENCIES_1)
 am_smparser_OBJECTS = src/smparser-parseConfig.$(OBJEXT)
@@ -98,8 +102,10 @@ CXXCOMPILE = $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
 CXXLD = $(CXX)
 CXXLINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) $(LDFLAGS) \
 	-o $@
-SOURCES = $(smit_SOURCES) $(smparser_SOURCES)
-DIST_SOURCES = $(smit_SOURCES) $(smparser_SOURCES)
+SOURCES = $(convertToC_SOURCES) $(smit_SOURCES) $(nodist_smit_SOURCES) \
+	$(smparser_SOURCES)
+DIST_SOURCES = $(convertToC_SOURCES) $(smit_SOURCES) \
+	$(smparser_SOURCES)
 RECURSIVE_TARGETS = all-recursive check-recursive dvi-recursive \
 	html-recursive info-recursive install-data-recursive \
 	install-dvi-recursive install-exec-recursive \
@@ -317,6 +323,9 @@ smit_SOURCES = \
     src/Trigger.cpp \
     src/filesystem.cpp
 
+nodist_smit_SOURCES = embedcpio.c embedcpio.h 
+BUILT_SOURCES = embedcpio.c embedcpio.h
+CLEANFILES = embedcpio.c embedcpio.h
 smit_CPPFLAGS = -I @srcdir@/mongoose @OPENSSL_CFLAGS@
 #smit_LDFLAGS = -pthread
 smit_LDADD = @OPENSSL_LIBS@ $(am__append_10)
@@ -331,7 +340,11 @@ dist_pkgdata_DATA = README.md LICENSE CHANGES
 smparser_SOURCES = src/parseConfig.cpp
 smparser_CPPFLAGS = -DSM_PARSER
 smparser_LDADD = 
-all: all-recursive
+
+# Tools (will not be packaged)
+convertToC_SOURCES = tools/convertToC.cpp
+all: $(BUILT_SOURCES)
+	$(MAKE) $(AM_MAKEFLAGS) all-recursive
 
 .SUFFIXES:
 .SUFFIXES: .c .cpp .o .obj
@@ -426,6 +439,17 @@ clean-binPROGRAMS:
 
 clean-noinstPROGRAMS:
 	-test -z "$(noinst_PROGRAMS)" || rm -f $(noinst_PROGRAMS)
+tools/$(am__dirstamp):
+	@$(MKDIR_P) tools
+	@: > tools/$(am__dirstamp)
+tools/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) tools/$(DEPDIR)
+	@: > tools/$(DEPDIR)/$(am__dirstamp)
+tools/convertToC.$(OBJEXT): tools/$(am__dirstamp) \
+	tools/$(DEPDIR)/$(am__dirstamp)
+convertToC$(EXEEXT): $(convertToC_OBJECTS) $(convertToC_DEPENDENCIES) $(EXTRA_convertToC_DEPENDENCIES) 
+	@rm -f convertToC$(EXEEXT)
+	$(CXXLINK) $(convertToC_OBJECTS) $(convertToC_LDADD) $(LIBS)
 mongoose/$(am__dirstamp):
 	@$(MKDIR_P) mongoose
 	@: > mongoose/$(am__dirstamp)
@@ -501,10 +525,12 @@ mostlyclean-compile:
 	-rm -f src/smit-session.$(OBJEXT)
 	-rm -f src/smit-stringTools.$(OBJEXT)
 	-rm -f src/smparser-parseConfig.$(OBJEXT)
+	-rm -f tools/convertToC.$(OBJEXT)
 
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/smit-embedcpio.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@mongoose/$(DEPDIR)/smit-mongoose.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-Trigger.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-cpio.Po@am__quote@
@@ -523,6 +549,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-session.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-stringTools.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smparser-parseConfig.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@tools/$(DEPDIR)/convertToC.Po@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.o$$||'`;\
@@ -553,6 +580,20 @@ mongoose/smit-mongoose.obj: mongoose/mongoose.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='mongoose/mongoose.c' object='mongoose/smit-mongoose.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o mongoose/smit-mongoose.obj `if test -f 'mongoose/mongoose.c'; then $(CYGPATH_W) 'mongoose/mongoose.c'; else $(CYGPATH_W) '$(srcdir)/mongoose/mongoose.c'; fi`
+
+smit-embedcpio.o: embedcpio.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT smit-embedcpio.o -MD -MP -MF $(DEPDIR)/smit-embedcpio.Tpo -c -o smit-embedcpio.o `test -f 'embedcpio.c' || echo '$(srcdir)/'`embedcpio.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/smit-embedcpio.Tpo $(DEPDIR)/smit-embedcpio.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='embedcpio.c' object='smit-embedcpio.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o smit-embedcpio.o `test -f 'embedcpio.c' || echo '$(srcdir)/'`embedcpio.c
+
+smit-embedcpio.obj: embedcpio.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT smit-embedcpio.obj -MD -MP -MF $(DEPDIR)/smit-embedcpio.Tpo -c -o smit-embedcpio.obj `if test -f 'embedcpio.c'; then $(CYGPATH_W) 'embedcpio.c'; else $(CYGPATH_W) '$(srcdir)/embedcpio.c'; fi`
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/smit-embedcpio.Tpo $(DEPDIR)/smit-embedcpio.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='embedcpio.c' object='smit-embedcpio.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o smit-embedcpio.obj `if test -f 'embedcpio.c'; then $(CYGPATH_W) 'embedcpio.c'; else $(CYGPATH_W) '$(srcdir)/embedcpio.c'; fi`
 
 .cpp.o:
 @am__fastdepCXX_TRUE@	depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.o$$||'`;\
@@ -1152,7 +1193,8 @@ distcleancheck: distclean
 	       $(distcleancheck_listfiles) ; \
 	       exit 1; } >&2
 check-am: all-am
-check: check-recursive
+check: $(BUILT_SOURCES)
+	$(MAKE) $(AM_MAKEFLAGS) check-recursive
 @WINDOWS_FALSE@all-local:
 all-am: Makefile $(PROGRAMS) $(DATA) all-local
 installdirs: installdirs-recursive
@@ -1160,7 +1202,8 @@ installdirs-am:
 	for dir in "$(DESTDIR)$(bindir)" "$(DESTDIR)$(pkgdatadir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
 	done
-install: install-recursive
+install: $(BUILT_SOURCES)
+	$(MAKE) $(AM_MAKEFLAGS) install-recursive
 install-exec: install-exec-recursive
 install-data: install-data-recursive
 uninstall: uninstall-recursive
@@ -1182,6 +1225,7 @@ install-strip:
 mostlyclean-generic:
 
 clean-generic:
+	-test -z "$(CLEANFILES)" || rm -f $(CLEANFILES)
 
 distclean-generic:
 	-test -z "$(CONFIG_CLEAN_FILES)" || rm -f $(CONFIG_CLEAN_FILES)
@@ -1190,10 +1234,13 @@ distclean-generic:
 	-rm -f mongoose/$(am__dirstamp)
 	-rm -f src/$(DEPDIR)/$(am__dirstamp)
 	-rm -f src/$(am__dirstamp)
+	-rm -f tools/$(DEPDIR)/$(am__dirstamp)
+	-rm -f tools/$(am__dirstamp)
 
 maintainer-clean-generic:
 	@echo "This command is intended for maintainers to use"
 	@echo "it deletes files that may require special tools to rebuild."
+	-test -z "$(BUILT_SOURCES)" || rm -f $(BUILT_SOURCES)
 clean: clean-recursive
 
 clean-am: clean-binPROGRAMS clean-generic clean-local \
@@ -1201,7 +1248,7 @@ clean-am: clean-binPROGRAMS clean-generic clean-local \
 
 distclean: distclean-recursive
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
-	-rm -rf mongoose/$(DEPDIR) src/$(DEPDIR)
+	-rm -rf ./$(DEPDIR) mongoose/$(DEPDIR) src/$(DEPDIR) tools/$(DEPDIR)
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-hdr distclean-tags
@@ -1249,7 +1296,7 @@ installcheck-am:
 maintainer-clean: maintainer-clean-recursive
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
 	-rm -rf $(top_srcdir)/autom4te.cache
-	-rm -rf mongoose/$(DEPDIR) src/$(DEPDIR)
+	-rm -rf ./$(DEPDIR) mongoose/$(DEPDIR) src/$(DEPDIR) tools/$(DEPDIR)
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 
@@ -1267,8 +1314,9 @@ ps-am:
 
 uninstall-am: uninstall-binPROGRAMS uninstall-dist_pkgdataDATA
 
-.MAKE: $(RECURSIVE_CLEAN_TARGETS) $(RECURSIVE_TARGETS) ctags-recursive \
-	install-am install-strip tags-recursive
+.MAKE: $(RECURSIVE_CLEAN_TARGETS) $(RECURSIVE_TARGETS) all check \
+	ctags-recursive install install-am install-strip \
+	tags-recursive
 
 .PHONY: $(RECURSIVE_CLEAN_TARGETS) $(RECURSIVE_TARGETS) CTAGS GTAGS \
 	all all-am all-local am--refresh check check-am clean \
@@ -1289,6 +1337,11 @@ uninstall-am: uninstall-binPROGRAMS uninstall-dist_pkgdataDATA
 	ps ps-am tags tags-recursive uninstall uninstall-am \
 	uninstall-binPROGRAMS uninstall-dist_pkgdataDATA
 
+embedcpio.c embedcpio.h: convertToC
+	cp -r @srcdir@/data embedded_data
+	echo TODO add version
+	cd embedded_data && find * | cpio -o > ../embedcpio
+	./convertToC embedcpio
 
 # Windows installer
 @WINDOWS_TRUE@all-local: @PACKAGE_TARNAME@-@VERSION@-setup$(EXEEXT)

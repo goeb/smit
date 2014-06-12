@@ -44,7 +44,7 @@ int main(int argc, char **argv)
     fprintf(fbody, "    \"");
     char c;
     while (f.get(c)) {
-        fprintf(fbody, "\\x%02x", (unsigned int)c);
+        fprintf(fbody, "\\x%02x", (unsigned char)c);
     }
     fprintf(fbody, "\"\n;\n");
     fprintf(fbody, "%s;\n", sizeDeclaration.c_str());
