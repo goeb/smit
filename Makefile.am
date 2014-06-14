@@ -50,18 +50,26 @@ smit_SOURCES = \
 
 nodist_smit_SOURCES = embedcpio.c embedcpio.h 
 BUILT_SOURCES = embedcpio.c embedcpio.h
-CLEANFILES = embedcpio.c embedcpio.h
-embedcpio.c embedcpio.h: convertToC embedded_data
-	cd embedded_data && find * | cpio -o > ../embedcpio
+CLEANFILES = embedcpio.c embedcpio.h convertToC
+X = embedded_data
+SM_VERSION = $(X)/sm/version
+embedcpio.c embedcpio.h: @srcdir@/tools/convertToC.cpp
+	cp -r @srcdir@/data $(X)
+	@# generate sm/version
+	mkdir -p `dirname $(SM_VERSION)`
+	echo "Version: @VERSION@" > $(SM_VERSION)
+	echo "Build: "`date "+%Y-%m-%d %H:%M:%S"` >> $(SM_VERSION)
+	which git && echo -n "Latest " >> $(SM_VERSION) && git log -1 | head -1 >> $(SM_VERSION)
+	@#
+	cd $(X) && find * | cpio -o > ../embedcpio
+	@# build convertToC with gcc
+	@# I do not know how to make this portable with the GNU autotools
+	g++ -o ./convertToC @srcdir@/tools/convertToC.cpp
 	./convertToC embedcpio
 
-.PHONY: embedded_data
-embedded_data:
-	cp -r @srcdir@/data $@
-	echo "Version: @VERSION@" > $@/sm/version
-	echo "Build: "`date "+%Y-%m-%d %H:%M:%S"` >> $@/sm/version
-	which git && echo -n "Latest " >> $@/sm/version && git log -1 | head -1 >> $@/sm/version
-
+.PHONY: clean-local-embedded-data
+clean-local-embedded-data:
+	rm -rf $(X)
 
 smit_CPPFLAGS = -I @srcdir@/mongoose @OPENSSL_CFLAGS@
 #smit_LDFLAGS = -pthread
@@ -84,10 +92,8 @@ smparser_SOURCES = src/parseConfig.cpp
 smparser_CPPFLAGS = -DSM_PARSER
 smparser_LDADD =
 
-# Tools (will not be packaged)
-convertToC_SOURCES = tools/convertToC.cpp
 
-noinst_PROGRAMS = smparser convertToC
+noinst_PROGRAMS = smparser
 
 # Windows installer
 if WINDOWS
@@ -98,7 +104,7 @@ all-local: @PACKAGE_TARNAME@-@VERSION@-setup$(EXEEXT)
 	$(WINE) "@ISCC@" /q /dMyAppName=@PACKAGE_NAME@ /dMyAppVersion=@PACKAGE_VERSION@ /dMyAppExeName=smit$(EXEEXT) /f@PACKAGE_TARNAME@-@VERSION@-setup $<
 endif
 
-clean-local:
+clean-local: clean-local-embedded-data
 	rm -f @PACKAGE_TARNAME@-@VERSION@-setup$(EXEEXT)
 	rm -f src/*.gcno src/*.gcda *.*.gcov
 

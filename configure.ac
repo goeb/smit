@@ -6,6 +6,7 @@ AC_INIT([Smit], [1.7.1], [], [smit], [http://goeb.github.io/smit])
 AC_CONFIG_HEADERS([src/config.h])
 AC_CANONICAL_TARGET
 AM_INIT_AUTOMAKE([-Wall -Werror subdir-objects])
+AM_SILENT_RULES([yes])
 
 # Set a OS specific settings
 WINDOWS=no
