@@ -51,11 +51,16 @@ smit_SOURCES = \
 nodist_smit_SOURCES = embedcpio.c embedcpio.h 
 BUILT_SOURCES = embedcpio.c embedcpio.h
 CLEANFILES = embedcpio.c embedcpio.h
-embedcpio.c embedcpio.h: convertToC
-	cp -r @srcdir@/data embedded_data
-	echo TODO add version
+embedcpio.c embedcpio.h: convertToC embedded_data
 	cd embedded_data && find * | cpio -o > ../embedcpio
 	./convertToC embedcpio
+
+.PHONY: embedded_data
+embedded_data:
+	cp -r @srcdir@/data $@
+	echo "Version: @VERSION@" > $@/sm/version
+	echo "Build: "`date "+%Y-%m-%d %H:%M:%S"` >> $@/sm/version
+	which git && echo -n "Latest " >> $@/sm/version && git log -1 | head -1 >> $@/sm/version
 
 
 smit_CPPFLAGS = -I @srcdir@/mongoose @OPENSSL_CFLAGS@

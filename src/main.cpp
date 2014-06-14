@@ -161,7 +161,7 @@ int initRepository(const std::string &exec, const char *directory)
     closedir(dirp);
 
     // ok, extract the files for the new repository
-    int r = cpioExtractFile(exec.c_str(), "public", directory);
+    int r = cpioExtractFile("public", directory);
     if (r < 0) {
         LOG_ERROR("Error while extracting files. r=%d", r);
         return 3;

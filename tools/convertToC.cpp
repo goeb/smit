@@ -43,11 +43,13 @@ int main(int argc, char **argv)
     fprintf(fbody, "%s = \n", binaryDeclaration.c_str());
     fprintf(fbody, "    \"");
     char c;
+    size_t size = 0;
     while (f.get(c)) {
         fprintf(fbody, "\\x%02x", (unsigned char)c);
+        size++;
     }
     fprintf(fbody, "\"\n;\n");
-    fprintf(fbody, "%s;\n", sizeDeclaration.c_str());
+    fprintf(fbody, "%s = %zd;\n", sizeDeclaration.c_str(), size);
     fclose(fbody);
 
     // generate header file

@@ -345,13 +345,10 @@ int httpGetSm(struct mg_connection *conn, const std::string &file)
         return 1;
     }
 
-    FILE *f = cpioOpenArchive(ExeFile.c_str());
-    if (!f) {
-        sendHttpHeader500(conn, "Cannot open CPIO archive");
-        return 1;
-    }
     std::string internalFile = "sm/" + file;
-    r = cpioGetFile(f, internalFile.c_str());
+    const char *start;
+    r = cpioGetFile(internalFile.c_str(), start);
+
     if (r >= 0) {
         int filesize = r;
         sendHttpHeader200(conn);
@@ -363,24 +360,28 @@ int httpGetSm(struct mg_connection *conn, const std::string &file)
         const uint32_t BS = 1024;
         char buffer[BS];
         int remainingBytes = filesize;
+        const char *cpioOffset = start;
+        const char *cpioEnd = start + filesize;
+
         while (remainingBytes > 0) {
             uint32_t nToRead = remainingBytes;
             if (nToRead > BS) nToRead = BS;
-            size_t n = fread(buffer, 1, nToRead, f);
-            mg_write(conn, buffer, n);
 
-            if (n != nToRead) break; // error
-            if (feof(f)) break; // error probably
+            if (cpioOffset + nToRead > cpioEnd) {
+                LOG_ERROR("cpioExtract: Error while reading contents (eof)");
+                return -1;
+            }
+            memcpy(buffer, cpioOffset, nToRead);
+            cpioOffset += nToRead;
 
-            remainingBytes -= n;
+            mg_write(conn, buffer, nToRead);
+
+            remainingBytes -= nToRead;
         }
         r = 1;
     } else {
         r = 0;
     }
-
-    fclose(f);
-
 
     return r;
 }

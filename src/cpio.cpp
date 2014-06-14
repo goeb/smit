@@ -46,29 +46,16 @@ struct header_old_cpio {
 enum FileType { FTYPE_REGULAR, FTYPE_DIR, FTYPE_OTHER };
 
 
-/**
-  * @param cpioArchiveFd
-  *     Open file descriptor pointing to the CPIO archive
-  */
-int cpioGetNextFileHeader(FILE* cpioArchiveFd, std::string &filepath, FileType &ftype, uint32_t &filesize)
+int cpioGetNextFileHeader(const char *&offset, const char *end, std::string &filepath, FileType &ftype, uint32_t &filesize)
 {
     LOG_FUNC();
     struct header_old_cpio header;
-    size_t n = fread(&header, sizeof(header), 1, cpioArchiveFd);
-    if (n == 0) {
-        if (feof(cpioArchiveFd)) return -2; // ok, normal termination.
-        else {
-            // error
-            LOG_ERROR("Error while reading header");
-            return -3;
-        }
-    }
+    size_t availableSize = end-offset;
+    LOG_DEBUG("offset=%p, end=%p, availableSize=%zd", offset, end, availableSize);
+    if (sizeof(header) > availableSize) return -2;
+    memcpy(&header, (void*)offset, sizeof(header));
+    offset += sizeof(header);
 
-    long offset = ftell(cpioArchiveFd);
-    if (offset < 0) {
-        LOG_ERROR("cpioExtract: Cannot ftell file: %s", strerror(errno));
-        return -4;
-    }
     if (header.c_magic == 0x71c7) { // 0o070707 == 0x71c7
         // ok
     } else {
@@ -106,11 +93,14 @@ int cpioGetNextFileHeader(FILE* cpioArchiveFd, std::string &filepath, FileType &
         return -8;
     }
     if (header.c_namesize % 2 == 1) header.c_namesize += 1; // make the size even
-    n = fread(filepathBuf, 1, header.c_namesize, cpioArchiveFd); // terminated null char included
-    if (n != header.c_namesize) {
-        LOG_ERROR("cpioExtract: short read %u/%u", n, header.c_namesize);
+
+    availableSize = end-offset;
+    if (header.c_namesize > availableSize)  {
+        LOG_ERROR("cpioExtract: short read %u/%u", availableSize, header.c_namesize);
         return -9;
     }
+    memcpy(filepathBuf, (void*)offset, header.c_namesize);
+    offset += header.c_namesize;
     LOG_DEBUG("cpioExtract: filepath=%s", filepathBuf);
     if (0 == strcmp(filepathBuf, "TRAILER!!!")) return -10; // end of archive
 
@@ -119,26 +109,26 @@ int cpioGetNextFileHeader(FILE* cpioArchiveFd, std::string &filepath, FileType &
     return 0;
 }
 
+
 /** Get the pointer of a regular file in the cpio archive
   */
-int cpioGetFile(FILE* cpioArchiveFd, const char *file)
+int cpioGetFile(const char *file, const char *&cpioOffset)
 {
     LOG_FUNC();
     std::string filepath;
     FileType ftype;
     uint32_t filesize;
+    const char *cpioEnd = em_binary_data_embedcpio + em_binary_size_embedcpio;
+    LOG_DEBUG("em_binary_size_embedcpio=%d", em_binary_size_embedcpio);
+    cpioOffset = em_binary_data_embedcpio;
     int r;
-    while ( (r = cpioGetNextFileHeader(cpioArchiveFd, filepath, ftype, filesize)) >= 0 ) {
+    while ( (r = cpioGetNextFileHeader(cpioOffset, cpioEnd, filepath, ftype, filesize)) >= 0 ) {
 
         if (filepath != file) {
             // this is not the file we are looking for
             // skip the contents of this file
             if (filesize % 2 == 1) filesize++; // padding of 1 null byte
-            int r = fseek(cpioArchiveFd, (long)filesize, SEEK_CUR);
-            if (r != 0) {
-                LOG_ERROR("fseek error (file=%s contentsSize=%u): %s", filepath.c_str(), filesize, strerror(errno));
-                return -1;
-            }
+            cpioOffset += filesize;
             continue;
         }
 
@@ -153,9 +143,10 @@ int cpioGetFile(FILE* cpioArchiveFd, const char *file)
     return r;
 }
 
-/** Extract a cpio archive starting at the given file pointer
-  * @param f
-  *     cpio archive
+
+/** Extract a cpio archive starting at the given address
+  * @param cpioStart, cpioSize
+  *     cpio archive in memory
   *
   * @param src
   *     The source file or directory to extract
@@ -163,19 +154,21 @@ int cpioGetFile(FILE* cpioArchiveFd, const char *file)
   * @param dst
   *     The destination directory where the archive shall be extracted.
   */
-int cpioExtractTree(FILE* cpioArchiveFd, const char *src, const char *dst)
+int cpioExtractTree(const char *cpioStart, size_t cpioSize, const char *src, const char *dst)
 {
     std::string filepath;
     FileType ftype;
     uint32_t filesize;
+    const char *cpioEnd = cpioStart + cpioSize;
+    const char *cpioOffset = cpioStart;
     int r;
-    while ( (r = cpioGetNextFileHeader(cpioArchiveFd, filepath, ftype, filesize)) >= 0 ) {
+    while ( (r = cpioGetNextFileHeader(cpioOffset, cpioEnd, filepath, ftype, filesize)) >= 0 ) {
         // if file does not match src, then skip this file
         if (src && strlen(src) && 0 != strncmp(src, filepath.c_str(), strlen(src))) {
             if (filesize % 2 == 1) filesize++; // padding of 1 null byte
-            int r = fseek(cpioArchiveFd, (long)filesize, SEEK_CUR);
-            if (r != 0) {
-                LOG_ERROR("fseek error (file=%s contentsSize=%u): %s", filepath.c_str(), filesize, strerror(errno));
+            cpioOffset += filesize;
+            if (cpioOffset > cpioEnd) {
+                LOG_ERROR("past the cpio end (file=%s contentsSize=%u)", filepath.c_str(), filesize);
                 return -1;
             }
             LOG_DEBUG("Skip: %s", filepath.c_str());
@@ -255,111 +248,47 @@ int cpioExtractTree(FILE* cpioArchiveFd, const char *src, const char *dst)
             if (dataToRead > SIZ) nToRead = SIZ;
             else nToRead = dataToRead;
 
-            size_t n = fread(buffer, 1, nToRead, cpioArchiveFd); // terminated null char included
-            if (n != nToRead) {
-                if (feof(cpioArchiveFd)) {
-                    close(extractedFile);
-                    LOG_ERROR("cpioExtract: Error while reading contents (eof)");
-                    return -1;
-                } else {
-                    // error
-                    LOG_ERROR("cpioExtract: Error while reading contents");
-                    close(extractedFile);
-                    return -1;
-                }
+            if (cpioOffset + nToRead > cpioEnd) {
+                LOG_ERROR("cpioExtract: Error while reading contents (eof)");
+                return -1;
             }
-            dataToRead -= n;
+            memcpy(buffer, cpioOffset, nToRead);
+            cpioOffset += nToRead;
+            dataToRead -= nToRead;
             // write to file
-            ssize_t written = write(extractedFile, buffer, n);
+            ssize_t written = write(extractedFile, buffer, nToRead);
 
             if (written == -1) {
                 LOG_ERROR("cpioExtract: Cannot write to file '%s': %s", destinationFile.c_str(), strerror((errno)));
                 close(extractedFile);
                 return -1;
 
-            } else if ((size_t)written != n) {
+            } else if ((size_t)written != nToRead) {
                 LOG_ERROR("cpioExtract: short write to file '%s': n=%u, written=%d",
-                          destinationFile.c_str(), n, written);
+                          destinationFile.c_str(), nToRead, written);
                 close(extractedFile);
                 return -1;
             }
         }
         if (filesize % 2 == 1) {
             // consuming the padding of 1 null byte
-            char buffer[1];
-            size_t n = fread(buffer, 1, 1, cpioArchiveFd);
-            if (n != 1)  {
-                LOG_ERROR("cpioExtract: cannot get the padding 1: n=%u, %s", n, strerror(errno));
-                close(extractedFile);
-                return -1;
-            }
+            cpioOffset += 1;
         }
         close(extractedFile);
     }
-    if (r == -10) r = 0; // end of archive is ok
     return r;
 }
 
-FILE *cpioOpenArchive(const char *file)
-{
-    LOG_FUNC();
-    LOG_DEBUG("cpioOpenArchive(%s)", file);
-    FILE *f = fopen(file, "rb");
-    if (!f) {
-        LOG_ERROR("Cannot open file '%s': %s", file, strerror(errno));
-
-#if defined(_WIN32)
-        // give it a second chance and try with .exe
-        // (if file is not already a .exe)
-        if (strlen(file) <= 4 || (strlen(file) > 4 && 0 != strcmp(file+strlen(file)-4, ".exe")) )  {
-            std::string exe = std::string(file) + ".exe";
-            return cpioOpenArchive(exe.c_str());
-        }
-#endif
-        return NULL;
-    }
-
-    int r = fseek(f, -4, SEEK_END); // go to the end - 4
-    if (r != 0) {
-        LOG_ERROR("Cannot fseek -4 file '%s': %s", file, strerror(errno));
-        return NULL;
-    }
-
-    uint32_t size;
-    size_t n = fread(&size, sizeof(size), 1, f);
-    //size = ntohl(size); // convert to host byte order
-    LOG_DEBUG("cpioExtractFile: size=%u\n", size);
-
-    long sizeToSeek = size;
-    // go to the beginning of the cpio archive
-    r = fseek(f, -4-sizeToSeek, SEEK_END);
-    if (r != 0) {
-        LOG_ERROR("Cannot fseek %d file '%s': %s", -4-size, file, strerror(errno));
-        return NULL;
-    }
-    long offset = ftell(f);
-    LOG_DEBUG("Position in file: offset=%ld", offset);
-    return f;
-}
 
 
-/** Extract a cpio archive located at the end of the given file.
-  *
-  * The memory is organized as follows:
-  * [... exe ... | ... cpio archive ... | length-of-cpio-archive ]
-  * length-of-cpio-archive is on 4 bytes. Thus the beginning of the cpio archive
-  * is found starting from the end.
+
+/** Extract a cpio archive located in memory
   */
-
-int cpioExtractFile(const char *file, const char *src, const char *dst)
+int cpioExtractFile(const char *src, const char *dst)
 {
-    LOG_INFO("Extracting archive from %s...", file);
-
-    FILE *f = cpioOpenArchive(file);
-    if (!f) return -1;
-
-    int r = cpioExtractTree(f, src, dst);
+    int r = cpioExtractTree(em_binary_data_embedcpio, em_binary_size_embedcpio, src, dst);
     LOG_DEBUG("cpioExtract: result=%d", r);
-    fclose(f);
     return r;
+
 }
+
