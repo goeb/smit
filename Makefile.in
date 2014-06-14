@@ -1346,7 +1346,7 @@ embedcpio.c embedcpio.h: @srcdir@/tools/convertToC.cpp
 	echo "Build: "`date "+%Y-%m-%d %H:%M:%S"` >> $(SM_VERSION)
 	which git && echo -n "Latest " >> $(SM_VERSION) && git log -1 | head -1 >> $(SM_VERSION)
 	@#
-	cd embedded_data && find * | cpio -o > ../embedcpio
+	cd $(X) && find * | cpio -o > ../embedcpio
 	@# build convertToC with gcc
 	@# I do not know how to make this portable with the GNU autotools
 	g++ -o ./convertToC @srcdir@/tools/convertToC.cpp
