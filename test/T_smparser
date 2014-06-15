@@ -1,32 +1,33 @@
 #!/bin/sh
 
-SM_PARSER=../bin/smparser
+SM_PARSER=../smparser
 if [ ! -x $SM_PARSER ]; then echo "ERROR: $SM_PARSER not found Build it first."
 fi
-REF=T_smparser1.ref
+REF=$srcdir/T_smparser1.ref
+IN=$srcdir/T_smparser1.in
 OUT=T_smparser1.out
 
-$SM_PARSER T_smparser1.in a > $OUT
-$SM_PARSER T_smparser1.in a 1 >> $OUT
-$SM_PARSER T_smparser1.in a 2 >> $OUT
-$SM_PARSER T_smparser1.in a 3 >> $OUT
-$SM_PARSER T_smparser1.in a 4 >> $OUT
-$SM_PARSER T_smparser1.in a 5 >> $OUT
+$SM_PARSER $IN a > $OUT
+$SM_PARSER $IN a 1 >> $OUT
+$SM_PARSER $IN a 2 >> $OUT
+$SM_PARSER $IN a 3 >> $OUT
+$SM_PARSER $IN a 4 >> $OUT
+$SM_PARSER $IN a 5 >> $OUT
 
-$SM_PARSER T_smparser1.in "a b c" >> $OUT
-$SM_PARSER T_smparser1.in "a b c" 2 >> $OUT
-$SM_PARSER T_smparser1.in "a b c" 3 >> $OUT
-$SM_PARSER T_smparser1.in "a b c" 4 >> $OUT
+$SM_PARSER $IN "a b c" >> $OUT
+$SM_PARSER $IN "a b c" 2 >> $OUT
+$SM_PARSER $IN "a b c" 3 >> $OUT
+$SM_PARSER $IN "a b c" 4 >> $OUT
 
-$SM_PARSER T_smparser1.in zzz >> $OUT
-$SM_PARSER T_smparser1.in zzz 1 >> $OUT
-$SM_PARSER T_smparser1.in zzz 2 >> $OUT
+$SM_PARSER $IN zzz >> $OUT
+$SM_PARSER $IN zzz 1 >> $OUT
+$SM_PARSER $IN zzz 2 >> $OUT
 
-$SM_PARSER T_smparser1.in hello >> $OUT
-$SM_PARSER T_smparser1.in hello 2 >> $OUT
+$SM_PARSER $IN hello >> $OUT
+$SM_PARSER $IN hello 2 >> $OUT
 
-cat T_smparser1.in | $SM_PARSER - zzz >> $OUT
-cat T_smparser1.in | $SM_PARSER - "a b c" 2 >> $OUT
+cat $IN | $SM_PARSER - zzz >> $OUT
+cat $IN | $SM_PARSER - "a b c" 2 >> $OUT
 
 
 diff $REF $OUT 

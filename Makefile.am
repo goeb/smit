@@ -93,11 +93,14 @@ smparser_CPPFLAGS = -DSM_PARSER
 smparser_LDADD =
 
 
-noinst_PROGRAMS = smparser T_parseConfig
+noinst_PROGRAMS = smparser T_parseConfig T_stringTools
 
-check_PROGRAMS = T_parseConfig
+check_PROGRAMS = T_parseConfig T_stringTools smparser
 T_parseConfig_SOURCES = test/T_parseConfig.cpp src/parseConfig.cpp
 T_parseConfig_CPPFLAGS = -include @srcdir@/test/logging.h -I@srcdir@/src
+
+T_stringTools_SOURCES = test/T_stringTools.cpp src/stringTools.cpp
+T_stringTools_CPPFLAGS = -include @srcdir@/test/logging.h -I@srcdir@/src
 
 # Windows installer
 if WINDOWS

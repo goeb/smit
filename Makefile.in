@@ -47,8 +47,10 @@ target_triplet = @target@
 @WINDOWS_FALSE@am__append_9 = -pthread
 bin_PROGRAMS = smit$(EXEEXT)
 @WINDOWS_FALSE@am__append_10 = -ldl
-noinst_PROGRAMS = smparser$(EXEEXT) T_parseConfig$(EXEEXT)
-check_PROGRAMS = T_parseConfig$(EXEEXT)
+noinst_PROGRAMS = smparser$(EXEEXT) T_parseConfig$(EXEEXT) \
+	T_stringTools$(EXEEXT)
+check_PROGRAMS = T_parseConfig$(EXEEXT) T_stringTools$(EXEEXT) \
+	smparser$(EXEEXT)
 subdir = .
 DIST_COMMON = README $(am__configure_deps) $(dist_pkgdata_DATA) \
 	$(srcdir)/Makefile.am $(srcdir)/Makefile.in \
@@ -73,6 +75,10 @@ am_T_parseConfig_OBJECTS = test/T_parseConfig-T_parseConfig.$(OBJEXT) \
 	src/T_parseConfig-parseConfig.$(OBJEXT)
 T_parseConfig_OBJECTS = $(am_T_parseConfig_OBJECTS)
 T_parseConfig_LDADD = $(LDADD)
+am_T_stringTools_OBJECTS = test/T_stringTools-T_stringTools.$(OBJEXT) \
+	src/T_stringTools-stringTools.$(OBJEXT)
+T_stringTools_OBJECTS = $(am_T_stringTools_OBJECTS)
+T_stringTools_LDADD = $(LDADD)
 am_smit_OBJECTS = mongoose/smit-mongoose.$(OBJEXT) \
 	src/smit-db.$(OBJEXT) src/smit-parseConfig.$(OBJEXT) \
 	src/smit-identifiers.$(OBJEXT) src/smit-main.$(OBJEXT) \
@@ -125,10 +131,10 @@ am__v_CXXLD_0 = @echo "  CXXLD " $@;
 AM_V_GEN = $(am__v_GEN_@AM_V@)
 am__v_GEN_ = $(am__v_GEN_@AM_DEFAULT_V@)
 am__v_GEN_0 = @echo "  GEN   " $@;
-SOURCES = $(T_parseConfig_SOURCES) $(smit_SOURCES) \
-	$(nodist_smit_SOURCES) $(smparser_SOURCES)
-DIST_SOURCES = $(T_parseConfig_SOURCES) $(smit_SOURCES) \
-	$(smparser_SOURCES)
+SOURCES = $(T_parseConfig_SOURCES) $(T_stringTools_SOURCES) \
+	$(smit_SOURCES) $(nodist_smit_SOURCES) $(smparser_SOURCES)
+DIST_SOURCES = $(T_parseConfig_SOURCES) $(T_stringTools_SOURCES) \
+	$(smit_SOURCES) $(smparser_SOURCES)
 RECURSIVE_TARGETS = all-recursive check-recursive dvi-recursive \
 	html-recursive info-recursive install-data-recursive \
 	install-dvi-recursive install-exec-recursive \
@@ -368,6 +374,8 @@ smparser_CPPFLAGS = -DSM_PARSER
 smparser_LDADD = 
 T_parseConfig_SOURCES = test/T_parseConfig.cpp src/parseConfig.cpp
 T_parseConfig_CPPFLAGS = -include @srcdir@/test/logging.h -I@srcdir@/src
+T_stringTools_SOURCES = test/T_stringTools.cpp src/stringTools.cpp
+T_stringTools_CPPFLAGS = -include @srcdir@/test/logging.h -I@srcdir@/src
 all: $(BUILT_SOURCES)
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive
 
@@ -486,6 +494,13 @@ src/T_parseConfig-parseConfig.$(OBJEXT): src/$(am__dirstamp) \
 T_parseConfig$(EXEEXT): $(T_parseConfig_OBJECTS) $(T_parseConfig_DEPENDENCIES) $(EXTRA_T_parseConfig_DEPENDENCIES) 
 	@rm -f T_parseConfig$(EXEEXT)
 	$(AM_V_CXXLD)$(CXXLINK) $(T_parseConfig_OBJECTS) $(T_parseConfig_LDADD) $(LIBS)
+test/T_stringTools-T_stringTools.$(OBJEXT): test/$(am__dirstamp) \
+	test/$(DEPDIR)/$(am__dirstamp)
+src/T_stringTools-stringTools.$(OBJEXT): src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
+T_stringTools$(EXEEXT): $(T_stringTools_OBJECTS) $(T_stringTools_DEPENDENCIES) $(EXTRA_T_stringTools_DEPENDENCIES) 
+	@rm -f T_stringTools$(EXEEXT)
+	$(AM_V_CXXLD)$(CXXLINK) $(T_stringTools_OBJECTS) $(T_stringTools_LDADD) $(LIBS)
 mongoose/$(am__dirstamp):
 	@$(MKDIR_P) mongoose
 	@: > mongoose/$(am__dirstamp)
@@ -539,6 +554,7 @@ mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
 	-rm -f mongoose/smit-mongoose.$(OBJEXT)
 	-rm -f src/T_parseConfig-parseConfig.$(OBJEXT)
+	-rm -f src/T_stringTools-stringTools.$(OBJEXT)
 	-rm -f src/smit-Trigger.$(OBJEXT)
 	-rm -f src/smit-cpio.$(OBJEXT)
 	-rm -f src/smit-dateTools.$(OBJEXT)
@@ -557,6 +573,7 @@ mostlyclean-compile:
 	-rm -f src/smit-stringTools.$(OBJEXT)
 	-rm -f src/smparser-parseConfig.$(OBJEXT)
 	-rm -f test/T_parseConfig-T_parseConfig.$(OBJEXT)
+	-rm -f test/T_stringTools-T_stringTools.$(OBJEXT)
 
 distclean-compile:
 	-rm -f *.tab.c
@@ -564,6 +581,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/smit-embedcpio.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@mongoose/$(DEPDIR)/smit-mongoose.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/T_parseConfig-parseConfig.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/T_stringTools-stringTools.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-Trigger.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-cpio.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-dateTools.Po@am__quote@
@@ -582,6 +600,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-stringTools.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smparser-parseConfig.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@test/$(DEPDIR)/T_parseConfig-T_parseConfig.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@test/$(DEPDIR)/T_stringTools-T_stringTools.Po@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(AM_V_CC)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.o$$||'`;\
@@ -670,6 +689,34 @@ src/T_parseConfig-parseConfig.obj: src/parseConfig.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/parseConfig.cpp' object='src/T_parseConfig-parseConfig.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(T_parseConfig_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/T_parseConfig-parseConfig.obj `if test -f 'src/parseConfig.cpp'; then $(CYGPATH_W) 'src/parseConfig.cpp'; else $(CYGPATH_W) '$(srcdir)/src/parseConfig.cpp'; fi`
+
+test/T_stringTools-T_stringTools.o: test/T_stringTools.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(T_stringTools_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT test/T_stringTools-T_stringTools.o -MD -MP -MF test/$(DEPDIR)/T_stringTools-T_stringTools.Tpo -c -o test/T_stringTools-T_stringTools.o `test -f 'test/T_stringTools.cpp' || echo '$(srcdir)/'`test/T_stringTools.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) test/$(DEPDIR)/T_stringTools-T_stringTools.Tpo test/$(DEPDIR)/T_stringTools-T_stringTools.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='test/T_stringTools.cpp' object='test/T_stringTools-T_stringTools.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(T_stringTools_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o test/T_stringTools-T_stringTools.o `test -f 'test/T_stringTools.cpp' || echo '$(srcdir)/'`test/T_stringTools.cpp
+
+test/T_stringTools-T_stringTools.obj: test/T_stringTools.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(T_stringTools_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT test/T_stringTools-T_stringTools.obj -MD -MP -MF test/$(DEPDIR)/T_stringTools-T_stringTools.Tpo -c -o test/T_stringTools-T_stringTools.obj `if test -f 'test/T_stringTools.cpp'; then $(CYGPATH_W) 'test/T_stringTools.cpp'; else $(CYGPATH_W) '$(srcdir)/test/T_stringTools.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) test/$(DEPDIR)/T_stringTools-T_stringTools.Tpo test/$(DEPDIR)/T_stringTools-T_stringTools.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='test/T_stringTools.cpp' object='test/T_stringTools-T_stringTools.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(T_stringTools_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o test/T_stringTools-T_stringTools.obj `if test -f 'test/T_stringTools.cpp'; then $(CYGPATH_W) 'test/T_stringTools.cpp'; else $(CYGPATH_W) '$(srcdir)/test/T_stringTools.cpp'; fi`
+
+src/T_stringTools-stringTools.o: src/stringTools.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(T_stringTools_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/T_stringTools-stringTools.o -MD -MP -MF src/$(DEPDIR)/T_stringTools-stringTools.Tpo -c -o src/T_stringTools-stringTools.o `test -f 'src/stringTools.cpp' || echo '$(srcdir)/'`src/stringTools.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/T_stringTools-stringTools.Tpo src/$(DEPDIR)/T_stringTools-stringTools.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/stringTools.cpp' object='src/T_stringTools-stringTools.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(T_stringTools_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/T_stringTools-stringTools.o `test -f 'src/stringTools.cpp' || echo '$(srcdir)/'`src/stringTools.cpp
+
+src/T_stringTools-stringTools.obj: src/stringTools.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(T_stringTools_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/T_stringTools-stringTools.obj -MD -MP -MF src/$(DEPDIR)/T_stringTools-stringTools.Tpo -c -o src/T_stringTools-stringTools.obj `if test -f 'src/stringTools.cpp'; then $(CYGPATH_W) 'src/stringTools.cpp'; else $(CYGPATH_W) '$(srcdir)/src/stringTools.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/T_stringTools-stringTools.Tpo src/$(DEPDIR)/T_stringTools-stringTools.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/stringTools.cpp' object='src/T_stringTools-stringTools.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(T_stringTools_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/T_stringTools-stringTools.obj `if test -f 'src/stringTools.cpp'; then $(CYGPATH_W) 'src/stringTools.cpp'; else $(CYGPATH_W) '$(srcdir)/src/stringTools.cpp'; fi`
 
 src/smit-db.o: src/db.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/smit-db.o -MD -MP -MF src/$(DEPDIR)/smit-db.Tpo -c -o src/smit-db.o `test -f 'src/db.cpp' || echo '$(srcdir)/'`src/db.cpp

@@ -1,5 +1,5 @@
 # Enable parallel tests
-TESTS = T_parseConfig
+TESTS = T_parseConfig T_stringTools T_smparser
 
 # include the tests on the distribution
 EXTRA_DIST = .
