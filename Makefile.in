@@ -48,9 +48,9 @@ target_triplet = @target@
 bin_PROGRAMS = smit$(EXEEXT)
 @WINDOWS_FALSE@am__append_10 = -ldl
 noinst_PROGRAMS = smparser$(EXEEXT) T_parseConfig$(EXEEXT) \
-	T_stringTools$(EXEEXT)
+	T_stringTools$(EXEEXT) get_random_value$(EXEEXT)
 check_PROGRAMS = T_parseConfig$(EXEEXT) T_stringTools$(EXEEXT) \
-	smparser$(EXEEXT)
+	smparser$(EXEEXT) get_random_value$(EXEEXT)
 subdir = .
 DIST_COMMON = README $(am__configure_deps) $(dist_pkgdata_DATA) \
 	$(srcdir)/Makefile.am $(srcdir)/Makefile.in \
@@ -79,6 +79,9 @@ am_T_stringTools_OBJECTS = test/T_stringTools-T_stringTools.$(OBJEXT) \
 	src/T_stringTools-stringTools.$(OBJEXT)
 T_stringTools_OBJECTS = $(am_T_stringTools_OBJECTS)
 T_stringTools_LDADD = $(LDADD)
+am_get_random_value_OBJECTS = test/get_random_value.$(OBJEXT)
+get_random_value_OBJECTS = $(am_get_random_value_OBJECTS)
+get_random_value_LDADD = $(LDADD)
 am_smit_OBJECTS = mongoose/smit-mongoose.$(OBJEXT) \
 	src/smit-db.$(OBJEXT) src/smit-parseConfig.$(OBJEXT) \
 	src/smit-identifiers.$(OBJEXT) src/smit-main.$(OBJEXT) \
@@ -132,9 +135,11 @@ AM_V_GEN = $(am__v_GEN_@AM_V@)
 am__v_GEN_ = $(am__v_GEN_@AM_DEFAULT_V@)
 am__v_GEN_0 = @echo "  GEN   " $@;
 SOURCES = $(T_parseConfig_SOURCES) $(T_stringTools_SOURCES) \
-	$(smit_SOURCES) $(nodist_smit_SOURCES) $(smparser_SOURCES)
+	$(get_random_value_SOURCES) $(smit_SOURCES) \
+	$(nodist_smit_SOURCES) $(smparser_SOURCES)
 DIST_SOURCES = $(T_parseConfig_SOURCES) $(T_stringTools_SOURCES) \
-	$(smit_SOURCES) $(smparser_SOURCES)
+	$(get_random_value_SOURCES) $(smit_SOURCES) \
+	$(smparser_SOURCES)
 RECURSIVE_TARGETS = all-recursive check-recursive dvi-recursive \
 	html-recursive info-recursive install-data-recursive \
 	install-dvi-recursive install-exec-recursive \
@@ -376,6 +381,7 @@ T_parseConfig_SOURCES = test/T_parseConfig.cpp src/parseConfig.cpp
 T_parseConfig_CPPFLAGS = -include @srcdir@/test/logging.h -I@srcdir@/src
 T_stringTools_SOURCES = test/T_stringTools.cpp src/stringTools.cpp
 T_stringTools_CPPFLAGS = -include @srcdir@/test/logging.h -I@srcdir@/src
+get_random_value_SOURCES = test/get_random_value.c
 all: $(BUILT_SOURCES)
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive
 
@@ -501,6 +507,11 @@ src/T_stringTools-stringTools.$(OBJEXT): src/$(am__dirstamp) \
 T_stringTools$(EXEEXT): $(T_stringTools_OBJECTS) $(T_stringTools_DEPENDENCIES) $(EXTRA_T_stringTools_DEPENDENCIES) 
 	@rm -f T_stringTools$(EXEEXT)
 	$(AM_V_CXXLD)$(CXXLINK) $(T_stringTools_OBJECTS) $(T_stringTools_LDADD) $(LIBS)
+test/get_random_value.$(OBJEXT): test/$(am__dirstamp) \
+	test/$(DEPDIR)/$(am__dirstamp)
+get_random_value$(EXEEXT): $(get_random_value_OBJECTS) $(get_random_value_DEPENDENCIES) $(EXTRA_get_random_value_DEPENDENCIES) 
+	@rm -f get_random_value$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(get_random_value_OBJECTS) $(get_random_value_LDADD) $(LIBS)
 mongoose/$(am__dirstamp):
 	@$(MKDIR_P) mongoose
 	@: > mongoose/$(am__dirstamp)
@@ -574,6 +585,7 @@ mostlyclean-compile:
 	-rm -f src/smparser-parseConfig.$(OBJEXT)
 	-rm -f test/T_parseConfig-T_parseConfig.$(OBJEXT)
 	-rm -f test/T_stringTools-T_stringTools.$(OBJEXT)
+	-rm -f test/get_random_value.$(OBJEXT)
 
 distclean-compile:
 	-rm -f *.tab.c
@@ -601,6 +613,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smparser-parseConfig.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@test/$(DEPDIR)/T_parseConfig-T_parseConfig.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@test/$(DEPDIR)/T_stringTools-T_stringTools.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@test/$(DEPDIR)/get_random_value.Po@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(AM_V_CC)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.o$$||'`;\

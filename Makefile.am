@@ -93,14 +93,17 @@ smparser_CPPFLAGS = -DSM_PARSER
 smparser_LDADD =
 
 
-noinst_PROGRAMS = smparser T_parseConfig T_stringTools
+noinst_PROGRAMS = smparser T_parseConfig T_stringTools get_random_value
 
-check_PROGRAMS = T_parseConfig T_stringTools smparser
+check_PROGRAMS = T_parseConfig T_stringTools smparser get_random_value
 T_parseConfig_SOURCES = test/T_parseConfig.cpp src/parseConfig.cpp
 T_parseConfig_CPPFLAGS = -include @srcdir@/test/logging.h -I@srcdir@/src
 
 T_stringTools_SOURCES = test/T_stringTools.cpp src/stringTools.cpp
 T_stringTools_CPPFLAGS = -include @srcdir@/test/logging.h -I@srcdir@/src
+
+get_random_value_SOURCES = test/get_random_value.c
+
 
 # Windows installer
 if WINDOWS
