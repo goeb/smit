@@ -5255,7 +5255,7 @@ fi
 done
 
 
-ac_config_files="$ac_config_files Makefile test/Makefile test/envtest smit.iss"
+ac_config_files="$ac_config_files Makefile test/Makefile test/parseConfig1.txt test/parseConfig2.txt smit.iss"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -6015,7 +6015,8 @@ do
     "depfiles") CONFIG_COMMANDS="$CONFIG_COMMANDS depfiles" ;;
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     "test/Makefile") CONFIG_FILES="$CONFIG_FILES test/Makefile" ;;
-    "test/envtest") CONFIG_FILES="$CONFIG_FILES test/envtest" ;;
+    "test/parseConfig1.txt") CONFIG_FILES="$CONFIG_FILES test/parseConfig1.txt" ;;
+    "test/parseConfig2.txt") CONFIG_FILES="$CONFIG_FILES test/parseConfig2.txt" ;;
     "smit.iss") CONFIG_FILES="$CONFIG_FILES smit.iss" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;

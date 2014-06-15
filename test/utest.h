@@ -14,9 +14,9 @@ void utAssert(bool condition, const char * file, int line)
 {
     if (!condition) {
         fprintf(stderr, "Error: %s:%d", file, line);
-        std::ostringstream s;
-        s << "sed -n '" << line << "p' " << file;
-        system(s.str().c_str());
+        //std::ostringstream s;
+        //s << "sed -n '" << line << "p' " << file;
+        //system(s.str().c_str());
         nErrors++;
     }
     nCheckpoints++;

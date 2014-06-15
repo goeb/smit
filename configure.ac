@@ -79,6 +79,6 @@ AC_TYPE_SIZE_T
 # Checks for library functions.
 AC_CHECK_FUNCS([gettimeofday localtime strcasecmp strchr strerror strstr])
 
-AC_CONFIG_FILES([Makefile test/Makefile test/envtest smit.iss])
+AC_CONFIG_FILES([Makefile test/Makefile test/parseConfig1.txt test/parseConfig2.txt smit.iss])
 AC_OUTPUT
 

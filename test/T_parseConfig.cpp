@@ -17,11 +17,15 @@
 // 3] 
 //
 
-main()
+int main()
 {
     // step 1: parse "parseConfig1.txt"
     FILE* f = fopen("parseConfig1.txt", "r");
     ASSERT(f!=0);
+    if (!f) {
+        utestEnd();
+        return 1;
+    }
     char buffer[1000];
     size_t n = fread(buffer, 1, 1000, f);
     fclose(f);

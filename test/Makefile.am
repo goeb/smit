@@ -1,11 +1,5 @@
 # Enable parallel tests
-TESTS = req-trac.test \
-req-stat.test \
-req-stat-stdin.test \
-req-trac-pdf.test \
-req-trac-html.test \
-req-stat-docx-rm.test \
-req-same-line.test
+TESTS = T_parseConfig
 
 # include the tests on the distribution
 EXTRA_DIST = .
