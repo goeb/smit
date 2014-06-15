@@ -276,6 +276,7 @@ int cpioExtractTree(const char *cpioStart, size_t cpioSize, const char *src, con
         }
         close(extractedFile);
     }
+    if (r == -10) r = 0; // end of archive is ok
     return r;
 }
 
