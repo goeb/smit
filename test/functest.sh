@@ -1,6 +1,6 @@
 
 SMIT=../smit
-SMITC=../bin/smitc
+SMITC=$srcdir/../bin/smitc
 
 set -e 
 
@@ -92,10 +92,10 @@ $SMITC get "http://127.0.0.1:$PORT/$PROJECT/issues?colspec=id+summary\&sort=id" 
 echo killing pid=$pid
 kill $pid
 
-cmp functest.ref functest.log
+cmp $srcdir/functest.ref functest.log
 
 echo -n "$0 ... "
 if [ $? -eq 0 ]; then echo OK 1>&2
-else echo "ERROR (check diff functest.ref functest.log, repo=$REPO)" 1>&2
+else echo "ERROR (check diff $srcdir/functest.ref functest.log, repo=$REPO)" 1>&2
 fi
 

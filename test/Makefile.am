@@ -1,5 +1,5 @@
 # Enable parallel tests
-TESTS = T_parseConfig T_stringTools T_smparser T_smp_encode_decode.sh
+TESTS = T_parseConfig T_stringTools T_smparser T_smp_encode_decode.sh functest.sh
 
 # include the tests on the distribution
 EXTRA_DIST = .

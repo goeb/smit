@@ -4,7 +4,7 @@
 
 set -e
 TMP=T_smp_encode_decode.out
-N=10000
+N=2000
 echo "Running $N random combinations..."
 for i in `seq 1 $N`; do 
     modulo=`expr $i % 1000 || echo >/dev/null` # prevent exit code 1 from expr
