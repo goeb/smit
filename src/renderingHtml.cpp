@@ -670,7 +670,7 @@ void RHtml::printNavigationIssues(const ContextParameters &ctx, bool autofocus)
 
     HtmlNode form("form");
     form.addAttribute("class", "sm_searchbox");
-    form.addAttribute("action", "/%s/issues", ctx.getProject().getUrlName().c_str());
+    form.addAttribute("action", "/%s/issues/", ctx.getProject().getUrlName().c_str());
     form.addAttribute("method", "get");
 
     HtmlNode input("input");
