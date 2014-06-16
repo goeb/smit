@@ -8,6 +8,7 @@ An online demo is available at this address: [http://smit.herokuapp.com](http://
 
     git clone https://github.com/goeb/smit.git
     cd smit
+    ./configure
     make
     ./smit serve demo &
 
