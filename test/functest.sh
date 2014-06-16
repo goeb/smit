@@ -93,9 +93,9 @@ echo killing pid=$pid
 kill $pid
 
 cmp $srcdir/functest.ref functest.log
-
+r=$?
 echo -n "$0 ... "
-if [ $? -eq 0 ]; then echo OK 1>&2
+if [ $r -eq 0 ]; then echo OK 1>&2
 else echo "ERROR (check diff $srcdir/functest.ref functest.log, repo=$REPO)" 1>&2
 fi
 

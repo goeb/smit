@@ -1,5 +1,5 @@
 
-SMIT=../smit
+SMIT=../build_linux86/smit
 SMITC=../bin/smitc
 
 set -e 
