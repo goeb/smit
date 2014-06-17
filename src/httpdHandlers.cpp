@@ -143,7 +143,7 @@ void sendHttpHeader500(struct mg_connection *conn, const char *msg)
 
 void sendCookie(mg_connection *conn, const std::string &key, const std::string &value)
 {
-    mg_printf(conn, "Set-Cookie: %s=%s\r\n", key.c_str(), value.c_str());
+    mg_printf(conn, "Set-Cookie: %s=%s; Path=/\r\n", key.c_str(), value.c_str());
 }
 
 
@@ -180,7 +180,7 @@ void setCookieAndRedirect(struct mg_connection *conn, const char *name, const ch
 {
     std::ostringstream s;
     s << "Set-Cookie: " << name << "=" << value;
-    s << "; Max-Age=" << SESSION_DURATION;
+    s << "; Path=/;  Max-Age=" << SESSION_DURATION;
     sendHttpRedirect(conn, redirectUrl, s.str().c_str());
 }
 
