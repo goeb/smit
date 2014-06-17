@@ -1,5 +1,5 @@
-#ifndef _filesystem_hpp
-#define _filesystem_hpp
+#ifndef _filesystem_h
+#define _filesystem_h
 
 #include <string>
 

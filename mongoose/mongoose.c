@@ -1157,7 +1157,9 @@ int mg_mkdir(const char *path, int mode) {
 
   (void) MultiByteToWideChar(CP_UTF8, 0, buf, -1, wbuf, ARRAY_SIZE(wbuf));
 
-  return CreateDirectoryW(wbuf, NULL) ? 0 : -1;
+  BOOL r = CreateDirectoryW(wbuf, NULL);
+  errno = GetLastError();
+  return  r ? 0 : -1;
 }
 
 // Implementation of POSIX opendir/closedir/readdir for Windows.

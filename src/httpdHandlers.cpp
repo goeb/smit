@@ -39,7 +39,6 @@
 #include "cpio.h"
 #include "Trigger.h"
 
-std::string ExeFile; // path to the executable (used for extracting embedded files)
 #define K_ME "me"
 #define MAX_SIZE_UPLOAD (10*1024*1024)
 #define SESSID "sessid"

@@ -5,6 +5,7 @@ v1.7.1
     - reject project config modification if a user property has a reserved name
     - Windows only: fix path of executable when exe taken on PATH
     - usage of autotools for the build process
+    - cookies are now attached to Path=/
 
 v1.7.0, 28 May 2014
 

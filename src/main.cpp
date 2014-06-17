@@ -31,7 +31,7 @@
 #include "session.h"
 #include "global.h"
 #include "identifiers.h"
-#include "filesystem.hpp"
+#include "filesystem.h"
 
 void usage()
 {
@@ -130,7 +130,7 @@ int helpServe()
 }
 
 
-int initRepository(const std::string &exec, const char *directory)
+int initRepository(const char *directory)
 {
     DIR *dirp;
     dirp = opendir(directory);
@@ -469,9 +469,6 @@ int main(int argc, const char **argv)
 {
     if (argc < 2) usage();
 
-    ExeFile = getExePath();
-    LOG_DEBUG("Exe=%s", ExeFile.c_str());
-
     int i = 1;
     const char *command = 0;
     while (i < argc) {
@@ -481,7 +478,7 @@ int main(int argc, const char **argv)
         if (0 == strcmp(command, "init")) {
             const char *dir = ".";
             if (i < argc) dir = argv[i];
-            return initRepository(ExeFile, dir);
+            return initRepository(dir);
 
         } else if (0 == strcmp(command, "version")) {
             return showVersion();

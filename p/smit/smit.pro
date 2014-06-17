@@ -42,5 +42,5 @@ HEADERS += \
     ../../src/renderingCsv.h \
     ../../mongoose/mg_win32.h \
     ../../src/Trigger.h \
-    ../../src/filesystem.hpp
+    ../../src/filesystem.h
 
