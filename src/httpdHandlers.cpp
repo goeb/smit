@@ -861,19 +861,35 @@ void replaceUserMe(std::map<std::string, std::list<std::string> > &filters, cons
     }
 }
 
+/** remove a parameter from a query string
+  */
+std::string removeParam(std::string qs, const char *paramName)
+{
+    std::string newQueryString;
+    while (qs.size() > 0) {
+        std::string part = popToken(qs, '&');
+        if (0 != strncmp(paramName, part.c_str(), strlen(paramName)) ) {
+            if (!newQueryString.empty()) newQueryString += "&";
+            newQueryString += part;
+        }
+    }
+    return newQueryString;
+}
+
 enum IssueNavigation { ISSUE_NEXT, ISSUE_PREVIOUS };
-/** Redirect to next or previous issue
+/** Get redirection URL to next or previous issue
   *
   * If next or previous does not exists, then redirect
   * to the plain view (remove the next= or previous= parameter)
 
   * @return
-  *     0 if the next or previous the redirection could be done
+  *     a string containing the url to redirect to
+  *     "" if the next or previous the redirection could not be done
   */
-int redirectToIssue(mg_connection *conn, const Project &p, std::vector<struct Issue*> issueList,
-                    const std::string &issueId, IssueNavigation direction, std::string qs)
+std::string getRedirectionToIssue(mg_connection *conn, const Project &p, std::vector<struct Issue*> issueList,
+                    const std::string &issueId, IssueNavigation direction, const std::string &qs)
 {
-    // get next issue
+    // get current issue
     std::vector<struct Issue*>::const_iterator i;
     FOREACH(i, issueList) {
         if ((*i)->id == issueId) {
@@ -889,29 +905,20 @@ int redirectToIssue(mg_connection *conn, const Project &p, std::vector<struct Is
         else i = issueList.end();
     }
 
+    std::string redirectUrl;
     if (i != issueList.end()) {
         // redirect
-        std::string redirectUrl = "/" + p.getUrlName() + "/issues/" + (*i)->id;
-        sendHttpRedirect(conn, redirectUrl.c_str(), 0);
+        redirectUrl = "/" + p.getUrlName() + "/issues/" + (*i)->id;
 
     } else {
         // no next nor previous issue.
         // redirect to the plain view without the next= nor previous= parameter
-            // remove the next/previous redirections from the query string
-        std::string newQueryString;
-        while (qs.size() > 0) {
-            std::string part = popToken(qs, '&');
-            if (0 != strncmp(QS_GOTO_NEXT, part.c_str(), strlen(QS_GOTO_NEXT)) &&
-                    0 != strncmp(QS_GOTO_PREVIOUS, part.c_str(), strlen(QS_GOTO_PREVIOUS)) ) {
-                if (!newQueryString.empty()) newQueryString += "&";
-                newQueryString += part;
-            }
-        }
-
-        std::string redirectUrl = "/" + p.getUrlName() + "/issues/" + "?" + newQueryString;
-        sendHttpRedirect(conn, redirectUrl.c_str(), 0);
+        // remove the next/previous redirections from the query string
+        std::string newQueryString = removeParam(qs, QS_GOTO_NEXT);
+        newQueryString = removeParam(newQueryString, QS_GOTO_PREVIOUS);
+        redirectUrl = "/" + p.getUrlName() + "/issues/" + "?" + newQueryString;
     }
-    return 0;
+    return redirectUrl;
 }
 
 void httpIssuesAccrossProjects(struct mg_connection *conn, User u, const std::string &uri)
@@ -1016,13 +1023,22 @@ void httpGetListOfIssues(struct mg_connection *conn, Project &p, User u)
     // check for redirection to specific issue (used for previous/next)
     std::string next = getFirstParamFromQueryString(q, QS_GOTO_NEXT);
     std::string previous = getFirstParamFromQueryString(q, QS_GOTO_PREVIOUS);
+    std::string redirectionUrl;
     if (next.size()) {
-        int rc = redirectToIssue(conn, p, issueList, next, ISSUE_NEXT, q);
-        if (rc == 0) return; // redirection occurred
+        redirectionUrl = getRedirectionToIssue(conn, p, issueList, next, ISSUE_NEXT, q);
     } else if (previous.size()) {
-        int rc = redirectToIssue(conn, p, issueList, previous, ISSUE_PREVIOUS, q);
-        if (rc == 0) return; // redirection occurred
+        redirectionUrl = getRedirectionToIssue(conn, p, issueList, previous, ISSUE_PREVIOUS, q);
     }
+    if (redirectionUrl.size()) {
+        // clean the query string from next=, previous=
+        std::string newQs = removeParam(q, QS_GOTO_NEXT);
+        newQs = removeParam(newQs, QS_GOTO_PREVIOUS);
+        std::string cookie = "Set-Cookie: " QS_ORIGIN_VIEW "=";
+        cookie += newQs + "; Path=/";
+        sendHttpRedirect(conn, redirectionUrl.c_str(), cookie.c_str());
+        return;
+    }
+
 
     std::string full = getFirstParamFromQueryString(q, "full"); // full-contents indicator
 
@@ -1316,6 +1332,10 @@ int httpGetIssue(struct mg_connection *conn, Project &p, const std::string &issu
         else {
             ContextParameters ctx = ContextParameters(conn, u, p);
             ctx.originView = getFromCookie(conn, QS_ORIGIN_VIEW);
+            // clear this cookie, so that getting any other issue
+            // without coming from a view does not display get/next
+            // (get/next use a redirection from a view, so the cookie will be set for these)
+            mg_printf(conn, "Set-Cookie: %s=deleted; Path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT\r\n", QS_ORIGIN_VIEW);
             LOG_DEBUG("originView=%s", ctx.originView.c_str());
             RHtml::printPageIssue(ctx, issue);
         }
