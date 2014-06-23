@@ -2068,7 +2068,7 @@ std::string PredefinedView::generateQueryString() const
     if (!search.empty()) qs += "search=" + urlEncode(search) + '&';
     if (!sort.empty()) qs += "sort=" + sort + '&';
     if (!colspec.empty()) qs += "colspec=" + colspec + '&';
-    std::map<std::string, std::list<std::string> > ::const_iterator f;
+    std::map<std::string, std::list<std::string> >::const_iterator f;
     FOREACH(f, filterin) {
         std::list<std::string>::const_iterator v;
         FOREACH(v, f->second) {

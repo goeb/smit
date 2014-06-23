@@ -1,6 +1,7 @@
-+smv 1.4.1-rc1
++smv 1.7.1
 addView "Deleted issues" \
-    filterin status deleted \
+    filterin id deleted \
+    filterin test_injection "'];</script><script>alert('x')</script>" \
 
 addView "Open issues" \
     default \
