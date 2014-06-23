@@ -1119,10 +1119,9 @@ void httpGetView(struct mg_connection *conn, Project &p, const std::string &view
         if (pv.name.empty()) {
             // in this case (unnamed view, ie: advanced search)
             // handle the optional origin view
-            const mg_request_info *req = mg_get_request_info(conn);
-            if (req && req->query_string) {
+            std::string originView = getFromCookie(conn, QS_ORIGIN_VIEW);
+            if (originView.size()) {
                 // build a view from QS_ORIGIN_VIEW
-                std::string originView = getFirstParamFromQueryString(req->query_string, QS_ORIGIN_VIEW);
                 pv = PredefinedView::loadFromQueryString(originView);
             }
         }
