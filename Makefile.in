@@ -1460,6 +1460,7 @@ uninstall-am: uninstall-binPROGRAMS uninstall-dist_pkgdataDATA
 	uninstall-binPROGRAMS uninstall-dist_pkgdataDATA
 
 embedcpio.c embedcpio.h: @srcdir@/tools/convertToC.cpp
+	rm -rf $(X)
 	cp -r @srcdir@/data $(X)
 	@# generate sm/version
 	mkdir -p `dirname $(SM_VERSION)`

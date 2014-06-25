@@ -877,6 +877,20 @@ void RHtml::printScriptUpdateConfig(const ContextParameters &ctx)
     mg_printf(conn, "addProperty('', '', '', '');\n");
 
     mg_printf(conn, "replaceContentInContainer();\n");
+
+    // add tags
+    std::map<std::string, TagSpec>::const_iterator tagspec;
+    FOREACH(tagspec, c.tags) {
+        const TagSpec& tpsec = tagspec->second;
+        mg_printf(conn, "addTag('%s', '%s', %s);\n", enquoteJs(tpsec.id).c_str(),
+                  enquoteJs(tpsec.label).c_str(),
+                  tpsec.display?"true":"false");
+    }
+
+    mg_printf(conn, "addTag('', '', '', '');\n");
+    mg_printf(conn, "addTag('', '', '', '');\n");
+
+
     mg_printf(conn, "</script>\n");
 }
 

@@ -411,3 +411,55 @@ function updateHref(className, href) {
         else if (items[i].nodeName == 'A') items[i].href = href;
     }
 }
+function addTag(name, label, display) {
+    var table = document.getElementById('sm_config_tags');
+    var n = table.rows.length;
+    var row = table.insertRow(n);
+
+    row.id = 'tag' + n;
+
+    // input boxes for this property
+    var cell;
+    cell = row.insertCell(row.cells.length);
+    var buttonUp = document.createElement('button');
+    buttonUp.innerHTML = '&#9650;';
+    buttonUp.onclick = function() {moveRowUp(buttonUp); return false;};
+    cell.appendChild(buttonUp);
+    var buttonDown = document.createElement('button');
+    buttonDown.innerHTML = '&#9660;';
+    buttonDown.onclick = function() {moveRowDown(buttonDown); return false;};
+    cell.appendChild(buttonDown);
+
+    cell = row.insertCell(row.cells.length);
+    i = document.createElement('input');
+    i.name = 'tagName';
+    i.className = 'sm_project_tagname';
+    i.value = name;
+    i.pattern = "[a-zA-Z_0-9]+";
+    i.placeholder = "logical_name";
+    i.title = "Allowed characters: letters, digits, underscore";
+    cell.appendChild(i);
+
+    // label
+    cell = row.insertCell(row.cells.length);
+    i = document.createElement('input');
+    i.name = 'tagLabel';
+    i.className = 'sm_project_label';
+    i.value = label;
+    i.placeholder = "Label that will be displayed";
+    i.title = "Label that will be displayed";
+    cell.appendChild(i);
+
+    // checkbox
+    cell = row.insertCell(row.cells.length);
+    cell.id = 'type_' + n;
+    i = document.createElement('input');
+    i.type = 'checkbox';
+    i.name = 'tagDisplay';
+    if (display) i.checked = true;
+    cell.appendChild(i);
+}
+function addMoreTags(n) {
+    // add n more tags on page
+    for (var i=0; i<n; i++) addTag('', '', false);
+}

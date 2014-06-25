@@ -54,6 +54,7 @@ CLEANFILES = embedcpio.c embedcpio.h convertToC
 X = embedded_data
 SM_VERSION = $(X)/sm/version
 embedcpio.c embedcpio.h: @srcdir@/tools/convertToC.cpp
+	rm -rf $(X)
 	cp -r @srcdir@/data $(X)
 	@# generate sm/version
 	mkdir -p `dirname $(SM_VERSION)`
