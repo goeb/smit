@@ -726,11 +726,13 @@ void httpPostProjectConfig(struct mg_connection *conn, Project &p, User u)
         LOG_DEBUG("postData=%s", postData.c_str());
         // parse the posted data
         std::string propertyName;
+        std::string tagName;
         std::string type;
         std::string label;
         std::string selectOptions;
         std::string projectName;
         std::string reverseAssociationName;
+        std::string tagDisplay;
         ProjectConfig pc;
         std::list<std::list<std::string> > tokens;
         while (1) {
@@ -741,9 +743,10 @@ void httpPostProjectConfig(struct mg_connection *conn, Project &p, User u)
             if (key == "projectName") {
                 projectName = value;
 
-            } else if (key == "propertyName" || postData.empty()) {
+            } else if (key == "propertyName" || key == "tagName" || postData.empty()) {
                 // process previous row
                 if (!propertyName.empty()) {
+                    // the previous row was a property
 
                     if (type.empty()) {
                         // case of reserved properties (id, ctime, mtime, etc.)
@@ -787,15 +790,32 @@ void httpPostProjectConfig(struct mg_connection *conn, Project &p, User u)
                         }
                         tokens.push_back(line);
                     }
+                } else if (!tagName.empty()) {
+                    // the previous row was a tag
+                    std::list<std::string> line;
+                    line.push_back("tag");
+                    line.push_back(tagName);
+                    if (!label.empty()) {
+                        line.push_back("-label");
+                        line.push_back(label);
+                    }
+                    if (tagDisplay == "on") line.push_back("-display");
+                    tokens.push_back(line);
                 }
-                propertyName = value;
+                propertyName.clear();
+                tagName.clear();
+                if (key == "propertyName") propertyName = value;
+                else if (key == "tagName") tagName = value;
                 type.clear();
                 label.clear();
                 selectOptions.clear();
+                tagDisplay.clear();
+
             } else if (key == "type") { type = value; trimBlanks(type); }
             else if (key == "label") { label = value; trimBlanks(label); }
             else if (key == "selectOptions") selectOptions = value;
             else if (key == "reverseAssociation") reverseAssociationName = value;
+            else if (key == "tagDisplay") tagDisplay = value;
             else {
                 LOG_ERROR("ProjectConfig: invalid posted parameter: '%s'", key.c_str());
             }

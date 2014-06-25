@@ -443,7 +443,7 @@ function addTag(name, label, display) {
     // label
     cell = row.insertCell(row.cells.length);
     i = document.createElement('input');
-    i.name = 'tagLabel';
+    i.name = 'label';
     i.className = 'sm_project_label';
     i.value = label;
     i.placeholder = "Label that will be displayed";

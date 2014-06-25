@@ -1517,10 +1517,10 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
                 int n = issue.getNumberOfTaggedIEntries(tspec->second.id);
                 if (n > 0) {
                     // issue has at least one such tagged entry
-                    style = "sm_issue_tagged sm_issue_tag_" + tspec->second.id;
+                    style = "sm_issue_tagged " + urlEncode("sm_issue_tag_" + tspec->second.id);
                 }
                 mg_printf(conn, "<span id=\"sm_issue_tag_%s\" class=\"%s\" data-n=\"%d\">%s</span>\n",
-                          urlEncode(tspec->second.id).c_str(), urlEncode(style).c_str(), n, htmlEscape(tspec->second.label).c_str());
+                          urlEncode(tspec->second.id).c_str(), style.c_str(), n, htmlEscape(tspec->second.label).c_str());
 
             }
         }
@@ -1598,7 +1598,7 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
                 TagSpec tag = tagIt->second;
                 LOG_DEBUG("tag: id=%s, label=%s", tag.id.c_str(), tag.label.c_str());
                 std::string tagStyle = "sm_entry_notag";
-                if (ee.tags.find(tag.id) != ee.tags.end()) tagStyle = "sm_entry_tagged sm_entry_tag_" + tag.id;
+                if (ee.tags.find(tag.id) != ee.tags.end()) tagStyle = "sm_entry_tagged " + urlEncode("sm_entry_tag_" + tag.id);
 
                 if (ctx.userRole == ROLE_ADMIN || ctx.userRole == ROLE_RW) {
                     const char *tagTitle = _("Click to tag/untag");
@@ -1610,7 +1610,7 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
 
                     // the tag itself
                     mg_printf(conn, "<span class=\"%s\" id=\"sm_tag_%s_%s\">",
-                              urlEncode(tagStyle).c_str(), urlEncode(ee.id).c_str(), urlEncode(tag.id).c_str());
+                              tagStyle.c_str(), urlEncode(ee.id).c_str(), urlEncode(tag.id).c_str());
                     mg_printf(conn, "[%s]", htmlEscape(tag.label).c_str());
                     mg_printf(conn, "</span>\n");
 
@@ -1620,7 +1620,7 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
                     // read-only
                     // if tag is not active, do not display
                     if (ee.tags.find(tag.id) != ee.tags.end()) {
-                        mg_printf(conn, "<span class=\"%s\">", urlEncode(tagStyle).c_str());
+                        mg_printf(conn, "<span class=\"%s\">", tagStyle.c_str());
                         mg_printf(conn, "[%s]", htmlEscape(tag.label).c_str());
                         mg_printf(conn, "</span>\n");
                     }

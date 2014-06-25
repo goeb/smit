@@ -818,7 +818,6 @@ int Project::modifyConfig(std::list<std::list<std::string> > &tokens)
 
     // keep unchanged the configuration items not managed via this modifyConfig
     c.predefinedViews = config.predefinedViews;
-    c.tags = config.tags;
     c.numberIssueAcrossProjects = config.numberIssueAcrossProjects;
 
     // add version
@@ -827,26 +826,11 @@ int Project::modifyConfig(std::list<std::list<std::string> > &tokens)
     versionLine.push_back(VERSION);
     tokens.insert(tokens.begin(), versionLine);
 
-    // at this point tagspecs are not managed by the web interface so they
+    // at this point numbering policy is not managed by the web interface so they
     // are not in 'tokens'
-    // add them now.
-    std::map<std::string, TagSpec>::iterator t;
-    std::list<std::string> line;
-    FOREACH(t, config.tags) {
-        line.clear();
-        line.push_back("tag");
-        line.push_back(t->second.id);
-        if (!t->second.label.empty()) {
-            line.push_back("-label");
-            line.push_back(t->second.label);
-        }
-        if (t->second.display) line.push_back("-display");
-        tokens.push_back(line);
-    }
-
     // serialize numbering policy (not managed by the web interface)
     if (config.numberIssueAcrossProjects) {
-        line.clear();
+        std::list<std::string> line;
         line.push_back("numberIssues");
         line.push_back("global");
         tokens.push_back(line);
