@@ -558,7 +558,7 @@ void RHtml::printNavigationGlobal(const ContextParameters &ctx)
     userinfo.addContents("%s", _("Logged in as: "));
     HtmlNode username("span");
     username.addAttribute("class", "sm_username");
-    username.addContents("%s", htmlEscape(ctx.user.username).c_str());
+    username.addContents("%s", ctx.user.username.c_str());
     userinfo.addContents(username);
     div.addContents(userinfo);
     div.addContents(" - ");
