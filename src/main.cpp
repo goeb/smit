@@ -32,6 +32,7 @@
 #include "global.h"
 #include "identifiers.h"
 #include "filesystem.h"
+#include "clone.h"
 
 void usage()
 {
@@ -50,10 +51,6 @@ void usage()
            );
     exit(1);
 }
-
-#define OPT_D "  \n" \
-                    "\n"
-
 
 int helpInit()
 {
@@ -491,6 +488,9 @@ int main(int argc, const char **argv)
         } else if (0 == strcmp(command, "user")) {
             return cmdUser(argc-2, argv+2);
 
+        } else if (0 == strcmp(command, "clone")) {
+            return cmdClone(argc-2, argv+2);
+
         } else if (0 == strcmp(command, "help")) {
             if (i < argc) {
                 const char *help = argv[i];
@@ -498,6 +498,7 @@ int main(int argc, const char **argv)
                 else if (0 == strcmp(help, "project")) return helpProject();
                 else if (0 == strcmp(help, "user")) return helpUser();
                 else if (0 == strcmp(help, "serve")) return helpServe();
+                else if (0 == strcmp(help, "clone")) return helpClone();
                 else {
                     printf("No help for '%s'\n", help);
                     exit(1);

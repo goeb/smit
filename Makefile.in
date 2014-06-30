@@ -92,7 +92,7 @@ am_smit_OBJECTS = mongoose/smit-mongoose.$(OBJEXT) \
 	src/smit-stringTools.$(OBJEXT) src/smit-mutexTools.$(OBJEXT) \
 	src/smit-session.$(OBJEXT) src/smit-dateTools.$(OBJEXT) \
 	src/smit-logging.$(OBJEXT) src/smit-Trigger.$(OBJEXT) \
-	src/smit-filesystem.$(OBJEXT)
+	src/smit-filesystem.$(OBJEXT) src/smit-clone.$(OBJEXT)
 nodist_smit_OBJECTS = smit-embedcpio.$(OBJEXT)
 smit_OBJECTS = $(am_smit_OBJECTS) $(nodist_smit_OBJECTS)
 am__DEPENDENCIES_1 =
@@ -356,7 +356,8 @@ smit_SOURCES = \
     src/dateTools.cpp \
     src/logging.cpp \
     src/Trigger.cpp \
-    src/filesystem.cpp
+    src/filesystem.cpp \
+	src/clone.cpp
 
 nodist_smit_SOURCES = embedcpio.c embedcpio.h 
 BUILT_SOURCES = embedcpio.c embedcpio.h
@@ -552,6 +553,8 @@ src/smit-Trigger.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/smit-filesystem.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
+src/smit-clone.$(OBJEXT): src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
 smit$(EXEEXT): $(smit_OBJECTS) $(smit_DEPENDENCIES) $(EXTRA_smit_DEPENDENCIES) 
 	@rm -f smit$(EXEEXT)
 	$(AM_V_CXXLD)$(CXXLINK) $(smit_OBJECTS) $(smit_LDADD) $(LIBS)
@@ -567,6 +570,7 @@ mostlyclean-compile:
 	-rm -f src/T_parseConfig-parseConfig.$(OBJEXT)
 	-rm -f src/T_stringTools-stringTools.$(OBJEXT)
 	-rm -f src/smit-Trigger.$(OBJEXT)
+	-rm -f src/smit-clone.$(OBJEXT)
 	-rm -f src/smit-cpio.$(OBJEXT)
 	-rm -f src/smit-dateTools.$(OBJEXT)
 	-rm -f src/smit-db.$(OBJEXT)
@@ -595,6 +599,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/T_parseConfig-parseConfig.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/T_stringTools-stringTools.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-Trigger.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-clone.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-cpio.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-dateTools.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-db.Po@am__quote@
@@ -954,6 +959,20 @@ src/smit-filesystem.obj: src/filesystem.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/filesystem.cpp' object='src/smit-filesystem.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/smit-filesystem.obj `if test -f 'src/filesystem.cpp'; then $(CYGPATH_W) 'src/filesystem.cpp'; else $(CYGPATH_W) '$(srcdir)/src/filesystem.cpp'; fi`
+
+src/smit-clone.o: src/clone.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/smit-clone.o -MD -MP -MF src/$(DEPDIR)/smit-clone.Tpo -c -o src/smit-clone.o `test -f 'src/clone.cpp' || echo '$(srcdir)/'`src/clone.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/smit-clone.Tpo src/$(DEPDIR)/smit-clone.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/clone.cpp' object='src/smit-clone.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/smit-clone.o `test -f 'src/clone.cpp' || echo '$(srcdir)/'`src/clone.cpp
+
+src/smit-clone.obj: src/clone.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/smit-clone.obj -MD -MP -MF src/$(DEPDIR)/smit-clone.Tpo -c -o src/smit-clone.obj `if test -f 'src/clone.cpp'; then $(CYGPATH_W) 'src/clone.cpp'; else $(CYGPATH_W) '$(srcdir)/src/clone.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/smit-clone.Tpo src/$(DEPDIR)/smit-clone.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/clone.cpp' object='src/smit-clone.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/smit-clone.obj `if test -f 'src/clone.cpp'; then $(CYGPATH_W) 'src/clone.cpp'; else $(CYGPATH_W) '$(srcdir)/src/clone.cpp'; fi`
 
 src/smparser-parseConfig.o: src/parseConfig.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smparser_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/smparser-parseConfig.o -MD -MP -MF src/$(DEPDIR)/smparser-parseConfig.Tpo -c -o src/smparser-parseConfig.o `test -f 'src/parseConfig.cpp' || echo '$(srcdir)/'`src/parseConfig.cpp
