@@ -235,6 +235,8 @@ CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
 CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
+CURL_CFLAGS = @CURL_CFLAGS@
+CURL_LIBS = @CURL_LIBS@
 CXX = @CXX@
 CXXDEPMODE = @CXXDEPMODE@
 CXXFLAGS = @CXXFLAGS@
@@ -357,16 +359,15 @@ smit_SOURCES = \
     src/logging.cpp \
     src/Trigger.cpp \
     src/filesystem.cpp \
-	src/clone.cpp
+    src/clone.cpp
 
 nodist_smit_SOURCES = embedcpio.c embedcpio.h 
 BUILT_SOURCES = embedcpio.c embedcpio.h
 CLEANFILES = embedcpio.c embedcpio.h convertToC
 X = embedded_data
 SM_VERSION = $(X)/sm/version
-smit_CPPFLAGS = -I @srcdir@/mongoose @OPENSSL_CFLAGS@
-#smit_LDFLAGS = -pthread
-smit_LDADD = @OPENSSL_LIBS@ $(am__append_10)
+smit_CPPFLAGS = -I @srcdir@/mongoose @OPENSSL_CFLAGS@ @CURL_CFLAGS@
+smit_LDADD = @OPENSSL_LIBS@ @CURL_LIBS@ $(am__append_10)
 
 # specific subdirs
 SUBDIRS = test

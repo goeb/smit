@@ -73,9 +73,8 @@ embedcpio.c embedcpio.h: @srcdir@/tools/convertToC.cpp
 clean-local-embedded-data:
 	rm -rf $(X)
 
-smit_CPPFLAGS = -I @srcdir@/mongoose @OPENSSL_CFLAGS@
-#smit_LDFLAGS = -pthread
-smit_LDADD = @OPENSSL_LIBS@
+smit_CPPFLAGS = -I @srcdir@/mongoose @OPENSSL_CFLAGS@ @CURL_CFLAGS@
+smit_LDADD = @OPENSSL_LIBS@ @CURL_LIBS@
 
 if WINDOWS
 else

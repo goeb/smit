@@ -45,6 +45,7 @@ if test x$WINDOWS = xyes; then
     PKG_CONFIG="$PKG_CONFIG --static"
 fi
 PKG_CHECK_MODULES(OPENSSL, openssl)
+PKG_CHECK_MODULES(CURL, curl)
 
 AC_ARG_ENABLE([gcov],
   [AS_HELP_STRING([--enable-gcov],
