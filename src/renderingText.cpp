@@ -24,7 +24,8 @@ void RText::printProjectList(struct mg_connection *conn, const std::list<std::pa
 
     std::list<std::pair<std::string, std::string> >::const_iterator p;
     for (p=pList.begin(); p!=pList.end(); p++) {
-        mg_printf(conn, "%s %s %s\n", Project::urlNameEncode(p->first).c_str(), p->second.c_str(), p->first.c_str());
+        mg_printf(conn, "%s %s %s\n", Project::urlNameEncode(p->first).c_str(),
+                  p->second.c_str(), p->first.c_str());
 
     }
 }
@@ -36,7 +37,8 @@ void RText::printIssueList(struct mg_connection *conn, std::vector<struct Issue*
     // print names of columns
     std::list<std::string>::iterator colname;
     for (colname = colspec.begin(); colname != colspec.end(); colname++) {
-        mg_printf(conn, "%s,\t", colname->c_str());
+        if (colname != colspec.begin()) mg_printf(conn, ",\t");
+        mg_printf(conn, "%s", colname->c_str());
    }
     mg_printf(conn, "\n");
 
@@ -48,6 +50,7 @@ void RText::printIssueList(struct mg_connection *conn, std::vector<struct Issue*
         for (c = colspec.begin(); c != colspec.end(); c++) {
             std::string text;
             std::string column = *c;
+            if (c != colspec.begin()) mg_printf(conn, ",\t");
 
             if (column == "id") text = (*i)->id;
             else if (column == "ctime") text = epochToString((*i)->ctime);
@@ -60,7 +63,7 @@ void RText::printIssueList(struct mg_connection *conn, std::vector<struct Issue*
                 if (p != properties.end()) text = toString(p->second);
             }
 
-            mg_printf(conn, "%s,\t", text.c_str());
+            mg_printf(conn, "%s", text.c_str());
         }
         mg_printf(conn, "\n");
     }
