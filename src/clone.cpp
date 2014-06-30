@@ -61,6 +61,7 @@ private:
     std::list<std::string> lines;
     std::string currentLine;
     CURL *curlHandle;
+    struct curl_slist *slist;
 };
 
 int getProjects(const char *rooturl)
@@ -187,12 +188,17 @@ HttpRequest::HttpRequest()
     curlHandle = curl_easy_init();
     curl_easy_setopt(curlHandle, CURLOPT_WRITEDATA, (void *)this);
     curl_easy_setopt(curlHandle, CURLOPT_USERAGENT, "smit-agent/1.0");
+
+    slist = 0;
+    slist = curl_slist_append(slist, "Accept: text/plain");
+    curl_easy_setopt(curlHandle, CURLOPT_HTTPHEADER, slist);
+
 }
 
 HttpRequest::~HttpRequest()
 {
+    curl_slist_free_all(slist);
     curl_easy_cleanup(curlHandle);
-
 }
 
 
