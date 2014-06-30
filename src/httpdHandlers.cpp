@@ -203,9 +203,18 @@ enum RenderingFormat getFormat(struct mg_connection *conn)
     if (req->query_string) q = req->query_string;
     std::string format = getFirstParamFromQueryString(q, "format");
 
-    if (format == "html" || format.empty()) return RENDERING_HTML;
+    if (format == "html") return RENDERING_HTML;
     else if (format == "csv") return RENDERING_CSV;
-    else return RENDERING_TEXT;
+    else if (format == "text") return RENDERING_TEXT;
+    else {
+        // look at the Accept header
+        const char *contentType = mg_get_header(conn, "Accept");
+        if (!contentType) return RENDERING_HTML; // no such header, return default value
+
+        if (0 == strcasecmp(contentType, "text/html")) return RENDERING_HTML;
+        if (0 == strcasecmp(contentType, "text/plain")) return RENDERING_TEXT;
+    }
+    return RENDERING_HTML;
 }
 
 

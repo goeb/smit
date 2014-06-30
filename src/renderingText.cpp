@@ -24,7 +24,7 @@ void RText::printProjectList(struct mg_connection *conn, const std::list<std::pa
 
     std::list<std::pair<std::string, std::string> >::const_iterator p;
     for (p=pList.begin(); p!=pList.end(); p++) {
-        mg_printf(conn, "%s (%s)\n", p->first.c_str(), p->second.c_str());
+        mg_printf(conn, "%s %s %s\n", Project::urlNameEncode(p->first).c_str(), p->second.c_str(), p->first.c_str());
 
     }
 }
