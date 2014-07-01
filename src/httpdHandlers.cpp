@@ -18,7 +18,8 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-
+#include <sys/types.h>
+#include <dirent.h>
 
 #include <string>
 #include <sstream>
@@ -1704,6 +1705,37 @@ int log_message_handler(const struct mg_connection *conn, const char *msg)
     return 1;
 }
 
+/** If the request is a GET request to a directory and the request format is text,
+  * then handle the request.
+  * Else, let Mongoose handle it.
+  */
+int httpGetFile(struct mg_connection *conn)
+{
+    std::string method = mg_get_request_info(conn)->request_method;
+    if (method != "GET") return 0; // let Mongoose handle the request
+
+    std::string uri = mg_get_request_info(conn)->uri;
+    std::string dir = Database::Db.pathToRepository + uri; // uri contains a leading /
+
+    if (getFormat(conn) != RENDERING_TEXT) return 0; // let Mongoose handle the request
+
+
+    // walk through the directory and print the entries
+    struct dirent *dp;
+    DIR *dirp;
+    if ((dirp = opendir(dir.c_str())) == NULL) return 0;  // let Mongoose handle the request
+
+    while ((dp = readdir(dirp)) != NULL) {
+        // Do not show . and ..
+        if (0 == strcmp(dp->d_name, ".") || 0 == strcmp(dp->d_name, "..")) continue;
+
+        mg_printf(conn, "%s/%s\n", uri.c_str(), dp->d_name);
+    }
+    closedir(dirp);
+
+    return 1; // the request is completely handled
+}
+
 
 /** begin_request_handler is the main entry point of an incoming HTTP request
   *
@@ -1743,7 +1775,7 @@ int begin_request_handler(struct mg_connection *conn)
     const char *referer = mg_get_header(conn, "Referer");
     LOG_DEBUG("resource=%s, method=%s, referer=%s", resource.c_str(), method.c_str(), referer);
 
-    if ((resource == "public") && (method == "GET")) return 0; // let mongoose handle the file request directly
+    if ((resource == "public") && (method == "GET")) return httpGetFile(conn);
     if ((resource == "sm") && (method == "GET")) return httpGetSm(conn, uri);
 
     // check acces rights
@@ -1814,6 +1846,6 @@ int begin_request_handler(struct mg_connection *conn)
         }
     }
     if (handled) return 1;
-    else return 0; // let Mongoose handle static file
+    else return httpGetFile(conn);
 }
 

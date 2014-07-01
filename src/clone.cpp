@@ -19,6 +19,7 @@
 #include <stdlib.h>
 
 #include "clone.h"
+#include "global.h"
 
 
 int helpClone()
@@ -106,7 +107,6 @@ int cmdClone(int argc, const char **args)
 
 void HttpRequest::setUrl(const char *u)
 {
-    printf("setUrl(%s)", u);
     url = u;
     curl_easy_setopt(curlHandle, CURLOPT_URL, u);
 }
@@ -123,6 +123,15 @@ void HttpRequest::getRequestLines()
 {
     curl_easy_setopt(curlHandle, CURLOPT_WRITEFUNCTION, receiveLinesCallback);
     performRequest();
+    handleReceivedLines(0, 0);
+
+    // debug
+    std::list<std::string>::iterator line;
+    FOREACH(line, lines) {
+        printf("%s\n", line->c_str());
+    }
+
+
 }
 void HttpRequest::performRequest()
 {
