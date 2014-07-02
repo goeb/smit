@@ -17,6 +17,7 @@
 #include <stdio.h>
 #include <curl/curl.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "clone.h"
 #include "global.h"
@@ -24,20 +25,23 @@
 
 int helpClone()
 {
-    printf("Usage: smit clone <url> <directory>\n"
+    printf("Usage: smit clone [options] <url> <directory>\n"
            "\n"
            "  Clone a smit repository into a new directory.\n"
            "\n"
            "Options:\n"
            "  <url>        The (possibly remote) repository to clone from.\n"
-           "  <directory>  The name of a new directory to clone into. Cloning\n"
-           "into an existing directory is only allowed if the directory is empty.\n"
+           "  <directory>  The name of a new directory to clone into. Cloning into an\n"
+           "               existing directory is only allowed if the directory is empty.\n"
+           "\n"
+           "  --user <user> --passwd <password> \n"
+           "               Give the user name and the password.\n"
            "\n"
            "Example:\n"
            "  smit clone http://example.com:8090 localDir\n"
            "\n"
            );
-    return 0;
+    return 1;
 }
 
 
@@ -75,25 +79,53 @@ int getProjects(const char *rooturl)
     return 0;
 }
 
-
-int cmdClone(int argc, const char **args)
+void signin(const char *user, const char *passwd)
 {
-    if (argc < 2) {
-        printf("You must specify a repository to clone and a directory.\n\n");
-        helpClone();
-        return 1;
+    printf("signin not implented. exiting...\n");
+    exit(1);
+}
+
+int cmdClone(int argc, const char **argv)
+{
+    const char *user = 0;
+    const char *passwd = 0;
+    const char *url = 0;
+    const char *dir = 0;
+
+    int i = 0;
+    while (i < argc) {
+        const char *arg = argv[i];
+        i++;
+        if (0 == strcmp(arg, "--user")) {
+            if (argc <= 0) return helpClone();
+            user = argv[i];
+            i++;
+        } else if (0 == strcmp(arg, "--passwd")) {
+            if (argc <= 0) return helpClone();
+            passwd = argv[i];
+            i++;
+        } else {
+            if (!url) url = arg;
+            else if (!dir) dir = arg;
+            else {
+                printf("Too many arguments.\n\n");
+                return helpClone();
+            }
+        }
     }
-    if (argc > 2) {
-        printf("Too many arguments.\n\n");
-        helpClone();
-        return 1;
+    if (!url || !dir) {
+        printf("You must specify a repository to clone and a directory.\n\n");
+        return helpClone();
     }
 
-    const char *url = args[0];
-    const char *dir = args[1];
+    if (!user || !passwd) {
+        printf("You must specify user name and password.\n\n");
+        return helpClone();
+    }
 
     curl_global_init(CURL_GLOBAL_ALL);
 
+    signin(user, passwd);
     // TODO
 
     getProjects(url);
