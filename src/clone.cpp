@@ -12,6 +12,7 @@
  */
 #include "config.h"
 
+#include <iostream>
 #include <string>
 #include <list>
 #include <stdio.h>
@@ -55,7 +56,7 @@ public:
     ~HttpRequest();
     void handleReceivedLines(const char *contents, size_t size);
     void handleReceivedRaw(void *data, size_t size);
-    void setUrl(const char *u);
+    void setUrl(const std::string u);
     void getRequestLines();
     void getRequestRaw();
 
@@ -79,15 +80,22 @@ int getProjects(const char *rooturl)
     return 0;
 }
 
-void signin(const char *user, const char *passwd)
+void signin(const char *url, const std::string &user, const std::string &passwd)
 {
+    HttpRequest hr;
+
+    std::string signinUrl = url;
+    signinUrl += "/signin";
+    hr.setUrl(signinUrl);
+    hr.getRequestLines();
+
     printf("signin not implented. exiting...\n");
     exit(1);
 }
 
 int cmdClone(int argc, const char **argv)
 {
-    const char *user = 0;
+    std::string username;
     const char *passwd = 0;
     const char *url = 0;
     const char *dir = 0;
@@ -98,7 +106,7 @@ int cmdClone(int argc, const char **argv)
         i++;
         if (0 == strcmp(arg, "--user")) {
             if (argc <= 0) return helpClone();
-            user = argv[i];
+            username = argv[i];
             i++;
         } else if (0 == strcmp(arg, "--passwd")) {
             if (argc <= 0) return helpClone();
@@ -118,15 +126,22 @@ int cmdClone(int argc, const char **argv)
         return helpClone();
     }
 
-    if (!user || !passwd) {
-        printf("You must specify user name and password.\n\n");
-        return helpClone();
+    if (username.empty()) {
+        printf("Username: ");
+        std::cin >> username;
+
+    }
+    std::string password;
+
+    if (passwd) password = passwd;
+    else {
+        printf("Password: ");
+        std::cin >> password;
     }
 
     curl_global_init(CURL_GLOBAL_ALL);
 
-    signin(user, passwd);
-    // TODO
+    signin(url, username, password);
 
     getProjects(url);
 
@@ -137,10 +152,10 @@ int cmdClone(int argc, const char **argv)
 }
 
 
-void HttpRequest::setUrl(const char *u)
+void HttpRequest::setUrl(const std::string u)
 {
     url = u;
-    curl_easy_setopt(curlHandle, CURLOPT_URL, u);
+    curl_easy_setopt(curlHandle, CURLOPT_URL, u.c_str());
 }
 
 
