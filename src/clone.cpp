@@ -22,6 +22,7 @@
 
 #include "clone.h"
 #include "global.h"
+#include "stringTools.h"
 
 
 int helpClone()
@@ -59,6 +60,7 @@ public:
     void setUrl(const std::string u);
     void getRequestLines();
     void getRequestRaw();
+    void post(const std::string &params);
 
 private:
     void performRequest();
@@ -87,9 +89,15 @@ void signin(const char *url, const std::string &user, const std::string &passwd)
     std::string signinUrl = url;
     signinUrl += "/signin";
     hr.setUrl(signinUrl);
-    hr.getRequestLines();
 
-    printf("signin not implented. exiting...\n");
+    // specify the POST data
+    std::string params;
+    params += "username=";
+    params += urlEncode(user);
+    params += "&password=";
+    params += urlEncode(passwd);
+    hr.post(params);
+
     exit(1);
 }
 
@@ -165,6 +173,12 @@ void HttpRequest::getRequestRaw()
     performRequest();
 }
 
+void HttpRequest::post(const std::string &params)
+{
+    curl_easy_setopt(curlHandle, CURLOPT_POSTFIELDS, params.c_str());
+    performRequest();
+}
+
 
 void HttpRequest::getRequestLines()
 {
@@ -183,12 +197,44 @@ void HttpRequest::getRequestLines()
 void HttpRequest::performRequest()
 {
     CURLcode res;
+
+
     res = curl_easy_perform(curlHandle);
 
     if(res != CURLE_OK) {
         fprintf(stderr, "curl_easy_perform() failed: %s (url %s)\n", curl_easy_strerror(res), url.c_str());
         exit(1);
     }
+
+    // get the cookies
+    struct curl_slist *cookies;
+
+    res = curl_easy_getinfo(curlHandle, CURLINFO_COOKIELIST, &cookies);
+    if (res != CURLE_OK) {
+        fprintf(stderr, "Curl curl_easy_getinfo failed: %s\n", curl_easy_strerror(res));
+        exit(1);
+    }
+
+    struct curl_slist *nc = cookies;
+    int i = 1;
+    while (nc) {
+        // parse the cookie
+        std::string cookieLine = nc->data;
+        std::string domain = popToken(cookieLine, '\t');
+        std::string flag = popToken(cookieLine, '\t');
+        std::string path = popToken(cookieLine, '\t');
+        std::string secure = popToken(cookieLine, '\t');
+        std::string expiration = popToken(cookieLine, '\t');
+        std::string name = popToken(cookieLine, '\t');
+        std::string value = cookieLine;
+        printf("cookie: %s = %s\n", name.c_str(), value.c_str());
+        nc = nc->next;
+        i++;
+    }
+    if (i == 1) {
+        printf("(none)\n");
+    }
+    curl_slist_free_all(cookies);
 }
 
 size_t writeMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp)
@@ -249,6 +295,7 @@ HttpRequest::HttpRequest()
     slist = curl_slist_append(slist, "Accept: text/plain");
     curl_easy_setopt(curlHandle, CURLOPT_HTTPHEADER, slist);
 
+    curl_easy_setopt(curlHandle, CURLOPT_COOKIEFILE, ""); /* just to start the cookie engine */
 }
 
 HttpRequest::~HttpRequest()
