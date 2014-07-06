@@ -19,11 +19,14 @@
 #include <curl/curl.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <errno.h>
 
 #include "clone.h"
 #include "global.h"
 #include "stringTools.h"
-
+#include "mg_win32.h"
 
 int helpClone()
 {
@@ -51,9 +54,21 @@ int helpClone()
 size_t writeMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp);
 size_t receiveLinesCallback(void *contents, size_t size, size_t nmemb, void *userp);
 
+class Cookie {
+public:
+    std::string domain;
+    std::string flag;
+    std::string path;
+    std::string secure;
+    std::string expiration;
+    std::string name;
+    std::string value;
+    int parse(std::string cookieLine);
+};
+
 class HttpRequest {
 public:
-    HttpRequest();
+    HttpRequest(const std::string &sessid);
     ~HttpRequest();
     void handleReceivedLines(const char *contents, size_t size);
     void handleReceivedRaw(void *data, size_t size);
@@ -61,30 +76,65 @@ public:
     void getRequestLines();
     void getRequestRaw();
     void post(const std::string &params);
+    std::map<std::string, Cookie> cookies;
+    std::list<std::string> lines; // fulfilled after calling getRequestLines()
+
 
 private:
     void performRequest();
     std::string url;
     std::string response;
-    std::list<std::string> lines;
     std::string currentLine;
     CURL *curlHandle;
     struct curl_slist *slist;
 };
 
-int getProjects(const char *rooturl)
+int getProjects(const char *rooturl, const std::string &destdir, const std::string &sessid)
 {
-    HttpRequest hr;
+    HttpRequest hr(sessid);
 
     hr.setUrl(rooturl);
     hr.getRequestLines();
 
+    if (hr.lines.empty()) {
+        printf("no project.");
+        exit(1);
+    }
+
+    // make root destination directory
+    mode_t mode = S_IRUSR | S_IWUSR | S_IXUSR;
+    int r = mg_mkdir(destdir.c_str(), mode);
+    if (r != 0) {
+        fprintf(stderr, "Cannot create directory '%s': %s\n", destdir.c_str(), strerror(errno));
+        exit(1);
+    }
+
+    std::list<std::string>::iterator line;
+    FOREACH(line, hr.lines) {
+        std::string projectDirname = popToken(*line, ' ');
+        if (projectDirname.empty()) continue;
+
+        printf("%s...\n", projectDirname.c_str());
+
+        std::string path = destdir + '/' + projectDirname;
+        int r = mg_mkdir(path.c_str(), mode);
+        if (r != 0) {
+            fprintf(stderr, "Cannot create directory '%s': %s\n", path.c_str(), strerror(errno));
+            fprintf(stderr, "Abort.\n");
+            exit(1);
+        }
+
+    }
+
+
+
+
     return 0;
 }
 
-void signin(const char *url, const std::string &user, const std::string &passwd)
+std::string signin(const char *url, const std::string &user, const std::string &passwd)
 {
-    HttpRequest hr;
+    HttpRequest hr("");
 
     std::string signinUrl = url;
     signinUrl += "/signin";
@@ -98,7 +148,13 @@ void signin(const char *url, const std::string &user, const std::string &passwd)
     params += urlEncode(passwd);
     hr.post(params);
 
-    exit(1);
+    // get the sessiond id
+    std::string sessid;
+    std::map<std::string, Cookie>::iterator c;
+    c = hr.cookies.find("sessid");
+    if (c != hr.cookies.end()) sessid = c->second.value;
+
+    return sessid;
 }
 
 int cmdClone(int argc, const char **argv)
@@ -149,9 +205,10 @@ int cmdClone(int argc, const char **argv)
 
     curl_global_init(CURL_GLOBAL_ALL);
 
-    signin(url, username, password);
+    std::string sessid = signin(url, username, password);
+    printf("sessid=%s\n", sessid.c_str());
 
-    getProjects(url);
+    getProjects(url, dir, sessid);
 
 
     curl_global_cleanup();
@@ -185,19 +242,30 @@ void HttpRequest::getRequestLines()
     curl_easy_setopt(curlHandle, CURLOPT_WRITEFUNCTION, receiveLinesCallback);
     performRequest();
     handleReceivedLines(0, 0);
-
-    // debug
-    std::list<std::string>::iterator line;
-    FOREACH(line, lines) {
-        printf("%s\n", line->c_str());
-    }
-
-
 }
+
+
+/** Parse a cookie line in libcurl format (same as netscape format)
+  * Example:
+  * .example.com TRUE / FALSE 946684799 key value
+  * (fields separated by tabs)
+  */
+int Cookie::parse(std::string cookieLine)
+{
+    domain = popToken(cookieLine, '\t');
+    flag = popToken(cookieLine, '\t');
+    path = popToken(cookieLine, '\t');
+    secure = popToken(cookieLine, '\t');
+    expiration = popToken(cookieLine, '\t');
+    name = popToken(cookieLine, '\t');
+    value = cookieLine;
+    printf("cookie: %s = %s\n", name.c_str(), value.c_str());
+    return 0;
+}
+
 void HttpRequest::performRequest()
 {
     CURLcode res;
-
 
     res = curl_easy_perform(curlHandle);
 
@@ -207,34 +275,28 @@ void HttpRequest::performRequest()
     }
 
     // get the cookies
-    struct curl_slist *cookies;
+    struct curl_slist *curlCookies;
 
-    res = curl_easy_getinfo(curlHandle, CURLINFO_COOKIELIST, &cookies);
+    res = curl_easy_getinfo(curlHandle, CURLINFO_COOKIELIST, &curlCookies);
     if (res != CURLE_OK) {
         fprintf(stderr, "Curl curl_easy_getinfo failed: %s\n", curl_easy_strerror(res));
         exit(1);
     }
 
-    struct curl_slist *nc = cookies;
+    struct curl_slist *nc = curlCookies;
     int i = 1;
     while (nc) {
         // parse the cookie
-        std::string cookieLine = nc->data;
-        std::string domain = popToken(cookieLine, '\t');
-        std::string flag = popToken(cookieLine, '\t');
-        std::string path = popToken(cookieLine, '\t');
-        std::string secure = popToken(cookieLine, '\t');
-        std::string expiration = popToken(cookieLine, '\t');
-        std::string name = popToken(cookieLine, '\t');
-        std::string value = cookieLine;
-        printf("cookie: %s = %s\n", name.c_str(), value.c_str());
+        Cookie c;
+        c.parse(nc->data);
+        cookies[c.name] = c;
         nc = nc->next;
         i++;
     }
     if (i == 1) {
         printf("(none)\n");
     }
-    curl_slist_free_all(cookies);
+    curl_slist_free_all(curlCookies);
 }
 
 size_t writeMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp)
@@ -285,7 +347,7 @@ void HttpRequest::handleReceivedLines(const char *data, size_t size)
 }
 
 
-HttpRequest::HttpRequest()
+HttpRequest::HttpRequest(const std::string &sessid)
 {
     curlHandle = curl_easy_init();
     curl_easy_setopt(curlHandle, CURLOPT_WRITEDATA, (void *)this);
@@ -293,6 +355,11 @@ HttpRequest::HttpRequest()
 
     slist = 0;
     slist = curl_slist_append(slist, "Accept: text/plain");
+    if (!sessid.empty()) {
+        std::string cookie = "Cookie: sessid=" + sessid;
+        slist = curl_slist_append(slist, cookie.c_str());
+    }
+
     curl_easy_setopt(curlHandle, CURLOPT_HTTPHEADER, slist);
 
     curl_easy_setopt(curlHandle, CURLOPT_COOKIEFILE, ""); /* just to start the cookie engine */
