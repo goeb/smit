@@ -20,7 +20,7 @@
 
 void RText::printProjectList(struct mg_connection *conn, const std::list<std::pair<std::string, std::string> > &pList)
 {
-    mg_printf(conn, "Content-Type: text/plain\r\n\r\n");
+    mg_printf(conn, "Content-Type: text/directory\r\n\r\n");
 
     std::list<std::pair<std::string, std::string> >::const_iterator p;
     for (p=pList.begin(); p!=pList.end(); p++) {
@@ -32,7 +32,7 @@ void RText::printProjectList(struct mg_connection *conn, const std::list<std::pa
 
 void RText::printIssueList(struct mg_connection *conn, std::vector<struct Issue*> issueList, std::list<std::string> colspec)
 {
-    mg_printf(conn, "Content-Type: text/plain\r\n\r\n");
+    mg_printf(conn, "Content-Type: text/directory\r\n\r\n");
 
     // print names of columns
     std::list<std::string>::iterator colname;
@@ -73,7 +73,7 @@ void RText::printIssueList(struct mg_connection *conn, std::vector<struct Issue*
 void RText::printIssue(struct mg_connection *conn, const Issue &issue)
 {
     LOG_DEBUG("RText::printIssue...");
-    mg_printf(conn, "Content-Type: text/plain\r\n\r\n");
+    mg_printf(conn, "Content-Type: text/directory\r\n\r\n");
     Entry *e = issue.latest;
     while (e && e->prev) e = e->prev; // go to the first one
     while (e) {
@@ -81,3 +81,8 @@ void RText::printIssue(struct mg_connection *conn, const Issue &issue)
         e = e->next;
     }
 }
+void RText::printDirectory(struct mg_connection *conn, const std::string &path)
+{
+
+}
+

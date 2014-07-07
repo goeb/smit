@@ -28,6 +28,8 @@
 #include "stringTools.h"
 #include "mg_win32.h"
 
+bool Verbose = false;
+
 int helpClone()
 {
     printf("Usage: smit clone [options] <url> <directory>\n"
@@ -51,8 +53,6 @@ int helpClone()
 
 
 
-size_t writeMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp);
-size_t receiveLinesCallback(void *contents, size_t size, size_t nmemb, void *userp);
 
 class Cookie {
 public:
@@ -70,6 +70,7 @@ class HttpRequest {
 public:
     HttpRequest(const std::string &sessid);
     ~HttpRequest();
+    void closeCurl(); // close libcurl resources
     void handleReceivedLines(const char *contents, size_t size);
     void handleReceivedRaw(void *data, size_t size);
     void setUrl(const std::string u);
@@ -78,7 +79,15 @@ public:
     void post(const std::string &params);
     std::map<std::string, Cookie> cookies;
     std::list<std::string> lines; // fulfilled after calling getRequestLines()
+    void getAndStore(const std::string &destdir);
+    void handleWriteToFile(void *data, size_t size);
+    void openFile(const std::string &file);
+    void closeFile();
 
+    static size_t writeMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp);
+    static size_t receiveLinesCallback(void *contents, size_t size, size_t nmemb, void *userp);
+    static size_t writeToFileCallback(void *contents, size_t size, size_t nmemb, void *userp);
+    static size_t headerCallback(void *contents, size_t size, size_t nmemb, void *userp);
 
 private:
     void performRequest();
@@ -87,8 +96,43 @@ private:
     std::string currentLine;
     CURL *curlHandle;
     struct curl_slist *slist;
+    std::string filename; // name of the file to write into
+    FILE *fd; // file descriptor of the file
 };
 
+
+
+/** Get a project
+  */
+int getProject(const char *rooturl, const std::string &projectDir, const std::string &destdir, const std::string &sessid)
+{
+    printf("%s...\n", projectDir.c_str());
+
+    std::string path = destdir + '/' + projectDir;
+    mode_t mode = S_IRUSR | S_IWUSR | S_IXUSR;
+    int r = mg_mkdir(path.c_str(), mode);
+    if (r != 0) {
+        fprintf(stderr, "Cannot create directory '%s': %s\n", path.c_str(), strerror(errno));
+        fprintf(stderr, "Abort.\n");
+        exit(1);
+    }
+
+    // get file 'project'
+    HttpRequest hr(sessid);
+
+    std::string url = rooturl;
+    url += "/" + projectDir + "/project";
+    hr.setUrl(url);
+
+    std::string destFile = path + "/project";
+    hr.openFile(destFile);
+    hr.getAndStore(destdir);
+    hr.closeFile();
+    return 0;
+}
+
+/** Get all the projects that we have read-access to.
+  */
 int getProjects(const char *rooturl, const std::string &destdir, const std::string &sessid)
 {
     HttpRequest hr(sessid);
@@ -109,26 +153,15 @@ int getProjects(const char *rooturl, const std::string &destdir, const std::stri
         exit(1);
     }
 
+    hr.closeCurl();
+
     std::list<std::string>::iterator line;
     FOREACH(line, hr.lines) {
         std::string projectDirname = popToken(*line, ' ');
         if (projectDirname.empty()) continue;
 
-        printf("%s...\n", projectDirname.c_str());
-
-        std::string path = destdir + '/' + projectDirname;
-        int r = mg_mkdir(path.c_str(), mode);
-        if (r != 0) {
-            fprintf(stderr, "Cannot create directory '%s': %s\n", path.c_str(), strerror(errno));
-            fprintf(stderr, "Abort.\n");
-            exit(1);
-        }
-
+        getProject(rooturl, projectDirname, destdir, sessid);
     }
-
-
-
-
     return 0;
 }
 
@@ -176,6 +209,8 @@ int cmdClone(int argc, const char **argv)
             if (argc <= 0) return helpClone();
             passwd = argv[i];
             i++;
+        } else if (0 == strcmp(arg, "-v")) {
+            Verbose = true;
         } else {
             if (!url) url = arg;
             else if (!dir) dir = arg;
@@ -206,7 +241,7 @@ int cmdClone(int argc, const char **argv)
     curl_global_init(CURL_GLOBAL_ALL);
 
     std::string sessid = signin(url, username, password);
-    printf("sessid=%s\n", sessid.c_str());
+    if (Verbose) printf("sessid=%s\n", sessid.c_str());
 
     getProjects(url, dir, sessid);
 
@@ -223,6 +258,13 @@ void HttpRequest::setUrl(const std::string u)
     curl_easy_setopt(curlHandle, CURLOPT_URL, u.c_str());
 }
 
+
+
+void HttpRequest::getAndStore(const std::string &destdir)
+{
+    curl_easy_setopt(curlHandle, CURLOPT_WRITEFUNCTION, writeToFileCallback);
+    performRequest();
+}
 
 void HttpRequest::getRequestRaw()
 {
@@ -259,7 +301,7 @@ int Cookie::parse(std::string cookieLine)
     expiration = popToken(cookieLine, '\t');
     name = popToken(cookieLine, '\t');
     value = cookieLine;
-    printf("cookie: %s = %s\n", name.c_str(), value.c_str());
+    if (Verbose) printf("cookie: %s = %s\n", name.c_str(), value.c_str());
     return 0;
 }
 
@@ -293,19 +335,31 @@ void HttpRequest::performRequest()
         nc = nc->next;
         i++;
     }
-    if (i == 1) {
-        printf("(none)\n");
-    }
     curl_slist_free_all(curlCookies);
 }
 
-size_t writeMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp)
+size_t HttpRequest::writeMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp)
 {
     HttpRequest *hr = (HttpRequest*)userp;
     size_t realsize = size * nmemb;
     hr->handleReceivedRaw(contents, realsize);
     return realsize;
 }
+size_t HttpRequest::headerCallback(void *contents, size_t size, size_t nmemb, void *userp)
+{
+    size_t realsize = size * nmemb;
+    if (Verbose) printf("%s", (char*)contents);
+    return realsize;
+}
+
+size_t HttpRequest::writeToFileCallback(void *contents, size_t size, size_t nmemb, void *userp)
+{
+    HttpRequest *hr = (HttpRequest*)userp;
+    size_t realsize = size * nmemb;
+    hr->handleWriteToFile(contents, realsize);
+    return realsize;
+}
+
 
 void HttpRequest::handleReceivedRaw(void *data, size_t size)
 {
@@ -313,7 +367,32 @@ void HttpRequest::handleReceivedRaw(void *data, size_t size)
 }
 
 
-size_t receiveLinesCallback(void *contents, size_t size, size_t nmemb, void *userp)
+void HttpRequest::openFile(const std::string &file)
+{
+    fd = fopen(file.c_str(), "wbx");
+    if (!fd) {
+        fprintf(stderr, "Cannot create file '%s': %s\n", file.c_str(), strerror(errno));
+        exit(1);
+    }
+    filename = file;
+}
+
+void HttpRequest::closeFile()
+{
+    fclose(fd);
+}
+
+void HttpRequest::handleWriteToFile(void *data, size_t size)
+{
+    size_t n = fwrite(data, size, 1, fd);
+    if (n != 1) {
+        fprintf(stderr, "Cannot write to '%s': %s", filename.c_str(), strerror(errno));
+        exit(1);
+    }
+}
+
+
+size_t HttpRequest::receiveLinesCallback(void *contents, size_t size, size_t nmemb, void *userp)
 {
     HttpRequest *hr = (HttpRequest*)userp;
     size_t realsize = size * nmemb;
@@ -352,6 +431,7 @@ HttpRequest::HttpRequest(const std::string &sessid)
     curlHandle = curl_easy_init();
     curl_easy_setopt(curlHandle, CURLOPT_WRITEDATA, (void *)this);
     curl_easy_setopt(curlHandle, CURLOPT_USERAGENT, "smit-agent/1.0");
+    curl_easy_setopt(curlHandle, CURLOPT_HEADERFUNCTION, headerCallback);
 
     slist = 0;
     slist = curl_slist_append(slist, "Accept: text/plain");
@@ -367,8 +447,14 @@ HttpRequest::HttpRequest(const std::string &sessid)
 
 HttpRequest::~HttpRequest()
 {
-    curl_slist_free_all(slist);
-    curl_easy_cleanup(curlHandle);
+    if (slist) curl_slist_free_all(slist);
+    if (curlHandle) curl_easy_cleanup(curlHandle);
 }
 
-
+void HttpRequest::closeCurl()
+{
+    curl_slist_free_all(slist);
+    slist = 0;
+    curl_easy_cleanup(curlHandle);
+    curlHandle = 0;
+}
