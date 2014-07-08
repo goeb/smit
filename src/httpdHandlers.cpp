@@ -196,7 +196,7 @@ int sendHttpHeaderInvalidResource(struct mg_connection *conn)
 
 
 
-enum RenderingFormat { RENDERING_HTML, RENDERING_TEXT, RENDERING_CSV };
+enum RenderingFormat { RENDERING_HTML, RENDERING_TEXT, RENDERING_CSV, X_SMIT };
 enum RenderingFormat getFormat(struct mg_connection *conn)
 {
     const struct mg_request_info *req = mg_get_request_info(conn);
@@ -214,6 +214,7 @@ enum RenderingFormat getFormat(struct mg_connection *conn)
 
         if (0 == strcasecmp(contentType, "text/html")) return RENDERING_HTML;
         if (0 == strcasecmp(contentType, "text/plain")) return RENDERING_TEXT;
+        if (0 == strcasecmp(contentType, APP_X_SMIT)) return X_SMIT;
     }
     return RENDERING_HTML;
 }
@@ -266,7 +267,7 @@ void httpPostSignin(struct mg_connection *conn)
 
         std::string redirect;
         enum RenderingFormat format = getFormat(conn);
-        if (format == RENDERING_TEXT || format == RENDERING_CSV) {
+        if (format != RENDERING_HTML) {
             // no need to get the redirect location
 
         } else {
@@ -589,6 +590,33 @@ void handleUnauthorizedAccess(struct mg_connection *conn, const std::string &res
     sendHttpHeader403(conn);
 }
 
+/** Serve a GET request to a file, for x-smit agent (cloning)
+  */
+int httpGetFile(struct mg_connection *conn)
+{
+    std::string uri = mg_get_request_info(conn)->uri;
+    std::string dir = Database::Db.pathToRepository + uri; // uri contains a leading /
+
+    // walk through the directory and print the entries
+    struct dirent *dp;
+    DIR *dirp;
+    if ((dirp = opendir(dir.c_str())) == NULL) return 0;  // regular file: let Mongoose handle the GET
+
+    mg_printf(conn, "Content-Type: text/directory\r\n\r\n");
+
+    while ((dp = readdir(dirp)) != NULL) {
+        // Do not show . and ..
+        if (0 == strcmp(dp->d_name, ".")) continue;
+        if (0 == strcmp(dp->d_name, "..")) continue;
+
+        mg_printf(conn, "%s\n", dp->d_name);
+    }
+    closedir(dirp);
+
+    return 1; // the request is completely handled
+}
+
+
 void httpGetRoot(struct mg_connection *conn, User u)
 {
     //std::string req = request2string(conn);
@@ -610,6 +638,7 @@ void httpGetRoot(struct mg_connection *conn, User u)
     enum RenderingFormat format = getFormat(conn);
 
     if (format == RENDERING_TEXT) RText::printProjectList(conn, pList);
+    else if (format == X_SMIT) httpGetFile(conn);
     else if (format == RENDERING_CSV) RCsv::printProjectList(conn, pList);
     else {
 
@@ -1705,36 +1734,6 @@ int log_message_handler(const struct mg_connection *conn, const char *msg)
     return 1;
 }
 
-/** If the request is a GET request to a directory and the request format is text,
-  * then handle the request.
-  * Else, let Mongoose handle it.
-  */
-int httpGetFile(struct mg_connection *conn)
-{
-    std::string method = mg_get_request_info(conn)->request_method;
-    if (method != "GET") return 0; // let Mongoose handle the request
-
-    std::string uri = mg_get_request_info(conn)->uri;
-    std::string dir = Database::Db.pathToRepository + uri; // uri contains a leading /
-
-    if (getFormat(conn) != RENDERING_TEXT) return 0; // let Mongoose handle the request
-
-
-    // walk through the directory and print the entries
-    struct dirent *dp;
-    DIR *dirp;
-    if ((dirp = opendir(dir.c_str())) == NULL) return 0;  // let Mongoose handle the request
-
-    while ((dp = readdir(dirp)) != NULL) {
-        // Do not show . and ..
-        if (0 == strcmp(dp->d_name, ".") || 0 == strcmp(dp->d_name, "..")) continue;
-
-        mg_printf(conn, "%s/%s\n", uri.c_str(), dp->d_name);
-    }
-    closedir(dirp);
-
-    return 1; // the request is completely handled
-}
 
 
 /** begin_request_handler is the main entry point of an incoming HTTP request
@@ -1770,12 +1769,17 @@ int begin_request_handler(struct mg_connection *conn)
     std::string uri = mg_get_request_info(conn)->uri;
     std::string method = mg_get_request_info(conn)->request_method;
     LOG_DEBUG("uri=%s, method=%s", uri.c_str(), method.c_str());
+    if (method != "GET" && method != "POST") {
+        sendHttpHeader400(conn, "invalid method");
+        return 1; // request completely handled
+    }
 
     std::string resource = popToken(uri, '/');
     const char *referer = mg_get_header(conn, "Referer");
     LOG_DEBUG("resource=%s, method=%s, referer=%s", resource.c_str(), method.c_str(), referer);
 
-    if ((resource == "public") && (method == "GET")) return httpGetFile(conn);
+    if ((resource == "public") && (method == "GET") && (getFormat(conn) == X_SMIT) ) return httpGetFile(conn);
+    if ((resource == "public") && (method == "GET")) return 0; // let mongoose handle it
     if ((resource == "sm") && (method == "GET")) return httpGetSm(conn, uri);
 
     // check acces rights
@@ -1808,7 +1812,7 @@ int begin_request_handler(struct mg_connection *conn)
         std::string projectUrl = resource;
         std::string project = Project::urlNameDecode(projectUrl);
 
-        // check if user has at lest read access
+        // check if user has at least read access
         enum Role r = user.getRole(project);
         if (r != ROLE_ADMIN && r != ROLE_RW && r != ROLE_RO && ! user.superadmin) {
             // no access granted for this user to this project
@@ -1816,6 +1820,9 @@ int begin_request_handler(struct mg_connection *conn)
 
         } else {
             // ressources inside a project
+
+            if (getFormat(conn) == X_SMIT && method == "GET") return httpGetFile(conn); // used for cloning
+
             Project *p = Database::Db.getProject(project);
             LOG_DEBUG("project %s, %p", project.c_str(), p);
             if (p) {
@@ -1845,7 +1852,9 @@ int begin_request_handler(struct mg_connection *conn)
             } else handled = false; // the resource is not a project
         }
     }
+
     if (handled) return 1;
-    else return httpGetFile(conn);
+    sendHttpHeader403(conn);
+    return 1;
 }
 

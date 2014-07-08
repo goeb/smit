@@ -309,6 +309,7 @@ void HttpRequest::performRequest()
 {
     CURLcode res;
 
+    if (Verbose) printf("uri: %s\n", url.c_str());
     res = curl_easy_perform(curlHandle);
 
     if(res != CURLE_OK) {
@@ -434,7 +435,7 @@ HttpRequest::HttpRequest(const std::string &sessid)
     curl_easy_setopt(curlHandle, CURLOPT_HEADERFUNCTION, headerCallback);
 
     slist = 0;
-    slist = curl_slist_append(slist, "Accept: text/plain");
+    slist = curl_slist_append(slist, "Accept: " APP_X_SMIT);
     if (!sessid.empty()) {
         std::string cookie = "Cookie: sessid=" + sessid;
         slist = curl_slist_append(slist, cookie.c_str());
