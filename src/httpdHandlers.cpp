@@ -639,6 +639,7 @@ void httpGetRoot(struct mg_connection *conn, User u)
     enum RenderingFormat format = getFormat(conn);
 
     if (format == RENDERING_TEXT) RText::printProjectList(conn, pList);
+    else if (format == RENDERING_CSV) RCsv::printProjectList(conn, pList);
     else if (format == X_SMIT) {
         // print the list of the projects (for cloning tool)
         mg_printf(conn, "Content-Type: text/directory\r\n\r\n");
@@ -646,8 +647,10 @@ void httpGetRoot(struct mg_connection *conn, User u)
         FOREACH(p, pList) {
             mg_printf(conn, "%s\n", Project::urlNameEncode(p->first).c_str());
         }
-    } else if (format == RENDERING_CSV) RCsv::printProjectList(conn, pList);
-    else {
+        mg_printf(conn, "public\n");
+
+
+    } else {
 
         // get the list of users and roles for each project
         std::map<std::string, std::map<std::string, Role> > usersRolesByProject;

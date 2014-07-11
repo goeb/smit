@@ -85,7 +85,6 @@ public:
     void closeFile();
     inline void setRepository(const std::string &r) { repository = r; }
 
-    static size_t writeMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp);
     static size_t receiveLinesCallback(void *contents, size_t size, size_t nmemb, void *userp);
     static size_t writeToFileCallback(void *contents, size_t size, size_t nmemb, void *userp);
     static size_t headerCallback(void *contents, size_t size, size_t nmemb, void *userp);
@@ -115,15 +114,6 @@ int getProjects(const char *rooturl, const std::string &destdir, const std::stri
     HttpRequest hr(sessid);
     hr.setUrl(rooturl, "/");
     hr.setRepository(destdir);
-    hr.getAndStore(true);
-
-    if (hr.lines.empty()) {
-        printf("no project.");
-        exit(1);
-    }
-
-    // get the 'public' folder (not returned with the list of projects)
-    hr.setUrl(rooturl, "/public");
     hr.getAndStore(true);
 
     return 0;
@@ -234,6 +224,9 @@ void HttpRequest::getAndStore(bool recursive)
     curl_easy_setopt(curlHandle, CURLOPT_WRITEFUNCTION, writeToFileCallback);
     performRequest();
     if (isDirectory && recursive) {
+        // finalize received lines
+        handleReceivedLines(0, 0);
+
         closeCurl();
 
         std::string localPath = repository + uri;
@@ -248,8 +241,7 @@ void HttpRequest::getAndStore(bool recursive)
             exit(1);
         }
 
-        // finalize received lines
-        handleReceivedLines(0, 0);
+
         std::list<std::string>::iterator file;
         FOREACH(file, lines) {
 
@@ -262,13 +254,10 @@ void HttpRequest::getAndStore(bool recursive)
             hr.setRepository(repository);
             hr.getAndStore(true);
         }
+    } else {
+        // make sure that even an empty file gets created as well
+        handleWriteToFile(0, 0);
     }
-}
-
-void HttpRequest::getRequestRaw()
-{
-    curl_easy_setopt(curlHandle, CURLOPT_WRITEFUNCTION, writeMemoryCallback);
-    performRequest();
 }
 
 void HttpRequest::post(const std::string &params)
@@ -338,13 +327,6 @@ void HttpRequest::performRequest()
     curl_slist_free_all(curlCookies);
 }
 
-size_t HttpRequest::writeMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp)
-{
-    HttpRequest *hr = (HttpRequest*)userp;
-    size_t realsize = size * nmemb;
-    hr->handleReceivedRaw(contents, realsize);
-    return realsize;
-}
 size_t HttpRequest::headerCallback(void *contents, size_t size, size_t nmemb, void *userp)
 {
     HttpRequest *hr = (HttpRequest*)userp;
@@ -397,11 +379,13 @@ void HttpRequest::handleWriteToFile(void *data, size_t size)
 
     } else {
         if (!fd) openFile();
-        size_t n = fwrite(data, size, 1, fd);
-        if (n != 1) {
-            fprintf(stderr, "Cannot write to '%s': %s", filename.c_str(), strerror(errno));
-            exit(1);
-        }
+        if (size) {
+            size_t n = fwrite(data, size, 1, fd);
+            if (n != 1) {
+                fprintf(stderr, "Cannot write to '%s': %s\n", filename.c_str(), strerror(errno));
+                exit(1);
+            }
+        } // else the size is zero, an empty file has been created
     }
 }
 
