@@ -73,16 +73,17 @@ public:
     void closeCurl(); // close libcurl resources
     void handleReceivedLines(const char *contents, size_t size);
     void handleReceivedRaw(void *data, size_t size);
-    void setUrl(const std::string u);
+    void setUrl(const std::string &root, const std::string &path);
     void getRequestLines();
     void getRequestRaw();
     void post(const std::string &params);
     std::map<std::string, Cookie> cookies;
     std::list<std::string> lines; // fulfilled after calling getRequestLines()
-    void getAndStore(const std::string &destdir);
+    void getAndStore(bool recursive);
     void handleWriteToFile(void *data, size_t size);
-    void openFile(const std::string &file);
+    void openFile();
     void closeFile();
+    inline void setRepository(const std::string &r) { repository = r; }
 
     static size_t writeMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp);
     static size_t receiveLinesCallback(void *contents, size_t size, size_t nmemb, void *userp);
@@ -91,87 +92,48 @@ public:
 
 private:
     void performRequest();
-    std::string url;
+    std::string rooturl;
+    std::string uri;
     std::string response;
+    std::string sessionId;
     std::string currentLine;
     CURL *curlHandle;
     struct curl_slist *slist;
     std::string filename; // name of the file to write into
     FILE *fd; // file descriptor of the file
+    bool isDirectory;
+    std::string repository; // base path for storage of files
 };
 
 
 
-/** Get a project
-  */
-int getProject(const char *rooturl, const std::string &projectDir, const std::string &destdir, const std::string &sessid)
-{
-    printf("%s...\n", projectDir.c_str());
-
-    std::string path = destdir + '/' + projectDir;
-    mode_t mode = S_IRUSR | S_IWUSR | S_IXUSR;
-    int r = mg_mkdir(path.c_str(), mode);
-    if (r != 0) {
-        fprintf(stderr, "Cannot create directory '%s': %s\n", path.c_str(), strerror(errno));
-        fprintf(stderr, "Abort.\n");
-        exit(1);
-    }
-
-    // get file 'project'
-    HttpRequest hr(sessid);
-
-    std::string url = rooturl;
-    url += "/" + projectDir + "/project";
-    hr.setUrl(url);
-
-    std::string destFile = path + "/project";
-    hr.openFile(destFile);
-    hr.getAndStore(destdir);
-    hr.closeFile();
-    return 0;
-}
 
 /** Get all the projects that we have read-access to.
   */
 int getProjects(const char *rooturl, const std::string &destdir, const std::string &sessid)
 {
     HttpRequest hr(sessid);
-
-    hr.setUrl(rooturl);
-    hr.getRequestLines();
+    hr.setUrl(rooturl, "/");
+    hr.setRepository(destdir);
+    hr.getAndStore(true);
 
     if (hr.lines.empty()) {
         printf("no project.");
         exit(1);
     }
 
-    // make root destination directory
-    mode_t mode = S_IRUSR | S_IWUSR | S_IXUSR;
-    int r = mg_mkdir(destdir.c_str(), mode);
-    if (r != 0) {
-        fprintf(stderr, "Cannot create directory '%s': %s\n", destdir.c_str(), strerror(errno));
-        exit(1);
-    }
+    // get the 'public' folder (not returned with the list of projects)
+    hr.setUrl(rooturl, "/public");
+    hr.getAndStore(true);
 
-    hr.closeCurl();
-
-    std::list<std::string>::iterator line;
-    FOREACH(line, hr.lines) {
-        std::string projectDirname = popToken(*line, ' ');
-        if (projectDirname.empty()) continue;
-
-        getProject(rooturl, projectDirname, destdir, sessid);
-    }
     return 0;
 }
 
-std::string signin(const char *url, const std::string &user, const std::string &passwd)
+std::string signin(const char *rooturl, const std::string &user, const std::string &passwd)
 {
     HttpRequest hr("");
 
-    std::string signinUrl = url;
-    signinUrl += "/signin";
-    hr.setUrl(signinUrl);
+    hr.setUrl(rooturl, "/signin");
 
     // specify the POST data
     std::string params;
@@ -252,18 +214,55 @@ int cmdClone(int argc, const char **argv)
 }
 
 
-void HttpRequest::setUrl(const std::string u)
+void HttpRequest::setUrl(const std::string &root, const std::string &path)
 {
-    url = u;
-    curl_easy_setopt(curlHandle, CURLOPT_URL, u.c_str());
+    if (path.empty() || path[0] != '/') {
+        fprintf(stderr, "setUrl: Malformed internal path '%s'", path.c_str());
+        exit(1);
+    }
+    rooturl = root;
+    uri = path;
+    std::string url = rooturl + uri;
+    curl_easy_setopt(curlHandle, CURLOPT_URL, url.c_str());
 }
 
 
 
-void HttpRequest::getAndStore(const std::string &destdir)
+void HttpRequest::getAndStore(bool recursive)
 {
+    if (Verbose) printf("Entering getAndStore: uri=%s\n", uri.c_str());
     curl_easy_setopt(curlHandle, CURLOPT_WRITEFUNCTION, writeToFileCallback);
     performRequest();
+    if (isDirectory && recursive) {
+        closeCurl();
+
+        std::string localPath = repository + uri;
+        printf("%s...\n", localPath.c_str());
+
+        mode_t mode = S_IRUSR | S_IWUSR | S_IXUSR;
+        if (Verbose) printf("mkdir %s...\n", localPath.c_str());
+        int r = mg_mkdir(localPath.c_str(), mode);
+        if (r != 0) {
+            fprintf(stderr, "Cannot create directory '%s': %s\n", localPath.c_str(), strerror(errno));
+            fprintf(stderr, "Abort.\n");
+            exit(1);
+        }
+
+        // finalize received lines
+        handleReceivedLines(0, 0);
+        std::list<std::string>::iterator file;
+        FOREACH(file, lines) {
+
+            if (file->empty()) continue;
+
+            std::string subpath = uri + '/' + file->c_str();
+
+            HttpRequest hr(sessionId);
+            hr.setUrl(rooturl, subpath);
+            hr.setRepository(repository);
+            hr.getAndStore(true);
+        }
+    }
 }
 
 void HttpRequest::getRequestRaw()
@@ -309,11 +308,11 @@ void HttpRequest::performRequest()
 {
     CURLcode res;
 
-    if (Verbose) printf("uri: %s\n", url.c_str());
+    if (Verbose) printf("url: %s%s\n", rooturl.c_str(), uri.c_str());
     res = curl_easy_perform(curlHandle);
 
     if(res != CURLE_OK) {
-        fprintf(stderr, "curl_easy_perform() failed: %s (url %s)\n", curl_easy_strerror(res), url.c_str());
+        fprintf(stderr, "curl_easy_perform() failed: %s (%s%s)\n", curl_easy_strerror(res), rooturl.c_str(), uri.c_str());
         exit(1);
     }
 
@@ -348,8 +347,13 @@ size_t HttpRequest::writeMemoryCallback(void *contents, size_t size, size_t nmem
 }
 size_t HttpRequest::headerCallback(void *contents, size_t size, size_t nmemb, void *userp)
 {
+    HttpRequest *hr = (HttpRequest*)userp;
     size_t realsize = size * nmemb;
-    if (Verbose) printf("%s", (char*)contents);
+    if (Verbose) printf("HDR: %s", (char*)contents);
+
+    // check content-type
+    if (strstr((char*)contents, "Content-Type: text/directory")) hr->isDirectory = true;
+
     return realsize;
 }
 
@@ -368,27 +372,36 @@ void HttpRequest::handleReceivedRaw(void *data, size_t size)
 }
 
 
-void HttpRequest::openFile(const std::string &file)
+void HttpRequest::openFile()
 {
-    fd = fopen(file.c_str(), "wbx");
+    filename = repository + uri;
+    if (Verbose) printf("Opening file: %s\n", filename.c_str());
+    fd = fopen(filename.c_str(), "wbx");
     if (!fd) {
-        fprintf(stderr, "Cannot create file '%s': %s\n", file.c_str(), strerror(errno));
+        fprintf(stderr, "Cannot create file '%s': %s\n", filename.c_str(), strerror(errno));
         exit(1);
     }
-    filename = file;
 }
 
 void HttpRequest::closeFile()
 {
     fclose(fd);
+    fd = 0;
 }
 
 void HttpRequest::handleWriteToFile(void *data, size_t size)
 {
-    size_t n = fwrite(data, size, 1, fd);
-    if (n != 1) {
-        fprintf(stderr, "Cannot write to '%s': %s", filename.c_str(), strerror(errno));
-        exit(1);
+    if (isDirectory) {
+        // store the lines temporarily in memory
+        handleReceivedLines((char*)data, size);
+
+    } else {
+        if (!fd) openFile();
+        size_t n = fwrite(data, size, 1, fd);
+        if (n != 1) {
+            fprintf(stderr, "Cannot write to '%s': %s", filename.c_str(), strerror(errno));
+            exit(1);
+        }
     }
 }
 
@@ -429,15 +442,20 @@ void HttpRequest::handleReceivedLines(const char *data, size_t size)
 
 HttpRequest::HttpRequest(const std::string &sessid)
 {
+    sessionId = sessid;
+    isDirectory = false;
+    fd = 0;
     curlHandle = curl_easy_init();
     curl_easy_setopt(curlHandle, CURLOPT_WRITEDATA, (void *)this);
     curl_easy_setopt(curlHandle, CURLOPT_USERAGENT, "smit-agent/1.0");
     curl_easy_setopt(curlHandle, CURLOPT_HEADERFUNCTION, headerCallback);
+    curl_easy_setopt(curlHandle, CURLOPT_HEADERDATA, (void *)this);
+
 
     slist = 0;
     slist = curl_slist_append(slist, "Accept: " APP_X_SMIT);
-    if (!sessid.empty()) {
-        std::string cookie = "Cookie: sessid=" + sessid;
+    if (!sessionId.empty()) {
+        std::string cookie = "Cookie: sessid=" + sessionId;
         slist = curl_slist_append(slist, cookie.c_str());
     }
 

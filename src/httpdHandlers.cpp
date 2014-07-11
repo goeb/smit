@@ -602,6 +602,7 @@ int httpGetFile(struct mg_connection *conn)
     DIR *dirp;
     if ((dirp = opendir(dir.c_str())) == NULL) return 0;  // regular file: let Mongoose handle the GET
 
+    sendHttpHeader200(conn);
     mg_printf(conn, "Content-Type: text/directory\r\n\r\n");
 
     while ((dp = readdir(dirp)) != NULL) {
@@ -638,8 +639,14 @@ void httpGetRoot(struct mg_connection *conn, User u)
     enum RenderingFormat format = getFormat(conn);
 
     if (format == RENDERING_TEXT) RText::printProjectList(conn, pList);
-    else if (format == X_SMIT) httpGetFile(conn);
-    else if (format == RENDERING_CSV) RCsv::printProjectList(conn, pList);
+    else if (format == X_SMIT) {
+        // print the list of the projects (for cloning tool)
+        mg_printf(conn, "Content-Type: text/directory\r\n\r\n");
+        std::list<std::pair<std::string, std::string> >::iterator p;
+        FOREACH(p, pList) {
+            mg_printf(conn, "%s\n", Project::urlNameEncode(p->first).c_str());
+        }
+    } else if (format == RENDERING_CSV) RCsv::printProjectList(conn, pList);
     else {
 
         // get the list of users and roles for each project
