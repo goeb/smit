@@ -110,11 +110,12 @@ void sendHttpHeader200(struct mg_connection *conn)
     mg_printf(conn, "HTTP/1.0 200 OK\r\n");
 }
 
-void sendHttpHeader400(struct mg_connection *conn, const char *msg)
+int sendHttpHeader400(struct mg_connection *conn, const char *msg)
 {
     mg_printf(conn, "HTTP/1.0 400 Bad Request\r\n\r\n");
     mg_printf(conn, "400 Bad Request\r\n");
     mg_printf(conn, "%s\r\n", msg);
+    return 1; // request completely handled
 }
 void sendHttpHeader403(struct mg_connection *conn)
 {
@@ -498,7 +499,8 @@ void httpPostUsers(struct mg_connection *conn, User signedInUser, const std::str
         if (signedInUser.superadmin) {
             if (newUserConfig.username.empty() || newUserConfig.username == "_") {
                 LOG_INFO("Ignore user parameters as username is empty or '_'");
-                return sendHttpHeader400(conn, "Invalid user name");
+                sendHttpHeader400(conn, "Invalid user name");
+                return;
             }
         }
 
@@ -591,17 +593,21 @@ void handleUnauthorizedAccess(struct mg_connection *conn, const std::string &res
 }
 
 /** Serve a GET request to a file, for x-smit agent (cloning)
+  *
+  * Access restriction must have been done before calling this function.
+  * (this function does not verify access rights)
   */
 int httpGetFile(struct mg_connection *conn)
 {
     std::string uri = mg_get_request_info(conn)->uri;
     std::string dir = Database::Db.pathToRepository + uri; // uri contains a leading /
 
-    // walk through the directory and print the entries
     struct dirent *dp;
     DIR *dirp;
-    if ((dirp = opendir(dir.c_str())) == NULL) return 0;  // regular file: let Mongoose handle the GET
+    if ((dirp = opendir(dir.c_str())) == NULL) return 0;  // not a directory: let Mongoose handle the GET
 
+    // send the directory contents
+    // walk through the directory and print the entries
     sendHttpHeader200(conn);
     mg_printf(conn, "Content-Type: text/directory\r\n\r\n");
 
@@ -874,7 +880,10 @@ void httpPostProjectConfig(struct mg_connection *conn, Project &p, User u)
         Project *ptr;
         if (p.getName().empty()) {
             if (!u.superadmin) return sendHttpHeader403(conn);
-            if (projectName.empty()) return sendHttpHeader400(conn, "Empty project name");
+            if (projectName.empty()) {
+                sendHttpHeader400(conn, "Empty project name");
+                return;
+            }
 
             // request for creation of a new project
             Project *newProject = Database::createProject(projectName);
@@ -1775,41 +1784,42 @@ int begin_request_handler(struct mg_connection *conn)
 {
     LOG_FUNC();
 
-    bool handled = true;
     std::string uri = mg_get_request_info(conn)->uri;
     std::string method = mg_get_request_info(conn)->request_method;
     LOG_DEBUG("uri=%s, method=%s", uri.c_str(), method.c_str());
-    if (method != "GET" && method != "POST") {
-        sendHttpHeader400(conn, "invalid method");
-        return 1; // request completely handled
-    }
+
+    if (method != "GET" && method != "POST") return sendHttpHeader400(conn, "invalid method");
 
     std::string resource = popToken(uri, '/');
-    const char *referer = mg_get_header(conn, "Referer");
-    LOG_DEBUG("resource=%s, method=%s, referer=%s", resource.c_str(), method.c_str(), referer);
 
-    if ((resource == "public") && (method == "GET") && (getFormat(conn) == X_SMIT) ) return httpGetFile(conn);
-    if ((resource == "public") && (method == "GET")) return 0; // let mongoose handle it
-    if ((resource == "sm") && (method == "GET")) return httpGetSm(conn, uri);
+    // public access to /public and /sm
+    if (resource == "public") {
+        if ( (method == "GET") && (getFormat(conn) == X_SMIT) ) return httpGetFile(conn);
+        if (method == "GET") return 0; // let mongoose handle it
+        else return sendHttpHeader400(conn, "invalid method");
+    }
+    if (resource == "sm") {
+        if (method == "GET") return httpGetSm(conn, uri);
+        else return sendHttpHeader400(conn, "invalid method");
+    }
 
-    // check acces rights
+    // check access rights
     std::string sessionId = getFromCookie(conn, SESSID);
-    LOG_DEBUG("session id: %s", sessionId.c_str());
     User user = SessionBase::getLoggedInUser(sessionId);
     // if username is empty, then no access is granted (only public pages will be available)
 
-    LOG_DEBUG("User logged: %s", user.username.c_str());
+    bool handled = true; // do not let Mongoose handle the request
 
     if ( (resource == "signin") && (method == "POST") ) httpPostSignin(conn);
+    else if ( (resource == "signin") && (method == "GET") ) sendHttpRedirect(conn, "/", 0);
+
     else if ( (resource == "signout") && (method == "POST") ) httpPostSignout(conn, sessionId);
     else if (user.username.size() == 0) {
 
         // user not logged in
         if (getFormat(conn) == RENDERING_HTML) redirectToSignin(conn, 0);
         else handleUnauthorizedAccess(conn, resource);
-
     }
-    else if ( (resource == "signin") && (method == "GET") ) sendHttpRedirect(conn, "/", 0);
     else if ( (resource == "") && (method == "GET") ) httpGetRoot(conn, user);
     else if ( (resource == "") && (method == "POST") ) httpPostRoot(conn, user);
     else if ( (resource == "users") && (method == "GET") ) httpGetUsers(conn, user, uri);
@@ -1829,7 +1839,7 @@ int begin_request_handler(struct mg_connection *conn)
             handleUnauthorizedAccess(conn, resource);
 
         } else {
-            // ressources inside a project
+            // access granted to ressources inside a project
 
             if (getFormat(conn) == X_SMIT && method == "GET") return httpGetFile(conn); // used for cloning
 
@@ -1863,8 +1873,7 @@ int begin_request_handler(struct mg_connection *conn)
         }
     }
 
-    if (handled) return 1;
-    sendHttpHeader403(conn);
-    return 1;
+    if (handled) return 1; // handled here. Do not let Mongoose handle the request
+    else return 0; // let Mongoose handle the request
 }
 

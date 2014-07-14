@@ -398,19 +398,23 @@ User SessionBase::getLoggedInUser(const std::string &sessionId)
 
     std::map<std::string, Session>::iterator i = SessionDb.sessions.find(sessionId);
 
-    if (i == SessionDb.sessions.end()) return User();
-    else {
+    if (i != SessionDb.sessions.end()) {
+        // session found
         Session s = i->second;
         if (time(0) - s.ctime > s.duration) {
             // session expired
             LOG_DEBUG("getLoggedInUser: session expired: %s", sessionId.c_str());
-            return User();
         } else {
             User *u = UserBase::getUser(s.username);
-            if (u) return *u;
-            else return User();
+            if (u) {
+                LOG_DEBUG("valid logged-in user: %s", u->username.c_str());
+                return *u;
+            }
+            // else session found, but related user no longer exists
         }
     }
+    LOG_DEBUG("no valid logged-in user");
+    return User();
 }
 
 int SessionBase::destroySession(const std::string &sessionId)
