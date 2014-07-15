@@ -92,7 +92,7 @@ public:
 private:
     void performRequest();
     std::string rooturl;
-    std::string uri;
+    std::string resourcePath;
     std::string response;
     std::string sessionId;
     std::string currentLine;
@@ -207,12 +207,12 @@ int cmdClone(int argc, const char **argv)
 void HttpRequest::setUrl(const std::string &root, const std::string &path)
 {
     if (path.empty() || path[0] != '/') {
-        fprintf(stderr, "setUrl: Malformed internal path '%s'", path.c_str());
+        fprintf(stderr, "setUrl: Malformed internal path '%s'\n", path.c_str());
         exit(1);
     }
     rooturl = root;
-    uri = path;
-    std::string url = rooturl + uri;
+    resourcePath = path;
+    std::string url = rooturl + urlEncode(resourcePath, '%', "/"); // do not url-encode /
     curl_easy_setopt(curlHandle, CURLOPT_URL, url.c_str());
 }
 
@@ -220,7 +220,7 @@ void HttpRequest::setUrl(const std::string &root, const std::string &path)
 
 void HttpRequest::getAndStore(bool recursive)
 {
-    if (Verbose) printf("Entering getAndStore: uri=%s\n", uri.c_str());
+    if (Verbose) printf("Entering getAndStore: resourcePath=%s\n", resourcePath.c_str());
     curl_easy_setopt(curlHandle, CURLOPT_WRITEFUNCTION, writeToFileCallback);
     performRequest();
     if (isDirectory && recursive) {
@@ -229,7 +229,7 @@ void HttpRequest::getAndStore(bool recursive)
 
         closeCurl();
 
-        std::string localPath = repository + uri;
+        std::string localPath = repository + resourcePath;
         printf("%s...\n", localPath.c_str());
 
         mode_t mode = S_IRUSR | S_IWUSR | S_IXUSR;
@@ -246,17 +246,20 @@ void HttpRequest::getAndStore(bool recursive)
         FOREACH(file, lines) {
 
             if (file->empty()) continue;
+			if ((*file)[0] == '.') continue; // do not clone hidden files
 
-            std::string subpath = uri + '/' + file->c_str();
+            std::string subpath = resourcePath + '/' + (*file);
 
             HttpRequest hr(sessionId);
             hr.setUrl(rooturl, subpath);
             hr.setRepository(repository);
             hr.getAndStore(true);
         }
-    } else {
+    }
+	if (!isDirectory) {
         // make sure that even an empty file gets created as well
         handleWriteToFile(0, 0);
+		closeFile();
     }
 }
 
@@ -297,11 +300,11 @@ void HttpRequest::performRequest()
 {
     CURLcode res;
 
-    if (Verbose) printf("url: %s%s\n", rooturl.c_str(), uri.c_str());
+    if (Verbose) printf("resource: %s%s\n", rooturl.c_str(), resourcePath.c_str());
     res = curl_easy_perform(curlHandle);
 
     if(res != CURLE_OK) {
-        fprintf(stderr, "curl_easy_perform() failed: %s (%s%s)\n", curl_easy_strerror(res), rooturl.c_str(), uri.c_str());
+        fprintf(stderr, "curl_easy_perform() failed: %s (%s%s)\n", curl_easy_strerror(res), rooturl.c_str(), resourcePath.c_str());
         exit(1);
     }
 
@@ -356,7 +359,7 @@ void HttpRequest::handleReceivedRaw(void *data, size_t size)
 
 void HttpRequest::openFile()
 {
-    filename = repository + uri;
+    filename = repository + resourcePath;
     if (Verbose) printf("Opening file: %s\n", filename.c_str());
     fd = fopen(filename.c_str(), "wbx");
     if (!fd) {
