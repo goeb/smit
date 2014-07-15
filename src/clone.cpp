@@ -89,6 +89,8 @@ public:
     static size_t writeToFileCallback(void *contents, size_t size, size_t nmemb, void *userp);
     static size_t headerCallback(void *contents, size_t size, size_t nmemb, void *userp);
 
+    int httpStatusCode;
+
 private:
     void performRequest();
     std::string rooturl;
@@ -334,6 +336,19 @@ size_t HttpRequest::headerCallback(void *contents, size_t size, size_t nmemb, vo
 {
     HttpRequest *hr = (HttpRequest*)userp;
     size_t realsize = size * nmemb;
+
+    if (hr->httpStatusCode == -1) {
+        // this header should be the HTTP response code
+        std::string code = (char*)contents;
+        popToken(code, ' ');
+        std::string reponseCode = popToken(code, ' ');
+        hr->httpStatusCode = atoi(reponseCode.c_str());
+
+        if (hr->httpStatusCode != 200 && hr->resourcePath != "/signin") {
+            fprintf(stderr, "%s: HTTP status code %d. Exiting.\n", hr->resourcePath.c_str(), hr->httpStatusCode);
+            exit(1);
+        }
+    }
     if (Verbose) printf("HDR: %s", (char*)contents);
 
     // check content-type
@@ -432,6 +447,7 @@ HttpRequest::HttpRequest(const std::string &sessid)
     sessionId = sessid;
     isDirectory = false;
     fd = 0;
+    httpStatusCode = -1; // not set
     curlHandle = curl_easy_init();
     curl_easy_setopt(curlHandle, CURLOPT_WRITEDATA, (void *)this);
     curl_easy_setopt(curlHandle, CURLOPT_USERAGENT, "smit-agent/1.0");
