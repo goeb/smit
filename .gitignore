@@ -1,0 +1,8 @@
+
+# ignore Autotools generated files
+/autom4te.cache/
+/autoscan.log
+/configure.scan
+/config.log
+/config.status
+
