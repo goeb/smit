@@ -21,19 +21,19 @@ int getch()
 	GetConsoleMode(hIn, &con_mode);
 	SetConsoleMode(hIn, con_mode & ~(ENABLE_ECHO_INPUT | ENABLE_LINE_INPUT));
 
-	unsigned char ch = 0;
+    unsigned char c = 0;
 
-	BOOL r = ReadConsoleA( hIn, &ch, 1, &dwRead, NULL);
+    BOOL r = ReadConsoleA( hIn, &c, 1, &dwRead, NULL);
 
 	if (!r) {
 		printf("getch error: %d\n", GetLastError());
 		exit(1);
 	}
-	return ch;
+    return c;
 }
 #else
 int getch() {
-    int ch;
+    int c;
     struct termios t_old, t_new;
 
     tcgetattr(STDIN_FILENO, &t_old);
@@ -41,13 +41,16 @@ int getch() {
     t_new.c_lflag &= ~(ICANON | ECHO);
     tcsetattr(STDIN_FILENO, TCSANOW, &t_new);
 
-    ch = getchar();
+    c = getchar();
 
     tcsetattr(STDIN_FILENO, TCSANOW, &t_old);
-    return ch;
+    return c;
 }
 #endif
-std::string getPasswd(const char *prompt, bool showAsterisk)
+
+/** Use getString with hide = true for passwords
+  */
+std::string getString(const char *prompt, bool hide)
 {
 
 #ifdef _WIN32
@@ -59,23 +62,24 @@ std::string getPasswd(const char *prompt, bool showAsterisk)
 	const char RETURN=10;
 #endif
 
-	std::string password;
+    std::string result;
 	unsigned char c = 0;
 
-	std::cout << prompt << std::endl;
+    std::cout << prompt;
 
 	while ( (c = getch()) != RETURN) {
 		if (c == BACKSPACE) {
-			if(password.size() != 0) {
-				if(showAsterisk) std::cout << "\b \b"; // erase an asterisk
-				password.resize(password.length()-1);
+            if (result.size() > 0) {
+                std::cout << "\b \b";
+                result.resize(result.size()-1);
 			}
 		} else {
-			password += c;
-			if(showAsterisk) std::cout << '*';
+            result += c;
+            if (hide) std::cout << '*';
+            else std::cout << c;
 		}
 	}
 	std::cout << std::endl;
-	return password;
+    return result;
 }
 

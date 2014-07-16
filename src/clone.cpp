@@ -27,6 +27,7 @@
 #include "global.h"
 #include "stringTools.h"
 #include "mg_win32.h"
+#include "console.h"
 
 bool Verbose = false;
 
@@ -179,18 +180,12 @@ int cmdClone(int argc, const char **argv)
         return helpClone();
     }
 
-    if (username.empty()) {
-        printf("Username: ");
-        std::cin >> username;
+    if (username.empty()) username = getString("Username: ", false);
 
-    }
     std::string password;
 
     if (passwd) password = passwd;
-    else {
-        printf("Password: ");
-        std::cin >> password;
-    }
+    else password = getString("Password: ", true);
 
     curl_global_init(CURL_GLOBAL_ALL);
 
@@ -337,6 +332,8 @@ size_t HttpRequest::headerCallback(void *contents, size_t size, size_t nmemb, vo
     HttpRequest *hr = (HttpRequest*)userp;
     size_t realsize = size * nmemb;
 
+    if (Verbose) printf("HDR: %s", (char*)contents);
+
     if (hr->httpStatusCode == -1) {
         // this header should be the HTTP response code
         std::string code = (char*)contents;
@@ -344,12 +341,11 @@ size_t HttpRequest::headerCallback(void *contents, size_t size, size_t nmemb, vo
         std::string reponseCode = popToken(code, ' ');
         hr->httpStatusCode = atoi(reponseCode.c_str());
 
-        if (hr->httpStatusCode != 200 && hr->resourcePath != "/signin") {
+        if (hr->httpStatusCode != 200) {
             fprintf(stderr, "%s: HTTP status code %d. Exiting.\n", hr->resourcePath.c_str(), hr->httpStatusCode);
             exit(1);
         }
     }
-    if (Verbose) printf("HDR: %s", (char*)contents);
 
     // check content-type
     if (strstr((char*)contents, "Content-Type: text/directory")) hr->isDirectory = true;

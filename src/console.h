@@ -2,6 +2,6 @@
 #ifndef _console_h
 #define _console_h
 
-std::string getPasswd(const char *prompt, bool showAsterisk=true);
+std::string getString(const char *prompt, bool hide);
 
 #endif

@@ -47,7 +47,8 @@ smit_SOURCES = \
     src/logging.cpp \
     src/Trigger.cpp \
     src/filesystem.cpp \
-    src/clone.cpp
+    src/clone.cpp \
+	src/console.cpp
 
 nodist_smit_SOURCES = embedcpio.c embedcpio.h 
 BUILT_SOURCES = embedcpio.c embedcpio.h

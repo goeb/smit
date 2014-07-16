@@ -176,13 +176,19 @@ void sendHttpRedirect(struct mg_connection *conn, const std::string &redirectUrl
     mg_printf(conn, "\r\n\r\n");
 }
 
-
-void setCookieAndRedirect(struct mg_connection *conn, const char *name, const char *value, const char *redirectUrl)
+std::string getServerCookie(const std::string &name, const std::string &value, int maxAgeSeconds)
 {
     std::ostringstream s;
     s << "Set-Cookie: " << name << "=" << value;
-    s << "; Path=/;  Max-Age=" << SESSION_DURATION;
-    sendHttpRedirect(conn, redirectUrl, s.str().c_str());
+    s << "; Path=/";
+    if (maxAgeSeconds > 0) s << ";  Max-Age=" << maxAgeSeconds;
+    return s.str();
+}
+
+void setCookieAndRedirect(struct mg_connection *conn, const char *name, const char *value, const char *redirectUrl)
+{
+    std::string s = getServerCookie(name, value, SESSION_DURATION);
+    sendHttpRedirect(conn, redirectUrl, s.c_str());
 }
 
 int sendHttpHeaderInvalidResource(struct mg_connection *conn)
@@ -294,8 +300,13 @@ void httpPostSignin(struct mg_connection *conn)
             return;
         }
 
-        if (redirect.empty()) redirect = "/";
-        setCookieAndRedirect(conn, SESSID, sessionId.c_str(), redirect.c_str());
+        if (format == X_SMIT) {
+            sendHttpHeader200(conn);
+            mg_printf(conn, "%s\r\n", getServerCookie(SESSID, sessionId.c_str(), SESSION_DURATION).c_str());
+        } else {
+            if (redirect.empty()) redirect = "/";
+            setCookieAndRedirect(conn, SESSID, sessionId.c_str(), redirect.c_str());
+        }
 
     } else {
         LOG_ERROR("Unsupported Content-Type in httpPostSignin: %s", contentType);
@@ -1111,8 +1122,7 @@ void httpGetListOfIssues(struct mg_connection *conn, Project &p, User u)
         // clean the query string from next=, previous=
         std::string newQs = removeParam(q, QS_GOTO_NEXT);
         newQs = removeParam(newQs, QS_GOTO_PREVIOUS);
-        std::string cookie = "Set-Cookie: " QS_ORIGIN_VIEW "=";
-        cookie += newQs + "; Path=/";
+        std::string cookie = getServerCookie(QS_ORIGIN_VIEW, newQs, -1);
         sendHttpRedirect(conn, redirectionUrl.c_str(), cookie.c_str());
         return;
     }

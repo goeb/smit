@@ -22,7 +22,8 @@ SOURCES += \
     ../../src/renderingCsv.cpp \
     ../../src/Trigger.cpp \
     ../../src/filesystem.cpp \
-    ../../src/clone.cpp
+    ../../src/clone.cpp \
+    ../../src/console.cpp
 
 HEADERS += \
     ../../mongoose/mongoose.h \
@@ -44,5 +45,6 @@ HEADERS += \
     ../../mongoose/mg_win32.h \
     ../../src/Trigger.h \
     ../../src/filesystem.h \
-    ../../src/clone.h
+    ../../src/clone.h \
+    ../../src/console.h
 
