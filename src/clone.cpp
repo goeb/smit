@@ -210,6 +210,7 @@ void HttpRequest::setUrl(const std::string &root, const std::string &path)
         exit(1);
     }
     rooturl = root;
+    trimRight(rooturl, "/");
     resourcePath = path;
     std::string url = rooturl + urlEncode(resourcePath, '%', "/"); // do not url-encode /
     curl_easy_setopt(curlHandle, CURLOPT_URL, url.c_str());

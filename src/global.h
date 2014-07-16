@@ -10,7 +10,7 @@
 
 #define FOREACH(var, container) for (var=container.begin(); var!= container.end(); var++)
 
-#define APP_X_SMIT "aplpication/x-smit"
+#define APP_X_SMIT "application/x-smit"
 
 
 #endif
