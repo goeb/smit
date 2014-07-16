@@ -80,7 +80,7 @@ public:
     void post(const std::string &params);
     std::map<std::string, Cookie> cookies;
     std::list<std::string> lines; // fulfilled after calling getRequestLines()
-    void getAndStore(bool recursive);
+    void getAndStore(bool recursive, int recursionLevel);
     void handleWriteToFile(void *data, size_t size);
     void openFile();
     void closeFile();
@@ -114,10 +114,12 @@ private:
   */
 int getProjects(const char *rooturl, const std::string &destdir, const std::string &sessid)
 {
+    if (Verbose) printf("getProjects(%s, %s, %s)\n", rooturl, destdir.c_str(), sessid.c_str());
+
     HttpRequest hr(sessid);
     hr.setUrl(rooturl, "/");
     hr.setRepository(destdir);
-    hr.getAndStore(true);
+    hr.getAndStore(true, 0);
 
     return 0;
 }
@@ -215,7 +217,7 @@ void HttpRequest::setUrl(const std::string &root, const std::string &path)
 
 
 
-void HttpRequest::getAndStore(bool recursive)
+void HttpRequest::getAndStore(bool recursive, int recursionLevel)
 {
     if (Verbose) printf("Entering getAndStore: resourcePath=%s\n", resourcePath.c_str());
     curl_easy_setopt(curlHandle, CURLOPT_WRITEFUNCTION, writeToFileCallback);
@@ -227,7 +229,7 @@ void HttpRequest::getAndStore(bool recursive)
         closeCurl();
 
         std::string localPath = repository + resourcePath;
-        printf("%s...\n", localPath.c_str());
+        if (recursionLevel < 2) printf("%s...\n", localPath.c_str());
 
         mode_t mode = S_IRUSR | S_IWUSR | S_IXUSR;
         if (Verbose) printf("mkdir %s...\n", localPath.c_str());
@@ -238,19 +240,20 @@ void HttpRequest::getAndStore(bool recursive)
             exit(1);
         }
 
-
         std::list<std::string>::iterator file;
         FOREACH(file, lines) {
 
             if (file->empty()) continue;
 			if ((*file)[0] == '.') continue; // do not clone hidden files
 
-            std::string subpath = resourcePath + '/' + (*file);
+            std::string subpath = resourcePath;
+            if (resourcePath != "/")  subpath += '/';
+            subpath += (*file);
 
             HttpRequest hr(sessionId);
             hr.setUrl(rooturl, subpath);
             hr.setRepository(repository);
-            hr.getAndStore(true);
+            hr.getAndStore(true, recursionLevel+1);
         }
     }
 	if (!isDirectory) {
