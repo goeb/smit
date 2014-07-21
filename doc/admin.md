@@ -25,6 +25,22 @@ smit user <user-name> --project <project-name> admin
 smit serve
 ```
 
+## Setup a smit web server over SSL/TLS
+
+Create a self-signed certificate:
+
+```
+openssl genrsa > privkey.pem
+openssl req -new -x509 -key privkey.pem -out cacert.pub.pem -days 1095
+cat privkey.pem cacert.pub.pem > cacert.pem
+```
+
+Start smit:
+
+```
+smit serve --ssl-cert cacert.pem
+```
+
 
 ## Command Line Usage
 
