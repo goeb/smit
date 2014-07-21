@@ -42,8 +42,13 @@ std::string User::serialize()
     result += serializeSimpleToken(username) + " ";
     if (superadmin) result += "superadmin \\\n";
     if (!hashType.empty()) {
-        result += serializeSimpleToken(hashType) + " ";
-        result += serializeSimpleToken(hashValue) + " \\\n";
+        result += "    " + serializeSimpleToken(hashType) + " ";
+        result += serializeSimpleToken(hashValue);
+        if (!hashSalt.empty()) {
+            result += " -salt " ;
+            result += serializeSimpleToken(hashSalt);
+        }
+        result += " \\\n";
     }
 
     std::map<std::string, enum Role>::const_iterator role;
@@ -56,10 +61,19 @@ std::string User::serialize()
     return result;
 }
 
+
+std::string getNewSalt()
+{
+    std::stringstream randomStr;
+    randomStr << std::hex << rand() << rand();
+    return randomStr.str();
+}
+
 void User::setPasswd(const std::string &password)
 {
     hashType = HASH_SHA1;
-    hashValue = getSha1(password);
+    hashSalt = getNewSalt();
+    hashValue = getSha1(password + hashSalt);
 }
 
 
@@ -163,6 +177,9 @@ int UserBase::init(const char *path, bool checkProject)
                     }
                     u.hashType = token;
                     u.hashValue = hash;
+                } else if (token == "-salt") {
+                    u.hashSalt = popListToken(*line);
+
                 } else if (token == "superadmin") u.superadmin = true;
             }
             // add user in database
@@ -373,7 +390,8 @@ std::string SessionBase::requestSession(const std::string &username, const std::
     User *u = UserBase::getUser(username);
 
     if (u && u->hashType == HASH_SHA1) {
-        std::string sha1 = getSha1(passwd);
+        LOG_DEBUG("salt=%s", u->hashSalt.c_str());
+        std::string sha1 = getSha1(passwd + u->hashSalt);
         if (sha1 != u->hashValue) {
             LOG_DEBUG("Sha1 do not match %s <> %s", sha1.c_str(), u->hashValue.c_str());
             sessid = "";

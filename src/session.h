@@ -29,6 +29,7 @@ struct User {
     std::string username;
     std::string hashType;
     std::string hashValue;
+    std::string hashSalt;
     std::map<std::string, enum Role> rolesOnProjects;
     enum Role getRole(const std::string &project);
     std::list<std::pair<std::string, std::string> > getProjects();

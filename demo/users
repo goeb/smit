@@ -1,14 +1,14 @@
-+smv 1.7.1-rc2
-addUser "John Smith" sha1 e61a3587b3f7a142b8c7b9263c82f8119398ecb7 \
++smv 2.0.0
+addUser "John Smith"     sha1 e61a3587b3f7a142b8c7b9263c82f8119398ecb7 \
     project things_to_do rw \
 
 
-addUser alice sha1 522b276a356bdf39013dfabea2cd43e141ecc9e8 \
+addUser alice     sha1 522b276a356bdf39013dfabea2cd43e141ecc9e8 \
     project things_to_do ro \
 
 
 addUser fred superadmin \
-sha1 31017a722665e4afce586950f42944a6d331dabf \
+    sha1 74508d96c26b89d9f48422c33b811c0c69df8032 -salt 5429ce173830c845 \
     project myproject admin \
     project myproject/yoyo ro \
     project smit admin \
@@ -18,7 +18,7 @@ sha1 31017a722665e4afce586950f42944a6d331dabf \
 
 
 addUser homer superadmin \
-sha1 8a30fca9ea5b46722cbdad24c7470a442718cac8 \
+    sha1 8a30fca9ea5b46722cbdad24c7470a442718cac8 \
     project things_to_do admin \
 
 
@@ -29,7 +29,7 @@ addUser "not assigned"     project myproject ref \
 
 addUser tyty 
 
-addUser xxxt sha1 0b9c2625dc21ef05f6ad4ddf47c5f203837aa32c \
+addUser xxxt     sha1 0b9c2625dc21ef05f6ad4ddf47c5f203837aa32c \
     project myproject rw \
 
 
