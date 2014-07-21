@@ -64,10 +64,15 @@ td {
     border-collapse:collapse;
 }
 
-tr.sm_issue_asso {
+tr.sm_issue_asso td.sm_issue_asso {
     /*background-color: #ddd;*/
     border: solid 1px #bbb;
-    font-size: 80%;
+    /*font-size: 80%;*/
+}
+.sm_issue_asso_id {
+    font-weight: bold;
+}
+.sm_issue_asso_summary {
 }
 .sm_not_found {
     color: #844;

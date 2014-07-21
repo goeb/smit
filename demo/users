@@ -18,7 +18,7 @@ addUser fred superadmin \
 
 
 addUser homer superadmin \
-    sha1 8a30fca9ea5b46722cbdad24c7470a442718cac8 \
+    sha1 9c38e24cb7d4f0b73f8b9cdf4f6a3612f989ce2b -salt 6cc8be554574aa67 \
     project things_to_do admin \
 
 

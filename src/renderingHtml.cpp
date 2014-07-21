@@ -1383,7 +1383,8 @@ void printAssociations(const ContextParameters &ctx, const std::string &associat
         Issue associatedIssue;
         int r = ctx.getProject().get(*otherIssue, associatedIssue);
         if (r == 0) { // issue found. print id and summary
-            mg_printf(conn, "<a href=\"%s\">%s %s</a>", urlEncode(associatedIssue.id).c_str(),
+            mg_printf(conn, "<a href=\"%s\"><span class=\"sm_issue_asso_id\">%s</span>"
+                      " <span class=\"sm_issue_asso_summary\">%s</span></a>", urlEncode(associatedIssue.id).c_str(),
                       htmlEscape(associatedIssue.id).c_str(), htmlEscape(associatedIssue.getSummary()).c_str());
 
         } else { // not found. no such issue
