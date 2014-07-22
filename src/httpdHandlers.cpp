@@ -217,6 +217,8 @@ enum RenderingFormat getFormat(struct mg_connection *conn)
     else {
         // look at the Accept header
         const char *contentType = mg_get_header(conn, "Accept");
+        LOG_DEBUG("Accept header=%s", contentType);
+
         if (!contentType) return RENDERING_HTML; // no such header, return default value
 
         if (0 == strcasecmp(contentType, "text/html")) return RENDERING_HTML;
