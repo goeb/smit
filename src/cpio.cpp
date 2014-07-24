@@ -89,7 +89,7 @@ int cpioGetNextFileHeader(const char *&offset, const char *end, std::string &fil
     // get size of filename
     char filepathBuf[1024];
     if (header.c_namesize > 1022) {
-        LOG_ERROR("cpioExtract: Filename too long (%d)", header.c_namesize);
+        LOG_ERROR("cpioExtract: Filename too long (%hu)", header.c_namesize);
         return -8;
     }
     if (header.c_namesize % 2 == 1) header.c_namesize += 1; // make the size even

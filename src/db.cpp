@@ -1152,7 +1152,7 @@ void Project::loadPredefinedViews()
         config.predefinedViews = PredefinedView::parsePredefinedViews(lines);
     } // else error of empty file
 
-    LOG_DEBUG("predefined views loaded: %d", config.predefinedViews.size());
+    LOG_DEBUG("predefined views loaded: %zd", config.predefinedViews.size());
 }
 
 /** Look for tags: files <project>/tags/<issue>/<entry>
