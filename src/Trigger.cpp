@@ -209,7 +209,7 @@ void Trigger::run(const std::string &program, const std::string &toStdin)
         } else {
             size_t n = fwrite(toStdin.c_str(), 1, toStdin.size(), fp);
             if (n != toStdin.size()) {
-                LOG_ERROR("fwrite error: %d bytes sent (%d requested)", n, toStdin.size());
+                LOG_ERROR("fwrite error: %zu bytes sent (%zu requested)", n, toStdin.size());
             }
             pclose(fp);
         }

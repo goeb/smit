@@ -220,7 +220,7 @@ int cmdProject(int argc, const char **args)
         FOREACH(p, Database::Db.projects) {
             printf("%s: %d issues\n", p->first.c_str(), p->second->getNumIssues());
         }
-        printf("%d project(s)\n", Database::Db.projects.size());
+        printf("%zu project(s)\n", Database::Db.projects.size());
         return 0;
     }
 
@@ -374,7 +374,7 @@ int serveRepository(int argc, const char **args)
 
     int i = 0;
     std::string listenPort = "8090";
-    const char *lang = "en";
+    //const char *lang = "en";
     const char *repo = 0;
     const char *certificatePemFile = 0;
     while (i<argc) {
@@ -384,13 +384,13 @@ int serveRepository(int argc, const char **args)
                 listenPort = args[i];
                 i++;
             } else usage();
-
+#if 0
         } else if (0 == strcmp(arg, "--lang")) {
             if (i<argc) {
                 lang = args[i];
                 i++;
             } else usage();
-
+#endif
         } else if (0 == strcmp(arg, "--ssl-cert")) {
             if (i<argc) {
                 certificatePemFile = args[i];

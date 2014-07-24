@@ -62,12 +62,12 @@ int readMgConn(struct mg_connection *conn, std::string &data, size_t maxSize)
         data.append(std::string(postFragment, n));
         if (data.size() > maxSize) {
             // data too big. overflow. abort.
-            LOG_ERROR("Too much POST data. Abort. maxSize=%u", maxSize);
+            LOG_ERROR("Too much POST data. Abort. maxSize=%zu", maxSize);
             return -1;
         }
 
     }
-    LOG_DEBUG("data size=%u", data.size());
+    LOG_DEBUG("data size=%zu", data.size());
 
     return 0; // ok
 }
@@ -1619,7 +1619,7 @@ void parseMultipartAndStoreUploadedFiles(const std::string &data, std::string bo
                 }
 
                 vars[name].push_back(basename);
-                LOG_DEBUG("name=%s, basename=%s, size=%u", name.c_str(), basename.c_str(), size);
+                LOG_DEBUG("name=%s, basename=%s, size=%zu", name.c_str(), basename.c_str(), size);
 
             } // else: empty file, ignore.
         }

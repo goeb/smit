@@ -96,7 +96,7 @@ int cpioGetNextFileHeader(const char *&offset, const char *end, std::string &fil
 
     availableSize = end-offset;
     if (header.c_namesize > availableSize)  {
-        LOG_ERROR("cpioExtract: short read %u/%u", availableSize, header.c_namesize);
+        LOG_ERROR("cpioExtract: short read %zu/%u", availableSize, header.c_namesize);
         return -9;
     }
     memcpy(filepathBuf, (void*)offset, header.c_namesize);
@@ -119,7 +119,7 @@ int cpioGetFile(const char *file, const char *&cpioOffset)
     FileType ftype;
     uint32_t filesize;
     const char *cpioEnd = em_binary_data_embedcpio + em_binary_size_embedcpio;
-    LOG_DEBUG("em_binary_size_embedcpio=%d", em_binary_size_embedcpio);
+    LOG_DEBUG("em_binary_size_embedcpio=%zu", em_binary_size_embedcpio);
     cpioOffset = em_binary_data_embedcpio;
     int r;
     while ( (r = cpioGetNextFileHeader(cpioOffset, cpioEnd, filepath, ftype, filesize)) >= 0 ) {
@@ -264,7 +264,7 @@ int cpioExtractTree(const char *cpioStart, size_t cpioSize, const char *src, con
                 return -1;
 
             } else if ((size_t)written != nToRead) {
-                LOG_ERROR("cpioExtract: short write to file '%s': n=%u, written=%d",
+                LOG_ERROR("cpioExtract: short write to file '%s': n=%zu, written=%zd",
                           destinationFile.c_str(), nToRead, written);
                 close(extractedFile);
                 return -1;
