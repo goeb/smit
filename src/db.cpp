@@ -298,8 +298,8 @@ Entry *loadEntry(std::string dir, const char* basename)
     }
     // if value is not 1.x, then raise a warning
     if (smitVersion.empty() || 0 != strncmp("1.", smitVersion.c_str(), 2)) {
-        LOG_INFO("Version of entry %s higher than current Smit version (%s). Check compatibility.",
-                 smitVersion.c_str(), VERSION);
+        LOG_INFO("Version %s of entry %s higher than current Smit version (%s). Check compatibility.",
+                 smitVersion.c_str(), basename, VERSION);
     }
 
     return e;

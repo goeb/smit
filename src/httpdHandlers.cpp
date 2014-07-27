@@ -644,9 +644,10 @@ void httpGetRoot(struct mg_connection *conn, User u)
     // print list of available projects
     std::list<std::pair<std::string, Role> > usersRoles;
     std::list<std::pair<std::string, std::string> > pList;
-    if (!u.superadmin) pList = u.getProjects();
+    if (!UserBase::isLocalUserInterface() && !u.superadmin) pList = u.getProjects();
     else {
         // for a superadmin, get the list of all the projects
+        // or in the case of a local user interface
         std::list<std::string> allProjects = Database::getProjects();
         std::list<std::string>::iterator p;
         FOREACH(p, allProjects) {
@@ -1820,7 +1821,7 @@ int begin_request_handler(struct mg_connection *conn)
     User user = SessionBase::getLoggedInUser(sessionId);
     // if username is empty, then no access is granted (only public pages will be available)
 
-    bool handled = true; // do not let Mongoose handle the request
+    bool handled = true; // by default, do not let Mongoose handle the request
 
     if ( (resource == "signin") && (method == "POST") ) httpPostSignin(conn);
     else if ( (resource == "signin") && (method == "GET") ) sendHttpRedirect(conn, "/", 0);

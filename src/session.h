@@ -32,7 +32,7 @@ struct User {
     std::string hashSalt;
     std::map<std::string, enum Role> rolesOnProjects;
     enum Role getRole(const std::string &project);
-    std::list<std::pair<std::string, std::string> > getProjects();
+    std::list<std::pair<std::string, std::string> >  getProjects();
     bool superadmin;
     User();
     std::string serialize();
@@ -43,6 +43,7 @@ struct User {
 class UserBase {
 public:
     static int init(const char *repository, bool checkProject = true);
+    static void setLocalUserInterface();
     static int store(const std::string &repository);
     static int initUsersFile(const char *repository);
     static User* getUser(const std::string &username);
@@ -53,6 +54,7 @@ public:
     static int updateUser(const std::string &username, User newConfig);
     static int updatePassword(const std::string &username, const std::string &password);
     static std::list<User> getAllUsers();
+    static inline bool isLocalUserInterface() {return localUserInterface;}
 
 private:
     static UserBase UserDb;
@@ -61,6 +63,9 @@ private:
     static std::string Repository;
     static void addUserInArray(User u);
 
+    // localUserInterface enables anonymous read access
+    // used for browsing a local clone of a smit repository
+    static bool localUserInterface;
 };
 
 struct Session {

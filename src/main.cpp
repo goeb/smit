@@ -395,6 +395,7 @@ int serveRepository(int argc, const char **args)
     //const char *lang = "en";
     const char *repo = 0;
     const char *certificatePemFile = 0;
+    bool userInterface = false;
     while (i<argc) {
         const char *arg = args[i]; i++;
         if (0 == strcmp(arg, "--listen-port")) {
@@ -431,10 +432,12 @@ int serveRepository(int argc, const char **args)
         LOG_ERROR("Cannot serve repository '%s'. Aborting.", repo);
         exit(1);
     }
-    r = UserBase::init(repo);
-    if (r < 0) {
-        LOG_ERROR("Cannot loads users of repository '%s'. Aborting.", repo);
-        exit(1);
+    if (!UserBase::isLocalUserInterface()) {
+        r = UserBase::init(repo);
+        if (r < 0) {
+            LOG_ERROR("Cannot loads users of repository '%s'. Aborting.", repo);
+            exit(1);
+        }
     }
 
     struct mg_context *ctx;
@@ -481,6 +484,8 @@ int cmdUi(int argc, const char **args)
         else usage();
     }
     if (!repo) repo = ".";
+
+    UserBase::setLocalUserInterface();
 
 #ifndef _WIN32
     signal(SIGCHLD, SIG_IGN); // ignore return values from child processes

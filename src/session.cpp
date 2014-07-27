@@ -27,6 +27,7 @@
 SessionBase SessionBase::SessionDb;
 UserBase UserBase::UserDb;
 std::string UserBase::Repository;
+bool UserBase::localUserInterface = false;
 
 const char *FILE_USERS = "users";
 
@@ -190,6 +191,11 @@ int UserBase::init(const char *path, bool checkProject)
     return 0;
 }
 
+void UserBase::setLocalUserInterface()
+{
+    localUserInterface = true;
+}
+
 int UserBase::initUsersFile(const char *repository)
 {
     std::string path = repository;
@@ -260,9 +266,11 @@ int UserBase::addUser(User newUser)
   */
 std::set<std::string> UserBase::getUsersOfProject(const std::string &project)
 {
+    std::set<std::string> result;
+    if (localUserInterface) return result;
+
     ScopeLocker(UserDb.locker, LOCK_READ_ONLY);
 
-    std::set<std::string> result;
     std::map<std::string, User*>::const_iterator u;
     FOREACH(u, UserDb.configuredUsers) {
         User *user = u->second;
@@ -276,9 +284,11 @@ std::set<std::string> UserBase::getUsersOfProject(const std::string &project)
   */
 std::map<std::string, Role> UserBase::getUsersRolesOfProject(const std::string &project)
 {
+    std::map<std::string, Role> result;
+    if (localUserInterface) return result;
+
     ScopeLocker(UserDb.locker, LOCK_READ_ONLY);
 
-    std::map<std::string, Role> result;
     std::map<std::string, User*>::const_iterator u;
     FOREACH(u, UserDb.configuredUsers) {
         enum Role r = u->second->getRole(project);
@@ -344,6 +354,9 @@ int UserBase::updatePassword(const std::string &username, const std::string &pas
 std::list<User> UserBase::getAllUsers()
 {
     std::list<User> result;
+
+    if (localUserInterface) return result;
+
     ScopeLocker(UserDb.locker, LOCK_READ_ONLY);
     std::map<std::string, User*>::const_iterator u;
     FOREACH(u, UserDb.configuredUsers) {
@@ -361,6 +374,8 @@ std::map<std::string, User*> configuredUsers;
   */
 enum Role User::getRole(const std::string &project)
 {
+    if (UserBase::isLocalUserInterface()) return ROLE_RO;
+
     std::map<std::string, enum Role>::iterator r = rolesOnProjects.find(project);
     if (r == rolesOnProjects.end()) return ROLE_NONE;
     else return r->second;
@@ -385,6 +400,8 @@ std::list<std::pair<std::string, std::string> > User::getProjects()
   */
 std::string SessionBase::requestSession(const std::string &username, const std::string &passwd)
 {
+    if (UserBase::isLocalUserInterface()) return "local";
+
     LOG_DEBUG("Requesting session: username=%s, password=%s", username.c_str(), passwd.c_str());
     std::string sessid = ""; // empty session id indicates that no session is on
     User *u = UserBase::getUser(username);
@@ -411,6 +428,12 @@ std::string SessionBase::requestSession(const std::string &username, const std::
   */
 User SessionBase::getLoggedInUser(const std::string &sessionId)
 {
+    if (UserBase::isLocalUserInterface()) {
+        User u;
+        u.username = "local user";
+        return u;
+    }
+
     LOG_DEBUG("getLoggedInUser(%s)...", sessionId.c_str());
     ScopeLocker(SessionDb.locker, LOCK_READ_ONLY);
 
