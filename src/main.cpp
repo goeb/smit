@@ -33,6 +33,8 @@
 #include "identifiers.h"
 #include "filesystem.h"
 #include "clone.h"
+#include <signal.h>
+
 
 void usage()
 {
@@ -45,7 +47,7 @@ void usage()
            "  project     List, create, or update a smit project\n"
            "  serve       Start a smit web server\n"
            "  user        List, create, or update a smit user\n"
-           "  ui          [not implemented] Browse a local smit repository (read-only)\n"
+           "  ui          Browse a local smit repository (read-only)\n"
            "  version     Print the version\n"
            "  help\n"
            "\n"
@@ -128,6 +130,20 @@ int helpServe()
     return 0;
 }
 
+int helpUi()
+{
+    printf("Usage: smit ui [<repository>] [options]\n"
+           "\n"
+           "  Start a smit local server (bound to 127.0.0.1), and a web browser.\n"
+           "\n"
+           "  <repository>      select a repository to serve (by default . is used)\n"
+           "\n"
+           "Options:\n"
+           "  --listen-port <port>   set TCP listening port (default is 8090)\n"
+           );
+    return 0;
+
+}
 
 int initRepository(const char *directory)
 {
@@ -368,6 +384,8 @@ int cmdUser(int argc, const char **args)
 
     return 0;
 }
+
+
 int serveRepository(int argc, const char **args)
 {
     LOG_INFO("Starting Smit v" VERSION);
@@ -403,10 +421,6 @@ int serveRepository(int argc, const char **args)
             usage();
         }
     }
-
-    // TODO set language
-
-
 
     if (!repo) repo = ".";
     if (certificatePemFile) listenPort += 's'; // force HTTPS listening
@@ -446,6 +460,70 @@ int serveRepository(int argc, const char **args)
 
     return 0;
 }
+
+int cmdUi(int argc, const char **args)
+{
+    int i = 0;
+    std::string listenPort = "127.0.0.1:8090";
+    //const char *lang = "en";
+    const char *repo = 0;
+
+    while (i<argc) {
+        const char *arg = args[i]; i++;
+        if (0 == strcmp(arg, "--listen-port")) {
+            if (i<argc) {
+                listenPort = "127.0.0.1:";
+                listenPort += args[i];
+                i++;
+            } else usage();
+
+        } else if (!repo) repo = arg;
+        else usage();
+    }
+    if (!repo) repo = ".";
+
+#ifndef _WIN32
+    signal(SIGCHLD, SIG_IGN); // ignore return values from child processes
+    pid_t p = fork();
+    if (p) {
+        // in parent
+        // start the local server
+
+        const char *serverArguments[3];
+        serverArguments[0] = "--listen-port";
+        serverArguments[1] = listenPort.c_str();
+        serverArguments[2] = repo;
+        int r = serveRepository(3, serverArguments);
+        return r;
+
+    } else {
+        // start a web browser
+        std::string cmd = "http://" + listenPort + "/";
+        // try xdg-open
+        int r = system("xdg-open --version");
+        if (r != 0) cmd = "xdg-open " + cmd; // use xdg-open
+        else {
+            // try gnome-open
+            int r = system("gnome-open --version");
+            if (r != 0) cmd = "gnome-open " + cmd; // use gnome-open
+            else {
+                // try firefox
+                int r = system("firefox --version");
+                if (r != 0) cmd = "firefox " + cmd; // use firefox
+                else cmd = "chromium-browser " + cmd; // use chromium-browser
+            }
+        }
+
+        LOG_INFO("Running: %s...", cmd.c_str());
+        r = system(cmd.c_str());
+        return r;
+    }
+#else
+    LOG_ERROR("Not supported on this OS");
+    return 1;
+#endif
+}
+
 int showVersion()
 {
     printf("Small Issue Tracker v%s\n"
@@ -493,6 +571,9 @@ int main(int argc, const char **argv)
         } else if (0 == strcmp(command, "clone")) {
             return cmdClone(argc-2, argv+2);
 
+        } else if (0 == strcmp(command, "ui")) {
+            return cmdUi(argc-2, argv+2);
+
         } else if (0 == strcmp(command, "help")) {
             if (i < argc) {
                 const char *help = argv[i];
@@ -500,6 +581,7 @@ int main(int argc, const char **argv)
                 else if (0 == strcmp(help, "project")) return helpProject();
                 else if (0 == strcmp(help, "user")) return helpUser();
                 else if (0 == strcmp(help, "serve")) return helpServe();
+                else if (0 == strcmp(help, "ui")) return helpUi();
                 else if (0 == strcmp(help, "clone")) return helpClone();
                 else {
                     printf("No help for '%s'\n", help);
