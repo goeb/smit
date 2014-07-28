@@ -9,3 +9,7 @@ My cross compilation command for Windows:
 
     make
 
+
+Curl
+
+    ./configure --host=i586-mingw32msvc --prefix=/home/fred/win32libs/curl-7.37.0

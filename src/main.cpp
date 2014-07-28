@@ -386,7 +386,7 @@ int cmdUser(int argc, const char **args)
 }
 
 
-int serveRepository(int argc, const char **args)
+struct mg_context *serveRepository(int argc, const char **args)
 {
     LOG_INFO("Starting Smit v" VERSION);
 
@@ -395,7 +395,6 @@ int serveRepository(int argc, const char **args)
     //const char *lang = "en";
     const char *repo = 0;
     const char *certificatePemFile = 0;
-    bool userInterface = false;
     while (i<argc) {
         const char *arg = args[i]; i++;
         if (0 == strcmp(arg, "--listen-port")) {
@@ -441,7 +440,6 @@ int serveRepository(int argc, const char **args)
     }
 
     struct mg_context *ctx;
-
     struct mg_callbacks callbacks;
 
     memset(&callbacks, 0, sizeof(callbacks));
@@ -457,11 +455,18 @@ int serveRepository(int argc, const char **args)
     if (certificatePemFile) ctx = mg_start(&callbacks, NULL, optionsWithSslCert);
     else ctx = mg_start(&callbacks, NULL, optionsWoSslCert);
 
-    while (1) sleep(1); // block until ctrl-C
-    getchar();  // Wait until user hits "enter"
-    mg_stop(ctx);
+    if (!ctx) {
+        LOG_ERROR("Cannot start http server. Aborting.");
+        return 0;
+    }
 
-    return 0;
+    if (!UserBase::isLocalUserInterface()) {
+        while (1) sleep(1); // block until ctrl-C
+        getchar();  // Wait until user hits "enter"
+        mg_stop(ctx);
+    }
+    // else, we return, and the cmdUi() will launch the web browser
+    return ctx;
 }
 
 int cmdUi(int argc, const char **args)
@@ -487,46 +492,53 @@ int cmdUi(int argc, const char **args)
 
     UserBase::setLocalUserInterface();
 
+    // start the local server
+
+    const char *serverArguments[3];
+    serverArguments[0] = "--listen-port";
+    serverArguments[1] = listenPort.c_str();
+    serverArguments[2] = repo;
+    struct mg_context *ctx = serveRepository(3, serverArguments);
+
+    // start a web browser
+    std::string url = "http://" + listenPort + "/";
+    std::string cmd;
 #ifndef _WIN32
-    signal(SIGCHLD, SIG_IGN); // ignore return values from child processes
+    // try xdg-open
+    int r = system("xdg-open --version");
+    if (r != 0) cmd = "xdg-open"; // use xdg-open
+    else {
+        // try gnome-open
+        int r = system("gnome-open --version");
+        if (r != 0) cmd = "gnome-open"; // use gnome-open
+        else {
+            // try firefox
+            int r = system("firefox --version");
+            if (r != 0) cmd = "firefox"; // use firefox
+            else cmd = "chromium-browser"; // use chromium-browser
+        }
+    }
     pid_t p = fork();
     if (p) {
-        // in parent
-        // start the local server
-
-        const char *serverArguments[3];
-        serverArguments[0] = "--listen-port";
-        serverArguments[1] = listenPort.c_str();
-        serverArguments[2] = repo;
-        int r = serveRepository(3, serverArguments);
-        return r;
-
+        // in parent, do nothing
     } else {
-        // start a web browser
-        std::string cmd = "http://" + listenPort + "/";
-        // try xdg-open
-        int r = system("xdg-open --version");
-        if (r != 0) cmd = "xdg-open " + cmd; // use xdg-open
-        else {
-            // try gnome-open
-            int r = system("gnome-open --version");
-            if (r != 0) cmd = "gnome-open " + cmd; // use gnome-open
-            else {
-                // try firefox
-                int r = system("firefox --version");
-                if (r != 0) cmd = "firefox " + cmd; // use firefox
-                else cmd = "chromium-browser " + cmd; // use chromium-browser
-            }
-        }
-
+        // close listening socket ?? TODO
+        //mg_stop(ctx);
         LOG_INFO("Running: %s...", cmd.c_str());
-        r = system(cmd.c_str());
-        return r;
+        int r = execlp(cmd.c_str(), url.c_str(), (char *)NULL);
+        printf("execl: r=%d, %s\n", r, strerror(errno));
     }
 #else
-    LOG_ERROR("Not supported on this OS");
-    return 1;
+    cmd = "start \"\" \"" + cmd + "\"";
+    LOG_INFO("Running: %s...", cmd.c_str());
+    system(cmd.c_str());
 #endif
+
+    printf("Hit Ctrl-C to stop the local server\n");
+
+    while (1) sleep(1); // block until ctrl-C
+
+    return r;
 }
 
 int showVersion()
@@ -565,7 +577,8 @@ int main(int argc, const char **argv)
             return showVersion();
 
         } else if (0 == strcmp(command, "serve")) {
-            return serveRepository(argc-2, argv+2);
+            serveRepository(argc-2, argv+2);
+            return 1;
 
         } else if (0 == strcmp(command, "project")) {
             return cmdProject(argc-2, argv+2);
