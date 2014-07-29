@@ -598,6 +598,8 @@ int cmdUi(int argc, const char **args)
         // in child
         close(pipefd[1]);
         // wait for local server to be ready
+        // in case the local server has to load a huge local smit repository,
+        // (tens of thousands of entries) then 20 seconds may not be enough. TODO.
         int i = 40; // wait 20 seconds max
         while (i > 0) {
             char buf[1];
