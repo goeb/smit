@@ -22,6 +22,9 @@
 #include <dirent.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 #include "mongoose.h"
 #include "httpdHandlers.h"
@@ -385,6 +388,17 @@ int cmdUser(int argc, const char **args)
     return 0;
 }
 
+void addParam(const char **table, size_t size, const char *param)
+{
+    size_t i = 0;
+    for (i=0; i<size; i++) {
+        if (table[i] == 0) {
+            table[i] = param;
+            return;
+        }
+    }
+    LOG_ERROR("Cannot add parameter %s: table full", param);
+}
 
 struct mg_context *serveRepository(int argc, const char **args)
 {
@@ -448,12 +462,26 @@ struct mg_context *serveRepository(int argc, const char **args)
 
     LOG_INFO("Starting http server on port %s", listenPort.c_str());
 
-    // the reason for this ugly code is that const char *options[] is not dynamic...
-    const char *optionsWithSslCert[] = {"listening_ports", listenPort.c_str(), "document_root", repo, "ssl_certificate", certificatePemFile, NULL};
-    const char *optionsWoSslCert[] = {"listening_ports", listenPort.c_str(), "document_root", repo, NULL};
+    const int PARAMS_SIZE = 30;
+    const char *params[PARAMS_SIZE];
+    memset(params, 0, PARAMS_SIZE);
 
-    if (certificatePemFile) ctx = mg_start(&callbacks, NULL, optionsWithSslCert);
-    else ctx = mg_start(&callbacks, NULL, optionsWoSslCert);
+    addParam(params, PARAMS_SIZE, "listening_ports");
+    addParam(params, PARAMS_SIZE, listenPort.c_str());
+    addParam(params, PARAMS_SIZE, "document_root");
+    addParam(params, PARAMS_SIZE, repo);
+
+    if (certificatePemFile) {
+        addParam(params, PARAMS_SIZE, "ssl_certificate");
+        addParam(params, PARAMS_SIZE, certificatePemFile);
+    }
+
+    if (UserBase::isLocalUserInterface()) {
+        addParam(params, PARAMS_SIZE, "num_threads");
+        addParam(params, PARAMS_SIZE, "1");
+    }
+
+    ctx = mg_start(&callbacks, NULL, params);
 
     if (!ctx) {
         LOG_ERROR("Cannot start http server. Aborting.");
@@ -468,7 +496,28 @@ struct mg_context *serveRepository(int argc, const char **args)
     // else, we return, and the cmdUi() will launch the web browser
     return ctx;
 }
-
+#ifndef _WIN32
+void daemonize()
+{
+    int i;
+    if (getppid() == 1) return; // already a daemon
+    i = fork();
+    if (i < 0) exit(1); // fork error
+    if (i > 0) exit(0); // parent exits
+    /* child (daemon) continues */
+    setsid(); /* obtain a new process group */
+    for (i = getdtablesize();i >= 0; i--) close(i); // close all descriptors
+    i = open("/dev/null", O_RDWR);
+    dup(i); dup(i); /* handle standart I/O */
+    //int lfp=open(LOCK_FILE,O_RDWR|O_CREAT,0640);
+    //if (lfp<0) exit(1); /* can not open */
+    //if (lockf(lfp,F_TLOCK,0)<0) exit(0); /* can not lock */
+    /* first instance continues */
+    //char str[10];
+    //sprintf(str,"%d\n",getpid());
+    //write(lfp,str,strlen(str)); /* record pid to lockfile */
+}
+#endif
 int cmdUi(int argc, const char **args)
 {
     int i = 0;
@@ -498,7 +547,6 @@ int cmdUi(int argc, const char **args)
     serverArguments[0] = "--listen-port";
     serverArguments[1] = listenPort.c_str();
     serverArguments[2] = repo;
-    struct mg_context *ctx = serveRepository(3, serverArguments);
 
     // start a web browser
     std::string url = "http://" + listenPort + "/";
@@ -518,18 +566,60 @@ int cmdUi(int argc, const char **args)
             else cmd = "chromium-browser"; // use chromium-browser
         }
     }
+    int pipefd[2]; // used to synchronize web client with local server
+    r = pipe(pipefd);
+    if (r < 0) {
+        fprintf(stderr, "Cannot pipe: %s\n", strerror(errno));
+        exit(1);
+    }
     pid_t p = fork();
+    if (p < 0) {
+        fprintf(stderr, "Cannot fork: %s\n", strerror(errno));
+        exit(1);
+    }
+
     if (p) {
-        // in parent, do nothing
+        // in parent, start local server
+        close(pipefd[0]);
+        struct mg_context *ctx = serveRepository(3, serverArguments);
+        if (!ctx) {
+            fprintf(stderr, "Cannot start local server\n");
+            exit(1);
+        }
+        // indicate that the serve is ready
+        ssize_t n = write(pipefd[1], "R", 1);
+        if (n != 1) {
+            fprintf(stderr, "Cannot write to pipe: %s\n", strerror(errno));
+            exit(1);
+        }
+        close(pipefd[1]);
+
     } else {
-        // close listening socket ?? TODO
-        //mg_stop(ctx);
-        LOG_INFO("Running: %s...", cmd.c_str());
-        int r = execlp(cmd.c_str(), url.c_str(), (char *)NULL);
-        printf("execl: r=%d, %s\n", r, strerror(errno));
+        // in child
+        close(pipefd[1]);
+        // wait for local server to be ready
+        int i = 40; // wait 20 seconds max
+        while (i > 0) {
+            char buf[1];
+            ssize_t n = read(pipefd[0], buf, 1);
+            if (n == 1) break; // got it
+            i--;
+            if (i <= 0) {
+                fprintf(stderr, "Child failed to get the ready indication\n");
+                exit(1);
+            }
+            usleep(500*1000); // sleep 0.5 s
+        }
+
+        daemonize();
+        int r = execlp(cmd.c_str(), cmd.c_str(), url.c_str(), (char *)NULL);
+        //printf("execl: r=%d, %s\n", r, strerror(errno));
     }
 #else
-    cmd = "start \"\" \"" + cmd + "\"";
+    // start local server
+    struct mg_context *ctx = serveRepository(3, serverArguments);
+
+    cmd = "start \"\" \"" + url + "\"";
     LOG_INFO("Running: %s...", cmd.c_str());
     system(cmd.c_str());
 #endif
