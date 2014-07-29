@@ -551,9 +551,10 @@ int cmdUi(int argc, const char **args)
     // start a web browser
     std::string url = "http://" + listenPort + "/";
     std::string cmd;
+    int r = 0;
 #ifndef _WIN32
     // try xdg-open
-    int r = system("xdg-open --version");
+    r = system("xdg-open --version");
     if (r != 0) cmd = "xdg-open"; // use xdg-open
     else {
         // try gnome-open
