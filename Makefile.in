@@ -46,7 +46,8 @@ target_triplet = @target@
 @WINDOWS_TRUE@am__append_8 = -static -static-libgcc -Dopenssl_EXPORTS
 @WINDOWS_FALSE@am__append_9 = -pthread
 bin_PROGRAMS = smit$(EXEEXT)
-@WINDOWS_FALSE@am__append_10 = -ldl
+@WINDOWS_TRUE@am__append_10 = -lws2_32 -lgdi32
+@WINDOWS_FALSE@am__append_11 = -ldl
 noinst_PROGRAMS = smparser$(EXEEXT) T_parseConfig$(EXEEXT) \
 	T_stringTools$(EXEEXT) get_random_value$(EXEEXT)
 check_PROGRAMS = T_parseConfig$(EXEEXT) T_stringTools$(EXEEXT) \
@@ -97,7 +98,7 @@ am_smit_OBJECTS = mongoose/smit-mongoose.$(OBJEXT) \
 nodist_smit_OBJECTS = smit-embedcpio.$(OBJEXT)
 smit_OBJECTS = $(am_smit_OBJECTS) $(nodist_smit_OBJECTS)
 am__DEPENDENCIES_1 =
-smit_DEPENDENCIES = $(am__DEPENDENCIES_1)
+smit_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_smparser_OBJECTS = src/smparser-parseConfig.$(OBJEXT)
 smparser_OBJECTS = $(am_smparser_OBJECTS)
 smparser_DEPENDENCIES =
@@ -369,7 +370,8 @@ CLEANFILES = embedcpio.c embedcpio.h convertToC
 X = embedded_data
 SM_VERSION = $(X)/sm/version
 smit_CPPFLAGS = -I @srcdir@/mongoose @OPENSSL_CFLAGS@ @CURL_CFLAGS@
-smit_LDADD = @OPENSSL_LIBS@ @CURL_LIBS@ $(am__append_10)
+smit_LDADD = @OPENSSL_LIBS@ @CURL_LIBS@ $(am__append_10) \
+	$(am__append_11)
 
 # specific subdirs
 SUBDIRS = test

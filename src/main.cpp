@@ -25,6 +25,8 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <iostream>
+
 
 #include "mongoose.h"
 #include "httpdHandlers.h"
@@ -618,18 +620,29 @@ int cmdUi(int argc, const char **args)
         int r = execlp(cmd.c_str(), cmd.c_str(), url.c_str(), (char *)NULL);
         //printf("execl: r=%d, %s\n", r, strerror(errno));
     }
-#else
+    printf("Hit Ctrl-C to stop the local server\n");
+
+    while (1) sleep(1); // block until ctrl-C
+
+#else // _WIN32
     // start local server
     struct mg_context *ctx = serveRepository(3, serverArguments);
 
     cmd = "start \"\" \"" + url + "\"";
     LOG_INFO("Running: %s...", cmd.c_str());
     system(cmd.c_str());
+
+    printf("Enter 'exit' (or 'e') to stop the local server\n");
+
+    while (1) {
+        std::string userInput;
+        std::cin >> userInput;
+        if (userInput[0] == 'e' || userInput[0] == 'E') break;
+        sleep(1); // block until ctrl-C
+    }
+
 #endif
 
-    printf("Hit Ctrl-C to stop the local server\n");
-
-    while (1) sleep(1); // block until ctrl-C
 
     return r;
 }

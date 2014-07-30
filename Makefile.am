@@ -78,6 +78,7 @@ smit_CPPFLAGS = -I @srcdir@/mongoose @OPENSSL_CFLAGS@ @CURL_CFLAGS@
 smit_LDADD = @OPENSSL_LIBS@ @CURL_LIBS@
 
 if WINDOWS
+    smit_LDADD += -lws2_32 -lgdi32
 else
     smit_LDADD += -ldl
 endif
