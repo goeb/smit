@@ -1092,12 +1092,13 @@ void httpGetListOfIssues(struct mg_connection *conn, Project &p, User u)
     std::string defaultView = getFirstParamFromQueryString(q, "defaultView");
     if (defaultView == "1") {
         // redirect
+        std::string redirectUrl = "/" + p.getUrlName() + "/issues/";
         PredefinedView pv = p.getDefaultView();
         if (!pv.name.empty()) {
-            std::string redirectUrl = "/" + p.getUrlName() + "/issues/?" + pv.generateQueryString();
-            sendHttpRedirect(conn, redirectUrl.c_str(), 0);
-            return;
+            redirectUrl += "?" + pv.generateQueryString();
         }
+        sendHttpRedirect(conn, redirectUrl.c_str(), 0);
+        return;
     }
 
     // should use loadViewFromQueryString (code maintainability improvement)
