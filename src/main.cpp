@@ -557,16 +557,16 @@ int cmdUi(int argc, const char **args)
 #ifndef _WIN32
     // try xdg-open
     r = system("xdg-open --version");
-    if (r != 0) cmd = "xdg-open"; // use xdg-open
+    if (r == 0) cmd = "xdg-open"; // use xdg-open
     else {
         // try gnome-open
         int r = system("gnome-open --version");
-        if (r != 0) cmd = "gnome-open"; // use gnome-open
+        if (r == 0) cmd = "gnome-open"; // use gnome-open
         else {
             // try firefox
             int r = system("firefox --version");
-            if (r != 0) cmd = "firefox"; // use firefox
-            else cmd = "chromium-browser"; // use chromium-browser
+            if (r == 0) cmd = "firefox"; // use firefox
+            else cmd = "chromium"; // use chromium
         }
     }
     int pipefd[2]; // used to synchronize web client with local server
@@ -616,9 +616,10 @@ int cmdUi(int argc, const char **args)
             usleep(500*1000); // sleep 0.5 s
         }
 
+        //printf("Running: %s %s\n", cmd.c_str(), url.c_str());
         daemonize();
         int r = execlp(cmd.c_str(), cmd.c_str(), url.c_str(), (char *)NULL);
-        //printf("execl: r=%d, %s\n", r, strerror(errno));
+        printf("execl: r=%d, %s\n", r, strerror(errno));
     }
     printf("Hit Ctrl-C to stop the local server\n");
 
