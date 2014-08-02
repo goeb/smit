@@ -184,7 +184,7 @@ int UserBase::init(const char *path, bool checkProject)
                 } else if (token == "superadmin") u.superadmin = true;
             }
             // add user in database
-            LOG_DEBUG("Loaded user: %s on %zu projects", u.username.c_str(), u.rolesOnProjects.size());
+            LOG_DEBUG("Loaded user: %s on %lu projects", u.username.c_str(), L(u.rolesOnProjects.size()));
             UserBase::addUserInArray(u);
         }
     }

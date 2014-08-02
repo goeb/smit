@@ -241,7 +241,7 @@ int cmdProject(int argc, const char **args)
         FOREACH(p, Database::Db.projects) {
             printf("%s: %d issues\n", p->first.c_str(), p->second->getNumIssues());
         }
-        printf("%zu project(s)\n", Database::Db.projects.size());
+        printf("%lu project(s)\n", L(Database::Db.projects.size()));
         return 0;
     }
 

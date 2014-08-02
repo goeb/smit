@@ -964,8 +964,8 @@ void RHtml::printIssueListFullContents(const ContextParameters &ctx, std::vector
 
     printFilters(ctx);
     // number of issues
-    mg_printf(conn, "<div class=\"sm_issues_count\">%s: <span class=\"sm_issues_count\">%zu</span></div>\n",
-              _("Issues found"), issueList.size());
+    mg_printf(conn, "<div class=\"sm_issues_count\">%s: <span class=\"sm_issues_count\">%lu</span></div>\n",
+              _("Issues found"), L(issueList.size()));
 
 
     std::vector<struct Issue*>::iterator i;
@@ -1027,8 +1027,8 @@ void RHtml::printIssueList(const ContextParameters &ctx, const std::vector<struc
     printFilters(ctx);
 
     // number of issues
-    mg_printf(conn, "<div class=\"sm_issues_count\">%s: <span class=\"sm_issues_count\">%zu</span></div>\n",
-              _("Issues found"), issueList.size());
+    mg_printf(conn, "<div class=\"sm_issues_count\">%s: <span class=\"sm_issues_count\">%lu</span></div>\n",
+              _("Issues found"), L(issueList.size()));
 
     std::string group = getPropertyForGrouping(ctx.projectConfig, ctx.sort);
     std::string currentGroup;
@@ -1061,8 +1061,8 @@ void RHtml::printIssueList(const ContextParameters &ctx, const std::vector<struc
                 // insert group bar if relevant
             mg_printf(conn, "<tr class=\"sm_issues_group\">\n");
             currentGroup = getProperty((*i)->properties, group);
-            mg_printf(conn, "<td class=\"sm_group\" colspan=\"%zu\"><span class=\"sm_issues_group_label\">%s: </span>",
-                      colspec.size(), htmlEscape(ctx.projectConfig.getLabelOfProperty(group)).c_str());
+            mg_printf(conn, "<td class=\"sm_group\" colspan=\"%lu\"><span class=\"sm_issues_group_label\">%s: </span>",
+                      L(colspec.size()), htmlEscape(ctx.projectConfig.getLabelOfProperty(group)).c_str());
             mg_printf(conn, "<span class=\"sm_issues_group\">%s</span></td>\n", htmlEscape(currentGroup).c_str());
             mg_printf(conn, "</tr>\n");
         }

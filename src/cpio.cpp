@@ -25,6 +25,7 @@
 #include "cpio.h"
 #include "logging.h"
 #include "mg_win32.h"
+#include "stringTools.h"
 
 #include "embedcpio.h" // generated
 
@@ -51,7 +52,7 @@ int cpioGetNextFileHeader(const char *&offset, const char *end, std::string &fil
     LOG_FUNC();
     struct header_old_cpio header;
     size_t availableSize = end-offset;
-    LOG_DEBUG("offset=%p, end=%p, availableSize=%zd", offset, end, availableSize);
+    LOG_DEBUG("offset=%p, end=%p, availableSize=%ld", offset, end, L(availableSize));
     if (sizeof(header) > availableSize) return -2;
     memcpy(&header, (void*)offset, sizeof(header));
     offset += sizeof(header);
@@ -96,7 +97,7 @@ int cpioGetNextFileHeader(const char *&offset, const char *end, std::string &fil
 
     availableSize = end-offset;
     if (header.c_namesize > availableSize)  {
-        LOG_ERROR("cpioExtract: short read %zu/%u", availableSize, header.c_namesize);
+        LOG_ERROR("cpioExtract: short read %lu/%u", L(availableSize), header.c_namesize);
         return -9;
     }
     memcpy(filepathBuf, (void*)offset, header.c_namesize);
@@ -119,7 +120,7 @@ int cpioGetFile(const char *file, const char *&cpioOffset)
     FileType ftype;
     uint32_t filesize;
     const char *cpioEnd = em_binary_data_embedcpio + em_binary_size_embedcpio;
-    LOG_DEBUG("em_binary_size_embedcpio=%zu", em_binary_size_embedcpio);
+    LOG_DEBUG("em_binary_size_embedcpio=%lu", L(em_binary_size_embedcpio));
     cpioOffset = em_binary_data_embedcpio;
     int r;
     while ( (r = cpioGetNextFileHeader(cpioOffset, cpioEnd, filepath, ftype, filesize)) >= 0 ) {
@@ -264,8 +265,8 @@ int cpioExtractTree(const char *cpioStart, size_t cpioSize, const char *src, con
                 return -1;
 
             } else if ((size_t)written != nToRead) {
-                LOG_ERROR("cpioExtract: short write to file '%s': n=%zu, written=%zd",
-                          destinationFile.c_str(), nToRead, written);
+                LOG_ERROR("cpioExtract: short write to file '%s': n=%lu, written=%ld",
+                          destinationFile.c_str(), L(nToRead), L(written));
                 close(extractedFile);
                 return -1;
             }

@@ -1,12 +1,12 @@
 #include <iostream>
 #include <string>
+#include <stdio.h>
 
 #ifdef _WIN32
   #include <windows.h>
 #else
   #include <termios.h>
   #include <unistd.h>
-  #include <stdio.h>
 #endif
 
 #include "console.h"
@@ -26,7 +26,7 @@ int getch()
     BOOL r = ReadConsoleA( hIn, &c, 1, &dwRead, NULL);
 
 	if (!r) {
-		printf("getch error: %d\n", GetLastError());
+        printf("getch error: %d\n", (int)GetLastError());
 		exit(1);
 	}
     return c;

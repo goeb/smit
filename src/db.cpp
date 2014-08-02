@@ -1152,7 +1152,7 @@ void Project::loadPredefinedViews()
         config.predefinedViews = PredefinedView::parsePredefinedViews(lines);
     } // else error of empty file
 
-    LOG_DEBUG("predefined views loaded: %zd", config.predefinedViews.size());
+    LOG_DEBUG("predefined views loaded: %ld", L(config.predefinedViews.size()));
 }
 
 /** Look for tags: files <project>/tags/<issue>/<entry>
@@ -1611,7 +1611,7 @@ void parseAssociation(std::list<std::string> &values)
     // we want to convert this to a list : ["1", "2", "3"]
     // and store it as a multi-valued property
     if (values.size() != 1) {
-        LOG_ERROR("Unexpected association with %zd values", values.size());
+        LOG_ERROR("Unexpected association with %ld values", L(values.size()));
         return;
     }
 

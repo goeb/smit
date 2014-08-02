@@ -29,5 +29,11 @@ std::string getBasename(const std::string &path);
 std::string getFirstParamFromQueryString(const std::string & queryString, const char *param);
 std::list<std::string> getParamListFromQueryString(const std::string & queryString, const char *param);
 
+/** Convert size_t and ssize_t types to unsigned long and long int
+  * The purpose is to workaround the %zd and %zu formats that are not
+  * supported in Windows XP.
+  */
+inline unsigned long int L(size_t x) { return (unsigned long int)x; }
+inline long int L(ssize_t x) { return (long int)x; }
 
 #endif

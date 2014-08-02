@@ -4,6 +4,7 @@
 
 #include "utest.h"
 #include "parseConfig.h"
+#include "stringTools.h"
 
 // Expected result:
 // line:  [single] 
@@ -36,7 +37,7 @@ int main()
     for (i=tokens.begin(); i!=tokens.end(); i++) {
         std::list<std::string> line = *i;
         std::list<std::string>::iterator tok;
-        printf("line (%zu): ", line.size());
+        printf("line (%lu): ", L(line.size()));
         for (tok=line.begin(); tok!= line.end(); tok++) {
             printf(" [%s] ", tok->c_str());
         }
