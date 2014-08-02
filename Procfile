@@ -1,1 +1,1 @@
-web: SMIT_DEBUG=DEBUG ./smit serve --listen-port $PORT demo
+web: ./smit serve --listen-port $PORT demo -d

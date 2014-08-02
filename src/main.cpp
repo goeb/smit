@@ -222,7 +222,7 @@ int cmdProject(int argc, const char **args)
     }
 
     // set log level to hide INFO logs
-    putenv("SMIT_DEBUG=ERROR");
+    setLoggingLevel(LL_ERROR);
 
     // Load all projects
     int r = dbLoad(repo);
@@ -425,6 +425,9 @@ struct mg_context *serveRepository(int argc, const char **args)
                 i++;
             } else usage();
 #endif
+        } else if (0 == strcmp(arg, "-d")) {
+            printf("-d\n");
+            setLoggingLevel(LL_DEBUG);
         } else if (0 == strcmp(arg, "--ssl-cert")) {
             if (i<argc) {
                 certificatePemFile = args[i];

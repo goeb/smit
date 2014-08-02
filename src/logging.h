@@ -20,6 +20,9 @@ enum LogLevel {
     LL_DEBUG
 };
 
+extern LogLevel LoggingLevel;
+inline void setLoggingLevel(LogLevel level) { LoggingLevel = level; }
+
 bool doPrint(enum LogLevel msgLevel);
 
 #define LOG_ERROR(...) do { if (doPrint(LL_ERROR)) { LOG("ERROR", __VA_ARGS__); } } while (0)
