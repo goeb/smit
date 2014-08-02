@@ -1,9 +1,10 @@
 
-v2.0.0
+v2.0.0, 2 August 2014
 
-    New features:
-    - smit clone
+    - smit clone and smit ui (read-only)
     - salted passwords
+    - fix javascript injections
+    - Windows installer
 
 v1.7.1 
 
