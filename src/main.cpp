@@ -426,7 +426,6 @@ struct mg_context *serveRepository(int argc, const char **args)
             } else usage();
 #endif
         } else if (0 == strcmp(arg, "-d")) {
-            printf("-d\n");
             setLoggingLevel(LL_DEBUG);
         } else if (0 == strcmp(arg, "--ssl-cert")) {
             if (i<argc) {
