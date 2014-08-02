@@ -468,7 +468,8 @@ struct mg_context *serveRepository(int argc, const char **args)
 
     const int PARAMS_SIZE = 30;
     const char *params[PARAMS_SIZE];
-    memset(params, 0, PARAMS_SIZE);
+    for (i=0; i<PARAMS_SIZE; i++) params[i] = 0;
+    //memset(params, 0, PARAMS_SIZE);
 
     addParam(params, PARAMS_SIZE, "listening_ports");
     addParam(params, PARAMS_SIZE, listenPort.c_str());
@@ -489,6 +490,7 @@ struct mg_context *serveRepository(int argc, const char **args)
 
     if (!ctx) {
         LOG_ERROR("Cannot start http server. Aborting.");
+        for (i=0; i<PARAMS_SIZE; i++) printf("%s\n", params[i]);
         return 0;
     }
 
