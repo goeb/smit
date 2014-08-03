@@ -49,66 +49,16 @@ Usage: smit <command> [<args>]
 
 The smit commands are:
 
+  clone       Clone a smit repository
   init        Initialise a smit repository
   project     List, create, or update a smit project
-  user        List, create, or update a smit user
   serve       Start a smit web server
+  user        List, create, or update a smit user
+  ui          Browse a local smit repository (read-only)
   version     Print the version
   help
 
 See 'smit help <command>' for more information on a specific command.
-```
-
-### init
-
-```
-Usage: smit init [<directory>]
-
-  Initialize a repository, where the smit projects are to be stored.
-
-  If the directory exists, it must be empty.
-  If the directory does not exist, it is created.
-  If the directory is not given, . is used by default.
-```
-
-### project
-
-```
-Usage: project [<project-name>] [options]
-
-  List, create, or update a smit project.
-
-Options:
-  -c         Create a project, with a default structure. The structure
-             may be modified online by an admin user.
-  -d <repo>  select a repository by its path (by default . is used)
-```
-
-### user
-
-```
-Usage: 1. smit user
-       2. smit user <name> [options] [global-options]
-
-  1. List all users and their configuration.
-  2. With no option, print the configuration of a user.
-     With options, create or update a user.
-
-Options:
-  --passwd <pw>     set the password
-  --no-passwd       delete the password (leading to impossible login)
-  --project <project-name> <role>
-                    set a role (ref, ro, rw, admin) on a project
-  --superadmin      set the superadmin priviledge (ability to create
-                    projects and manage users via the web interface)
-  --no-superadmin   remove the superadmin priviledge
-  -d <repo>         select a repository by its path (by default . is used)
-
-Roles:
-    admin       able to modify an existing project
-    rw          able to create and modify issues
-    ro          able to read issues
-    ref         may not access the project, but may be referenced
 ```
 
 

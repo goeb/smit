@@ -1,5 +1,19 @@
 # News
 
+## 3 August 2014
+
+Smit 2.0.0 is released.
+
+This version brings a major new feature: the ability to clone locally a remote Smit repository (commands `smit clone`  and `smit ui`).
+
+Other improvements:
+
+- tags can be managed via the web interface
+- Windows installer
+- fixed javascript injections
+- salted passwords
+
+
 ## 28 May 2014
 
 Smit 1.7.0 is released.
