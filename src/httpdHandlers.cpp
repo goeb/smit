@@ -111,6 +111,14 @@ void sendHttpHeader200(struct mg_connection *conn)
     mg_printf(conn, "HTTP/1.0 200 OK\r\n");
 }
 
+void sendHttpHeader204(struct mg_connection *conn)
+{
+    LOG_FUNC();
+    mg_printf(conn, "HTTP/1.0 204 No Content\r\n");
+}
+
+
+
 int sendHttpHeader400(struct mg_connection *conn, const char *msg)
 {
     mg_printf(conn, "HTTP/1.0 400 Bad Request\r\n\r\n");
@@ -312,8 +320,8 @@ void httpPostSignin(struct mg_connection *conn)
         }
 
         if (format == X_SMIT) {
-            sendHttpHeader200(conn);
-            mg_printf(conn, "%s\r\n", getServerCookie(SESSID, sessionId.c_str(), SESSION_DURATION).c_str());
+            sendHttpHeader204(conn);
+            mg_printf(conn, "%s\r\n\r\n", getServerCookie(SESSID, sessionId.c_str(), SESSION_DURATION).c_str());
         } else {
             if (redirect.empty()) redirect = "/";
             setCookieAndRedirect(conn, SESSID, sessionId.c_str(), redirect.c_str());
