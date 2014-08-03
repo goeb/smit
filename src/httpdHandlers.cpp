@@ -107,6 +107,7 @@ std::string request2string(struct mg_connection *conn)
 
 void sendHttpHeader200(struct mg_connection *conn)
 {
+    LOG_FUNC();
     mg_printf(conn, "HTTP/1.0 200 OK\r\n");
 }
 
@@ -157,6 +158,7 @@ void sendCookie(mg_connection *conn, const std::string &key, const std::string &
   */
 void sendHttpRedirect(struct mg_connection *conn, const std::string &redirectUrl, const char *otherHeader)
 {
+    LOG_FUNC();
     mg_printf(conn, "HTTP/1.1 303 See Other\r\n");
     const char *scheme = 0;
     if (mg_get_request_info(conn)->is_ssl) scheme = "https";
@@ -187,6 +189,7 @@ std::string getServerCookie(const std::string &name, const std::string &value, i
 
 void setCookieAndRedirect(struct mg_connection *conn, const char *name, const char *value, const char *redirectUrl)
 {
+    LOG_FUNC();
     std::string s = getServerCookie(name, value, SESSION_DURATION);
     sendHttpRedirect(conn, redirectUrl, s.c_str());
 }
@@ -235,6 +238,8 @@ void httpPostRoot(struct mg_connection *conn, User u)
 
 void httpPostSignin(struct mg_connection *conn)
 {
+    LOG_FUNC();
+
     const char *contentType = mg_get_header(conn, "Content-Type");
 
     if (0 == strcmp("application/x-www-form-urlencoded", contentType)) {
@@ -247,6 +252,7 @@ void httpPostSignin(struct mg_connection *conn)
         n = mg_read(conn, buffer, SIZ);
         if (n == SIZ) {
             LOG_ERROR("Post data for signin too long. Abort request.");
+            sendHttpHeader400(conn, "Post data for signin too long");
             return;
         }
         buffer[n] = 0;
@@ -259,6 +265,7 @@ void httpPostSignin(struct mg_connection *conn)
         if (r<=0) {
             // error: empty, or too long, or not present
             LOG_DEBUG("Cannot get username. r=%d, postData=%s", r, postData.c_str());
+            sendHttpHeader400(conn, "Missing user name");
             return;
         }
         std::string username = buffer;
@@ -270,6 +277,7 @@ void httpPostSignin(struct mg_connection *conn)
         if (r<0) {
             // error: empty, or too long, or not present
             LOG_DEBUG("Cannot get password. r=%d, postData=%s", r, postData.c_str());
+            sendHttpHeader400(conn, "Missing password");
             return;
         }
         std::string password = buffer;
@@ -287,6 +295,7 @@ void httpPostSignin(struct mg_connection *conn)
             if (r<0) {
                 // error: empty, or too long, or not present
                 LOG_DEBUG("Cannot get redirect. r=%d, postData=%s", r, postData.c_str());
+                sendHttpHeader400(conn, "Cannot get redirection");
                 return;
             }
             redirect = buffer;
@@ -312,6 +321,7 @@ void httpPostSignin(struct mg_connection *conn)
 
     } else {
         LOG_ERROR("Unsupported Content-Type in httpPostSignin: %s", contentType);
+        sendHttpHeader400(conn, "Unsupported Content-Type");
         return;
     }
 
