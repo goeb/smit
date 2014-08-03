@@ -2,6 +2,7 @@
 v2.0.0, 2 August 2014
 
     - smit clone and smit ui (read-only)
+    - tags can be managed via the admin web interface
     - salted passwords
     - fix javascript injections
     - Windows installer
