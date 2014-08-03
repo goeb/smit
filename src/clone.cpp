@@ -345,7 +345,7 @@ size_t HttpRequest::headerCallback(void *contents, size_t size, size_t nmemb, vo
         std::string reponseCode = popToken(code, ' ');
         hr->httpStatusCode = atoi(reponseCode.c_str());
 
-        if (hr->httpStatusCode != 200) {
+        if (hr->httpStatusCode < 200 && hr->httpStatusCode > 299) {
             fprintf(stderr, "%s: HTTP status code %d. Exiting.\n", hr->resourcePath.c_str(), hr->httpStatusCode);
             exit(1);
         }
