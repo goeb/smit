@@ -89,6 +89,7 @@ public:
     static size_t receiveLinesCallback(void *contents, size_t size, size_t nmemb, void *userp);
     static size_t writeToFileCallback(void *contents, size_t size, size_t nmemb, void *userp);
     static size_t headerCallback(void *contents, size_t size, size_t nmemb, void *userp);
+    static size_t ignoreResponseCallback(void *contents, size_t size, size_t nmemb, void *userp);
 
     int httpStatusCode;
 
@@ -194,12 +195,17 @@ int cmdClone(int argc, const char **argv)
     std::string sessid = signin(url, username, password);
     if (Verbose) printf("sessid=%s\n", sessid.c_str());
 
+    if (sessid.empty()) {
+        fprintf(stderr, "Authentication failed\n");
+        return 1; // authentication failed
+    }
+
     getProjects(url, dir, sessid);
 
 
     curl_global_cleanup();
 
-    return 1;
+    return 0;
 }
 
 
@@ -217,10 +223,10 @@ void HttpRequest::setUrl(const std::string &root, const std::string &path)
 }
 
 
-
 void HttpRequest::getAndStore(bool recursive, int recursionLevel)
 {
     if (Verbose) printf("Entering getAndStore: resourcePath=%s\n", resourcePath.c_str());
+    curl_easy_setopt(curlHandle, CURLOPT_WRITEDATA, (void *)this);
     curl_easy_setopt(curlHandle, CURLOPT_WRITEFUNCTION, writeToFileCallback);
     performRequest();
     if (isDirectory && recursive) {
@@ -230,6 +236,7 @@ void HttpRequest::getAndStore(bool recursive, int recursionLevel)
         closeCurl();
 
         std::string localPath = repository + resourcePath;
+        trimRight(localPath, "/");
         if (recursionLevel < 2) printf("%s...\n", localPath.c_str());
 
         mode_t mode = S_IRUSR | S_IWUSR | S_IXUSR;
@@ -266,6 +273,8 @@ void HttpRequest::getAndStore(bool recursive, int recursionLevel)
 
 void HttpRequest::post(const std::string &params)
 {
+    curl_easy_setopt(curlHandle, CURLOPT_WRITEDATA, (void *)this);
+    curl_easy_setopt(curlHandle, CURLOPT_WRITEFUNCTION, ignoreResponseCallback);
     curl_easy_setopt(curlHandle, CURLOPT_POSTFIELDS, params.c_str());
     performRequest();
 }
@@ -407,6 +416,13 @@ void HttpRequest::handleWriteToFile(void *data, size_t size)
     }
 }
 
+/** Ignore the response
+  * (do not save it into a file, as the default lib curl behaviour)
+  */
+size_t HttpRequest::ignoreResponseCallback(void *contents, size_t size, size_t nmemb, void *userp)
+{
+    return size * nmemb;
+}
 
 size_t HttpRequest::receiveLinesCallback(void *contents, size_t size, size_t nmemb, void *userp)
 {
@@ -449,7 +465,6 @@ HttpRequest::HttpRequest(const std::string &sessid)
     fd = 0;
     httpStatusCode = -1; // not set
     curlHandle = curl_easy_init();
-    curl_easy_setopt(curlHandle, CURLOPT_WRITEDATA, (void *)this);
     curl_easy_setopt(curlHandle, CURLOPT_USERAGENT, "smit-agent/1.0");
     curl_easy_setopt(curlHandle, CURLOPT_HEADERFUNCTION, headerCallback);
     curl_easy_setopt(curlHandle, CURLOPT_HEADERDATA, (void *)this);
