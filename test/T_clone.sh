@@ -45,6 +45,12 @@ stopServer() {
     kill $pid
 }
 
+fail() {
+    echo "ERROR: $1"
+    [ -n "$pid" ] && kill $pid
+    exit 1
+}
+
 cleanup
 init
 startServer
@@ -52,20 +58,20 @@ startServer
 # check that clone of p1 has correct content
 $SMIT clone http://127.0.0.1:$PORT --user $USER1 --passwd $PASSWD1 clone1
 echo $?
-[ -f clone1/$PROJECT1/issues/abc1 ] && echo ok
-[ -f clone1/$PROJECT1/files/file1 ] && echo ok
-[ -f clone1/$PROJECT2/issues/abc2 ] || echo ok
-[ -f clone1/$PROJECT2/files/file2 ] || echo ok
+[ -f clone1/$PROJECT1/issues/abc1 ] || fail "missing file 'clone1/$PROJECT1/issues/abc1'"
+[ -f clone1/$PROJECT1/files/file1 ] || fail "missing file 'clone1/$PROJECT1/files/file1'"
+[ -f clone1/$PROJECT2/issues/abc2 ] && fail "unexpected file 'clone1/$PROJECT2/issues/abc2'"
+[ -f clone1/$PROJECT2/files/file2 ] && fail "unexpected file 'clone1/$PROJECT2/files/file2'"
 
 # check that clone of p2 has correct content
 $SMIT clone http://127.0.0.1:$PORT --user $USER2 --passwd $PASSWD2 clone2
-[ -f clone2/$PROJECT1/issues/abc1 ] || echo ok
-[ -f clone2/$PROJECT1/files/file1 ] || echo ok
-[ -f clone2/$PROJECT2/issues/abc2 ] && echo ok
-[ -f clone2/$PROJECT2/files/file2 ] && echo ok
+[ -f clone2/$PROJECT1/issues/abc1 ] && fail "unexpected file 'clone2/$PROJECT1/issues/abc1'"
+[ -f clone2/$PROJECT1/files/file1 ] && fail "unexpected file 'clone2/$PROJECT1/files/file1'"
+[ -f clone2/$PROJECT2/issues/abc2 ] || fail "missing file 'clone2/$PROJECT2/issues/abc2'"
+[ -f clone2/$PROJECT2/files/file2 ] || fail "missing file 'clone2/$PROJECT2/files/file2'"
 
 # check that user 1 with password of user 2 raises an error
-$SMIT clone http://127.0.0.1:$PORT --user $USER1 --passwd $PASSWD2 clone2 || echo ok
+$SMIT clone http://127.0.0.1:$PORT --user $USER1 --passwd $PASSWD2 clone2 && fail "unexpected clone with wrong password"
 
 stopServer
 
