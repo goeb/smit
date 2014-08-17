@@ -50,14 +50,14 @@
   *    0 on success
   *   -1 on error (data too big)
   */
-int readMgConn(struct mg_connection *conn, std::string &data, size_t maxSize)
+int readMgConn(MongooseRequestContext *request, std::string &data, size_t maxSize)
 {
     data.clear();
     const int SIZ = 4096;
     char postFragment[SIZ+1];
     int n; // number of bytes read
 
-    while ( (n = mg_read(conn, postFragment, SIZ)) > 0) {
+    while ( (n = request->read(postFragment, SIZ)) > 0) {
         LOG_DEBUG("postFragment size=%d", n);
         data.append(std::string(postFragment, n));
         if (data.size() > maxSize) {
@@ -73,87 +73,56 @@ int readMgConn(struct mg_connection *conn, std::string &data, size_t maxSize)
 }
 
 
-std::string request2string(struct mg_connection *conn)
-{
-    const struct mg_request_info *request_info = mg_get_request_info(conn);
 
-    const int SIZEX = 1000;
-    char content[SIZEX+1];
-    int content_length = snprintf(content, sizeof(content),
-                                  "<pre>Hello from mongoose! Remote port: %d",
-                                  request_info->remote_port);
-
-    int L = content_length;
-    L += snprintf(content+L, SIZEX-L, "request_method=%s\n", request_info->request_method);
-    L += snprintf(content+L, SIZEX-L, "uri=%s\n", request_info->uri);
-    L += snprintf(content+L, SIZEX-L, "http_version=%s\n", request_info->http_version);
-    L += snprintf(content+L, SIZEX-L, "query_string=%s\n", request_info->query_string);
-    L += snprintf(content+L, SIZEX-L, "remote_user=%s\n", request_info->remote_user);
-
-    for (int i=0; i<request_info->num_headers; i++) {
-        struct mg_request_info::mg_header H = request_info->http_headers[i];
-        L += snprintf(content+L, SIZEX-L, "header: %30s = %s\n", H.name, H.value);
-    }
-
-
-    L += snprintf(content+L, SIZEX-L, "</pre>");
-
-    std::string postData;
-    readMgConn(conn, postData, 10*1024*1024);
-
-    return std::string(content) + postData;
-
-}
-
-void sendHttpHeader200(struct mg_connection *conn)
+void sendHttpHeader200(MongooseRequestContext *request)
 {
     LOG_FUNC();
-    mg_printf(conn, "HTTP/1.0 200 OK\r\n");
+    request->printf("HTTP/1.0 200 OK\r\n");
 }
 
-void sendHttpHeader204(struct mg_connection *conn)
+void sendHttpHeader204(MongooseRequestContext *request)
 {
     LOG_FUNC();
-    mg_printf(conn, "HTTP/1.0 204 No Content\r\n");
+    request->printf("HTTP/1.0 204 No Content\r\n");
 }
 
 
 
-int sendHttpHeader400(struct mg_connection *conn, const char *msg)
+int sendHttpHeader400(MongooseRequestContext *request, const char *msg)
 {
-    mg_printf(conn, "HTTP/1.0 400 Bad Request\r\n\r\n");
-    mg_printf(conn, "400 Bad Request\r\n");
-    mg_printf(conn, "%s\r\n", msg);
+    request->printf("HTTP/1.0 400 Bad Request\r\n\r\n");
+    request->printf("400 Bad Request\r\n");
+    request->printf("%s\r\n", msg);
     return 1; // request completely handled
 }
-void sendHttpHeader403(struct mg_connection *conn)
+void sendHttpHeader403(MongooseRequestContext *request)
 {
-    mg_printf(conn, "HTTP/1.1 403 Forbidden\r\n\r\n");
-    mg_printf(conn, "403 Forbidden\r\n");
+    request->printf("HTTP/1.1 403 Forbidden\r\n\r\n");
+    request->printf("403 Forbidden\r\n");
 }
 
-void sendHttpHeader413(struct mg_connection *conn, const char *msg)
+void sendHttpHeader413(MongooseRequestContext *request, const char *msg)
 {
-    mg_printf(conn, "HTTP/1.1 413 Request Entity Too Large\r\n\r\n");
-    mg_printf(conn, "413 Request Entity Too Large\r\n%s\r\n", msg);
+    request->printf("HTTP/1.1 413 Request Entity Too Large\r\n\r\n");
+    request->printf("413 Request Entity Too Large\r\n%s\r\n", msg);
 }
 
-void sendHttpHeader404(struct mg_connection *conn)
+void sendHttpHeader404(MongooseRequestContext *request)
 {
-    mg_printf(conn, "HTTP/1.1 404 Not Found\r\n\r\n");
-    mg_printf(conn, "404 Not Found\r\n");
+    request->printf("HTTP/1.1 404 Not Found\r\n\r\n");
+    request->printf("404 Not Found\r\n");
 }
 
-void sendHttpHeader500(struct mg_connection *conn, const char *msg)
+void sendHttpHeader500(MongooseRequestContext *request, const char *msg)
 {
-    mg_printf(conn, "HTTP/1.1 500 Internal Server Error\r\n\r\n");
-    mg_printf(conn, "500 Internal Server Error\r\n");
-    mg_printf(conn, "%s\r\n", msg);
+    request->printf("HTTP/1.1 500 Internal Server Error\r\n\r\n");
+    request->printf("500 Internal Server Error\r\n");
+    request->printf("%s\r\n", msg);
 }
 
-void sendCookie(mg_connection *conn, const std::string &key, const std::string &value)
+void sendCookie(MongooseRequestContext *request, const std::string &key, const std::string &value)
 {
-    mg_printf(conn, "Set-Cookie: %s=%s; Path=/\r\n", key.c_str(), value.c_str());
+    request->printf("Set-Cookie: %s=%s; Path=/\r\n", key.c_str(), value.c_str());
 }
 
 
@@ -164,15 +133,15 @@ void sendCookie(mg_connection *conn, const std::string &key, const std::string &
   *    Must not include the line-terminating \r\n
   *    May be NULL
   */
-void sendHttpRedirect(struct mg_connection *conn, const std::string &redirectUrl, const char *otherHeader)
+void sendHttpRedirect(MongooseRequestContext *request, const std::string &redirectUrl, const char *otherHeader)
 {
     LOG_FUNC();
-    mg_printf(conn, "HTTP/1.1 303 See Other\r\n");
+    request->printf("HTTP/1.1 303 See Other\r\n");
     const char *scheme = 0;
-    if (mg_get_request_info(conn)->is_ssl) scheme = "https";
+    if (request->isSSL()) scheme = "https";
     else scheme = "http";
 
-    const char *host = mg_get_header(conn, "Host"); // includes the TCP port (optionally)
+    const char *host = request->getHeader("Host"); // includes the TCP port (optionally)
     if (!host) {
         LOG_ERROR("No Host header in base request");
         host ="";
@@ -180,10 +149,10 @@ void sendHttpRedirect(struct mg_connection *conn, const std::string &redirectUrl
 
     if (redirectUrl[0] != '/') LOG_ERROR("Invalid redirect URL (missing first /): %s", redirectUrl.c_str());
 
-    mg_printf(conn, "Location: %s://%s%s", scheme, host, redirectUrl.c_str());
+    request->printf("Location: %s://%s%s", scheme, host, redirectUrl.c_str());
 
-    if (otherHeader) mg_printf(conn, "\r\n%s", otherHeader);
-    mg_printf(conn, "\r\n\r\n");
+    if (otherHeader) request->printf("\r\n%s", otherHeader);
+    request->printf("\r\n\r\n");
 }
 
 std::string getServerCookie(const std::string &name, const std::string &value, int maxAgeSeconds)
@@ -195,19 +164,19 @@ std::string getServerCookie(const std::string &name, const std::string &value, i
     return s.str();
 }
 
-void setCookieAndRedirect(struct mg_connection *conn, const char *name, const char *value, const char *redirectUrl)
+void setCookieAndRedirect(MongooseRequestContext *request, const char *name, const char *value, const char *redirectUrl)
 {
     LOG_FUNC();
     std::string s = getServerCookie(name, value, SESSION_DURATION);
-    sendHttpRedirect(conn, redirectUrl, s.c_str());
+    sendHttpRedirect(request, redirectUrl, s.c_str());
 }
 
-int sendHttpHeaderInvalidResource(struct mg_connection *conn)
+int sendHttpHeaderInvalidResource(MongooseRequestContext *request)
 {
-    const char *uri = mg_get_request_info(conn)->uri;
+    const char *uri = request->getUri();
     LOG_INFO("Invalid resource: uri=%s", uri);
-    mg_printf(conn, "HTTP/1.0 400 Bad Request\r\n\r\n");
-    mg_printf(conn, "400 Bad Request");
+    request->printf("HTTP/1.0 400 Bad Request\r\n\r\n");
+    request->printf("400 Bad Request");
 
     return 1; // request processed
 }
@@ -215,11 +184,9 @@ int sendHttpHeaderInvalidResource(struct mg_connection *conn)
 
 
 enum RenderingFormat { RENDERING_HTML, RENDERING_TEXT, RENDERING_CSV, X_SMIT };
-enum RenderingFormat getFormat(struct mg_connection *conn)
+enum RenderingFormat getFormat(MongooseRequestContext *request)
 {
-    const struct mg_request_info *req = mg_get_request_info(conn);
-    std::string q;
-    if (req->query_string) q = req->query_string;
+    std::string q = request->getQueryString();
     std::string format = getFirstParamFromQueryString(q, "format");
 
     if (format == "html") return RENDERING_HTML;
@@ -227,7 +194,7 @@ enum RenderingFormat getFormat(struct mg_connection *conn)
     else if (format == "text") return RENDERING_TEXT;
     else {
         // look at the Accept header
-        const char *contentType = mg_get_header(conn, "Accept");
+        const char *contentType = request->getHeader("Accept");
         LOG_DEBUG("Accept header=%s", contentType);
 
         if (!contentType) return RENDERING_HTML; // no such header, return default value
@@ -244,11 +211,11 @@ void httpPostRoot(struct mg_connection *conn, User u)
 {
 }
 
-void httpPostSignin(struct mg_connection *conn)
+void httpPostSignin(MongooseRequestContext *request)
 {
     LOG_FUNC();
 
-    const char *contentType = mg_get_header(conn, "Content-Type");
+    const char *contentType = request->getHeader("Content-Type");
 
     if (0 == strcmp("application/x-www-form-urlencoded", contentType)) {
         // application/x-www-form-urlencoded
@@ -257,10 +224,10 @@ void httpPostSignin(struct mg_connection *conn)
         const int SIZ = 1024;
         char buffer[SIZ+1];
         int n; // number of bytes read
-        n = mg_read(conn, buffer, SIZ);
+        n = request->read(buffer, SIZ);
         if (n == SIZ) {
             LOG_ERROR("Post data for signin too long. Abort request.");
-            sendHttpHeader400(conn, "Post data for signin too long");
+            sendHttpHeader400(request, "Post data for signin too long");
             return;
         }
         buffer[n] = 0;
@@ -273,7 +240,7 @@ void httpPostSignin(struct mg_connection *conn)
         if (r<=0) {
             // error: empty, or too long, or not present
             LOG_DEBUG("Cannot get username. r=%d, postData=%s", r, postData.c_str());
-            sendHttpHeader400(conn, "Missing user name");
+            sendHttpHeader400(request, "Missing user name");
             return;
         }
         std::string username = buffer;
@@ -285,13 +252,13 @@ void httpPostSignin(struct mg_connection *conn)
         if (r<0) {
             // error: empty, or too long, or not present
             LOG_DEBUG("Cannot get password. r=%d, postData=%s", r, postData.c_str());
-            sendHttpHeader400(conn, "Missing password");
+            sendHttpHeader400(request, "Missing password");
             return;
         }
         std::string password = buffer;
 
         std::string redirect;
-        enum RenderingFormat format = getFormat(conn);
+        enum RenderingFormat format = getFormat(request);
         if (format != RENDERING_HTML) {
             // no need to get the redirect location
 
@@ -303,7 +270,7 @@ void httpPostSignin(struct mg_connection *conn)
             if (r<0) {
                 // error: empty, or too long, or not present
                 LOG_DEBUG("Cannot get redirect. r=%d, postData=%s", r, postData.c_str());
-                sendHttpHeader400(conn, "Cannot get redirection");
+                sendHttpHeader400(request, "Cannot get redirection");
                 return;
             }
             redirect = buffer;
@@ -315,60 +282,57 @@ void httpPostSignin(struct mg_connection *conn)
 
         if (sessionId.size() == 0) {
             LOG_DEBUG("Authentication refused");
-            sendHttpHeader403(conn);
+            sendHttpHeader403(request);
             return;
         }
 
         if (format == X_SMIT) {
-            sendHttpHeader204(conn);
-            mg_printf(conn, "%s\r\n\r\n", getServerCookie(SESSID, sessionId.c_str(), SESSION_DURATION).c_str());
+            sendHttpHeader204(request);
+            request->printf("%s\r\n\r\n", getServerCookie(SESSID, sessionId.c_str(), SESSION_DURATION).c_str());
         } else {
             if (redirect.empty()) redirect = "/";
-            setCookieAndRedirect(conn, SESSID, sessionId.c_str(), redirect.c_str());
+            setCookieAndRedirect(request, SESSID, sessionId.c_str(), redirect.c_str());
         }
 
     } else {
         LOG_ERROR("Unsupported Content-Type in httpPostSignin: %s", contentType);
-        sendHttpHeader400(conn, "Unsupported Content-Type");
+        sendHttpHeader400(request, "Unsupported Content-Type");
         return;
     }
 
 }
 
-void redirectToSignin(struct mg_connection *conn, const char *resource = 0)
+void redirectToSignin(MongooseRequestContext *request, const char *resource = 0)
 {
-    sendHttpHeader200(conn);
+    sendHttpHeader200(request);
     std::string url;
     if (!resource) {
-        struct mg_request_info *rq = mg_get_request_info(conn);
-        url = rq->uri;
-        const char *qs = rq->query_string;
+        url = request->getUri();
+        const char *qs = request->getQueryString();
         if (qs && strlen(qs)) url = url + '?' + qs;
         resource = url.c_str();
     }
-    RHtml::printPageSignin(conn, resource);
+    RHtml::printPageSignin(request, resource);
 }
 
 
-void httpPostSignout(struct mg_connection *conn, const std::string &sessionId)
+void httpPostSignout(MongooseRequestContext *request, const std::string &sessionId)
 {
     SessionBase::destroySession(sessionId);
-    redirectToSignin(conn, "/");
+    redirectToSignin(request, "/");
 }
 
 
-void handleMessagePreview(struct mg_connection *conn)
+void handleMessagePreview(MongooseRequestContext *request)
 {
     LOG_FUNC();
-    const struct mg_request_info *req = mg_get_request_info(conn);
-    std::string q;
-    if (req->query_string) q = req->query_string;
+    std::string q = request->getQueryString();
     std::string message = getFirstParamFromQueryString(q, "message");
     LOG_DEBUG("message=%s", message.c_str());
     message = RHtml::convertToRichText(htmlEscape(message));
-    sendHttpHeader200(conn);
-    mg_printf(conn, "Content-Type: text/html\r\n\r\n");
-    mg_printf(conn, "%s", message.c_str());
+    sendHttpHeader200(request);
+    request->printf("Content-Type: text/html\r\n\r\n");
+    request->printf("%s", message.c_str());
 }
 
 /** Get a SM embedded file
@@ -376,14 +340,14 @@ void handleMessagePreview(struct mg_connection *conn)
   * Embbeded files: smit.js, etc.
   * Virtual files: preview
   */
-int httpGetSm(struct mg_connection *conn, const std::string &file)
+int httpGetSm(MongooseRequestContext *request, const std::string &file)
 {
     int r; // return 0 to let mongoose handle static file, 1 otherwise
 
     LOG_DEBUG("httpGetSm: %s", file.c_str());
     const char *virtualFilePreview = "preview";
     if (0 == strncmp(file.c_str(), virtualFilePreview, strlen(virtualFilePreview))) {
-        handleMessagePreview(conn);
+        handleMessagePreview(request);
         return 1;
     }
 
@@ -393,10 +357,10 @@ int httpGetSm(struct mg_connection *conn, const std::string &file)
 
     if (r >= 0) {
         int filesize = r;
-        sendHttpHeader200(conn);
+        sendHttpHeader200(request);
         const char *mimeType = mg_get_builtin_mime_type(file.c_str());
         LOG_DEBUG("mime-type=%s, size=%d", mimeType, filesize);
-        mg_printf(conn, "Content-Type: %s\r\n\r\n", mimeType);
+        request->printf("Content-Type: %s\r\n\r\n", mimeType);
 
         // file found
         const uint32_t BS = 1024;
@@ -416,7 +380,7 @@ int httpGetSm(struct mg_connection *conn, const std::string &file)
             memcpy(buffer, cpioOffset, nToRead);
             cpioOffset += nToRead;
 
-            mg_write(conn, buffer, nToRead);
+            request->write(buffer, nToRead);
 
             remainingBytes -= nToRead;
         }
@@ -437,7 +401,7 @@ int httpGetSm(struct mg_connection *conn, const std::string &file)
   *     user whose configuration is requested
   *
   */
-void httpGetUsers(struct mg_connection *conn, User signedInUser, const std::string &username)
+void httpGetUsers(MongooseRequestContext *request, User signedInUser, const std::string &username)
 {
     ContextParameters ctx = ContextParameters(conn, signedInUser);
 
@@ -445,9 +409,9 @@ void httpGetUsers(struct mg_connection *conn, User signedInUser, const std::stri
         // display form for a new user
         // only a superadmin may do this
         if (!signedInUser.superadmin) {
-            sendHttpHeader403(conn);
+            sendHttpHeader403(request);
         } else {
-            sendHttpHeader200(conn);
+            sendHttpHeader200(request);
             RHtml::printPageUser(ctx, 0);
         }
 
@@ -457,16 +421,16 @@ void httpGetUsers(struct mg_connection *conn, User signedInUser, const std::stri
 
         if (!editedUser) {
             if (signedInUser.superadmin) sendHttpHeader404(conn);
-            else sendHttpHeader403(conn);
+            else sendHttpHeader403(request);
 
         } else if (username == signedInUser.username || signedInUser.superadmin) {
 
             // handle an existing user
             // a user may only view his/her own user page
-            sendHttpHeader200(conn);
+            sendHttpHeader200(request);
             RHtml::printPageUser(ctx, editedUser);
 
-        } else sendHttpHeader403(conn);
+        } else sendHttpHeader403(request);
     }
 }
 
@@ -474,25 +438,25 @@ void httpGetUsers(struct mg_connection *conn, User signedInUser, const std::stri
   *
   * Non-superadmin users may only post their password.
   */
-void httpPostUsers(struct mg_connection *conn, User signedInUser, const std::string &username)
+void httpPostUsers(MongooseRequestContext *request, User signedInUser, const std::string &username)
 {
     if (!signedInUser.superadmin && username != signedInUser.username) {
-        sendHttpHeader403(conn);
+        sendHttpHeader403(request);
         return;
     }
-    if (username.empty()) return sendHttpHeader403(conn);
+    if (username.empty()) return sendHttpHeader403(request);
 
     // get the posted parameters
-    const char *contentType = mg_get_header(conn, "Content-Type");
+    const char *contentType = request->getHeader("Content-Type");
 
     if (0 == strcmp("application/x-www-form-urlencoded", contentType)) {
         // application/x-www-form-urlencoded
         // post_data is "var1=val1&var2=val2...".
 
         std::string postData;
-        int rc = readMgConn(conn, postData, 4096);
+        int rc = readMgConn(request, postData, 4096);
         if (rc < 0) {
-            sendHttpHeader413(conn, "You tried to upload too much data. Max is 4096 bytes.");
+            sendHttpHeader413(request, "You tried to upload too much data. Max is 4096 bytes.");
             return;
         }
 
@@ -530,7 +494,7 @@ void httpPostUsers(struct mg_connection *conn, User signedInUser, const std::str
         if (signedInUser.superadmin) {
             if (newUserConfig.username.empty() || newUserConfig.username == "_") {
                 LOG_INFO("Ignore user parameters as username is empty or '_'");
-                sendHttpHeader400(conn, "Invalid user name");
+                sendHttpHeader400(request, "Invalid user name");
                 return;
             }
         }
@@ -540,7 +504,7 @@ void httpPostUsers(struct mg_connection *conn, User signedInUser, const std::str
 
         if (passwd1 != passwd2) {
             LOG_INFO("passwd1 (%s) != passwd2 (%s)", passwd1.c_str(), passwd2.c_str());
-            sendHttpHeader400(conn, "passwords 1 and 2 do not match");
+            sendHttpHeader400(request, "passwords 1 and 2 do not match");
             return;
 
         }
@@ -583,12 +547,12 @@ void httpPostUsers(struct mg_connection *conn, User signedInUser, const std::str
         }
 
         if (r != 0) {
-            sendHttpHeader400(conn, error.c_str());
+            sendHttpHeader400(request, error.c_str());
 
         } else {
             // ok, redirect
             std::string redirectUrl = "/users/" + urlEncode(newUserConfig.username);
-            sendHttpRedirect(conn, redirectUrl.c_str(), 0);
+            sendHttpRedirect(request, redirectUrl.c_str(), 0);
         }
 
     } else {
@@ -1779,14 +1743,6 @@ void httpPostEntry(struct mg_connection *conn, Project &pro, const std::string &
 
 }
 
-int log_message_handler(const struct mg_connection *conn, const char *msg)
-{
-    LOG_ERROR("[MG] %s", msg);
-    return 1;
-}
-
-
-
 /** begin_request_handler is the main entry point of an incoming HTTP request
   *
   * Resources               Methods    Acces Granted     Description
@@ -1812,15 +1768,15 @@ int log_message_handler(const struct mg_connection *conn, const char *msg)
   * /any/other/file         GET        user              any existing file (in the repository)
   */
 
-int begin_request_handler(struct mg_connection *conn)
+int begin_request_handler(MongooseRequestContext *request)
 {
     LOG_FUNC();
 
-    std::string uri = mg_get_request_info(conn)->uri;
-    std::string method = mg_get_request_info(conn)->request_method;
+    std::string uri = request->getUri();
+    std::string method = request->getMethod();
     LOG_DEBUG("uri=%s, method=%s", uri.c_str(), method.c_str());
 
-    if (method != "GET" && method != "POST") return sendHttpHeader400(conn, "invalid method");
+    if (method != "GET" && method != "POST") return sendHttpHeader400(request, "invalid method");
 
     std::string resource = popToken(uri, '/');
 

@@ -3,10 +3,11 @@
 
 #include <string>
 
+#include "HttpContext.h"
+
 extern std::string ExeFile;
 
-int begin_request_handler(struct mg_connection *conn);
-int log_message_handler(const mg_connection *conn, const char *msg);
+int begin_request_handler(MongooseRequestContext *request);
 
 
 #endif

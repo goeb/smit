@@ -270,7 +270,7 @@ private:
   * @param redirect
   *    May include a query string
   */
-void RHtml::printPageSignin(struct mg_connection *conn, const char *redirect)
+void RHtml::printPageSignin(MongooseRequestContext *request, const char *redirect)
 {
 
     mg_printf(conn, "Content-Type: text/html\r\n\r\n");

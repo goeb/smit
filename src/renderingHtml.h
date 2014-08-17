@@ -5,7 +5,7 @@
 #include <string>
 #include <stdint.h>
 
-#include "mongoose.h"
+#include "HttpContext.h"
 #include "db.h"
 #include "session.h"
 
@@ -61,7 +61,7 @@ public:
 
     static bool inList(const std::list<std::string> &listOfValues, const std::string &value);
     static void printIssueForm(const ContextParameters &ctx, const Issue *issue, bool autofocus);
-    static void printPageSignin(struct mg_connection *conn, const char *redirect);
+    static void printPageSignin(MongooseRequestContext *request, const char *redirect);
 
     static void printPageUser(const ContextParameters &ctx, const User *u);
 

@@ -44,10 +44,8 @@ target_triplet = @target@
 @GPROF_ENABLED_TRUE@am__append_6 = -pg -lgcov
 @WINDOWS_TRUE@am__append_7 = -static -static-libgcc -Dopenssl_EXPORTS
 @WINDOWS_TRUE@am__append_8 = -static -static-libgcc -Dopenssl_EXPORTS
-@WINDOWS_FALSE@am__append_9 = -pthread
 bin_PROGRAMS = smit$(EXEEXT)
-@WINDOWS_TRUE@am__append_10 = -lws2_32 -lgdi32
-@WINDOWS_FALSE@am__append_11 = -ldl
+@WINDOWS_TRUE@am__append_9 = -lws2_32 -lgdi32
 noinst_PROGRAMS = smparser$(EXEEXT) T_parseConfig$(EXEEXT) \
 	T_stringTools$(EXEEXT) get_random_value$(EXEEXT)
 check_PROGRAMS = T_parseConfig$(EXEEXT) T_stringTools$(EXEEXT) \
@@ -83,8 +81,7 @@ T_stringTools_LDADD = $(LDADD)
 am_get_random_value_OBJECTS = test/get_random_value.$(OBJEXT)
 get_random_value_OBJECTS = $(am_get_random_value_OBJECTS)
 get_random_value_LDADD = $(LDADD)
-am_smit_OBJECTS = mongoose/smit-mongoose.$(OBJEXT) \
-	src/smit-db.$(OBJEXT) src/smit-parseConfig.$(OBJEXT) \
+am_smit_OBJECTS = src/smit-db.$(OBJEXT) src/smit-parseConfig.$(OBJEXT) \
 	src/smit-identifiers.$(OBJEXT) src/smit-main.$(OBJEXT) \
 	src/smit-httpdHandlers.$(OBJEXT) \
 	src/smit-renderingText.$(OBJEXT) \
@@ -94,11 +91,12 @@ am_smit_OBJECTS = mongoose/smit-mongoose.$(OBJEXT) \
 	src/smit-session.$(OBJEXT) src/smit-dateTools.$(OBJEXT) \
 	src/smit-logging.$(OBJEXT) src/smit-Trigger.$(OBJEXT) \
 	src/smit-filesystem.$(OBJEXT) src/smit-clone.$(OBJEXT) \
-	src/smit-console.$(OBJEXT)
+	src/smit-console.$(OBJEXT) src/smit-HttpContext.$(OBJEXT) \
+	mongoose/smit-mongoose.$(OBJEXT)
 nodist_smit_OBJECTS = smit-embedcpio.$(OBJEXT)
 smit_OBJECTS = $(am_smit_OBJECTS) $(nodist_smit_OBJECTS)
 am__DEPENDENCIES_1 =
-smit_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+smit_DEPENDENCIES = $(am__DEPENDENCIES_1)
 am_smparser_OBJECTS = src/smparser-parseConfig.$(OBJEXT)
 smparser_OBJECTS = $(am_smparser_OBJECTS)
 smparser_DEPENDENCIES =
@@ -342,27 +340,28 @@ top_srcdir = @top_srcdir@
 AM_CPPFLAGS = -Wall
 AM_CFLAGS = -Wall $(am__append_1) $(am__append_4) $(am__append_7)
 AM_CXXFLAGS = -Wall $(am__append_2) $(am__append_5) $(am__append_8)
-AM_LDFLAGS = $(am__append_3) $(am__append_6) $(am__append_9)
+AM_LDFLAGS = $(am__append_3) $(am__append_6)
 smit_SOURCES = \
-	mongoose/mongoose.c \
-	src/db.cpp  \
-    src/parseConfig.cpp \
-    src/identifiers.cpp \
-    src/main.cpp \
-    src/httpdHandlers.cpp \
-    src/renderingText.cpp \
-    src/renderingCsv.cpp \
-    src/renderingHtml.cpp \
-    src/cpio.cpp \
-    src/stringTools.cpp \
-    src/mutexTools.cpp \
-    src/session.cpp \
-    src/dateTools.cpp \
-    src/logging.cpp \
-    src/Trigger.cpp \
-    src/filesystem.cpp \
-    src/clone.cpp \
-	src/console.cpp
+			   src/db.cpp  \
+			   src/parseConfig.cpp \
+			   src/identifiers.cpp \
+			   src/main.cpp \
+			   src/httpdHandlers.cpp \
+			   src/renderingText.cpp \
+			   src/renderingCsv.cpp \
+			   src/renderingHtml.cpp \
+			   src/cpio.cpp \
+			   src/stringTools.cpp \
+			   src/mutexTools.cpp \
+			   src/session.cpp \
+			   src/dateTools.cpp \
+			   src/logging.cpp \
+			   src/Trigger.cpp \
+			   src/filesystem.cpp \
+			   src/clone.cpp \
+			   src/console.cpp \
+			   src/HttpContext.cpp \
+			   mongoose/mongoose.c 
 
 nodist_smit_SOURCES = embedcpio.c embedcpio.h 
 BUILT_SOURCES = embedcpio.c embedcpio.h
@@ -370,8 +369,7 @@ CLEANFILES = embedcpio.c embedcpio.h convertToC
 X = embedded_data
 SM_VERSION = $(X)/sm/version
 smit_CPPFLAGS = -I @srcdir@/mongoose @OPENSSL_CFLAGS@ @CURL_CFLAGS@
-smit_LDADD = @OPENSSL_LIBS@ @CURL_LIBS@ $(am__append_10) \
-	$(am__append_11)
+smit_LDADD = @OPENSSL_LIBS@ @CURL_LIBS@ $(am__append_9)
 
 # specific subdirs
 SUBDIRS = test
@@ -518,14 +516,6 @@ test/get_random_value.$(OBJEXT): test/$(am__dirstamp) \
 get_random_value$(EXEEXT): $(get_random_value_OBJECTS) $(get_random_value_DEPENDENCIES) $(EXTRA_get_random_value_DEPENDENCIES) 
 	@rm -f get_random_value$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(get_random_value_OBJECTS) $(get_random_value_LDADD) $(LIBS)
-mongoose/$(am__dirstamp):
-	@$(MKDIR_P) mongoose
-	@: > mongoose/$(am__dirstamp)
-mongoose/$(DEPDIR)/$(am__dirstamp):
-	@$(MKDIR_P) mongoose/$(DEPDIR)
-	@: > mongoose/$(DEPDIR)/$(am__dirstamp)
-mongoose/smit-mongoose.$(OBJEXT): mongoose/$(am__dirstamp) \
-	mongoose/$(DEPDIR)/$(am__dirstamp)
 src/smit-db.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/smit-parseConfig.$(OBJEXT): src/$(am__dirstamp) \
@@ -562,6 +552,16 @@ src/smit-clone.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/smit-console.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
+src/smit-HttpContext.$(OBJEXT): src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
+mongoose/$(am__dirstamp):
+	@$(MKDIR_P) mongoose
+	@: > mongoose/$(am__dirstamp)
+mongoose/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) mongoose/$(DEPDIR)
+	@: > mongoose/$(DEPDIR)/$(am__dirstamp)
+mongoose/smit-mongoose.$(OBJEXT): mongoose/$(am__dirstamp) \
+	mongoose/$(DEPDIR)/$(am__dirstamp)
 smit$(EXEEXT): $(smit_OBJECTS) $(smit_DEPENDENCIES) $(EXTRA_smit_DEPENDENCIES) 
 	@rm -f smit$(EXEEXT)
 	$(AM_V_CXXLD)$(CXXLINK) $(smit_OBJECTS) $(smit_LDADD) $(LIBS)
@@ -576,6 +576,7 @@ mostlyclean-compile:
 	-rm -f mongoose/smit-mongoose.$(OBJEXT)
 	-rm -f src/T_parseConfig-parseConfig.$(OBJEXT)
 	-rm -f src/T_stringTools-stringTools.$(OBJEXT)
+	-rm -f src/smit-HttpContext.$(OBJEXT)
 	-rm -f src/smit-Trigger.$(OBJEXT)
 	-rm -f src/smit-clone.$(OBJEXT)
 	-rm -f src/smit-console.$(OBJEXT)
@@ -606,6 +607,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@mongoose/$(DEPDIR)/smit-mongoose.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/T_parseConfig-parseConfig.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/T_stringTools-stringTools.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-HttpContext.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-Trigger.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-clone.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-console.Po@am__quote@
@@ -996,6 +998,20 @@ src/smit-console.obj: src/console.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/console.cpp' object='src/smit-console.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/smit-console.obj `if test -f 'src/console.cpp'; then $(CYGPATH_W) 'src/console.cpp'; else $(CYGPATH_W) '$(srcdir)/src/console.cpp'; fi`
+
+src/smit-HttpContext.o: src/HttpContext.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/smit-HttpContext.o -MD -MP -MF src/$(DEPDIR)/smit-HttpContext.Tpo -c -o src/smit-HttpContext.o `test -f 'src/HttpContext.cpp' || echo '$(srcdir)/'`src/HttpContext.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/smit-HttpContext.Tpo src/$(DEPDIR)/smit-HttpContext.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/HttpContext.cpp' object='src/smit-HttpContext.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/smit-HttpContext.o `test -f 'src/HttpContext.cpp' || echo '$(srcdir)/'`src/HttpContext.cpp
+
+src/smit-HttpContext.obj: src/HttpContext.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/smit-HttpContext.obj -MD -MP -MF src/$(DEPDIR)/smit-HttpContext.Tpo -c -o src/smit-HttpContext.obj `if test -f 'src/HttpContext.cpp'; then $(CYGPATH_W) 'src/HttpContext.cpp'; else $(CYGPATH_W) '$(srcdir)/src/HttpContext.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/smit-HttpContext.Tpo src/$(DEPDIR)/smit-HttpContext.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/HttpContext.cpp' object='src/smit-HttpContext.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/smit-HttpContext.obj `if test -f 'src/HttpContext.cpp'; then $(CYGPATH_W) 'src/HttpContext.cpp'; else $(CYGPATH_W) '$(srcdir)/src/HttpContext.cpp'; fi`
 
 src/smparser-parseConfig.o: src/parseConfig.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smparser_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/smparser-parseConfig.o -MD -MP -MF src/$(DEPDIR)/smparser-parseConfig.Tpo -c -o src/smparser-parseConfig.o `test -f 'src/parseConfig.cpp' || echo '$(srcdir)/'`src/parseConfig.cpp
@@ -1501,6 +1517,7 @@ uninstall-am: uninstall-binPROGRAMS uninstall-dist_pkgdataDATA
 	tags tags-recursive uninstall uninstall-am \
 	uninstall-binPROGRAMS uninstall-dist_pkgdataDATA
 
+@WINDOWS_FALSE@	AM_LDFLAGS += -pthread
 embedcpio.c embedcpio.h: @srcdir@/tools/convertToC.cpp
 	rm -rf $(X)
 	cp -r @srcdir@/data $(X)
@@ -1519,6 +1536,7 @@ embedcpio.c embedcpio.h: @srcdir@/tools/convertToC.cpp
 .PHONY: clean-local-embedded-data
 clean-local-embedded-data:
 	rm -rf $(X)
+@WINDOWS_FALSE@	smit_LDADD += -ldl
 
 # Windows installer
 @WINDOWS_TRUE@all-local: @PACKAGE_TARNAME@-@VERSION@-setup$(EXEEXT)

@@ -5,50 +5,51 @@ AM_CXXFLAGS=-Wall
 AM_LDFLAGS=
 
 if GCOV_ENABLED
-    AM_CFLAGS += -O0 -g3 -fprofile-arcs -ftest-coverage
-    AM_CXXFLAGS += -O0 -g3 -fprofile-arcs -ftest-coverage
-    AM_LDFLAGS += -lgcov
+AM_CFLAGS += -O0 -g3 -fprofile-arcs -ftest-coverage
+AM_CXXFLAGS += -O0 -g3 -fprofile-arcs -ftest-coverage
+AM_LDFLAGS += -lgcov
 endif
 
 if GPROF_ENABLED
-    AM_CFLAGS += -O0 -g3 -pg -fprofile-arcs
-    AM_CXXFLAGS += -O0 -g3 -pg -fprofile-arcs
-    AM_LDFLAGS += -pg -lgcov
+AM_CFLAGS += -O0 -g3 -pg -fprofile-arcs
+AM_CXXFLAGS += -O0 -g3 -pg -fprofile-arcs
+AM_LDFLAGS += -pg -lgcov
 endif
 
 if WINDOWS
-    AM_CFLAGS += -static -static-libgcc
-    AM_CFLAGS += -Dopenssl_EXPORTS
-    
-    AM_CXXFLAGS += -static -static-libgcc
-    AM_CXXFLAGS += -Dopenssl_EXPORTS
+AM_CFLAGS += -static -static-libgcc
+AM_CFLAGS += -Dopenssl_EXPORTS
+
+AM_CXXFLAGS += -static -static-libgcc
+AM_CXXFLAGS += -Dopenssl_EXPORTS
 else
-    AM_LDFLAGS += -pthread
+	AM_LDFLAGS += -pthread
 endif
 
 
 # Main program
 bin_PROGRAMS = smit
 smit_SOURCES = \
-	mongoose/mongoose.c \
-	src/db.cpp  \
-    src/parseConfig.cpp \
-    src/identifiers.cpp \
-    src/main.cpp \
-    src/httpdHandlers.cpp \
-    src/renderingText.cpp \
-    src/renderingCsv.cpp \
-    src/renderingHtml.cpp \
-    src/cpio.cpp \
-    src/stringTools.cpp \
-    src/mutexTools.cpp \
-    src/session.cpp \
-    src/dateTools.cpp \
-    src/logging.cpp \
-    src/Trigger.cpp \
-    src/filesystem.cpp \
-    src/clone.cpp \
-	src/console.cpp
+			   src/db.cpp  \
+			   src/parseConfig.cpp \
+			   src/identifiers.cpp \
+			   src/main.cpp \
+			   src/httpdHandlers.cpp \
+			   src/renderingText.cpp \
+			   src/renderingCsv.cpp \
+			   src/renderingHtml.cpp \
+			   src/cpio.cpp \
+			   src/stringTools.cpp \
+			   src/mutexTools.cpp \
+			   src/session.cpp \
+			   src/dateTools.cpp \
+			   src/logging.cpp \
+			   src/Trigger.cpp \
+			   src/filesystem.cpp \
+			   src/clone.cpp \
+			   src/console.cpp \
+			   src/HttpContext.cpp \
+			   mongoose/mongoose.c 
 
 nodist_smit_SOURCES = embedcpio.c embedcpio.h 
 BUILT_SOURCES = embedcpio.c embedcpio.h
@@ -78,9 +79,9 @@ smit_CPPFLAGS = -I @srcdir@/mongoose @OPENSSL_CFLAGS@ @CURL_CFLAGS@
 smit_LDADD = @OPENSSL_LIBS@ @CURL_LIBS@
 
 if WINDOWS
-    smit_LDADD += -lws2_32 -lgdi32
+smit_LDADD += -lws2_32 -lgdi32
 else
-    smit_LDADD += -ldl
+	smit_LDADD += -ldl
 endif
 
 

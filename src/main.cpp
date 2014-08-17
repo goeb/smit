@@ -26,8 +26,9 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <iostream>
+#include <signal.h>
 
-
+#include "HttpContext.h"
 #include "mongoose.h"
 #include "httpdHandlers.h"
 #include "logging.h"
@@ -38,7 +39,6 @@
 #include "identifiers.h"
 #include "filesystem.h"
 #include "clone.h"
-#include <signal.h>
 
 
 void usage()
@@ -390,19 +390,7 @@ int cmdUser(int argc, const char **args)
     return 0;
 }
 
-void addParam(const char **table, size_t size, const char *param)
-{
-    size_t i = 0;
-    for (i=0; i<size; i++) {
-        if (table[i] == 0) {
-            table[i] = param;
-            return;
-        }
-    }
-    LOG_ERROR("Cannot add parameter %s: table full", param);
-}
-
-struct mg_context *serveRepository(int argc, const char **args)
+int serveRepository(int argc, const char **args)
 {
     LOG_INFO("Starting Smit v" VERSION);
 
@@ -457,48 +445,40 @@ struct mg_context *serveRepository(int argc, const char **args)
         }
     }
 
-    struct mg_context *ctx;
-    struct mg_callbacks callbacks;
-
-    memset(&callbacks, 0, sizeof(callbacks));
-    callbacks.begin_request = begin_request_handler;
-    callbacks.log_message = log_message_handler;
+    MongooseServerContext mc;
+    mc.setRequestHandler(begin_request_handler);
 
     LOG_INFO("Starting http server on port %s", listenPort.c_str());
 
-    const int PARAMS_SIZE = 30;
-    const char *params[PARAMS_SIZE];
-    for (i=0; i<PARAMS_SIZE; i++) params[i] = 0;
-
-    addParam(params, PARAMS_SIZE, "listening_ports");
-    addParam(params, PARAMS_SIZE, listenPort.c_str());
-    addParam(params, PARAMS_SIZE, "document_root");
-    addParam(params, PARAMS_SIZE, repo);
+    mc.addParam("listening_ports");
+    mc.addParam(listenPort.c_str());
+    mc.addParam("document_root");
+    mc.addParam(repo);
 
     if (certificatePemFile) {
-        addParam(params, PARAMS_SIZE, "ssl_certificate");
-        addParam(params, PARAMS_SIZE, certificatePemFile);
+        mc.addParam("ssl_certificate");
+        mc.addParam(certificatePemFile);
     }
 
     if (UserBase::isLocalUserInterface()) {
-        addParam(params, PARAMS_SIZE, "num_threads");
-        addParam(params, PARAMS_SIZE, "1");
+        mc.addParam("num_threads");
+        mc.addParam("1");
     }
 
-    ctx = mg_start(&callbacks, NULL, params);
+    r = mc.start();
 
-    if (!ctx) {
+    if (r < 0) {
         LOG_ERROR("Cannot start http server. Aborting.");
-        return 0;
+        return -1;
     }
 
     if (!UserBase::isLocalUserInterface()) {
         while (1) sleep(1); // block until ctrl-C
         getchar();  // Wait until user hits "enter"
-        mg_stop(ctx);
+        mc.stop();
     }
     // else, we return, and the cmdUi() will launch the web browser
-    return ctx;
+    return 0;
 }
 #ifndef _WIN32
 void daemonize()
@@ -586,8 +566,8 @@ int cmdUi(int argc, const char **args)
     if (p) {
         // in parent, start local server
         close(pipefd[0]);
-        struct mg_context *ctx = serveRepository(3, serverArguments);
-        if (!ctx) {
+        int r = serveRepository(3, serverArguments);
+        if (r < 0) {
             fprintf(stderr, "Cannot start local server\n");
             exit(1);
         }
@@ -629,7 +609,7 @@ int cmdUi(int argc, const char **args)
 
 #else // _WIN32
     // start local server
-    struct mg_context *ctx = serveRepository(3, serverArguments);
+    int r = serveRepository(3, serverArguments);
 
     cmd = "start \"\" \"" + url + "\"";
     LOG_INFO("Running: %s...", cmd.c_str());
