@@ -1,3 +1,6 @@
+v2.0.1
+
+    - fix smit-clone crash when authentication refused
 
 v2.0.0, 2 August 2014
 

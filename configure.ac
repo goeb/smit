@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.63])
-AC_INIT([Smit], [2.0.0], [], [smit], [http://goeb.github.io/smit])
+AC_INIT([Smit], [2.0.1], [], [smit], [http://goeb.github.io/smit])
 AC_CONFIG_HEADERS([src/config.h])
 AC_CANONICAL_TARGET
 AM_INIT_AUTOMAKE([-Wall -Werror subdir-objects])
@@ -33,6 +33,12 @@ esac
 AM_CONDITIONAL(WINDOWS, test x$WINDOWS = xyes)
 AM_CONDITIONAL(CYGWIN, test x$MINGW = xyes)
 AM_CONDITIONAL(MINGW, test x$MINGW = xyes)
+
+# 
+#AC_ARG_WITH([libcurl], [AS_HELP_STRING([--with-libcurl],
+#                          [build with libcurl, needed for smit-clone])],
+#                          [],
+#                          [with_libcurl=yes])
 
 # Checks for programs.
 AC_PROG_CXX

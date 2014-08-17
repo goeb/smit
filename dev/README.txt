@@ -20,7 +20,7 @@ Curl
 
 Open SSL
 
-    TODO
-
-     ./Configure --prefix=$HOME/win32libs/openssl-1.0.1h no-shared  mingw no-asm
+    CROSS_COMPILE="i686-w64-mingw32-" ./Configure mingw  --prefix=$HOME/win32libs/openssl-1.0.1h  no-shared no-asm
+    make
+    make install
 
