@@ -23,7 +23,8 @@ SOURCES += \
     ../../src/Trigger.cpp \
     ../../src/filesystem.cpp \
     ../../src/clone.cpp \
-    ../../src/console.cpp
+    ../../src/console.cpp \
+    ../../src/HttpContext.cpp
 
 HEADERS += \
     ../../mongoose/mongoose.h \
@@ -46,5 +47,6 @@ HEADERS += \
     ../../src/Trigger.h \
     ../../src/filesystem.h \
     ../../src/clone.h \
-    ../../src/console.h
+    ../../src/console.h \
+    ../../src/HttpContext.h
 

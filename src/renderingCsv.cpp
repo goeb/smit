@@ -39,27 +39,27 @@ std::string doubleQuoteCsv(const std::string &input)
 }
 
 
-void RCsv::printProjectList(struct mg_connection *conn, const std::list<std::pair<std::string, std::string> > &pList)
+void RCsv::printProjectList(const RequestContext *req, const std::list<std::pair<std::string, std::string> > &pList)
 {
-    mg_printf(conn, "Content-Type: text/plain\r\n\r\n");
+    req->printf("Content-Type: text/plain\r\n\r\n");
 
     std::list<std::pair<std::string, std::string> >::const_iterator p;
     for (p=pList.begin(); p!=pList.end(); p++) {
-        mg_printf(conn, "%s,%s\r\n", doubleQuoteCsv(p->first).c_str(), doubleQuoteCsv(p->second).c_str());
+        req->printf("%s,%s\r\n", doubleQuoteCsv(p->first).c_str(), doubleQuoteCsv(p->second).c_str());
     }
 }
 
-void RCsv::printIssueList(struct mg_connection *conn, std::vector<struct Issue*> issueList, std::list<std::string> colspec)
+void RCsv::printIssueList(const RequestContext *req, std::vector<struct Issue*> issueList, std::list<std::string> colspec)
 {
-    mg_printf(conn, "Content-Type: text/plain\r\n\r\n");
+    req->printf("Content-Type: text/plain\r\n\r\n");
 
     // print names of columns
     std::list<std::string>::iterator colname;
     for (colname = colspec.begin(); colname != colspec.end(); colname++) {
-        if (colname != colspec.begin()) mg_printf(conn, ",");
-        mg_printf(conn, "%s", doubleQuoteCsv(*colname).c_str());
-   }
-    mg_printf(conn, "\r\n");
+        if (colname != colspec.begin()) req->printf(",");
+        req->printf("%s", doubleQuoteCsv(*colname).c_str());
+    }
+    req->printf("\r\n");
 
     // list of issues
     std::vector<struct Issue*>::iterator i;
@@ -67,7 +67,7 @@ void RCsv::printIssueList(struct mg_connection *conn, std::vector<struct Issue*>
 
         std::list<std::string>::iterator c;
         for (c = colspec.begin(); c != colspec.end(); c++) {
-            if (c != colspec.begin()) mg_printf(conn, ",");
+            if (c != colspec.begin()) req->printf(",");
 
             std::string text;
             std::string column = *c;
@@ -83,9 +83,9 @@ void RCsv::printIssueList(struct mg_connection *conn, std::vector<struct Issue*>
                 if (p != properties.end()) text = toString(p->second);
             }
 
-            mg_printf(conn, "%s", doubleQuoteCsv(text).c_str());
+            req->printf("%s", doubleQuoteCsv(text).c_str());
         }
-        mg_printf(conn, "\r\n");
+        req->printf("\r\n");
     }
 }
 

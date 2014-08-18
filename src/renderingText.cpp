@@ -18,29 +18,29 @@
 #include "stringTools.h"
 #include "global.h"
 
-void RText::printProjectList(struct mg_connection *conn, const std::list<std::pair<std::string, std::string> > &pList)
+void RText::printProjectList(const RequestContext *req, const std::list<std::pair<std::string, std::string> > &pList)
 {
-    mg_printf(conn, "Content-Type: text/plain\r\n\r\n");
+    req->printf("Content-Type: text/plain\r\n\r\n");
 
     std::list<std::pair<std::string, std::string> >::const_iterator p;
     for (p=pList.begin(); p!=pList.end(); p++) {
-        mg_printf(conn, "%s %s %s\n", Project::urlNameEncode(p->first).c_str(),
-                  p->second.c_str(), p->first.c_str());
+        req->printf("%s %s %s\n", Project::urlNameEncode(p->first).c_str(),
+                    p->second.c_str(), p->first.c_str());
 
     }
 }
 
-void RText::printIssueList(struct mg_connection *conn, std::vector<struct Issue*> issueList, std::list<std::string> colspec)
+void RText::printIssueList(const RequestContext *req, std::vector<struct Issue*> issueList, std::list<std::string> colspec)
 {
-    mg_printf(conn, "Content-Type: text/plain\r\n\r\n");
+    req->printf("Content-Type: text/plain\r\n\r\n");
 
     // print names of columns
     std::list<std::string>::iterator colname;
     for (colname = colspec.begin(); colname != colspec.end(); colname++) {
-        if (colname != colspec.begin()) mg_printf(conn, ",\t");
-        mg_printf(conn, "%s", colname->c_str());
-   }
-    mg_printf(conn, "\n");
+        if (colname != colspec.begin()) req->printf(",\t");
+        req->printf("%s", colname->c_str());
+    }
+    req->printf("\n");
 
     // list of issues
     std::vector<struct Issue*>::iterator i;
@@ -50,7 +50,7 @@ void RText::printIssueList(struct mg_connection *conn, std::vector<struct Issue*
         for (c = colspec.begin(); c != colspec.end(); c++) {
             std::string text;
             std::string column = *c;
-            if (c != colspec.begin()) mg_printf(conn, ",\t");
+            if (c != colspec.begin()) req->printf(",\t");
 
             if (column == "id") text = (*i)->id;
             else if (column == "ctime") text = epochToString((*i)->ctime);
@@ -63,21 +63,21 @@ void RText::printIssueList(struct mg_connection *conn, std::vector<struct Issue*
                 if (p != properties.end()) text = toString(p->second);
             }
 
-            mg_printf(conn, "%s", text.c_str());
+            req->printf("%s", text.c_str());
         }
-        mg_printf(conn, "\n");
+        req->printf("\n");
     }
 
 }
 
-void RText::printIssue(struct mg_connection *conn, const Issue &issue)
+void RText::printIssue(const RequestContext *req, const Issue &issue)
 {
     LOG_DEBUG("RText::printIssue...");
-    mg_printf(conn, "Content-Type: text/plain\r\n\r\n");
+    req->printf("Content-Type: text/plain\r\n\r\n");
     Entry *e = issue.latest;
     while (e && e->prev) e = e->prev; // go to the first one
     while (e) {
-        mg_printf(conn, "%s\n", e->id.c_str());
+        req->printf("%s\n", e->id.c_str());
         e = e->next;
     }
 }

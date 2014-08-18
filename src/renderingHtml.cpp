@@ -34,20 +34,20 @@
   * ContextParameters::projectConfig gets the config once at initilisation,
   * and afterwards one can work with the copy (without locking).
   */
-ContextParameters::ContextParameters(struct mg_connection *cnx, User u, Project &p)
+ContextParameters::ContextParameters(const RequestContext *request, User u, Project &p)
 {
     project = &p;
     projectConfig = p.getConfig(); // take a copy of the config
     user = u;
     userRole = u.getRole(p.getName());
-    conn = cnx;
+    req = request;
 }
 
-ContextParameters::ContextParameters(struct mg_connection *cnx, User u)
+ContextParameters::ContextParameters(const RequestContext *request, User u)
 {
     project = 0;
     user = u;
-    conn = cnx;
+    req = request;
 }
 
 const Project &ContextParameters::getProject() const
@@ -83,7 +83,7 @@ const Project &ContextParameters::getProject() const
   *
   * The caller is responsible for calling 'free' on the returned pointer (if not null).
   */
-int loadProjectPage(struct mg_connection *conn, const std::string &projectPath, const std::string &page, const char **data)
+int loadProjectPage(const RequestContext *req, const std::string &projectPath, const std::string &page, const char **data)
 {
     // first look for the page in $REPO/$PROJECT/html/
     std::string path = projectPath + "/html/" + page;
@@ -98,7 +98,7 @@ int loadProjectPage(struct mg_connection *conn, const std::string &projectPath, 
 
     // no page found. This is an error
     LOG_ERROR("Page not found (or empty): %s", page.c_str());
-    mg_printf(conn, "Missing page (or empty): %s", htmlEscape(page).c_str());
+    req->printf("Missing page (or empty): %s", htmlEscape(page).c_str());
     return n;
 }
 
@@ -129,7 +129,7 @@ public:
         userRolesByProject = 0;
 
         int n;
-        if (ctx.project) n = loadProjectPage(ctx.conn, ctx.getProject().getPath(), basename, &buffer);
+        if (ctx.project) n = loadProjectPage(ctx.req, ctx.getProject().getPath(), basename, &buffer);
         else {
             std::string path = Database::Db.getRootDir() + "/public/" + basename;
             n = loadFile(path.c_str(), &buffer);
@@ -172,31 +172,31 @@ public:
         return varname;
     }
 
-    void dumpPrevious(struct mg_connection *conn) {
+    void dumpPrevious(const RequestContext *req) {
         if (dumpEnd == dumpStart) {
             LOG_ERROR("dumpPrevious: dumpEnd == dumpStart");
             return;
         }
-        mg_write(conn, dumpStart, dumpEnd-dumpStart);
+        req->write(dumpStart, dumpEnd-dumpStart);
         dumpStart = searchFromHere;
         dumpEnd = dumpStart;
     }
 
     void printPage() {
         if (!buffer) return;
-        mg_printf(ctx.conn, "Content-Type: text/html\r\n\r\n");
+        ctx.req->printf("Content-Type: text/html\r\n\r\n");
 
         while (1) {
             std::string varname = getNextVariable();
-            dumpPrevious(ctx.conn);
+            dumpPrevious(ctx.req);
             if (varname.empty()) break;
 
             if (varname == K_SM_HTML_PROJECT_NAME && ctx.project) {
-                if (ctx.getProject().getName().empty()) mg_printf(ctx.conn, "(new)");
-                else mg_printf(ctx.conn, "%s", htmlEscape(ctx.getProject().getName()).c_str());
+                if (ctx.getProject().getName().empty()) ctx.req->printf("(new)");
+                else ctx.req->printf("%s", htmlEscape(ctx.getProject().getName()).c_str());
 
             } else if (varname == K_SM_URL_PROJECT_NAME && ctx.project) {
-                    mg_printf(ctx.conn, "%s", ctx.getProject().getUrlName().c_str());
+                    ctx.req->printf("%s", ctx.getProject().getUrlName().c_str());
 
             } else if (varname == K_SM_DIV_NAVIGATION_GLOBAL) {
                 RHtml::printNavigationGlobal(ctx);
@@ -209,16 +209,16 @@ public:
                 RHtml::printProjects(ctx, *projectList, userRolesByProject);
 
             } else if (varname == K_SM_DIV_USERS && usersList) {
-                RHtml::printUsers(ctx.conn, *usersList);
+                RHtml::printUsers(ctx.req, *usersList);
 
             } else if (varname == K_SM_SCRIPT_PROJECT_CONFIG_UPDATE) {
                 RHtml::printScriptUpdateConfig(ctx);
 
             } else if (varname == K_SM_RAW_ISSUE_ID && currentIssue) {
-                mg_printf(ctx.conn, "%s", htmlEscape(currentIssue->id).c_str());
+                ctx.req->printf("%s", htmlEscape(currentIssue->id).c_str());
 
             } else if (varname == K_SM_HTML_ISSUE_SUMMARY && currentIssue) {
-                mg_printf(ctx.conn, "%s", htmlEscape(currentIssue->getSummary()).c_str());
+                ctx.req->printf("%s", htmlEscape(currentIssue->getSummary()).c_str());
 
             } else if (varname == K_SM_DIV_ISSUES && issueList && colspec) {
                 RHtml::printIssueList(ctx, *issueList, *colspec, true);
@@ -244,13 +244,13 @@ public:
                 RHtml::printLinksToPredefinedViews(ctx);
 
             } else if (varname == K_SM_DIV_ISSUE_MSG_PREVIEW) {
-                mg_printf(ctx.conn, "<div id=\"sm_entry_preview\" class=\"sm_entry_message\">"
+                ctx.req->printf("<div id=\"sm_entry_preview\" class=\"sm_entry_message\">"
                           "%s"
                           "</div>", htmlEscape(_("...message preview...")).c_str());
 
             } else {
                 // unknown variable name
-                mg_printf(ctx.conn, "%s", varname.c_str());
+                ctx.req->printf("%s", varname.c_str());
             }
         }
 
@@ -270,19 +270,19 @@ private:
   * @param redirect
   *    May include a query string
   */
-void RHtml::printPageSignin(struct mg_connection *conn, const char *redirect)
+void RHtml::printPageSignin(const RequestContext *req, const char *redirect)
 {
 
-    mg_printf(conn, "Content-Type: text/html\r\n\r\n");
+    req->printf("Content-Type: text/html\r\n\r\n");
 
     std::string path = Database::Db.getRootDir() + "/public/signin.html";
     const char *data;
     int r = loadFile(path.c_str(), &data);
     if (r > 0) {
-        mg_write(conn, data, r);
+        req->write(data, r);
         // add javascript for updating the redirect URL
-        mg_printf(conn, "<script>document.getElementById(\"redirect\").value = \"%s\"</script>",
-                  enquoteJs(redirect).c_str());
+        req->printf("<script>document.getElementById(\"redirect\").value = \"%s\"</script>",
+                    enquoteJs(redirect).c_str());
         free((void*)data);
     } else {
         LOG_ERROR("Could not load %s (or empty file)", path.c_str());
@@ -296,67 +296,63 @@ void RHtml::printPageUser(const ContextParameters &ctx, const User *u)
     vn.printPage();
 
     // add javascript for updating the inputs
-    struct mg_connection *conn = ctx.conn;
-
-    mg_printf(conn, "<script>\n");
+    ctx.req->printf("<script>\n");
 
     if (!ctx.user.superadmin) {
         // hide what is reserved to superadmin
-        mg_printf(conn, "hideSuperadminZone();\n");
+        ctx.req->printf("hideSuperadminZone();\n");
     } else {
-        if (u) mg_printf(conn, "setName('%s');\n", enquoteJs(u->username).c_str());
+        if (u) ctx.req->printf("setName('%s');\n", enquoteJs(u->username).c_str());
     }
 
     if (u && u->superadmin) {
-        mg_printf(conn, "setSuperadminCheckbox();\n");
+        ctx.req->printf("setSuperadminCheckbox();\n");
     }
 
     std::list<std::string> projects = Database::getProjects();
-    mg_printf(conn, "Projects = %s;\n", toJavascriptArray(projects).c_str());
+    ctx.req->printf("Projects = %s;\n", toJavascriptArray(projects).c_str());
     std::list<std::string> roleList = getAvailableRoles();
-    mg_printf(conn, "Roles = %s;\n", toJavascriptArray(roleList).c_str());
+    ctx.req->printf("Roles = %s;\n", toJavascriptArray(roleList).c_str());
 
     if (u) {
         std::map<std::string, enum Role>::const_iterator rop;
         FOREACH(rop, u->rolesOnProjects) {
-            mg_printf(conn, "addProject('roles_on_projects', '%s', '%s');\n",
+            ctx.req->printf("addProject('roles_on_projects', '%s', '%s');\n",
                       enquoteJs(rop->first).c_str(),
                       enquoteJs(roleToString(rop->second)).c_str());
         }
     }
-    mg_printf(conn, "addProject('roles_on_projects', '', '');\n");
+    ctx.req->printf("addProject('roles_on_projects', '', '');\n");
 
-    mg_printf(conn, "</script>\n");
+    ctx.req->printf("</script>\n");
 }
 
 void RHtml::printPageView(const ContextParameters &ctx, const PredefinedView &pv)
 {
-    struct mg_connection *conn = ctx.conn;
-
     VariableNavigator vn("view.html", ctx);
     vn.printPage();
 
 
     // add javascript for updating the inputs
-    mg_printf(conn, "<script>\n");
+    ctx.req->printf("<script>\n");
 
     if (ctx.userRole != ROLE_ADMIN && !ctx.user.superadmin) {
         // hide what is reserved to admin
-        mg_printf(conn, "hideAdminZone();\n");
+        ctx.req->printf("hideAdminZone();\n");
     } else {
-        mg_printf(conn, "setName('%s');\n", enquoteJs(pv.name).c_str());
+        ctx.req->printf("setName('%s');\n", enquoteJs(pv.name).c_str());
     }
-    if (pv.isDefault) mg_printf(conn, "setDefaultCheckbox();\n");
+    if (pv.isDefault) ctx.req->printf("setDefaultCheckbox();\n");
     std::list<std::string> properties = ctx.projectConfig.getPropertiesNames();
-    mg_printf(conn, "Properties = %s;\n", toJavascriptArray(properties).c_str());
+    ctx.req->printf("Properties = %s;\n", toJavascriptArray(properties).c_str());
 
     // add PropertiesLists, for proposing the values in filterin/out
-    mg_printf(conn, "PropertiesLists = {};\n");
+    ctx.req->printf("PropertiesLists = {};\n");
     std::list<PropertySpec>::const_iterator pspec;
     FOREACH(pspec, ctx.projectConfig.properties) {
         PropertyType t = pspec->type;
         if (t == F_SELECT || t == F_MULTISELECT) {
-            mg_printf(conn, "PropertiesLists['%s'] = %s;\n", enquoteJs(pspec->name).c_str(),
+            ctx.req->printf("PropertiesLists['%s'] = %s;\n", enquoteJs(pspec->name).c_str(),
                       toJavascriptArray(pspec->selectOptions).c_str());
 
         } else if (t == F_SELECT_USER) {
@@ -366,13 +362,13 @@ void RHtml::printPageView(const ContextParameters &ctx, const PredefinedView &pv
             std::list<std::string> userList;
             userList.push_back("me");
             FOREACH(u, users) { userList.push_back(*u); }
-            mg_printf(conn, "PropertiesLists['%s'] = %s;\n", enquoteJs(pspec->name).c_str(),
+            ctx.req->printf("PropertiesLists['%s'] = %s;\n", enquoteJs(pspec->name).c_str(),
                       toJavascriptArray(userList).c_str());
         }
     }
 
-    mg_printf(conn, "setSearch('%s');\n", enquoteJs(pv.search).c_str());
-    mg_printf(conn, "setUrl('/%s/issues/?%s');\n", ctx.getProject().getUrlName().c_str(),
+    ctx.req->printf("setSearch('%s');\n", enquoteJs(pv.search).c_str());
+    ctx.req->printf("setUrl('/%s/issues/?%s');\n", ctx.getProject().getUrlName().c_str(),
               pv.generateQueryString().c_str());
 
     // filter in and out
@@ -380,63 +376,61 @@ void RHtml::printPageView(const ContextParameters &ctx, const PredefinedView &pv
     std::list<std::string>::const_iterator v;
     FOREACH(f, pv.filterin) {
         FOREACH(v, f->second) {
-            mg_printf(conn, "addFilter('filterin', '%s', '%s');\n",
+            ctx.req->printf("addFilter('filterin', '%s', '%s');\n",
                       enquoteJs(f->first).c_str(),
                       enquoteJs(*v).c_str());
         }
     }
-    mg_printf(conn, "addFilter('filterin', '', '');\n");
+    ctx.req->printf("addFilter('filterin', '', '');\n");
 
     FOREACH(f, pv.filterout) {
         FOREACH(v, f->second) {
-            mg_printf(conn, "addFilter('filterout', '%s', '%s');\n",
+            ctx.req->printf("addFilter('filterout', '%s', '%s');\n",
                       enquoteJs(f->first).c_str(),
                       enquoteJs(*v).c_str());
         }
     }
-    mg_printf(conn, "addFilter('filterout', '', '');\n");
+    ctx.req->printf("addFilter('filterout', '', '');\n");
 
     // Colums specification
     if (!pv.colspec.empty()) {
         std::vector<std::string> items = split(pv.colspec, " +");
         std::vector<std::string>::iterator i;
         FOREACH(i, items) {
-            mg_printf(conn, "addColspec('%s');\n", enquoteJs(*i).c_str());
+            ctx.req->printf("addColspec('%s');\n", enquoteJs(*i).c_str());
         }
     }
-    mg_printf(conn, "addColspec('');\n");
+    ctx.req->printf("addColspec('');\n");
 
     // sort
     std::list<std::pair<bool, std::string> > sSpec = parseSortingSpec(pv.sort.c_str());
     std::list<std::pair<bool, std::string> >::iterator s;
     FOREACH(s, sSpec) {
         std::string direction = PredefinedView::getDirectionName(s->first);
-        mg_printf(conn, "addSort('%s', '%s');\n", enquoteJs(direction).c_str(),
+        ctx.req->printf("addSort('%s', '%s');\n", enquoteJs(direction).c_str(),
                   enquoteJs(s->second).c_str());
     }
-    mg_printf(conn, "addSort('', '');\n");
+    ctx.req->printf("addSort('', '');\n");
 
 
-    mg_printf(conn, "</script>\n");
+    ctx.req->printf("</script>\n");
 }
 
 void RHtml::printLinksToPredefinedViews(const ContextParameters &ctx)
 {
-    struct mg_connection *conn = ctx.conn;
-
     const ProjectConfig &c = ctx.projectConfig;
     std::map<std::string, PredefinedView>::const_iterator pv;
-    mg_printf(conn, "<table class=\"sm_views\">");
-    mg_printf(conn, "<tr><th>%s</th><th>%s</th></tr>\n", _("Name"), _("Associated Url"));
+    ctx.req->printf("<table class=\"sm_views\">");
+    ctx.req->printf("<tr><th>%s</th><th>%s</th></tr>\n", _("Name"), _("Associated Url"));
     FOREACH(pv, c.predefinedViews) {
-        mg_printf(conn, "<tr><td class=\"sm_views_name\">");
-        mg_printf(conn, "<a href=\"%s\">%s</a>", urlEncode(pv->first).c_str(), htmlEscape(pv->first).c_str());
-        mg_printf(conn, "</td><td class=\"sm_views_link\">");
+        ctx.req->printf("<tr><td class=\"sm_views_name\">");
+        ctx.req->printf("<a href=\"%s\">%s</a>", urlEncode(pv->first).c_str(), htmlEscape(pv->first).c_str());
+        ctx.req->printf("</td><td class=\"sm_views_link\">");
         std::string qs = pv->second.generateQueryString();
-        mg_printf(conn, "<a href=\"../issues/?%s\">%s</a>", qs.c_str(), htmlEscape(qs).c_str());
-        mg_printf(conn, "</td></tr>\n");
+        ctx.req->printf("<a href=\"../issues/?%s\">%s</a>", qs.c_str(), htmlEscape(qs).c_str());
+        ctx.req->printf("</td></tr>\n");
     }
-    mg_printf(conn, "<table>\n");
+    ctx.req->printf("<table>\n");
 }
 
 void RHtml::printPageListOfViews(const ContextParameters &ctx)
@@ -473,26 +467,26 @@ public:
         }
     }
 
-    void print(struct mg_connection *conn) {
+    void print(const RequestContext *req) {
         if (nodeName.empty()) {
             // text contents
-            mg_printf(conn, "%s", text.c_str());
+            req->printf("%s", text.c_str());
         } else {
-            mg_printf(conn, "<%s ", nodeName.c_str());
+            req->printf("<%s ", nodeName.c_str());
             std::map<std::string, std::string>::iterator i;
             FOREACH(i, attributes) {
-                mg_printf(conn, "%s=\"%s\" ", i->first.c_str(), i->second.c_str());
+                req->printf("%s=\"%s\" ", i->first.c_str(), i->second.c_str());
             }
-            mg_printf(conn, ">\n");
+            req->printf(">\n");
 
             if (nodeName == "input") return; // no closing tag nor any contents
 
             std::list<HtmlNode>::iterator c;
             FOREACH(c, contents) {
-                c->print(conn);
+                c->print(req);
             }
             // close HTML node
-            mg_printf(conn, "</%s>\n", nodeName.c_str());
+            req->printf("</%s>\n", nodeName.c_str());
         }
 
     }
@@ -524,7 +518,6 @@ public:
   */
 void RHtml::printNavigationGlobal(const ContextParameters &ctx)
 {
-    struct mg_connection *conn = ctx.conn;
     HtmlNode div("div");
     div.addAttribute("class", "sm_navigation_global");
     HtmlNode linkToProjects("a");
@@ -583,7 +576,7 @@ void RHtml::printNavigationGlobal(const ContextParameters &ctx)
     linkToProfile.addContents(_("Profile"));
     div.addContents(linkToProfile);
 
-    div.print(conn);
+    div.print(ctx.req);
 
 }
 
@@ -595,8 +588,6 @@ void RHtml::printNavigationGlobal(const ContextParameters &ctx)
   */
 void RHtml::printNavigationIssues(const ContextParameters &ctx, bool autofocus)
 {
-    struct mg_connection *conn = ctx.conn;
-
     HtmlNode div("div");
     div.addAttribute("class", "sm_navigation_project");
     if (ctx.userRole == ROLE_ADMIN || ctx.userRole == ROLE_RW || ctx.user.superadmin) {
@@ -640,7 +631,7 @@ void RHtml::printNavigationIssues(const ContextParameters &ctx, bool autofocus)
     div.addContents(a);
 
 
-    div.print(conn);
+    div.print(ctx.req);
 }
 
 
@@ -648,69 +639,67 @@ void RHtml::printProjects(const ContextParameters &ctx,
                           const std::list<std::pair<std::string, std::string> > &pList,
                           const std::map<std::string, std::map<std::string, Role> > *userRolesByProject)
 {
-    struct mg_connection *conn = ctx.conn;
-
     std::list<std::pair<std::string, std::string> >::const_iterator p;
-    mg_printf(conn, "<table class=\"sm_projects\">\n");
-    mg_printf(conn, "<tr class=\"sm_projects\"><th class=\"sm_projects\">%s</th>"
+    ctx.req->printf("<table class=\"sm_projects\">\n");
+    ctx.req->printf("<tr class=\"sm_projects\"><th class=\"sm_projects\">%s</th>"
               "<th class=\"sm_projects\">%s</th><th class=\"sm_projects\">%s</th></tr>\n",
               _("Projects"), _("My Role"), _("Other Stakeholders"));
     for (p=pList.begin(); p!=pList.end(); p++) {
         std::string pname = p->first.c_str();
-        mg_printf(conn, "<tr class=\"sm_projects\">\n");
+        ctx.req->printf("<tr class=\"sm_projects\">\n");
 
-        mg_printf(conn, "<td class=\"sm_projects_link\">");
-        mg_printf(conn, "<a href=\"/%s/issues/?defaultView=1\" class=\"sm_projects_link\">%s</a></td>\n",
+        ctx.req->printf("<td class=\"sm_projects_link\">");
+        ctx.req->printf("<a href=\"/%s/issues/?defaultView=1\" class=\"sm_projects_link\">%s</a></td>\n",
                   Project::urlNameEncode(pname).c_str(), htmlEscape(pname).c_str());
 
-        mg_printf(conn, "<td>%s</td>\n", htmlEscape(_(p->second.c_str())).c_str());
+        ctx.req->printf("<td>%s</td>\n", htmlEscape(_(p->second.c_str())).c_str());
 
-        mg_printf(conn, "<td>");
+        ctx.req->printf("<td>");
         std::map<std::string, std::map<std::string, Role> >::const_iterator urit;
         std::map<std::string, Role>::const_iterator urole;
         urit = userRolesByProject->find(pname);
         if (urit != userRolesByProject->end()) FOREACH(urole, urit->second) {
-            if (urole != urit->second.begin()) mg_printf(conn, ", ");
-            mg_printf(conn, "<span class=\"sm_projects_stakeholder\">%s</span>"
+            if (urole != urit->second.begin()) ctx.req->printf(", ");
+            ctx.req->printf("<span class=\"sm_projects_stakeholder\">%s</span>"
                       " <span class=\"sm_projects_stakeholder_role\">(%s)</span>",
                       htmlEscape(urole->first).c_str(), htmlEscape(roleToString(urole->second)).c_str());
         }
-        mg_printf(conn, "</td>");
-        mg_printf(conn, "</tr>\n");
+        ctx.req->printf("</td>");
+        ctx.req->printf("</tr>\n");
     }
-    mg_printf(conn, "</table><br>\n");
-    if (ctx.user.superadmin) mg_printf(conn, "<div class=\"sm_projects_new\">"
+    ctx.req->printf("</table><br>\n");
+    if (ctx.user.superadmin) ctx.req->printf("<div class=\"sm_projects_new\">"
                                        "<a href=\"/_\" class=\"sm_projects_new\">%s</a></div><br>",
                                        htmlEscape(_("New Project")).c_str());
 }
 
-void RHtml::printUsers(struct mg_connection *conn, const std::list<User> &usersList)
+void RHtml::printUsers(const RequestContext *req, const std::list<User> &usersList)
 {
     std::list<User>::const_iterator u;
 
     if (usersList.empty()) return;
 
-    mg_printf(conn, "<table class=\"sm_users\">\n");
-    mg_printf(conn, "<tr class=\"sm_users\">");
-    mg_printf(conn, "<th class=\"sm_users\">%s</th>\n", _("Users"));
-    mg_printf(conn, "<th class=\"sm_users\">%s</th></tr>\n", _("Capabilities"));
-    mg_printf(conn, "</tr>");
+    req->printf("<table class=\"sm_users\">\n");
+    req->printf("<tr class=\"sm_users\">");
+    req->printf("<th class=\"sm_users\">%s</th>\n", _("Users"));
+    req->printf("<th class=\"sm_users\">%s</th></tr>\n", _("Capabilities"));
+    req->printf("</tr>");
 
     FOREACH(u, usersList) {
-        mg_printf(conn, "<tr class=\"sm_users\">");
-        mg_printf(conn, "<td class=\"sm_users\">\n");
-        mg_printf(conn, "<a href=\"/users/%s\">%s<a><br>",
+        req->printf("<tr class=\"sm_users\">");
+        req->printf("<td class=\"sm_users\">\n");
+        req->printf("<a href=\"/users/%s\">%s<a><br>",
                   urlEncode(u->username).c_str(), htmlEscape(u->username).c_str());
-        mg_printf(conn, "</td>");
+        req->printf("</td>");
         // capability
-        if (u->superadmin) mg_printf(conn, "<td class=\"sm_users\">%s</td>\n", _("superadmin"));
-        else mg_printf(conn, "<td class=\"sm_users\"> </td>\n");
+        if (u->superadmin) req->printf("<td class=\"sm_users\">%s</td>\n", _("superadmin"));
+        else req->printf("<td class=\"sm_users\"> </td>\n");
 
-        mg_printf(conn, "</tr>\n");
+        req->printf("</tr>\n");
 
     }
-    mg_printf(conn, "</table><br>\n");
-    mg_printf(conn, "<div class=\"sm_users_new\">"
+    req->printf("</table><br>\n");
+    req->printf("<div class=\"sm_users_new\">"
               "<a href=\"/users/_\" class=\"sm_users_new\">%s</a></div><br>",
               htmlEscape(_("New User")).c_str());
 
@@ -744,11 +733,9 @@ void RHtml::printPageProjectList(const ContextParameters &ctx,
   * - else, the property is added after the others
   *
   */
-std::string getNewSortingSpec(struct mg_connection *conn, const std::string property, bool exclusive)
+std::string getNewSortingSpec(const RequestContext *req, const std::string property, bool exclusive)
 {
-    const char *qstring = mg_get_request_info(conn)->query_string;
-    std::string qs;
-    if (qstring) qs = qstring;
+    std::string qs = req->getQueryString();
     LOG_DEBUG("getNewSortingSpec: in=%s, exclusive=%d", qs.c_str(), exclusive);
     std::string result;
 
@@ -836,16 +823,14 @@ std::string getNewSortingSpec(struct mg_connection *conn, const std::string prop
   */
 void RHtml::printScriptUpdateConfig(const ContextParameters &ctx)
 {
-    struct mg_connection *conn = ctx.conn;
-
-    mg_printf(conn, "<script>\n");
+    ctx.req->printf("<script>\n");
 
     // fulfill reserved properties first
     std::list<std::string> reserved = ProjectConfig::getReservedProperties();
     std::list<std::string>::iterator r;
     FOREACH(r, reserved) {
         std::string label = ctx.projectConfig.getLabelOfProperty(*r);
-        mg_printf(conn, "addProperty('%s', '%s', 'reserved', '');\n", enquoteJs(*r).c_str(),
+        ctx.req->printf("addProperty('%s', '%s', 'reserved', '');\n", enquoteJs(*r).c_str(),
                   enquoteJs(label).c_str());
     }
 
@@ -866,32 +851,32 @@ void RHtml::printScriptUpdateConfig(const ContextParameters &ctx)
         } else if (pspec->type == F_ASSOCIATION) {
             options = pspec->reverseLabel;
         }
-        mg_printf(conn, "addProperty('%s', '%s', '%s', '%s');\n", enquoteJs(pspec->name).c_str(),
+        ctx.req->printf("addProperty('%s', '%s', '%s', '%s');\n", enquoteJs(pspec->name).c_str(),
                   enquoteJs(label).c_str(),
                   type.c_str(), options.c_str());
     }
 
     // add 3 more empty properties
-    mg_printf(conn, "addProperty('', '', '', '');\n");
-    mg_printf(conn, "addProperty('', '', '', '');\n");
-    mg_printf(conn, "addProperty('', '', '', '');\n");
+    ctx.req->printf("addProperty('', '', '', '');\n");
+    ctx.req->printf("addProperty('', '', '', '');\n");
+    ctx.req->printf("addProperty('', '', '', '');\n");
 
-    mg_printf(conn, "replaceContentInContainer();\n");
+    ctx.req->printf("replaceContentInContainer();\n");
 
     // add tags
     std::map<std::string, TagSpec>::const_iterator tagspec;
     FOREACH(tagspec, c.tags) {
         const TagSpec& tpsec = tagspec->second;
-        mg_printf(conn, "addTag('%s', '%s', %s);\n", enquoteJs(tpsec.id).c_str(),
+        ctx.req->printf("addTag('%s', '%s', %s);\n", enquoteJs(tpsec.id).c_str(),
                   enquoteJs(tpsec.label).c_str(),
                   tpsec.display?"true":"false");
     }
 
-    mg_printf(conn, "addTag('', '', '', '');\n");
-    mg_printf(conn, "addTag('', '', '', '');\n");
+    ctx.req->printf("addTag('', '', '', '');\n");
+    ctx.req->printf("addTag('', '', '', '');\n");
 
 
-    mg_printf(conn, "</script>\n");
+    ctx.req->printf("</script>\n");
 }
 
 
@@ -900,14 +885,14 @@ void RHtml::printProjectConfig(const ContextParameters &ctx)
     VariableNavigator vn("project.html", ctx);
     vn.printPage();
 
-    mg_printf(ctx.conn, "<script>");
+    ctx.req->printf("<script>");
     if (!ctx.user.superadmin) {
         // hide what is reserved to superadmin
-        mg_printf(ctx.conn, "hideSuperadminZone();\n");
+        ctx.req->printf("hideSuperadminZone();\n");
     } else {
-        if (ctx.project) mg_printf(ctx.conn, "setProjectName('%s');\n", enquoteJs(ctx.getProject().getName()).c_str());
+        if (ctx.project) ctx.req->printf("setProjectName('%s');\n", enquoteJs(ctx.getProject().getName()).c_str());
     }
-    mg_printf(ctx.conn, "</script>");
+    ctx.req->printf("</script>");
 
 }
 
@@ -946,25 +931,22 @@ std::string getPropertyForGrouping(const ProjectConfig &pconfig, const std::stri
   */
 void printFilters(const ContextParameters &ctx)
 {
-    struct mg_connection *conn = ctx.conn;
     if (!ctx.search.empty() || !ctx.filterin.empty() || !ctx.filterout.empty()) {
-       mg_printf(conn, "<div class=\"sm_issues_filters\">");
-       if (!ctx.search.empty()) mg_printf(conn, "search: %s<br>", htmlEscape(ctx.search).c_str());
-       if (!ctx.filterin.empty()) mg_printf(conn, "filterin: %s<br>", htmlEscape(toString(ctx.filterin)).c_str());
-       if (!ctx.filterout.empty()) mg_printf(conn, "filterout: %s", htmlEscape(toString(ctx.filterout)).c_str());
-       mg_printf(conn, "</div>");
+       ctx.req->printf("<div class=\"sm_issues_filters\">");
+       if (!ctx.search.empty()) ctx.req->printf("search: %s<br>", htmlEscape(ctx.search).c_str());
+       if (!ctx.filterin.empty()) ctx.req->printf("filterin: %s<br>", htmlEscape(toString(ctx.filterin)).c_str());
+       if (!ctx.filterout.empty()) ctx.req->printf("filterout: %s", htmlEscape(toString(ctx.filterout)).c_str());
+       ctx.req->printf("</div>");
    }
 }
 
 void RHtml::printIssueListFullContents(const ContextParameters &ctx, std::vector<struct Issue*> issueList)
 {
-    struct mg_connection *conn = ctx.conn;
-
-    mg_printf(conn, "<div class=\"sm_issues\">\n");
+    ctx.req->printf("<div class=\"sm_issues\">\n");
 
     printFilters(ctx);
     // number of issues
-    mg_printf(conn, "<div class=\"sm_issues_count\">%s: <span class=\"sm_issues_count\">%lu</span></div>\n",
+    ctx.req->printf("<div class=\"sm_issues_count\">%s: <span class=\"sm_issues_count\">%lu</span></div>\n",
               _("Issues found"), L(issueList.size()));
 
 
@@ -991,66 +973,66 @@ void RHtml::printIssueListFullContents(const ContextParameters &ctx, std::vector
 
         }
     }
-    mg_printf(conn, "</div>\n");
+    ctx.req->printf("</div>\n");
 
 }
 
 /** concatenate a param to the URL (add ? or &)
   */
-std::string urlAdd(struct mg_connection *conn, const char *param)
+std::string urlAdd(const RequestContext *req, const char *param)
 {
-    const struct mg_request_info *rq = mg_get_request_info(conn);
-    std::string url;
-    if (rq && rq->uri) {
-        url = rq->uri;
-        url += '?';
-        if (rq->query_string && strlen(rq->query_string)) url = url + rq->query_string + '&' + param;
-        else url += param;
-    }
+
+    std::string uri = req->getUri();
+    std::string qs = req->getQueryString();
+
+    std::string url = uri + '?';
+    if (qs.size() > 0) url = url + qs + '&' + param;
+    else url += param;
+
     return url;
 }
 
 void RHtml::printIssueList(const ContextParameters &ctx, const std::vector<struct Issue*> &issueList,
                      const std::list<std::string> &colspec, bool showOtherFormats)
 {
-    struct mg_connection *conn = ctx.conn;
-
-    mg_printf(conn, "<div class=\"sm_issues\">\n");
+    ctx.req->printf("<div class=\"sm_issues\">\n");
 
     // add links to alternate download formats (CSV and full-contents)
     if (showOtherFormats) {
-        mg_printf(conn, "<div class=\"sm_issues_other_formats\">");
-        mg_printf(conn, "<a href=\"%s\" class=\"sm_issues_other_formats\">csv</a> ", urlAdd(conn, "format=csv").c_str());
-        mg_printf(conn, "<a href=\"%s\" class=\"sm_issues_other_formats\">full-contents</a></div>\n", urlAdd(conn, "full=1").c_str());
+        ctx.req->printf("<div class=\"sm_issues_other_formats\">");
+        ctx.req->printf("<a href=\"%s\" class=\"sm_issues_other_formats\">csv</a> ",
+                        urlAdd(ctx.req, "format=csv").c_str());
+        ctx.req->printf("<a href=\"%s\" class=\"sm_issues_other_formats\">full-contents</a></div>\n",
+                        urlAdd(ctx.req, "full=1").c_str());
     }
 
     printFilters(ctx);
 
     // number of issues
-    mg_printf(conn, "<div class=\"sm_issues_count\">%s: <span class=\"sm_issues_count\">%lu</span></div>\n",
+    ctx.req->printf("<div class=\"sm_issues_count\">%s: <span class=\"sm_issues_count\">%lu</span></div>\n",
               _("Issues found"), L(issueList.size()));
 
     std::string group = getPropertyForGrouping(ctx.projectConfig, ctx.sort);
     std::string currentGroup;
 
-    mg_printf(conn, "<table class=\"sm_issues\">\n");
+    ctx.req->printf("<table class=\"sm_issues\">\n");
 
     // print header of the table
-    mg_printf(conn, "<tr class=\"sm_issues\">\n");
+    ctx.req->printf("<tr class=\"sm_issues\">\n");
     std::list<std::string>::const_iterator colname;
     for (colname = colspec.begin(); colname != colspec.end(); colname++) {
 
         std::string label = ctx.projectConfig.getLabelOfProperty(*colname);
-        std::string newQueryString = getNewSortingSpec(conn, *colname, true);
-        mg_printf(conn, "<th class=\"sm_issues\"><a class=\"sm_issues_sort\" href=\"?%s\" title=\"Sort ascending\">%s</a>\n",
+        std::string newQueryString = getNewSortingSpec(ctx.req, *colname, true);
+        ctx.req->printf("<th class=\"sm_issues\"><a class=\"sm_issues_sort\" href=\"?%s\" title=\"Sort ascending\">%s</a>\n",
                   newQueryString.c_str(), htmlEscape(label).c_str());
-        newQueryString = getNewSortingSpec(conn, *colname, false);
-        mg_printf(conn, "\n<br><a href=\"?%s\" class=\"sm_issues_sort_cumulative\" ", newQueryString.c_str());
-        mg_printf(conn, "title=\"%s\">&gt;&gt;&gt;</a></th>\n",
+        newQueryString = getNewSortingSpec(ctx.req, *colname, false);
+        ctx.req->printf("\n<br><a href=\"?%s\" class=\"sm_issues_sort_cumulative\" ", newQueryString.c_str());
+        ctx.req->printf("title=\"%s\">&gt;&gt;&gt;</a></th>\n",
                   _("Sort while preserving order of other columns\n(or invert current column if already sorted-by)"));
 
     }
-    mg_printf(conn, "</tr>\n");
+    ctx.req->printf("</tr>\n");
 
     // print the rows of the issues
     std::vector<struct Issue*>::const_iterator i;
@@ -1059,15 +1041,15 @@ void RHtml::printIssueList(const ContextParameters &ctx, const std::vector<struc
         if (! group.empty() &&
             (i == issueList.begin() || getProperty((*i)->properties, group) != currentGroup) ) {
                 // insert group bar if relevant
-            mg_printf(conn, "<tr class=\"sm_issues_group\">\n");
+            ctx.req->printf("<tr class=\"sm_issues_group\">\n");
             currentGroup = getProperty((*i)->properties, group);
-            mg_printf(conn, "<td class=\"sm_group\" colspan=\"%lu\"><span class=\"sm_issues_group_label\">%s: </span>",
+            ctx.req->printf("<td class=\"sm_group\" colspan=\"%lu\"><span class=\"sm_issues_group_label\">%s: </span>",
                       L(colspec.size()), htmlEscape(ctx.projectConfig.getLabelOfProperty(group)).c_str());
-            mg_printf(conn, "<span class=\"sm_issues_group\">%s</span></td>\n", htmlEscape(currentGroup).c_str());
-            mg_printf(conn, "</tr>\n");
+            ctx.req->printf("<span class=\"sm_issues_group\">%s</span></td>\n", htmlEscape(currentGroup).c_str());
+            ctx.req->printf("</tr>\n");
         }
 
-        mg_printf(conn, "<tr class=\"sm_issues\">\n");
+        ctx.req->printf("<tr class=\"sm_issues\">\n");
 
         std::list<std::string>::const_iterator c;
         for (c = colspec.begin(); c != colspec.end(); c++) {
@@ -1097,30 +1079,30 @@ void RHtml::printIssueList(const ContextParameters &ctx, const std::vector<struc
                 href_rhs = "</a>";
             }
 
-            mg_printf(conn, "<td class=\"sm_issues\">%s%s%s</td>\n",
+            ctx.req->printf("<td class=\"sm_issues\">%s%s%s</td>\n",
                       href_lhs.c_str(), htmlEscape(text.str()).c_str(), href_rhs.c_str());
         }
-        mg_printf(conn, "</tr>\n");
+        ctx.req->printf("</tr>\n");
     }
-    mg_printf(conn, "</table>\n");
-    mg_printf(conn, "</div>\n");
+    ctx.req->printf("</table>\n");
+    ctx.req->printf("</div>\n");
 }
 
 void RHtml::printIssuesAccrossProjects(ContextParameters ctx,
                                        const std::map<std::string, std::vector<struct Issue*> >&issues,
                                        const std::list<std::string> &colspec)
 {
-    mg_printf(ctx.conn, "<div class=\"sm_accross_issues\">");
+    ctx.req->printf("<div class=\"sm_accross_issues\">");
     std::map<std::string, std::vector<struct Issue*> >::const_iterator i;
     FOREACH(i, issues) {
         const Project *p = Database::Db.getProject(i->first);
         if (!p) continue;
         ctx.project = p;
         ctx.projectConfig = p->getConfig();
-        mg_printf(ctx.conn, "<div class=\"sm_accross_project\">%s</div>\n", htmlEscape(p->getName()).c_str());
+        ctx.req->printf("<div class=\"sm_accross_project\">%s</div>\n", htmlEscape(p->getName()).c_str());
         printIssueList(ctx, i->second, colspec, false);
     }
-    mg_printf(ctx.conn, "</div>");
+    ctx.req->printf("</div>");
 }
 
 
@@ -1349,11 +1331,10 @@ bool isImage(const std::string &filename)
   */
 void RHtml::printIssueSummary(const ContextParameters &ctx, const Issue &issue)
 {
-    struct mg_connection *conn = ctx.conn;
-    mg_printf(conn, "<div class=\"sm_issue_header\">\n");
-    mg_printf(conn, "<span class=\"sm_issue_id\">%s</span>\n", htmlEscape(issue.id).c_str());
-    mg_printf(conn, "<span class=\"sm_issue_summary\">%s</span>\n", htmlEscape(issue.getSummary()).c_str());
-    mg_printf(conn, "</div>\n");
+    ctx.req->printf("<div class=\"sm_issue_header\">\n");
+    ctx.req->printf("<span class=\"sm_issue_id\">%s</span>\n", htmlEscape(issue.id).c_str());
+    ctx.req->printf("<span class=\"sm_issue_summary\">%s</span>\n", htmlEscape(issue.getSummary()).c_str());
+    ctx.req->printf("</div>\n");
 
 }
 
@@ -1364,8 +1345,6 @@ void RHtml::printIssueSummary(const ContextParameters &ctx, const Issue &issue)
   */
 void printAssociations(const ContextParameters &ctx, const std::string &associationName, const std::list<std::string> &issues, bool reverse)
 {
-    struct mg_connection *conn = ctx.conn;
-
     std::string label;
     if (reverse) {
         label = ctx.projectConfig.getReverseLabelOfProperty(associationName);
@@ -1373,36 +1352,35 @@ void printAssociations(const ContextParameters &ctx, const std::string &associat
         label = ctx.projectConfig.getLabelOfProperty(associationName);
     }
 
-    mg_printf(conn, "<td class=\"sm_issue_plabel\">%s: </td>", htmlEscape(label).c_str());
+    ctx.req->printf("<td class=\"sm_issue_plabel\">%s: </td>", htmlEscape(label).c_str());
     std::list<std::string>::const_iterator otherIssue;
-    mg_printf(conn, "<td colspan=\"3\" class=\"sm_issue_asso\">");
+    ctx.req->printf("<td colspan=\"3\" class=\"sm_issue_asso\">");
     FOREACH(otherIssue, issues) {
         // separate by a line feed
-        if (otherIssue != issues.begin()) mg_printf(conn, "<br>\n");
+        if (otherIssue != issues.begin()) ctx.req->printf("<br>\n");
 
         Issue associatedIssue;
         int r = ctx.getProject().get(*otherIssue, associatedIssue);
         if (r == 0) { // issue found. print id and summary
-            mg_printf(conn, "<a href=\"%s\"><span class=\"sm_issue_asso_id\">%s</span>"
+            ctx.req->printf("<a href=\"%s\"><span class=\"sm_issue_asso_id\">%s</span>"
                       " <span class=\"sm_issue_asso_summary\">%s</span></a>", urlEncode(associatedIssue.id).c_str(),
                       htmlEscape(associatedIssue.id).c_str(), htmlEscape(associatedIssue.getSummary()).c_str());
 
         } else { // not found. no such issue
-            mg_printf(conn, "<span class=\"sm_not_found\">%s</span>\n", htmlEscape(*otherIssue).c_str());
+            ctx.req->printf("<span class=\"sm_not_found\">%s</span>\n", htmlEscape(*otherIssue).c_str());
         }
     }
-    mg_printf(conn, "</td>");
+    ctx.req->printf("</td>");
 }
 
 
 void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
 {
-    struct mg_connection *conn = ctx.conn;
-    mg_printf(conn, "<div class=\"sm_issue\">");
+    ctx.req->printf("<div class=\"sm_issue\">");
 
     // issue properties in a two-column table
     // -------------------------------------------------
-    mg_printf(conn, "<table class=\"sm_issue_properties\">");
+    ctx.req->printf("<table class=\"sm_issue_properties\">");
     int workingColumn = 1;
     const uint8_t MAX_COLUMNS = 2;
 
@@ -1437,7 +1415,7 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
         if (type == F_ASSOCIATION) trStyle = "class=\"sm_issue_asso\"";
 
         if (workingColumn == 1) {
-            mg_printf(conn, "<tr %s>\n", trStyle);
+            ctx.req->printf("<tr %s>\n", trStyle);
         }
 
         // manage the start of the row
@@ -1448,7 +1426,7 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
             } else {
                 // add a placeholder in order to align the property with next row
                 // close current row and start a new row
-                mg_printf(conn, "<td></td><td></td></tr><tr %s>\n", trStyle);
+                ctx.req->printf("<td></td><td></td></tr><tr %s>\n", trStyle);
             }
             colspan = "colspan=\"3\"";
             workingColumn = 1;
@@ -1467,14 +1445,14 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
             // print label and value of property (other than an association)
 
             // label
-            mg_printf(conn, "<td class=\"sm_issue_plabel sm_issue_plabel_%s\">%s: </td>\n",
+            ctx.req->printf("<td class=\"sm_issue_plabel sm_issue_plabel_%s\">%s: </td>\n",
                       urlEncode(pname).c_str(), htmlEscape(label).c_str());
 
             // value
             std::string value;
             if (p != issue.properties.end()) value = toString(p->second);
 
-            mg_printf(conn, "<td %s class=\"%s sm_issue_pvalue_%s\">%s</td>\n",
+            ctx.req->printf("<td %s class=\"%s sm_issue_pvalue_%s\">%s</td>\n",
                       colspan, pvalueStyle, urlEncode(pname).c_str(), htmlEscape(value).c_str());
             workingColumn += workingColumnIncrement;
         }
@@ -1485,9 +1463,9 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
     }
 
     // align wrt missing cells (ie: fulfill missnig columns and close current row)
-    if (workingColumn != 1) mg_printf(conn, "<td></td><td></td>\n");
+    if (workingColumn != 1) ctx.req->printf("<td></td><td></td>\n");
 
-    mg_printf(conn, "</tr>\n");
+    ctx.req->printf("</tr>\n");
 
     // reverse associated issues, if any
     std::map<std::string, std::set<std::string> > rAssociatedIssues = ctx.project->getReverseAssociations(issue.id);
@@ -1498,19 +1476,19 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
             if (!ctx.projectConfig.isValidPropertyName(ra->first)) continue;
 
             std::list<std::string> issues(ra->second.begin(), ra->second.end()); // convert to list
-            mg_printf(conn, "<tr class=\"sm_issue_asso\">");
+            ctx.req->printf("<tr class=\"sm_issue_asso\">");
 
             printAssociations(ctx, ra->first, issues, true);
-            mg_printf(conn, "</tr>");
+            ctx.req->printf("</tr>");
         }
     }
 
-    mg_printf(conn, "</table>\n");
+    ctx.req->printf("</table>\n");
 
 
     // tags of the entries of the issue
     if (!pconfig.tags.empty()) {
-        mg_printf(conn, "<div class=\"sm_issue_tags\">\n");
+        ctx.req->printf("<div class=\"sm_issue_tags\">\n");
         std::map<std::string, TagSpec>::const_iterator tspec;
         FOREACH(tspec, pconfig.tags) {
             if (tspec->second.display) {
@@ -1520,13 +1498,13 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
                     // issue has at least one such tagged entry
                     style = "sm_issue_tagged " + urlEncode("sm_issue_tag_" + tspec->second.id);
                 }
-                mg_printf(conn, "<span id=\"sm_issue_tag_%s\" class=\"%s\" data-n=\"%d\">%s</span>\n",
+                ctx.req->printf("<span id=\"sm_issue_tag_%s\" class=\"%s\" data-n=\"%d\">%s</span>\n",
                           urlEncode(tspec->second.id).c_str(), style.c_str(), n, htmlEscape(tspec->second.label).c_str());
 
             }
         }
 
-        mg_printf(conn, "</div>\n");
+        ctx.req->printf("</div>\n");
     }
 
 
@@ -1539,7 +1517,7 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
 
         if (!e->next) {
             // latest entry. Add an anchor.
-            mg_printf(conn, "<span id=\"sm_last_entry\"></span>");
+            ctx.req->printf("<span id=\"sm_last_entry\"></span>");
         }
 
         // look if class sm_no_contents is applicable
@@ -1565,12 +1543,12 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
             }
         }
 
-        mg_printf(conn, "<div class=\"sm_entry %s %s\" id=\"%s\">\n", classNoContents,
+        ctx.req->printf("<div class=\"sm_entry %s %s\" id=\"%s\">\n", classNoContents,
                   urlEncode(classTagged).c_str(), urlEncode(ee.id).c_str());
 
-        mg_printf(conn, "<div class=\"sm_entry_header\">\n");
-        mg_printf(conn, "<span class=\"sm_entry_author\">%s</span>", htmlEscape(ee.author).c_str());
-        mg_printf(conn, ", <span class=\"sm_entry_ctime\">%s</span>\n", epochToString(ee.ctime).c_str());
+        ctx.req->printf("<div class=\"sm_entry_header\">\n");
+        ctx.req->printf("<span class=\"sm_entry_author\">%s</span>", htmlEscape(ee.author).c_str());
+        ctx.req->printf(", <span class=\"sm_entry_ctime\">%s</span>\n", epochToString(ee.ctime).c_str());
         // conversion of date in javascript
         // document.write(new Date(%d)).toString());
 
@@ -1580,15 +1558,15 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
              (e == issue.latest) && e->prev &&
              (ctx.userRole == ROLE_ADMIN || ctx.userRole == ROLE_RW) ) {
             // entry was created less than 10 minutes ago, and by same user, and is latest in the issue
-            mg_printf(conn, "<a href=\"#\" class=\"sm_entry_delete\" title=\"Delete this entry (at most %d minutes after posting)\" ", (DELETE_DELAY_S/60));
-            mg_printf(conn, " onclick=\"deleteEntry('/%s/issues/%s', '%s');return false;\">\n",
+            ctx.req->printf("<a href=\"#\" class=\"sm_entry_delete\" title=\"Delete this entry (at most %d minutes after posting)\" ", (DELETE_DELAY_S/60));
+            ctx.req->printf(" onclick=\"deleteEntry('/%s/issues/%s', '%s');return false;\">\n",
                       ctx.getProject().getUrlName().c_str(), enquoteJs(issue.id).c_str(), enquoteJs(ee.id).c_str());
-            mg_printf(conn, "&#10008; delete");
-            mg_printf(conn, "</a>\n");
+            ctx.req->printf("&#10008; delete");
+            ctx.req->printf("</a>\n");
         }
 
         // link to raw entry
-        mg_printf(conn, "(<a href=\"/%s/issues/%s/%s\" class=\"sm_entry_raw\">%s</a>)\n",
+        ctx.req->printf("(<a href=\"/%s/issues/%s/%s\" class=\"sm_entry_raw\">%s</a>)\n",
                   ctx.getProject().getUrlName().c_str(),
                   urlEncode(issue.id).c_str(), urlEncode(ee.id).c_str(), _("raw"));
 
@@ -1604,26 +1582,26 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
                 if (ctx.userRole == ROLE_ADMIN || ctx.userRole == ROLE_RW) {
                     const char *tagTitle = _("Click to tag/untag");
 
-                    mg_printf(conn, "<a href=\"#\" onclick=\"tagEntry('/%s/tags/%s', '%s', '%s');return false;\""
+                    ctx.req->printf("<a href=\"#\" onclick=\"tagEntry('/%s/tags/%s', '%s', '%s');return false;\""
                               " title=\"%s\" class=\"sm_entry_tag\">",
                               ctx.getProject().getUrlName().c_str(), enquoteJs(issue.id).c_str(), enquoteJs(ee.id).c_str(),
                               enquoteJs(tag.id).c_str(), tagTitle);
 
                     // the tag itself
-                    mg_printf(conn, "<span class=\"%s\" id=\"sm_tag_%s_%s\">",
+                    ctx.req->printf("<span class=\"%s\" id=\"sm_tag_%s_%s\">",
                               tagStyle.c_str(), urlEncode(ee.id).c_str(), urlEncode(tag.id).c_str());
-                    mg_printf(conn, "[%s]", htmlEscape(tag.label).c_str());
-                    mg_printf(conn, "</span>\n");
+                    ctx.req->printf("[%s]", htmlEscape(tag.label).c_str());
+                    ctx.req->printf("</span>\n");
 
-                    mg_printf(conn, "</a>\n");
+                    ctx.req->printf("</a>\n");
 
                 } else {
                     // read-only
                     // if tag is not active, do not display
                     if (ee.tags.find(tag.id) != ee.tags.end()) {
-                        mg_printf(conn, "<span class=\"%s\">", tagStyle.c_str());
-                        mg_printf(conn, "[%s]", htmlEscape(tag.label).c_str());
-                        mg_printf(conn, "</span>\n");
+                        ctx.req->printf("<span class=\"%s\">", tagStyle.c_str());
+                        ctx.req->printf("[%s]", htmlEscape(tag.label).c_str());
+                        ctx.req->printf("</span>\n");
                     }
 
                 }
@@ -1632,20 +1610,20 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
 
         }
 
-        mg_printf(conn, "</div>\n"); // end header
+        ctx.req->printf("</div>\n"); // end header
 
         std::string m = ee.getMessage();
         if (! m.empty()) {
-            mg_printf(conn, "<div class=\"sm_entry_message\">");
-            mg_printf(conn, "%s\n", convertToRichText(htmlEscape(m)).c_str());
-            mg_printf(conn, "</div>\n"); // end message
+            ctx.req->printf("<div class=\"sm_entry_message\">");
+            ctx.req->printf("%s\n", convertToRichText(htmlEscape(m)).c_str());
+            ctx.req->printf("</div>\n"); // end message
         }
 
 
         // uploaded files
         std::map<std::string, std::list<std::string> >::iterator files = ee.properties.find(K_FILE);
         if (files != ee.properties.end() && files->second.size() > 0) {
-            mg_printf(conn, "<div class=\"sm_entry_files\">\n");
+            ctx.req->printf("<div class=\"sm_entry_files\">\n");
             std::list<std::string>::iterator f;
             FOREACH(f, files->second) {
                 std::string shortName = *f;
@@ -1655,17 +1633,17 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
                     shortName = shortName.substr(dot+1);
                 }
 
-                mg_printf(conn, "<div class=\"sm_entry_file\">\n");
-                mg_printf(conn, "<a href=\"../%s/%s\" class=\"sm_entry_file\">", K_UPLOADED_FILES_DIR,
+                ctx.req->printf("<div class=\"sm_entry_file\">\n");
+                ctx.req->printf("<a href=\"../%s/%s\" class=\"sm_entry_file\">", K_UPLOADED_FILES_DIR,
                           urlEncode(*f).c_str());
                 if (isImage(*f)) {
-                    mg_printf(conn, "<img src=\"../files/%s\" class=\"sm_entry_file\"><br>", urlEncode(*f).c_str());
+                    ctx.req->printf("<img src=\"../files/%s\" class=\"sm_entry_file\"><br>", urlEncode(*f).c_str());
                 }
-                mg_printf(conn, "%s", htmlEscape(shortName).c_str());
-                mg_printf(conn, "</a>");
-                mg_printf(conn, "</div>\n"); // end file
+                ctx.req->printf("%s", htmlEscape(shortName).c_str());
+                ctx.req->printf("</a>");
+                ctx.req->printf("</div>\n"); // end file
             }
-            mg_printf(conn, "</div>\n"); // end files
+            ctx.req->printf("</div>\n"); // end files
         }
 
         // print other modified properties
@@ -1689,17 +1667,17 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
         }
 
         if (otherProperties.str().size() > 0) {
-            mg_printf(conn, "<div class=\"sm_entry_other_properties\">\n");
-            mg_printf(conn, "%s", otherProperties.str().c_str());
-            mg_printf(conn, "</div>\n");
+            ctx.req->printf("<div class=\"sm_entry_other_properties\">\n");
+            ctx.req->printf("%s", otherProperties.str().c_str());
+            ctx.req->printf("</div>\n");
         }
 
-        mg_printf(conn, "</div>\n"); // end entry
+        ctx.req->printf("</div>\n"); // end entry
 
         e = e->next;
     } // end of entries
 
-    mg_printf(conn, "</div>\n");
+    ctx.req->printf("</div>\n");
 
 }
 
@@ -1710,23 +1688,23 @@ void RHtml::printPageIssue(const ContextParameters &ctx, const Issue &issue)
     vn.printPage();
 
     // update the next/previous links
-    struct mg_connection *conn = ctx.conn;
+
     // class name of the HTML nodes to be updated
     const char* SM_ISSUE_NEXT = "sm_issue_next";
     const char* SM_ISSUE_PREVIOUS = "sm_issue_previous";
-    mg_printf(conn, "<script>");
+    ctx.req->printf("<script>");
     if (ctx.originView.empty()) {
         // disable the next/previous links
-        mg_printf(conn, "updateHref('%s', null);\n", SM_ISSUE_NEXT);
-        mg_printf(conn, "updateHref('%s', null);\n", SM_ISSUE_PREVIOUS);
+        ctx.req->printf("updateHref('%s', null);\n", SM_ISSUE_NEXT);
+        ctx.req->printf("updateHref('%s', null);\n", SM_ISSUE_PREVIOUS);
     } else {
         std::string qs;
         qs = ctx.originView + "&" QS_GOTO_NEXT "=" + urlEncode(issue.id);
-        mg_printf(conn, "updateHref('%s', './?%s');\n", SM_ISSUE_NEXT, enquoteJs(qs).c_str());
+        ctx.req->printf("updateHref('%s', './?%s');\n", SM_ISSUE_NEXT, enquoteJs(qs).c_str());
         qs = ctx.originView + "&" QS_GOTO_PREVIOUS "=" + urlEncode(issue.id);
-        mg_printf(conn, "updateHref('%s', './?%s');\n", SM_ISSUE_PREVIOUS, enquoteJs(qs).c_str());
+        ctx.req->printf("updateHref('%s', './?%s');\n", SM_ISSUE_PREVIOUS, enquoteJs(qs).c_str());
     }
-    mg_printf(conn, "</script>");
+    ctx.req->printf("</script>");
 }
 
 
@@ -1750,28 +1728,27 @@ void RHtml::printIssueForm(const ContextParameters &ctx, const Issue *issue, boo
         return;
     }
 
-    struct mg_connection *conn = ctx.conn;
     const ProjectConfig &pconfig = ctx.projectConfig;
 
-    mg_printf(conn, "<form enctype=\"multipart/form-data\" method=\"post\"  class=\"sm_issue_form\">");
+    ctx.req->printf("<form enctype=\"multipart/form-data\" method=\"post\"  class=\"sm_issue_form\">");
     // print the fields of the issue in a two-column table
 
     // The form is made over a table with 4 columns.
     // each row is made of 1 label, 1 input, 1 label, 1 input (4 columns)
     // except for the summary.
     // summary
-    mg_printf(conn, "<table class=\"sm_issue_properties\">");
-    mg_printf(conn, "<tr>\n");
-    mg_printf(conn, "<td class=\"sm_issue_plabel sm_issue_plabel_summary\">%s: </td>\n",
+    ctx.req->printf("<table class=\"sm_issue_properties\">");
+    ctx.req->printf("<tr>\n");
+    ctx.req->printf("<td class=\"sm_issue_plabel sm_issue_plabel_summary\">%s: </td>\n",
               htmlEscape(pconfig.getLabelOfProperty("summary")).c_str());
-    mg_printf(conn, "<td class=\"sm_issue_pinput\" colspan=\"3\">");
+    ctx.req->printf("<td class=\"sm_issue_pinput\" colspan=\"3\">");
 
-    mg_printf(conn, "<input class=\"sm_issue_pinput_summary\" required=\"required\" type=\"text\" name=\"summary\" value=\"%s\"",
+    ctx.req->printf("<input class=\"sm_issue_pinput_summary\" required=\"required\" type=\"text\" name=\"summary\" value=\"%s\"",
               htmlEscape(issue->getSummary()).c_str());
-    if (autofocus) mg_printf(conn, " autofocus");
-    mg_printf(conn, ">");
-    mg_printf(conn, "</td>\n");
-    mg_printf(conn, "</tr>\n");
+    if (autofocus) ctx.req->printf(" autofocus");
+    ctx.req->printf(">");
+    ctx.req->printf("</td>\n");
+    ctx.req->printf("</tr>\n");
 
     int workingColumn = 1;
     const uint8_t MAX_COLUMNS = 2;
@@ -1857,7 +1834,7 @@ void RHtml::printIssueForm(const ContextParameters &ctx, const Issue *issue, boo
             } else {
                 // add a placeholder in order to align the property with next row
                 // close current row and start a new row
-                mg_printf(conn, "<td></td><td></td></tr><tr>\n");
+                ctx.req->printf("<td></td><td></td></tr><tr>\n");
             }
             colspan = "colspan=\"3\"";
             workingColumn = 1;
@@ -1878,58 +1855,58 @@ void RHtml::printIssueForm(const ContextParameters &ctx, const Issue *issue, boo
         }
 
         if (workingColumn == 1) {
-            mg_printf(conn, "<tr>\n");
+            ctx.req->printf("<tr>\n");
         }
 
         // label
-        mg_printf(conn, "<td class=\"sm_issue_plabel sm_issue_plabel_%s\">%s: </td>\n",
+        ctx.req->printf("<td class=\"sm_issue_plabel sm_issue_plabel_%s\">%s: </td>\n",
                   urlEncode(pname).c_str(), htmlEscape(label).c_str());
 
         // input
-        mg_printf(conn, "<td %s class=\"sm_issue_pinput\">%s</td>\n", colspan, input.str().c_str());
+        ctx.req->printf("<td %s class=\"sm_issue_pinput\">%s</td>\n", colspan, input.str().c_str());
 
         workingColumn += workingColumnIncrement;
         if (workingColumn > MAX_COLUMNS) {
-            mg_printf(conn, "</tr>\n");
+            ctx.req->printf("</tr>\n");
             workingColumn = 1;
         }
     }
 
     if (workingColumn != 1) {
         // add 2 empty cells
-        mg_printf(conn, "<td></td><td></td></tr>\n");
+        ctx.req->printf("<td></td><td></td></tr>\n");
     }
-    mg_printf(conn, "<tr>\n");
-    mg_printf(conn, "<td class=\"sm_issue_plabel sm_issue_plabel_message\" >%s: </td>\n",  htmlEscape(_("Message")).c_str());
-    mg_printf(conn, "<td colspan=\"3\">\n");
-    mg_printf(conn, "<textarea class=\"sm_issue_pinput sm_issue_pinput_message\" placeholder=\"%s\" name=\"%s\" wrap=\"hard\" cols=\"80\">\n",
+    ctx.req->printf("<tr>\n");
+    ctx.req->printf("<td class=\"sm_issue_plabel sm_issue_plabel_message\" >%s: </td>\n",  htmlEscape(_("Message")).c_str());
+    ctx.req->printf("<td colspan=\"3\">\n");
+    ctx.req->printf("<textarea class=\"sm_issue_pinput sm_issue_pinput_message\" placeholder=\"%s\" name=\"%s\" wrap=\"hard\" cols=\"80\">\n",
               _("Enter a message"), K_MESSAGE);
-    mg_printf(conn, "</textarea>\n");
-    mg_printf(conn, "</td></tr>\n");
+    ctx.req->printf("</textarea>\n");
+    ctx.req->printf("</td></tr>\n");
 
     // check box "enable long lines"
-    mg_printf(conn, "<tr><td></td>\n");
-    mg_printf(conn, "<td class=\"sm_issue_longlines\" colspan=\"3\">\n");
-    mg_printf(conn, "<label><input type=\"checkbox\" onclick=\"changeWrapping();\">\n");
-    mg_printf(conn, "%s\n", _("Enable long lines"));
-    mg_printf(conn, "</label></td></tr>\n");
+    ctx.req->printf("<tr><td></td>\n");
+    ctx.req->printf("<td class=\"sm_issue_longlines\" colspan=\"3\">\n");
+    ctx.req->printf("<label><input type=\"checkbox\" onclick=\"changeWrapping();\">\n");
+    ctx.req->printf("%s\n", _("Enable long lines"));
+    ctx.req->printf("</label></td></tr>\n");
 
 
     // add file upload input
-    mg_printf(conn, "<tr>\n");
-    mg_printf(conn, "<td class=\"sm_issue_plabel sm_issue_plabel_file\" >%s: </td>\n", htmlEscape(_("File Upload")).c_str());
-    mg_printf(conn, "<td colspan=\"3\">\n");
-    mg_printf(conn, "<input type=\"file\" name=\"%s\" class=\"sm_issue_input_file\" onchange=\"updateFileInput('sm_issue_input_file');\">\n", K_FILE);
-    mg_printf(conn, "</td></tr>\n");
+    ctx.req->printf("<tr>\n");
+    ctx.req->printf("<td class=\"sm_issue_plabel sm_issue_plabel_file\" >%s: </td>\n", htmlEscape(_("File Upload")).c_str());
+    ctx.req->printf("<td colspan=\"3\">\n");
+    ctx.req->printf("<input type=\"file\" name=\"%s\" class=\"sm_issue_input_file\" onchange=\"updateFileInput('sm_issue_input_file');\">\n", K_FILE);
+    ctx.req->printf("</td></tr>\n");
 
-    mg_printf(conn, "<tr><td></td>\n");
-    mg_printf(conn, "<td colspan=\"3\">\n");
-    mg_printf(conn, "<button onclick=\"previewMessage(); return false;\">%s</button>\n", htmlEscape(_("Preview")).c_str());
-    mg_printf(conn, "<input type=\"submit\" value=\"%s\">\n", htmlEscape(_("Post")).c_str());
-    mg_printf(conn, "</td></tr>\n");
+    ctx.req->printf("<tr><td></td>\n");
+    ctx.req->printf("<td colspan=\"3\">\n");
+    ctx.req->printf("<button onclick=\"previewMessage(); return false;\">%s</button>\n", htmlEscape(_("Preview")).c_str());
+    ctx.req->printf("<input type=\"submit\" value=\"%s\">\n", htmlEscape(_("Post")).c_str());
+    ctx.req->printf("</td></tr>\n");
 
-    mg_printf(conn, "</table>\n");
+    ctx.req->printf("</table>\n");
 
-    mg_printf(conn, "</form>");
+    ctx.req->printf("</form>");
 
 }

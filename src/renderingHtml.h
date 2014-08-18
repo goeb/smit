@@ -5,7 +5,7 @@
 #include <string>
 #include <stdint.h>
 
-#include "mongoose.h"
+#include "HttpContext.h"
 #include "db.h"
 #include "session.h"
 
@@ -22,8 +22,8 @@
   */
 class ContextParameters {
 public:
-    ContextParameters(struct mg_connection *cnx, User u, Project &p);
-    ContextParameters(struct mg_connection *cnx, User u);
+    ContextParameters(const RequestContext *req, User u, Project &p);
+    ContextParameters(const RequestContext *req, User u);
     const Project &getProject() const;
 
     User user;
@@ -36,7 +36,7 @@ public:
     ProjectConfig projectConfig;
     std::set<std::string> usersOfProject;
     std::list<std::pair<std::string, uint8_t> > htmlFieldDisplay;
-    struct mg_connection *conn;
+    const RequestContext *req;
     std::string originView; // query string format
 };
 
@@ -61,7 +61,7 @@ public:
 
     static bool inList(const std::list<std::string> &listOfValues, const std::string &value);
     static void printIssueForm(const ContextParameters &ctx, const Issue *issue, bool autofocus);
-    static void printPageSignin(struct mg_connection *conn, const char *redirect);
+    static void printPageSignin(const RequestContext *req, const char *redirect);
 
     static void printPageUser(const ContextParameters &ctx, const User *u);
 
@@ -71,7 +71,7 @@ public:
     static void printProjects(const ContextParameters &ctx,
                               const std::list<std::pair<std::string, std::string> > &pList,
                               const std::map<std::string, std::map<std::string, Role> > *userRolesByProject);
-    static void printUsers(struct mg_connection *conn, const std::list<User> &usersList);
+    static void printUsers(const RequestContext *req, const std::list<User> &usersList);
     static void printScriptUpdateConfig(const ContextParameters &ctx);
     static std::string convertToRichText(const std::string &raw);
     static void printIssueSummary(const ContextParameters &ctx, const Issue &issue);
