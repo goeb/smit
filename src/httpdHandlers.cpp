@@ -50,7 +50,7 @@
   *    0 on success
   *   -1 on error (data too big)
   */
-int readMgConn(MongooseRequestContext *request, std::string &data, size_t maxSize)
+int readMgreq(MongooseRequestContext *request, std::string &data, size_t maxSize)
 {
     data.clear();
     const int SIZ = 4096;
@@ -207,7 +207,7 @@ enum RenderingFormat getFormat(MongooseRequestContext *request)
 }
 
 
-void httpPostRoot(struct mg_connection *conn, User u)
+void httpPostRoot(MongooseRequestContext *req, User u)
 {
 }
 
@@ -403,7 +403,7 @@ int httpGetSm(MongooseRequestContext *request, const std::string &file)
   */
 void httpGetUsers(MongooseRequestContext *request, User signedInUser, const std::string &username)
 {
-    ContextParameters ctx = ContextParameters(conn, signedInUser);
+    ContextParameters ctx = ContextParameters(request, signedInUser);
 
     if (username.empty() || username == "_") {
         // display form for a new user
@@ -420,7 +420,7 @@ void httpGetUsers(MongooseRequestContext *request, User signedInUser, const std:
         User *editedUser = UserBase::getUser(username);
 
         if (!editedUser) {
-            if (signedInUser.superadmin) sendHttpHeader404(conn);
+            if (signedInUser.superadmin) sendHttpHeader404(request);
             else sendHttpHeader403(request);
 
         } else if (username == signedInUser.username || signedInUser.superadmin) {
@@ -454,7 +454,7 @@ void httpPostUsers(MongooseRequestContext *request, User signedInUser, const std
         // post_data is "var1=val1&var2=val2...".
 
         std::string postData;
-        int rc = readMgConn(request, postData, 4096);
+        int rc = readMgreq(request, postData, 4096);
         if (rc < 0) {
             sendHttpHeader413(request, "You tried to upload too much data. Max is 4096 bytes.");
             return;
@@ -560,9 +560,9 @@ void httpPostUsers(MongooseRequestContext *request, User signedInUser, const std
     }
 }
 
-std::string getFromCookie(struct mg_connection *conn, const std::string &key)
+std::string getFromCookie(MongooseRequestContext *request, const std::string &key)
 {
-    const char *cookie = mg_get_header(conn, "Cookie");
+    const char *cookie = request->getHeader("Cookie");
     if (cookie) {
         LOG_DEBUG("Cookie found: %s", cookie);
         std::string c = cookie;
@@ -582,9 +582,9 @@ std::string getFromCookie(struct mg_connection *conn, const std::string &key)
     return "";
 }
 
-void handleUnauthorizedAccess(struct mg_connection *conn, const std::string &resource)
+void handleUnauthorizedAccess(MongooseRequestContext *request, const std::string &resource)
 {
-    sendHttpHeader403(conn);
+    sendHttpHeader403(request);
 }
 
 /** Serve a GET request to a file, for x-smit agent (cloning)
@@ -592,9 +592,9 @@ void handleUnauthorizedAccess(struct mg_connection *conn, const std::string &res
   * Access restriction must have been done before calling this function.
   * (this function does not verify access rights)
   */
-int httpGetFile(struct mg_connection *conn)
+int httpGetFile(MongooseRequestContext *request)
 {
-    std::string uri = mg_get_request_info(conn)->uri;
+    std::string uri = request->getUri();
     std::string dir = Database::Db.pathToRepository + uri; // uri contains a leading /
 
     struct dirent *dp;
@@ -603,15 +603,15 @@ int httpGetFile(struct mg_connection *conn)
 
     // send the directory contents
     // walk through the directory and print the entries
-    sendHttpHeader200(conn);
-    mg_printf(conn, "Content-Type: text/directory\r\n\r\n");
+    sendHttpHeader200(request);
+    request->printf("Content-Type: text/directory\r\n\r\n");
 
     while ((dp = readdir(dirp)) != NULL) {
         // Do not show . and ..
         if (0 == strcmp(dp->d_name, ".")) continue;
         if (0 == strcmp(dp->d_name, "..")) continue;
 
-        mg_printf(conn, "%s\n", dp->d_name);
+       request->printf("%s\n", dp->d_name);
     }
     closedir(dirp);
 
@@ -619,10 +619,9 @@ int httpGetFile(struct mg_connection *conn)
 }
 
 
-void httpGetRoot(struct mg_connection *conn, User u)
+void httpGetRoot(MongooseRequestContext *req, User u)
 {
-    //std::string req = request2string(conn);
-    sendHttpHeader200(conn);
+    sendHttpHeader200(req);
     // print list of available projects
     std::list<std::pair<std::string, Role> > usersRoles;
     std::list<std::pair<std::string, std::string> > pList;
@@ -638,18 +637,18 @@ void httpGetRoot(struct mg_connection *conn, User u)
         }
     }
 
-    enum RenderingFormat format = getFormat(conn);
+    enum RenderingFormat format = getFormat(req);
 
-    if (format == RENDERING_TEXT) RText::printProjectList(conn, pList);
-    else if (format == RENDERING_CSV) RCsv::printProjectList(conn, pList);
+    if (format == RENDERING_TEXT) RText::printProjectList(req, pList);
+    else if (format == RENDERING_CSV) RCsv::printProjectList(req, pList);
     else if (format == X_SMIT) {
         // print the list of the projects (for cloning tool)
-        mg_printf(conn, "Content-Type: text/directory\r\n\r\n");
+        req->printf("Content-Type: text/directory\r\n\r\n");
         std::list<std::pair<std::string, std::string> >::iterator p;
         FOREACH(p, pList) {
-            mg_printf(conn, "%s\n", Project::urlNameEncode(p->first).c_str());
+           req->printf("%s\n", Project::urlNameEncode(p->first).c_str());
         }
-        mg_printf(conn, "public\n");
+        req->printf("public\n");
 
 
     } else {
@@ -670,14 +669,14 @@ void httpGetRoot(struct mg_connection *conn, User u)
             allUsers = UserBase::getAllUsers();
         }
 
-        ContextParameters ctx = ContextParameters(conn, u);
+        ContextParameters ctx = ContextParameters(req, u);
         RHtml::printPageProjectList(ctx, pList, usersRolesByProject, allUsers);
     }
 }
 
-void httpGetNewProject(struct mg_connection *conn, User u)
+void httpGetNewProject(MongooseRequestContext *req, User u)
 {
-    if (! u.superadmin) return sendHttpHeader403(conn);
+    if (! u.superadmin) return sendHttpHeader403(req);
 
     Project p;
     // add by default 2 properties : status (open, closed) and owner (selectUser)
@@ -692,18 +691,18 @@ void httpGetNewProject(struct mg_connection *conn, User u)
     pspec.type = F_SELECT_USER;
     pconfig.properties.push_back(pspec);
     p.setConfig(pconfig);
-    sendHttpHeader200(conn);
-    ContextParameters ctx = ContextParameters(conn, u, p);
+    sendHttpHeader200(req);
+    ContextParameters ctx = ContextParameters(req, u, p);
     RHtml::printProjectConfig(ctx);
 }
 
 
-void httpGetProjectConfig(struct mg_connection *conn, Project &p, User u)
+void httpGetProjectConfig(MongooseRequestContext *req, Project &p, User u)
 {
-    if (u.getRole(p.getName()) != ROLE_ADMIN && ! u.superadmin) return sendHttpHeader403(conn);
+    if (u.getRole(p.getName()) != ROLE_ADMIN && ! u.superadmin) return sendHttpHeader403(req);
 
-    sendHttpHeader200(conn);
-    ContextParameters ctx = ContextParameters(conn, u, p);
+    sendHttpHeader200(req);
+    ContextParameters ctx = ContextParameters(req, u, p);
     RHtml::printProjectConfig(ctx);
 }
 
@@ -750,26 +749,26 @@ std::list<std::list<std::string> > convertPostToTokens(std::string &postData)
     return tokens;
 }
 
-void httpPostProjectConfig(struct mg_connection *conn, Project &p, User u)
+void httpPostProjectConfig(MongooseRequestContext *req, Project &p, User u)
 {
     enum Role r = u.getRole(p.getName());
     if (r != ROLE_ADMIN && ! u.superadmin) {
-        sendHttpHeader403(conn);
+        sendHttpHeader403(req);
         return;
     }
 
     std::string postData;
 
-    const char *contentType = mg_get_header(conn, "Content-Type");
+    const char *contentType = req->getHeader("Content-Type");
 
     if (0 == strcmp("application/x-www-form-urlencoded", contentType)) {
         // application/x-www-form-urlencoded
         // post_data is "var1=val1&var2=val2...".
 
-        int rc = readMgConn(conn, postData, 4096);
+        int rc = readMgreq(req, postData, 4096);
         if (rc < 0) {
             std::ostringstream s;
-            sendHttpHeader413(conn, "You tried to upload too much data. Max is 4096 bytes.");
+            sendHttpHeader413(req, "You tried to upload too much data. Max is 4096 bytes.");
             return;
         }
 
@@ -816,7 +815,7 @@ void httpPostProjectConfig(struct mg_connection *conn, Project &p, User u)
                             // error
                             std::string msg = "Cannot add reserved property: ";
                             msg += propertyName;
-                            sendHttpHeader400(conn, msg.c_str());
+                            sendHttpHeader400(req, msg.c_str());
                             return;
 
                         }
@@ -875,15 +874,15 @@ void httpPostProjectConfig(struct mg_connection *conn, Project &p, User u)
 
         Project *ptr;
         if (p.getName().empty()) {
-            if (!u.superadmin) return sendHttpHeader403(conn);
+            if (!u.superadmin) return sendHttpHeader403(req);
             if (projectName.empty()) {
-                sendHttpHeader400(conn, "Empty project name");
+                sendHttpHeader400(req, "Empty project name");
                 return;
             }
 
             // request for creation of a new project
             Project *newProject = Database::createProject(projectName);
-            if (!newProject) return sendHttpHeader500(conn, "Cannot create project");
+            if (!newProject) return sendHttpHeader500(req, "Cannot create project");
 
             ptr = newProject;
 
@@ -899,21 +898,21 @@ void httpPostProjectConfig(struct mg_connection *conn, Project &p, User u)
         if (r == 0) {
             // success, redirect to
             std::string redirectUrl = "/" + ptr->getUrlName() + "/config";
-            sendHttpRedirect(conn, redirectUrl.c_str(), 0);
+            sendHttpRedirect(req, redirectUrl.c_str(), 0);
 
         } else { // error
             LOG_ERROR("Cannot modify project config");
-            sendHttpHeader500(conn, "Cannot modify project config");
+            sendHttpHeader500(req, "Cannot modify project config");
         }
     }
 }
 
-void httpPostNewProject(struct mg_connection *conn, User u)
+void httpPostNewProject(MongooseRequestContext *req, User u)
 {
-    if (! u.superadmin) return sendHttpHeader403(conn);
+    if (! u.superadmin) return sendHttpHeader403(req);
 
     Project p;
-    return httpPostProjectConfig(conn, p, u);
+    return httpPostProjectConfig(req, p, u);
 }
 
 
@@ -960,7 +959,7 @@ enum IssueNavigation { ISSUE_NEXT, ISSUE_PREVIOUS };
   *     a string containing the url to redirect to
   *     "" if the next or previous the redirection could not be done
   */
-std::string getRedirectionToIssue(mg_connection *conn, const Project &p, std::vector<struct Issue*> issueList,
+std::string getRedirectionToIssue(const Project &p, std::vector<struct Issue*> issueList,
                     const std::string &issueId, IssueNavigation direction, const std::string &qs)
 {
     // get current issue
@@ -995,17 +994,15 @@ std::string getRedirectionToIssue(mg_connection *conn, const Project &p, std::ve
     return redirectUrl;
 }
 
-void httpIssuesAccrossProjects(struct mg_connection *conn, User u, const std::string &uri)
+void httpIssuesAccrossProjects(MongooseRequestContext *req, User u, const std::string &uri)
 {
-    if (uri != "issues") return sendHttpHeader404(conn);
+    if (uri != "issues") return sendHttpHeader404(req);
 
     // get list of projects for that user
     std::list<std::pair<std::string, std::string> > projectsAndRoles = u.getProjects();
 
     // get query string parameters
-    const struct mg_request_info *req = mg_get_request_info(conn);
-    std::string q;
-    if (req->query_string) q = req->query_string;
+    std::string q = req->getQueryString();
     PredefinedView v = PredefinedView::loadFromQueryString(q); // unamed view, used as handle on the viewing parameters
 
     std::map<std::string, std::vector<struct Issue*> > issues;
@@ -1038,14 +1035,14 @@ void httpIssuesAccrossProjects(struct mg_connection *conn, User u, const std::st
         // prevent having no columns, by forcing all of them
         cols = ProjectConfig::getReservedProperties();
     }
-    enum RenderingFormat format = getFormat(conn);
+    enum RenderingFormat format = getFormat(req);
 
-    sendHttpHeader200(conn);
+    sendHttpHeader200(req);
 
-    if (format == RENDERING_TEXT) mg_printf(conn, "\r\n\r\nnot supported\r\n");
-    else if (format == RENDERING_CSV) mg_printf(conn, "\r\n\r\nnot supported\r\n");
+    if (format == RENDERING_TEXT) req->printf("\r\n\r\nnot supported\r\n");
+    else if (format == RENDERING_CSV) req->printf("\r\n\r\nnot supported\r\n");
     else {
-        ContextParameters ctx = ContextParameters(conn, u);
+        ContextParameters ctx = ContextParameters(req, u);
         std::list<std::string> filterinRaw = getParamListFromQueryString(q, "filterin");
         std::list<std::string> filteroutRaw = getParamListFromQueryString(q, "filterout");
         // it would be better for code maintainability to pass v.filterin/out
@@ -1060,16 +1057,14 @@ void httpIssuesAccrossProjects(struct mg_connection *conn, User u, const std::st
 
 }
 
-void httpGetListOfIssues(struct mg_connection *conn, Project &p, User u)
+void httpGetListOfIssues(MongooseRequestContext *req, Project &p, User u)
 {
     // get query string parameters:
     //     colspec    which fields are to be displayed in the table, and their order
     //     filter     select issues with fields of the given values
     //     sort       indicate sorting
 
-    const struct mg_request_info *req = mg_get_request_info(conn);
-    std::string q;
-    if (req->query_string) q = req->query_string;
+    std::string q = req->getQueryString();
 
     std::string defaultView = getFirstParamFromQueryString(q, "defaultView");
     if (defaultView == "1") {
@@ -1079,7 +1074,7 @@ void httpGetListOfIssues(struct mg_connection *conn, Project &p, User u)
         if (!pv.name.empty()) {
             redirectUrl += "?" + pv.generateQueryString();
         }
-        sendHttpRedirect(conn, redirectUrl.c_str(), 0);
+        sendHttpRedirect(req, redirectUrl.c_str(), 0);
         return;
     }
 
@@ -1100,16 +1095,16 @@ void httpGetListOfIssues(struct mg_connection *conn, Project &p, User u)
     std::string previous = getFirstParamFromQueryString(q, QS_GOTO_PREVIOUS);
     std::string redirectionUrl;
     if (next.size()) {
-        redirectionUrl = getRedirectionToIssue(conn, p, issueList, next, ISSUE_NEXT, q);
+        redirectionUrl = getRedirectionToIssue(p, issueList, next, ISSUE_NEXT, q);
     } else if (previous.size()) {
-        redirectionUrl = getRedirectionToIssue(conn, p, issueList, previous, ISSUE_PREVIOUS, q);
+        redirectionUrl = getRedirectionToIssue(p, issueList, previous, ISSUE_PREVIOUS, q);
     }
     if (redirectionUrl.size()) {
         // clean the query string from next=, previous=
         std::string newQs = removeParam(q, QS_GOTO_NEXT);
         newQs = removeParam(newQs, QS_GOTO_PREVIOUS);
         std::string cookie = getServerCookie(QS_ORIGIN_VIEW, newQs, -1);
-        sendHttpRedirect(conn, redirectionUrl.c_str(), cookie.c_str());
+        sendHttpRedirect(req, redirectionUrl.c_str(), cookie.c_str());
         return;
     }
 
@@ -1125,14 +1120,14 @@ void httpGetListOfIssues(struct mg_connection *conn, Project &p, User u)
         // prevent having no columns, by forcing all of them
         cols = allCols;
     }
-    enum RenderingFormat format = getFormat(conn);
+    enum RenderingFormat format = getFormat(req);
 
-    sendHttpHeader200(conn);
+    sendHttpHeader200(req);
 
-    if (format == RENDERING_TEXT) RText::printIssueList(conn, issueList, cols);
-    else if (format == RENDERING_CSV) RCsv::printIssueList(conn, issueList, cols);
+    if (format == RENDERING_TEXT) RText::printIssueList(req, issueList, cols);
+    else if (format == RENDERING_CSV) RCsv::printIssueList(req, issueList, cols);
     else {
-        ContextParameters ctx = ContextParameters(conn, u, p);
+        ContextParameters ctx = ContextParameters(req, u, p);
         std::list<std::string> filterinRaw = getParamListFromQueryString(q, "filterin");
         std::list<std::string> filteroutRaw = getParamListFromQueryString(q, "filterout");
         // it would be better for code maintainability to pass v.filterin/out
@@ -1144,45 +1139,45 @@ void httpGetListOfIssues(struct mg_connection *conn, Project &p, User u)
         if (full == "1") {
             RHtml::printPageIssuesFullContents(ctx, issueList);
         } else {
-            sendCookie(conn, QS_ORIGIN_VIEW, q);
+            sendCookie(req, QS_ORIGIN_VIEW, q);
             RHtml::printPageIssueList(ctx, issueList, cols);
         }
     }
 }
 
-void httpGetProject(struct mg_connection *conn, Project &p, User u)
+void httpGetProject(MongooseRequestContext *req, Project &p, User u)
 {
     // redirect to list of issues
     std::string url = "/";
     url += p.getUrlName() + "/issues?defaultView=1";
-    sendHttpRedirect(conn, url.c_str(), 0);
+    sendHttpRedirect(req, url.c_str(), 0);
 }
 
 
-void httpGetNewIssueForm(struct mg_connection *conn, Project &p, User u)
+void httpGetNewIssueForm(MongooseRequestContext *req, Project &p, User u)
 {
     enum Role role = u.getRole(p.getName());
     if (role != ROLE_RW && role != ROLE_ADMIN) {
-        sendHttpHeader403(conn);
+        sendHttpHeader403(req);
         return;
     }
 
-    sendHttpHeader200(conn);
+    sendHttpHeader200(req);
 
-    ContextParameters ctx = ContextParameters(conn, u, p);
+    ContextParameters ctx = ContextParameters(req, u, p);
 
     // only HTML format is needed
     RHtml::printPageNewIssue(ctx);
 }
 
-void httpGetView(struct mg_connection *conn, Project &p, const std::string &view, User u)
+void httpGetView(MongooseRequestContext *req, Project &p, const std::string &view, User u)
 {
     LOG_FUNC();
-    sendHttpHeader200(conn);
+    sendHttpHeader200(req);
 
     if (view.empty()) {
         // print the list of all views
-        ContextParameters ctx = ContextParameters(conn, u, p);
+        ContextParameters ctx = ContextParameters(req, u, p);
         RHtml::printPageListOfViews(ctx);
 
     } else {
@@ -1193,13 +1188,13 @@ void httpGetView(struct mg_connection *conn, Project &p, const std::string &view
         if (pv.name.empty()) {
             // in this case (unnamed view, ie: advanced search)
             // handle the optional origin view
-            std::string originView = getFromCookie(conn, QS_ORIGIN_VIEW);
+            std::string originView = getFromCookie(req, QS_ORIGIN_VIEW);
             if (originView.size()) {
                 // build a view from QS_ORIGIN_VIEW
                 pv = PredefinedView::loadFromQueryString(originView);
             }
         }
-        ContextParameters ctx = ContextParameters(conn, u, p);
+        ContextParameters ctx = ContextParameters(req, u, p);
         RHtml::printPageView(ctx, pv);
     }
 }
@@ -1209,18 +1204,18 @@ void httpGetView(struct mg_connection *conn, Project &p, const std::string &view
   * All user can post these as an advanced search (with no name).
   * But only admin users can post predefined views (with a name).
   */
-void httpPostView(struct mg_connection *conn, Project &p, const std::string &name, User u)
+void httpPostView(MongooseRequestContext *req, Project &p, const std::string &name, User u)
 {
     LOG_FUNC();
 
     std::string postData;
-    const char *contentType = mg_get_header(conn, "Content-Type");
+    const char *contentType = req->getHeader("Content-Type");
     if (0 == strcmp("application/x-www-form-urlencoded", contentType)) {
         // application/x-www-form-urlencoded
         // post_data is "var1=val1&var2=val2...".
-        int rc = readMgConn(conn, postData, MAX_SIZE_UPLOAD);
+        int rc = readMgreq(req, postData, MAX_SIZE_UPLOAD);
         if (rc < 0) {
-            sendHttpHeader413(conn, "You tried to upload too much data. Max is 10 MB.");
+            sendHttpHeader413(req, "You tried to upload too much data. Max is 10 MB.");
             return;
         }
 
@@ -1231,13 +1226,13 @@ void httpPostView(struct mg_connection *conn, Project &p, const std::string &nam
     enum Role role = u.getRole(p.getName());
     if (deleteMark == "1") {
         if (role != ROLE_ADMIN && !u.superadmin) {
-            sendHttpHeader403(conn);
+            sendHttpHeader403(req);
             return;
         } else {
             // delete the view
             p.deletePredefinedView(name);
             std::string redirectUrl = "/" + p.getUrlName() + "/issues/";
-            sendHttpRedirect(conn, redirectUrl.c_str(), 0);
+            sendHttpRedirect(req, redirectUrl.c_str(), 0);
         }
     }
 
@@ -1299,33 +1294,33 @@ void httpPostView(struct mg_connection *conn, Project &p, const std::string &nam
     if (pv.name.empty()) {
         // unnamed view
         if (role != ROLE_ADMIN && role != ROLE_RO && role != ROLE_RW && !u.superadmin) {
-            sendHttpHeader403(conn);
+            sendHttpHeader403(req);
             return;
         }
         // do nothing, just redirect
 
     } else { // named view
         if (role != ROLE_ADMIN && !u.superadmin) {
-            sendHttpHeader403(conn);
+            sendHttpHeader403(req);
             return;
         }
         // store the view
         int r = p.setPredefinedView(name, pv);
         if (r < 0) {
             LOG_ERROR("Cannot set predefined view");
-            sendHttpHeader500(conn, "Cannot set predefined view");
+            sendHttpHeader500(req, "Cannot set predefined view");
             return;
         }
     }
 
-    enum RenderingFormat format = getFormat(conn);
+    enum RenderingFormat format = getFormat(req);
     if (RENDERING_TEXT == format || RENDERING_CSV == format) {
-        sendHttpHeader200(conn);
+        sendHttpHeader200(req);
 
     } else {
         // redirect to the result of the search
         std::string redirectUrl = "/" + p.getUrlName() + "/issues/?" + pv.generateQueryString();
-        sendHttpRedirect(conn, redirectUrl.c_str(), 0);
+        sendHttpRedirect(req, redirectUrl.c_str(), 0);
     }
 }
 
@@ -1337,11 +1332,11 @@ void httpPostView(struct mg_connection *conn, Project &p, const std::string &nam
   *     The reference of the message: <issue>/<entry>/<tagid>
   *
   */
-void httpPostTag(struct mg_connection *conn, Project &p, std::string &ref, User u)
+void httpPostTag(MongooseRequestContext *req, Project &p, std::string &ref, User u)
 {
     enum Role role = u.getRole(p.getName());
     if (role != ROLE_RW && role != ROLE_ADMIN) {
-        sendHttpHeader403(conn);
+        sendHttpHeader403(req);
         return;
     }
 
@@ -1351,10 +1346,10 @@ void httpPostTag(struct mg_connection *conn, Project &p, std::string &ref, User 
 
     int r = p.toggleTag(issueId, entryId, tagid);
     if (r == 0) {
-        sendHttpHeader200(conn);
-        mg_printf(conn, "\r\n");
+        sendHttpHeader200(req);
+        req->printf("\r\n");
     } else {
-        sendHttpHeader500(conn, "cannot toggle tag");
+        sendHttpHeader500(req, "cannot toggle tag");
     }
 }
 
@@ -1362,11 +1357,11 @@ void httpPostTag(struct mg_connection *conn, Project &p, std::string &ref, User 
   *
   * This encompasses the configuration and the entries.
   */
-void httpReloadProject(struct mg_connection *conn, Project &p, User u)
+void httpReloadProject(MongooseRequestContext *req, Project &p, User u)
 {
     enum Role role = u.getRole(p.getName());
     if (role != ROLE_ADMIN) {
-        sendHttpHeader403(conn);
+        sendHttpHeader403(req);
         return;
     }
     int r = p.reload();
@@ -1375,18 +1370,18 @@ void httpReloadProject(struct mg_connection *conn, Project &p, User u)
     if (r == 0) {
         // success, redirect to
         std::string redirectUrl = "/" + p.getUrlName() + "/config";
-        sendHttpRedirect(conn, redirectUrl.c_str(), 0);
+        sendHttpRedirect(req, redirectUrl.c_str(), 0);
 
     } else { // error
         std::string msg = "Cannot reload project: ";
         msg += p.getName();
         LOG_ERROR("%s", msg.c_str());
-        sendHttpHeader500(conn, msg.c_str());
+        sendHttpHeader500(req, msg.c_str());
     }
 }
 
 
-int httpGetIssue(struct mg_connection *conn, Project &p, const std::string &issueId, User u)
+int httpGetIssue(MongooseRequestContext *req, Project &p, const std::string &issueId, User u)
 {
     LOG_DEBUG("httpGetIssue: project=%s, issue=%s", p.getName().c_str(), issueId.c_str());
 
@@ -1397,18 +1392,18 @@ int httpGetIssue(struct mg_connection *conn, Project &p, const std::string &issu
         return 0; // let mongoose handle it
 
     } else {
-        enum RenderingFormat format = getFormat(conn);
+        enum RenderingFormat format = getFormat(req);
 
-        sendHttpHeader200(conn);
+        sendHttpHeader200(req);
 
-        if (format == RENDERING_TEXT) RText::printIssue(conn, issue);
+        if (format == RENDERING_TEXT) RText::printIssue(req, issue);
         else {
-            ContextParameters ctx = ContextParameters(conn, u, p);
-            ctx.originView = getFromCookie(conn, QS_ORIGIN_VIEW);
+            ContextParameters ctx = ContextParameters(req, u, p);
+            ctx.originView = getFromCookie(req, QS_ORIGIN_VIEW);
             // clear this cookie, so that getting any other issue
             // without coming from a view does not display get/next
             // (get/next use a redirection from a view, so the cookie will be set for these)
-            mg_printf(conn, "Set-Cookie: %s=deleted; Path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT\r\n", QS_ORIGIN_VIEW);
+            req->printf("Set-Cookie: %s=deleted; Path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT\r\n", QS_ORIGIN_VIEW);
             LOG_DEBUG("originView=%s", ctx.originView.c_str());
             RHtml::printPageIssue(ctx, issue);
         }
@@ -1424,7 +1419,7 @@ int httpGetIssue(struct mg_connection *conn, Project &p, const std::string &issu
   *     0, let Mongoose handle static file
   *     1, do not.
   */
-void httpDeleteEntry(struct mg_connection *conn, Project &p, const std::string &issueId,
+void httpDeleteEntry(MongooseRequestContext *req, Project &p, const std::string &issueId,
                     std::string details, User u)
 {
     LOG_DEBUG("httpDeleteEntry: project=%s, issueId=%s, details=%s", p.getName().c_str(),
@@ -1432,13 +1427,13 @@ void httpDeleteEntry(struct mg_connection *conn, Project &p, const std::string &
 
     std::string entryId = popToken(details, '/');
     if (details != "delete") {
-        sendHttpHeader404(conn);
+        sendHttpHeader404(req);
         return;
     }
 
     enum Role role = u.getRole(p.getName());
     if (role != ROLE_RW && role != ROLE_ADMIN) {
-        sendHttpHeader403(conn);
+        sendHttpHeader403(req);
         return;
     }
 
@@ -1446,11 +1441,11 @@ void httpDeleteEntry(struct mg_connection *conn, Project &p, const std::string &
     if (r < 0) {
         // failure
         LOG_INFO("deleteEntry returned %d", r);
-        sendHttpHeader403(conn);
+        sendHttpHeader403(req);
 
     } else {
-        sendHttpHeader200(conn);
-        mg_printf(conn, "\r\n"); // no contents
+        sendHttpHeader200(req);
+        req->printf("\r\n"); // no contents
     }
 
     return;
@@ -1655,17 +1650,17 @@ void parseQueryString(const std::string &queryString, std::map<std::string, std:
 /** Handle the posting of an entry
   * If issueId is empty, then a new issue is created.
   */
-void httpPostEntry(struct mg_connection *conn, Project &pro, const std::string & issueId, User u)
+void httpPostEntry(MongooseRequestContext *req, Project &pro, const std::string & issueId, User u)
 {
     enum Role r = u.getRole(pro.getName());
     if (r != ROLE_RW && r != ROLE_ADMIN) {
-        sendHttpHeader403(conn);
+        sendHttpHeader403(req);
         return;
     }
     const char *multipart = "multipart/form-data";
     std::map<std::string, std::list<std::string> > vars;
 
-    const char *contentType = mg_get_header(conn, "Content-Type");
+    const char *contentType = req->getHeader("Content-Type");
     if (0 == strcmp("application/x-www-form-urlencoded", contentType)) {
 
         // this branch is obsolete. It was the old code without file-upload capability
@@ -1675,17 +1670,17 @@ void httpPostEntry(struct mg_connection *conn, Project &pro, const std::string &
         // multiselect is like: "tags=v4.1&tags=v5.0" (same var repeated)
 
         std::string postData;
-        int rc = readMgConn(conn, postData, MAX_SIZE_UPLOAD);
+        int rc = readMgreq(req, postData, MAX_SIZE_UPLOAD);
         if (rc < 0) {
-            sendHttpHeader413(conn, "You tried to upload too much data. Max is 10 MB.");
+            sendHttpHeader413(req, "You tried to upload too much data. Max is 10 MB.");
             return;
         }
 
         parseQueryString(postData, vars);
 
     } else if (0 == strncmp(multipart, contentType, strlen(multipart))) {
-        //std::string x = request2string(conn);
-        //mg_printf(conn, "%s", x.c_str());
+        //std::string x = request2string(req);
+        //mg_printf(req, "%s", x.c_str());
 
         // extract the boundary
         const char *b = "boundary=";
@@ -1699,9 +1694,9 @@ void httpPostEntry(struct mg_connection *conn, Project &pro, const std::string &
         LOG_DEBUG("Boundary: %s", boundary.c_str());
 
         std::string postData;
-        int rc = readMgConn(conn, postData, MAX_SIZE_UPLOAD);
+        int rc = readMgreq(req, postData, MAX_SIZE_UPLOAD);
         if (rc < 0) {
-            sendHttpHeader413(conn, "You tried to upload too much data. Max is 10 MB.");
+            sendHttpHeader413(req, "You tried to upload too much data. Max is 10 MB.");
             return;
         }
 
@@ -1719,7 +1714,7 @@ void httpPostEntry(struct mg_connection *conn, Project &pro, const std::string &
     int status = pro.addEntry(vars, id, entryId, u.username);
     if (status != 0) {
         // error
-        sendHttpHeader500(conn, "Cannot add entry");
+        sendHttpHeader500(req, "Cannot add entry");
 
     } else {
 
@@ -1730,14 +1725,14 @@ void httpPostEntry(struct mg_connection *conn, Project &pro, const std::string &
 #endif
 
 
-        if (getFormat(conn) == RENDERING_HTML) {
+        if (getFormat(req) == RENDERING_HTML) {
             // HTTP redirect
             std::string redirectUrl = "/" + pro.getUrlName() + "/issues/" + id;
-            sendHttpRedirect(conn, redirectUrl.c_str(), 0);
+            sendHttpRedirect(req, redirectUrl.c_str(), 0);
         } else {
-            sendHttpHeader200(conn);
-            mg_printf(conn, "\r\n");
-            mg_printf(conn, "%s/%s\r\n", id.c_str(), entryId.c_str());
+            sendHttpHeader200(req);
+            req->printf("\r\n");
+            req->printf("%s/%s\r\n", id.c_str(), entryId.c_str());
         }
     }
 
@@ -1768,53 +1763,53 @@ void httpPostEntry(struct mg_connection *conn, Project &pro, const std::string &
   * /any/other/file         GET        user              any existing file (in the repository)
   */
 
-int begin_request_handler(MongooseRequestContext *request)
+int begin_request_handler(MongooseRequestContext *req)
 {
     LOG_FUNC();
 
-    std::string uri = request->getUri();
-    std::string method = request->getMethod();
+    std::string uri = req->getUri();
+    std::string method = req->getMethod();
     LOG_DEBUG("uri=%s, method=%s", uri.c_str(), method.c_str());
 
-    if (method != "GET" && method != "POST") return sendHttpHeader400(request, "invalid method");
+    if (method != "GET" && method != "POST") return sendHttpHeader400(req, "invalid method");
 
     std::string resource = popToken(uri, '/');
 
     // public access to /public and /sm
     if (resource == "public") {
-        if ( (method == "GET") && (getFormat(conn) == X_SMIT) ) return httpGetFile(conn);
+        if ( (method == "GET") && (getFormat(req) == X_SMIT) ) return httpGetFile(req);
         if (method == "GET") return 0; // let mongoose handle it
-        else return sendHttpHeader400(conn, "invalid method");
+        else return sendHttpHeader400(req, "invalid method");
     }
     if (resource == "sm") {
-        if (method == "GET") return httpGetSm(conn, uri);
-        else return sendHttpHeader400(conn, "invalid method");
+        if (method == "GET") return httpGetSm(req, uri);
+        else return sendHttpHeader400(req, "invalid method");
     }
 
     // check access rights
-    std::string sessionId = getFromCookie(conn, SESSID);
+    std::string sessionId = getFromCookie(req, SESSID);
     User user = SessionBase::getLoggedInUser(sessionId);
     // if username is empty, then no access is granted (only public pages will be available)
 
     bool handled = true; // by default, do not let Mongoose handle the request
 
-    if ( (resource == "signin") && (method == "POST") ) httpPostSignin(conn);
-    else if ( (resource == "signin") && (method == "GET") ) sendHttpRedirect(conn, "/", 0);
+    if ( (resource == "signin") && (method == "POST") ) httpPostSignin(req);
+    else if ( (resource == "signin") && (method == "GET") ) sendHttpRedirect(req, "/", 0);
 
-    else if ( (resource == "signout") && (method == "POST") ) httpPostSignout(conn, sessionId);
+    else if ( (resource == "signout") && (method == "POST") ) httpPostSignout(req, sessionId);
     else if (user.username.size() == 0) {
 
         // user not logged in
-        if (getFormat(conn) == RENDERING_HTML) redirectToSignin(conn, 0);
-        else handleUnauthorizedAccess(conn, resource);
+        if (getFormat(req) == RENDERING_HTML) redirectToSignin(req, 0);
+        else handleUnauthorizedAccess(req, resource);
     }
-    else if ( (resource == "") && (method == "GET") ) httpGetRoot(conn, user);
-    else if ( (resource == "") && (method == "POST") ) httpPostRoot(conn, user);
-    else if ( (resource == "users") && (method == "GET") ) httpGetUsers(conn, user, uri);
-    else if ( (resource == "users") && (method == "POST") ) httpPostUsers(conn, user, uri);
-    else if ( (resource == "_") && (method == "GET") ) httpGetNewProject(conn, user);
-    else if ( (resource == "_") && (method == "POST") ) httpPostNewProject(conn, user);
-    else if ( (resource == "*") && (method == "GET") ) httpIssuesAccrossProjects(conn, user, uri);
+    else if ( (resource == "") && (method == "GET") ) httpGetRoot(req, user);
+    else if ( (resource == "") && (method == "POST") ) httpPostRoot(req, user);
+    else if ( (resource == "users") && (method == "GET") ) httpGetUsers(req, user, uri);
+    else if ( (resource == "users") && (method == "POST") ) httpPostUsers(req, user, uri);
+    else if ( (resource == "_") && (method == "GET") ) httpGetNewProject(req, user);
+    else if ( (resource == "_") && (method == "POST") ) httpPostNewProject(req, user);
+    else if ( (resource == "*") && (method == "GET") ) httpIssuesAccrossProjects(req, user, uri);
     else {
         // check if it is a valid project resource such as /myp/issues, /myp/users, /myp/config
         std::string projectUrl = resource;
@@ -1824,12 +1819,12 @@ int begin_request_handler(MongooseRequestContext *request)
         enum Role r = user.getRole(project);
         if (r != ROLE_ADMIN && r != ROLE_RW && r != ROLE_RO && ! user.superadmin) {
             // no access granted for this user to this project
-            handleUnauthorizedAccess(conn, resource);
+            handleUnauthorizedAccess(req, resource);
 
         } else {
             // access granted to ressources inside a project
 
-            if (getFormat(conn) == X_SMIT && method == "GET") return httpGetFile(conn); // used for cloning
+            if (getFormat(req) == X_SMIT && method == "GET") return httpGetFile(req); // used for cloning
 
             Project *p = Database::Db.getProject(project);
             LOG_DEBUG("project %s, %p", project.c_str(), p);
@@ -1839,22 +1834,22 @@ int begin_request_handler(MongooseRequestContext *request)
 
                 resource = popToken(uri, '/');
                 LOG_DEBUG("resource=%s", resource.c_str());
-                if      ( resource.empty()       && (method == "GET") ) httpGetProject(conn, *p, user);
-                else if ( (resource == "issues") && (method == "GET") && uri.empty() ) httpGetListOfIssues(conn, *p, user);
+                if      ( resource.empty()       && (method == "GET") ) httpGetProject(req, *p, user);
+                else if ( (resource == "issues") && (method == "GET") && uri.empty() ) httpGetListOfIssues(req, *p, user);
                 else if ( (resource == "issues") && (method == "POST") ) {
                     std::string issueId = popToken(uri, '/');
-                    if (uri.empty()) httpPostEntry(conn, *p, issueId, user);
-                    else httpDeleteEntry(conn, *p, issueId, uri, user);
+                    if (uri.empty()) httpPostEntry(req, *p, issueId, user);
+                    else httpDeleteEntry(req, *p, issueId, uri, user);
 
-                } else if ( (resource == "issues") && (uri == "new") && (method == "GET") ) httpGetNewIssueForm(conn, *p, user);
-                else if ( (resource == "issues") && (method == "GET") ) return httpGetIssue(conn, *p, uri, user);
-                else if ( (resource == "config") && (method == "GET") ) httpGetProjectConfig(conn, *p, user);
-                else if ( (resource == "config") && (method == "POST") ) httpPostProjectConfig(conn, *p, user);
-                else if ( (resource == "views") && (method == "GET") && !isdir && uri.empty()) sendHttpRedirect(conn, "/" + projectUrl + "/views/", 0);
-                else if ( (resource == "views") && (method == "GET")) httpGetView(conn, *p, uri, user);
-                else if ( (resource == "views") && (method == "POST") ) httpPostView(conn, *p, uri, user);
-                else if ( (resource == "tags") && (method == "POST") ) httpPostTag(conn, *p, uri, user);
-                else if ( (resource == "reload") && (method == "POST") ) httpReloadProject(conn, *p, user);
+                } else if ( (resource == "issues") && (uri == "new") && (method == "GET") ) httpGetNewIssueForm(req, *p, user);
+                else if ( (resource == "issues") && (method == "GET") ) return httpGetIssue(req, *p, uri, user);
+                else if ( (resource == "config") && (method == "GET") ) httpGetProjectConfig(req, *p, user);
+                else if ( (resource == "config") && (method == "POST") ) httpPostProjectConfig(req, *p, user);
+                else if ( (resource == "views") && (method == "GET") && !isdir && uri.empty()) sendHttpRedirect(req, "/" + projectUrl + "/views/", 0);
+                else if ( (resource == "views") && (method == "GET")) httpGetView(req, *p, uri, user);
+                else if ( (resource == "views") && (method == "POST") ) httpPostView(req, *p, uri, user);
+                else if ( (resource == "tags") && (method == "POST") ) httpPostTag(req, *p, uri, user);
+                else if ( (resource == "reload") && (method == "POST") ) httpReloadProject(req, *p, user);
                 else handled = false;
 
             } else handled = false; // the resource is not a project

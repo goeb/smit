@@ -54,6 +54,7 @@ private:
     struct mg_context *mongooseCtx; // mongoose inetrnal context, returned by mg_start
     struct mg_callbacks callbacks;
     const char *params[PARAMS_SIZE];
+    static int (*requestHandler)(MongooseRequestContext*);
 };
 
 

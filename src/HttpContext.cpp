@@ -17,6 +17,10 @@
 #include "HttpContext.h"
 #include "logging.h"
 
+// static members
+int  (*MongooseServerContext::requestHandler)(MongooseRequestContext*) = 0;
+
+
 MongooseServerContext::MongooseServerContext()
 {
     init();
@@ -66,7 +70,7 @@ void MongooseServerContext::setRequestHandler(int  (*handler)(MongooseRequestCon
 int MongooseServerContext::handleRequest(struct mg_connection *conn)
 {
     MongooseRequestContext mrc(conn);
-    return handler(mrc);
+    return requestHandler(&mrc);
 }
 
 int MongooseServerContext::logMessage(const struct mg_connection *, const char *message)
