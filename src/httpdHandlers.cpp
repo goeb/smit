@@ -23,7 +23,6 @@
 
 #include <string>
 #include <sstream>
-#include "mongoose.h"
 #include "httpdHandlers.h"
 
 #include "db.h"
@@ -50,7 +49,7 @@
   *    0 on success
   *   -1 on error (data too big)
   */
-int readMgreq(MongooseRequestContext *request, std::string &data, size_t maxSize)
+int readMgreq(const RequestContext *request, std::string &data, size_t maxSize)
 {
     data.clear();
     const int SIZ = 4096;
@@ -74,13 +73,13 @@ int readMgreq(MongooseRequestContext *request, std::string &data, size_t maxSize
 
 
 
-void sendHttpHeader200(MongooseRequestContext *request)
+void sendHttpHeader200(const RequestContext *request)
 {
     LOG_FUNC();
     request->printf("HTTP/1.0 200 OK\r\n");
 }
 
-void sendHttpHeader204(MongooseRequestContext *request)
+void sendHttpHeader204(const RequestContext *request)
 {
     LOG_FUNC();
     request->printf("HTTP/1.0 204 No Content\r\n");
@@ -88,39 +87,39 @@ void sendHttpHeader204(MongooseRequestContext *request)
 
 
 
-int sendHttpHeader400(MongooseRequestContext *request, const char *msg)
+int sendHttpHeader400(const RequestContext *request, const char *msg)
 {
     request->printf("HTTP/1.0 400 Bad Request\r\n\r\n");
     request->printf("400 Bad Request\r\n");
     request->printf("%s\r\n", msg);
     return 1; // request completely handled
 }
-void sendHttpHeader403(MongooseRequestContext *request)
+void sendHttpHeader403(const RequestContext *request)
 {
     request->printf("HTTP/1.1 403 Forbidden\r\n\r\n");
     request->printf("403 Forbidden\r\n");
 }
 
-void sendHttpHeader413(MongooseRequestContext *request, const char *msg)
+void sendHttpHeader413(const RequestContext *request, const char *msg)
 {
     request->printf("HTTP/1.1 413 Request Entity Too Large\r\n\r\n");
     request->printf("413 Request Entity Too Large\r\n%s\r\n", msg);
 }
 
-void sendHttpHeader404(MongooseRequestContext *request)
+void sendHttpHeader404(const RequestContext *request)
 {
     request->printf("HTTP/1.1 404 Not Found\r\n\r\n");
     request->printf("404 Not Found\r\n");
 }
 
-void sendHttpHeader500(MongooseRequestContext *request, const char *msg)
+void sendHttpHeader500(const RequestContext *request, const char *msg)
 {
     request->printf("HTTP/1.1 500 Internal Server Error\r\n\r\n");
     request->printf("500 Internal Server Error\r\n");
     request->printf("%s\r\n", msg);
 }
 
-void sendCookie(MongooseRequestContext *request, const std::string &key, const std::string &value)
+void sendCookie(const RequestContext *request, const std::string &key, const std::string &value)
 {
     request->printf("Set-Cookie: %s=%s; Path=/\r\n", key.c_str(), value.c_str());
 }
@@ -133,7 +132,7 @@ void sendCookie(MongooseRequestContext *request, const std::string &key, const s
   *    Must not include the line-terminating \r\n
   *    May be NULL
   */
-void sendHttpRedirect(MongooseRequestContext *request, const std::string &redirectUrl, const char *otherHeader)
+void sendHttpRedirect(const RequestContext *request, const std::string &redirectUrl, const char *otherHeader)
 {
     LOG_FUNC();
     request->printf("HTTP/1.1 303 See Other\r\n");
@@ -164,14 +163,14 @@ std::string getServerCookie(const std::string &name, const std::string &value, i
     return s.str();
 }
 
-void setCookieAndRedirect(MongooseRequestContext *request, const char *name, const char *value, const char *redirectUrl)
+void setCookieAndRedirect(const RequestContext *request, const char *name, const char *value, const char *redirectUrl)
 {
     LOG_FUNC();
     std::string s = getServerCookie(name, value, SESSION_DURATION);
     sendHttpRedirect(request, redirectUrl, s.c_str());
 }
 
-int sendHttpHeaderInvalidResource(MongooseRequestContext *request)
+int sendHttpHeaderInvalidResource(const RequestContext *request)
 {
     const char *uri = request->getUri();
     LOG_INFO("Invalid resource: uri=%s", uri);
@@ -184,7 +183,7 @@ int sendHttpHeaderInvalidResource(MongooseRequestContext *request)
 
 
 enum RenderingFormat { RENDERING_HTML, RENDERING_TEXT, RENDERING_CSV, X_SMIT };
-enum RenderingFormat getFormat(MongooseRequestContext *request)
+enum RenderingFormat getFormat(const RequestContext *request)
 {
     std::string q = request->getQueryString();
     std::string format = getFirstParamFromQueryString(q, "format");
@@ -207,11 +206,11 @@ enum RenderingFormat getFormat(MongooseRequestContext *request)
 }
 
 
-void httpPostRoot(MongooseRequestContext *req, User u)
+void httpPostRoot(const RequestContext *req, User u)
 {
 }
 
-void httpPostSignin(MongooseRequestContext *request)
+void httpPostSignin(const RequestContext *request)
 {
     LOG_FUNC();
 
@@ -302,7 +301,7 @@ void httpPostSignin(MongooseRequestContext *request)
 
 }
 
-void redirectToSignin(MongooseRequestContext *request, const char *resource = 0)
+void redirectToSignin(const RequestContext *request, const char *resource = 0)
 {
     sendHttpHeader200(request);
     std::string url;
@@ -316,14 +315,14 @@ void redirectToSignin(MongooseRequestContext *request, const char *resource = 0)
 }
 
 
-void httpPostSignout(MongooseRequestContext *request, const std::string &sessionId)
+void httpPostSignout(const RequestContext *request, const std::string &sessionId)
 {
     SessionBase::destroySession(sessionId);
     redirectToSignin(request, "/");
 }
 
 
-void handleMessagePreview(MongooseRequestContext *request)
+void handleMessagePreview(const RequestContext *request)
 {
     LOG_FUNC();
     std::string q = request->getQueryString();
@@ -340,7 +339,7 @@ void handleMessagePreview(MongooseRequestContext *request)
   * Embbeded files: smit.js, etc.
   * Virtual files: preview
   */
-int httpGetSm(MongooseRequestContext *request, const std::string &file)
+int httpGetSm(const RequestContext *request, const std::string &file)
 {
     int r; // return 0 to let mongoose handle static file, 1 otherwise
 
@@ -401,7 +400,7 @@ int httpGetSm(MongooseRequestContext *request, const std::string &file)
   *     user whose configuration is requested
   *
   */
-void httpGetUsers(MongooseRequestContext *request, User signedInUser, const std::string &username)
+void httpGetUsers(const RequestContext *request, User signedInUser, const std::string &username)
 {
     ContextParameters ctx = ContextParameters(request, signedInUser);
 
@@ -438,7 +437,7 @@ void httpGetUsers(MongooseRequestContext *request, User signedInUser, const std:
   *
   * Non-superadmin users may only post their password.
   */
-void httpPostUsers(MongooseRequestContext *request, User signedInUser, const std::string &username)
+void httpPostUsers(const RequestContext *request, User signedInUser, const std::string &username)
 {
     if (!signedInUser.superadmin && username != signedInUser.username) {
         sendHttpHeader403(request);
@@ -560,7 +559,7 @@ void httpPostUsers(MongooseRequestContext *request, User signedInUser, const std
     }
 }
 
-std::string getFromCookie(MongooseRequestContext *request, const std::string &key)
+std::string getFromCookie(const RequestContext *request, const std::string &key)
 {
     const char *cookie = request->getHeader("Cookie");
     if (cookie) {
@@ -582,7 +581,7 @@ std::string getFromCookie(MongooseRequestContext *request, const std::string &ke
     return "";
 }
 
-void handleUnauthorizedAccess(MongooseRequestContext *request, const std::string &resource)
+void handleUnauthorizedAccess(const RequestContext *request, const std::string &resource)
 {
     sendHttpHeader403(request);
 }
@@ -592,7 +591,7 @@ void handleUnauthorizedAccess(MongooseRequestContext *request, const std::string
   * Access restriction must have been done before calling this function.
   * (this function does not verify access rights)
   */
-int httpGetFile(MongooseRequestContext *request)
+int httpGetFile(const RequestContext *request)
 {
     std::string uri = request->getUri();
     std::string dir = Database::Db.pathToRepository + uri; // uri contains a leading /
@@ -619,7 +618,7 @@ int httpGetFile(MongooseRequestContext *request)
 }
 
 
-void httpGetRoot(MongooseRequestContext *req, User u)
+void httpGetRoot(const RequestContext *req, User u)
 {
     sendHttpHeader200(req);
     // print list of available projects
@@ -674,7 +673,7 @@ void httpGetRoot(MongooseRequestContext *req, User u)
     }
 }
 
-void httpGetNewProject(MongooseRequestContext *req, User u)
+void httpGetNewProject(const RequestContext *req, User u)
 {
     if (! u.superadmin) return sendHttpHeader403(req);
 
@@ -697,7 +696,7 @@ void httpGetNewProject(MongooseRequestContext *req, User u)
 }
 
 
-void httpGetProjectConfig(MongooseRequestContext *req, Project &p, User u)
+void httpGetProjectConfig(const RequestContext *req, Project &p, User u)
 {
     if (u.getRole(p.getName()) != ROLE_ADMIN && ! u.superadmin) return sendHttpHeader403(req);
 
@@ -749,7 +748,7 @@ std::list<std::list<std::string> > convertPostToTokens(std::string &postData)
     return tokens;
 }
 
-void httpPostProjectConfig(MongooseRequestContext *req, Project &p, User u)
+void httpPostProjectConfig(const RequestContext *req, Project &p, User u)
 {
     enum Role r = u.getRole(p.getName());
     if (r != ROLE_ADMIN && ! u.superadmin) {
@@ -907,7 +906,7 @@ void httpPostProjectConfig(MongooseRequestContext *req, Project &p, User u)
     }
 }
 
-void httpPostNewProject(MongooseRequestContext *req, User u)
+void httpPostNewProject(const RequestContext *req, User u)
 {
     if (! u.superadmin) return sendHttpHeader403(req);
 
@@ -994,7 +993,7 @@ std::string getRedirectionToIssue(const Project &p, std::vector<struct Issue*> i
     return redirectUrl;
 }
 
-void httpIssuesAccrossProjects(MongooseRequestContext *req, User u, const std::string &uri)
+void httpIssuesAccrossProjects(const RequestContext *req, User u, const std::string &uri)
 {
     if (uri != "issues") return sendHttpHeader404(req);
 
@@ -1057,7 +1056,7 @@ void httpIssuesAccrossProjects(MongooseRequestContext *req, User u, const std::s
 
 }
 
-void httpGetListOfIssues(MongooseRequestContext *req, Project &p, User u)
+void httpGetListOfIssues(const RequestContext *req, Project &p, User u)
 {
     // get query string parameters:
     //     colspec    which fields are to be displayed in the table, and their order
@@ -1145,7 +1144,7 @@ void httpGetListOfIssues(MongooseRequestContext *req, Project &p, User u)
     }
 }
 
-void httpGetProject(MongooseRequestContext *req, Project &p, User u)
+void httpGetProject(const RequestContext *req, Project &p, User u)
 {
     // redirect to list of issues
     std::string url = "/";
@@ -1154,7 +1153,7 @@ void httpGetProject(MongooseRequestContext *req, Project &p, User u)
 }
 
 
-void httpGetNewIssueForm(MongooseRequestContext *req, Project &p, User u)
+void httpGetNewIssueForm(const RequestContext *req, Project &p, User u)
 {
     enum Role role = u.getRole(p.getName());
     if (role != ROLE_RW && role != ROLE_ADMIN) {
@@ -1170,7 +1169,7 @@ void httpGetNewIssueForm(MongooseRequestContext *req, Project &p, User u)
     RHtml::printPageNewIssue(ctx);
 }
 
-void httpGetView(MongooseRequestContext *req, Project &p, const std::string &view, User u)
+void httpGetView(const RequestContext *req, Project &p, const std::string &view, User u)
 {
     LOG_FUNC();
     sendHttpHeader200(req);
@@ -1204,7 +1203,7 @@ void httpGetView(MongooseRequestContext *req, Project &p, const std::string &vie
   * All user can post these as an advanced search (with no name).
   * But only admin users can post predefined views (with a name).
   */
-void httpPostView(MongooseRequestContext *req, Project &p, const std::string &name, User u)
+void httpPostView(const RequestContext *req, Project &p, const std::string &name, User u)
 {
     LOG_FUNC();
 
@@ -1332,7 +1331,7 @@ void httpPostView(MongooseRequestContext *req, Project &p, const std::string &na
   *     The reference of the message: <issue>/<entry>/<tagid>
   *
   */
-void httpPostTag(MongooseRequestContext *req, Project &p, std::string &ref, User u)
+void httpPostTag(const RequestContext *req, Project &p, std::string &ref, User u)
 {
     enum Role role = u.getRole(p.getName());
     if (role != ROLE_RW && role != ROLE_ADMIN) {
@@ -1357,7 +1356,7 @@ void httpPostTag(MongooseRequestContext *req, Project &p, std::string &ref, User
   *
   * This encompasses the configuration and the entries.
   */
-void httpReloadProject(MongooseRequestContext *req, Project &p, User u)
+void httpReloadProject(const RequestContext *req, Project &p, User u)
 {
     enum Role role = u.getRole(p.getName());
     if (role != ROLE_ADMIN) {
@@ -1381,7 +1380,7 @@ void httpReloadProject(MongooseRequestContext *req, Project &p, User u)
 }
 
 
-int httpGetIssue(MongooseRequestContext *req, Project &p, const std::string &issueId, User u)
+int httpGetIssue(const RequestContext *req, Project &p, const std::string &issueId, User u)
 {
     LOG_DEBUG("httpGetIssue: project=%s, issue=%s", p.getName().c_str(), issueId.c_str());
 
@@ -1419,7 +1418,7 @@ int httpGetIssue(MongooseRequestContext *req, Project &p, const std::string &iss
   *     0, let Mongoose handle static file
   *     1, do not.
   */
-void httpDeleteEntry(MongooseRequestContext *req, Project &p, const std::string &issueId,
+void httpDeleteEntry(const RequestContext *req, Project &p, const std::string &issueId,
                     std::string details, User u)
 {
     LOG_DEBUG("httpDeleteEntry: project=%s, issueId=%s, details=%s", p.getName().c_str(),
@@ -1650,7 +1649,7 @@ void parseQueryString(const std::string &queryString, std::map<std::string, std:
 /** Handle the posting of an entry
   * If issueId is empty, then a new issue is created.
   */
-void httpPostEntry(MongooseRequestContext *req, Project &pro, const std::string & issueId, User u)
+void httpPostEntry(const RequestContext *req, Project &pro, const std::string & issueId, User u)
 {
     enum Role r = u.getRole(pro.getName());
     if (r != ROLE_RW && r != ROLE_ADMIN) {
@@ -1763,7 +1762,7 @@ void httpPostEntry(MongooseRequestContext *req, Project &pro, const std::string 
   * /any/other/file         GET        user              any existing file (in the repository)
   */
 
-int begin_request_handler(MongooseRequestContext *req)
+int begin_request_handler(const RequestContext *req)
 {
     LOG_FUNC();
 

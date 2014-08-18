@@ -34,7 +34,7 @@
   * ContextParameters::projectConfig gets the config once at initilisation,
   * and afterwards one can work with the copy (without locking).
   */
-ContextParameters::ContextParameters(MongooseRequestContext *request, User u, Project &p)
+ContextParameters::ContextParameters(const RequestContext *request, User u, Project &p)
 {
     project = &p;
     projectConfig = p.getConfig(); // take a copy of the config
@@ -43,7 +43,7 @@ ContextParameters::ContextParameters(MongooseRequestContext *request, User u, Pr
     req = request;
 }
 
-ContextParameters::ContextParameters(MongooseRequestContext *request, User u)
+ContextParameters::ContextParameters(const RequestContext *request, User u)
 {
     project = 0;
     user = u;
@@ -83,7 +83,7 @@ const Project &ContextParameters::getProject() const
   *
   * The caller is responsible for calling 'free' on the returned pointer (if not null).
   */
-int loadProjectPage(MongooseRequestContext *req, const std::string &projectPath, const std::string &page, const char **data)
+int loadProjectPage(const RequestContext *req, const std::string &projectPath, const std::string &page, const char **data)
 {
     // first look for the page in $REPO/$PROJECT/html/
     std::string path = projectPath + "/html/" + page;
@@ -172,7 +172,7 @@ public:
         return varname;
     }
 
-    void dumpPrevious(MongooseRequestContext *req) {
+    void dumpPrevious(const RequestContext *req) {
         if (dumpEnd == dumpStart) {
             LOG_ERROR("dumpPrevious: dumpEnd == dumpStart");
             return;
@@ -270,7 +270,7 @@ private:
   * @param redirect
   *    May include a query string
   */
-void RHtml::printPageSignin(MongooseRequestContext *req, const char *redirect)
+void RHtml::printPageSignin(const RequestContext *req, const char *redirect)
 {
 
     req->printf("Content-Type: text/html\r\n\r\n");
@@ -467,7 +467,7 @@ public:
         }
     }
 
-    void print(MongooseRequestContext *req) {
+    void print(const RequestContext *req) {
         if (nodeName.empty()) {
             // text contents
             req->printf("%s", text.c_str());
@@ -673,7 +673,7 @@ void RHtml::printProjects(const ContextParameters &ctx,
                                        htmlEscape(_("New Project")).c_str());
 }
 
-void RHtml::printUsers(MongooseRequestContext *req, const std::list<User> &usersList)
+void RHtml::printUsers(const RequestContext *req, const std::list<User> &usersList)
 {
     std::list<User>::const_iterator u;
 
@@ -733,7 +733,7 @@ void RHtml::printPageProjectList(const ContextParameters &ctx,
   * - else, the property is added after the others
   *
   */
-std::string getNewSortingSpec(MongooseRequestContext *req, const std::string property, bool exclusive)
+std::string getNewSortingSpec(const RequestContext *req, const std::string property, bool exclusive)
 {
     std::string qs = req->getQueryString();
     LOG_DEBUG("getNewSortingSpec: in=%s, exclusive=%d", qs.c_str(), exclusive);
@@ -979,7 +979,7 @@ void RHtml::printIssueListFullContents(const ContextParameters &ctx, std::vector
 
 /** concatenate a param to the URL (add ? or &)
   */
-std::string urlAdd(MongooseRequestContext *req, const char *param)
+std::string urlAdd(const RequestContext *req, const char *param)
 {
 
     std::string uri = req->getUri();

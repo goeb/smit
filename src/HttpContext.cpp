@@ -18,7 +18,7 @@
 #include "logging.h"
 
 // static members
-int  (*MongooseServerContext::requestHandler)(MongooseRequestContext*) = 0;
+int  (*MongooseServerContext::requestHandler)(const RequestContext*) = 0;
 
 
 MongooseServerContext::MongooseServerContext()
@@ -61,7 +61,7 @@ void MongooseServerContext::addParam(const char *param)
     LOG_ERROR("Cannot add parameter %s: table full", param);
 }
 
-void MongooseServerContext::setRequestHandler(int  (*handler)(MongooseRequestContext*))
+void MongooseServerContext::setRequestHandler(int (*handler)(const RequestContext*))
 {
     callbacks.begin_request = handleRequest;
     requestHandler = handler;
@@ -85,24 +85,30 @@ MongooseRequestContext::MongooseRequestContext(struct mg_connection *c)
     conn = c;
 }
 
-int MongooseRequestContext::printf(const char *fmt, ...)
+/** Print text to the HTTP client
+  */
+int MongooseRequestContext::printf(const char *fmt, ...) const
 {
     va_list ap;
     va_start(ap, fmt);
     return mg_vprintf(conn, fmt, ap);
 }
 
-int MongooseRequestContext::write(const void *buf, size_t len)
+/** Write data to the HTTP client
+  */
+int MongooseRequestContext::write(const void *buf, size_t len) const
 {
     return mg_write(conn, buf, len);
 }
 
-int MongooseRequestContext::read(void *buf, size_t len)
+/** Read data from the HTTP client
+  */
+int MongooseRequestContext::read(void *buf, size_t len) const
 {
     return mg_read(conn, buf, len);
 }
 
-const char *MongooseRequestContext::getQueryString()
+const char *MongooseRequestContext::getQueryString() const
 {
     const char *qs = "";
     const struct mg_request_info *req = mg_get_request_info(conn);

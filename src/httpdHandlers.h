@@ -7,7 +7,7 @@
 
 extern std::string ExeFile;
 
-int begin_request_handler(MongooseRequestContext *req);
+int begin_request_handler(const RequestContext *req);
 
 
 #endif

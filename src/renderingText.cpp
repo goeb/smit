@@ -18,7 +18,7 @@
 #include "stringTools.h"
 #include "global.h"
 
-void RText::printProjectList(MongooseRequestContext *req, const std::list<std::pair<std::string, std::string> > &pList)
+void RText::printProjectList(const RequestContext *req, const std::list<std::pair<std::string, std::string> > &pList)
 {
     req->printf("Content-Type: text/plain\r\n\r\n");
 
@@ -30,7 +30,7 @@ void RText::printProjectList(MongooseRequestContext *req, const std::list<std::p
     }
 }
 
-void RText::printIssueList(MongooseRequestContext *req, std::vector<struct Issue*> issueList, std::list<std::string> colspec)
+void RText::printIssueList(const RequestContext *req, std::vector<struct Issue*> issueList, std::list<std::string> colspec)
 {
     req->printf("Content-Type: text/plain\r\n\r\n");
 
@@ -70,7 +70,7 @@ void RText::printIssueList(MongooseRequestContext *req, std::vector<struct Issue
 
 }
 
-void RText::printIssue(MongooseRequestContext *req, const Issue &issue)
+void RText::printIssue(const RequestContext *req, const Issue &issue)
 {
     LOG_DEBUG("RText::printIssue...");
     req->printf("Content-Type: text/plain\r\n\r\n");

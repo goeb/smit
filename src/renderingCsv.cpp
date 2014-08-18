@@ -39,7 +39,7 @@ std::string doubleQuoteCsv(const std::string &input)
 }
 
 
-void RCsv::printProjectList(MongooseRequestContext *req, const std::list<std::pair<std::string, std::string> > &pList)
+void RCsv::printProjectList(const RequestContext *req, const std::list<std::pair<std::string, std::string> > &pList)
 {
     req->printf("Content-Type: text/plain\r\n\r\n");
 
@@ -49,7 +49,7 @@ void RCsv::printProjectList(MongooseRequestContext *req, const std::list<std::pa
     }
 }
 
-void RCsv::printIssueList(MongooseRequestContext *req, std::vector<struct Issue*> issueList, std::list<std::string> colspec)
+void RCsv::printIssueList(const RequestContext *req, std::vector<struct Issue*> issueList, std::list<std::string> colspec)
 {
     req->printf("Content-Type: text/plain\r\n\r\n");
 

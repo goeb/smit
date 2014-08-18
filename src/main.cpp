@@ -29,7 +29,6 @@
 #include <signal.h>
 
 #include "HttpContext.h"
-#include "mongoose.h"
 #include "httpdHandlers.h"
 #include "logging.h"
 #include "db.h"
