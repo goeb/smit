@@ -675,7 +675,7 @@ int main(int argc, char **argv)
             return cmdUser(argc-2, argv+2);
 
         } else if (0 == strcmp(command, "clone")) {
-            return cmdClone(argc-2, argv+2);
+            return cmdClone(argc-1, argv+1);
 
         } else if (0 == strcmp(command, "ui")) {
             return cmdUi(argc-2, argv+2);

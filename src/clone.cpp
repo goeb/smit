@@ -151,12 +151,6 @@ std::string signin(const char *rooturl, const std::string &user, const std::stri
 
 int cmdClone(int argc, char * const *argv)
 {
-    struct option longOptions[] = {
-        {"user", 1, 0, 0},
-        {"passwd", 1, 0, 0},
-        {NULL, 0, NULL, 0}
-    };
-
     std::string username;
     const char *passwd = 0;
     const char *url = 0;
@@ -164,6 +158,11 @@ int cmdClone(int argc, char * const *argv)
 
     int c;
     int optionIndex = 0;
+    static struct option longOptions[] = {
+        {"user", 1, 0, 0},
+        {"passwd", 1, 0, 0},
+        {NULL, 0, NULL, 0}
+    };
     while ((c = getopt_long(argc, argv, "v", longOptions, &optionIndex)) != -1) {
         switch (c) {
         case 0: // manage long options
@@ -175,10 +174,12 @@ int cmdClone(int argc, char * const *argv)
         case 'v':
             Verbose = true;
             break;
-        case '?':
+        case '?': // incorrect syntax, a message is printed by getopt_long
+            exit(1);
             break;
         default:
             printf("?? getopt returned character code 0x%x ??\n", c);
+            exit(1);
         }
     }
     // manage non-option ARGV elements
