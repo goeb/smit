@@ -27,6 +27,7 @@
 #include <fcntl.h>
 #include <iostream>
 #include <signal.h>
+#include <getopt.h>
 
 #include "HttpContext.h"
 #include "httpdHandlers.h"
@@ -70,49 +71,6 @@ int helpInit()
            "  If the directory does not exist, it is created.\n"
            "  If the directory is not given, . is used by default.\n"
            );
-    return 0;
-}
-
-int helpProject()
-{
-    printf("Usage: project [<project-name>] [options]\n"
-           "\n"
-           "  List, create, or update a smit project.\n"
-           "\n"
-           "Options:\n"
-           "  -c         Create a project, with a default structure. The structure\n"
-           "             may be modified online by an admin user.\n"
-           "  -d <repo>  select a repository by its path (by default . is used)\n"
-          );
-    return 0;
-}
-
-
-int helpUser()
-{
-    printf("Usage: 1. smit user\n"
-           "       2. smit user <name> [options] [global-options]\n"
-           "\n"
-           "  1. List all users and their configuration.\n"
-           "  2. With no option, print the configuration of a user.\n"
-           "     With options, create or update a user.\n"
-           "\n"
-           "Options:\n"
-           "  --passwd <pw>     set the password\n"
-           "  --no-passwd       delete the password (leading to impossible login)\n"
-           "  --project <project-name> <role>\n"
-           "                    set a role (ref, ro, rw, admin) on a project\n"
-           "  --superadmin      set the superadmin priviledge (ability to create\n"
-           "                    projects and manage users via the web interface)\n"
-           "  --no-superadmin   remove the superadmin priviledge\n"
-           "  -d <repo>         select a repository by its path (by default . is used)\n"
-           "\n"
-           "Roles:\n"
-           "    admin       able to modify an existing project\n"
-           "    rw          able to create and modify issues\n"
-           "    ro          able to read issues\n"
-           "    ref         may not access the project, but may be referenced\n"
-           "\n");
     return 0;
 }
 
@@ -195,29 +153,51 @@ int initRepository(const char *directory)
     return 0;
 }
 
-int cmdProject(int argc, char **args)
+int helpProject()
 {
-    int i = 0;
+    printf("Usage: smit project [<project-name>] [options]\n"
+           "\n"
+           "  List, create, or update a smit project.\n"
+           "\n"
+           "Options:\n"
+           "  -c         Create a project, with a default structure. The structure\n"
+           "             may be modified online by an admin user.\n"
+           "  -d <repo>  select a repository by its path (by default . is used)\n"
+          );
+    return 1;
+}
+
+int cmdProject(int argc, char **argv)
+{
     const char *repo = ".";
     const char *projectName = 0;
     bool create = false;
-    while (i<argc) {
-        const char *arg = args[i]; i++;
-        if (0 == strcmp(arg, "-d")) {
-            if (i<argc) {
-                repo = args[i];
-                i++;
-            } else usage();
 
-        } else if (0 == strcmp(arg, "-c")) {
+    int c;
+    int optionIndex = 0;
+    struct option longOptions[] = { {NULL, 0, NULL, 0}  };
+    while ((c = getopt_long(argc, argv, "cd:", longOptions, &optionIndex)) != -1) {
+        switch (c) {
+        case 0: // manage long options
+            break;
+        case 'd':
+            repo = optarg;
+            break;
+        case 'c':
             create = true;
-
-        } else if (!projectName) {
-            projectName = arg;
-
-        } else {
-            usage();
+            break;
+        case '?': // incorrect syntax, a message is printed by getopt_long
+            return helpProject();
+            break;
+        default:
+            printf("?? getopt returned character code 0x%x ??\n", c);
+            return helpProject();
         }
+    }
+    // manage non-option ARGV elements
+    if (optind < argc) {
+        projectName = argv[optind];
+        optind++;
     }
 
     // set log level to hide INFO logs
@@ -254,14 +234,13 @@ int cmdProject(int argc, char **args)
         std::map<std::string, Project*>::const_iterator p;
         p = Database::Db.projects.find(projectName);
         if (p == Database::Db.projects.end()) {
-            printf("No such project: %s", projectName);
+            printf("No such project: %s\n", projectName);
             return 1;
         }
-        printf("%s: %d issues\n", p->first.c_str(), p->second->getNumIssues());
+        printf("%s: %d issue(s)\n", p->first.c_str(), p->second->getNumIssues());
     }
     return 0;
 }
-
 
 int showUser(const User &u)
 {
@@ -278,9 +257,36 @@ int showUser(const User &u)
     return 0;
 }
 
-int cmdUser(int argc, char **args)
+int helpUser()
 {
-    int i = 0;
+    printf("Usage: 1. smit user\n"
+           "       2. smit user <name> [options] [global-options]\n"
+           "\n"
+           "  1. List all users and their configuration.\n"
+           "  2. With no option, print the configuration of a user.\n"
+           "     With options, create or update a user.\n"
+           "\n"
+           "Options:\n"
+           "  --passwd <pw>     set the password\n"
+           "  --no-passwd       delete the password (leading to impossible login)\n"
+           "  --project <project-name>:<role>\n"
+           "                    set a role (ref, ro, rw, admin) on a project\n"
+           "  --superadmin      set the superadmin priviledge (ability to create\n"
+           "                    projects and manage users via the web interface)\n"
+           "  --no-superadmin   remove the superadmin priviledge\n"
+           "  -d <repo>         select a repository by its path (by default . is used)\n"
+           "\n"
+           "Roles:\n"
+           "    admin       able to modify an existing project\n"
+           "    rw          able to create and modify issues\n"
+           "    ro          able to read issues\n"
+           "    ref         may not access the project, but may be referenced\n"
+           "\n");
+    return 1;
+}
+
+int cmdUser(int argc, char **argv)
+{
     const char *repo = ".";
     const char *username = 0;
     bool deletePasswd = false;
@@ -289,47 +295,64 @@ int cmdUser(int argc, char **args)
     UserConfigAction action = GET_CONFIG;
     User u;
 
-    while (i < argc) {
-        const char *arg = args[i]; i++;
-        if (0 == strcmp(arg, "-d")) {
-            if (i<argc) {
-                repo = args[i];
-                i++;
-            } else return helpUser();
-
-        } else if (0 == strcmp(arg, "--no-passwd")) {
-            deletePasswd = true;
-            action = SET_CONFIG;
-
-        } else if (0 == strcmp(arg, "--passwd")) {
-            if (i<argc) {
-                u.setPasswd(args[i]);
-                i++;
+    int c;
+    int optionIndex = 0;
+    struct option longOptions[] = {
+        {"no-passwd", 0, 0, 0},
+        {"passwd", 1, 0, 0},
+        {"superadmin", 0, 0, 0},
+        {"no-superadmin", 0, 0, 0},
+        {"project", 1, 0, 0},
+        {NULL, 0, NULL, 0}
+    };
+    while ((c = getopt_long(argc, argv, "d:", longOptions, &optionIndex)) != -1) {
+        switch (c) {
+        case 0: // manage long options
+            if (0 == strcmp(longOptions[optionIndex].name, "no-passwd")) {
+                deletePasswd = true;
                 action = SET_CONFIG;
-            } else return helpUser();
-
-        } else if (0 == strcmp(arg, "--superadmin")) {
-            superadmin = "yes";
-            action = SET_CONFIG;
-
-        } else if (0 == strcmp(arg, "--no-superadmin")) {
-            superadmin = "no";
-            action = SET_CONFIG;
-
-        } else if (0 == strcmp(arg, "--project")) {
-            if (i+1<argc) {
-                std::string project = args[i];
-                std::string role = args[i+1];
+            } else if (0 == strcmp(longOptions[optionIndex].name, "passwd")) {
+                u.setPasswd(optarg);
+                action = SET_CONFIG;
+            } else if (0 == strcmp(longOptions[optionIndex].name, "superadmin")) {
+                superadmin = "yes";
+                action = SET_CONFIG;
+            } else if (0 == strcmp(longOptions[optionIndex].name, "no-superadmin")) {
+                superadmin = "no";
+                action = SET_CONFIG;
+            } else if (0 == strcmp(longOptions[optionIndex].name, "project")) {
+                std::string arg = optarg;
+                size_t i = arg.find_last_of(":");
+                if (i == std::string::npos) {
+                    printf("Malformed option --project <project>:<role>\n\n");
+                    return helpUser();
+                }
+                std::string project = arg.substr(0, i);
+                std::string role = arg.substr(i+1);
                 u.rolesOnProjects[project] = stringToRole(role);
-                // role "none" to be erase below
-                i += 2;
                 action = SET_CONFIG;
-            } else return helpUser();
+            }
+            break;
+        case 'd':
+            repo = optarg;
+            break;
+        case '?': // incorrect syntax, a message is printed by getopt_long
+            return helpUser();
+            break;
+        default:
+            printf("?? getopt returned character code 0x%x ??\n", c);
+            return helpUser();
+        }
+    }
 
-        } else if (!username) {
-            username = arg;
-
-        } else return helpUser();
+    // manage non-option ARGV elements
+    if (optind < argc) {
+        username = argv[optind];
+        optind++;
+    }
+    if (optind < argc) {
+        printf("Too many arguments.\n\n");
+        return helpUser();
     }
 
     int r = UserBase::init(repo, false);
@@ -669,10 +692,10 @@ int main(int argc, char **argv)
             return 1;
 
         } else if (0 == strcmp(command, "project")) {
-            return cmdProject(argc-2, argv+2);
+            return cmdProject(argc-1, argv+1);
 
         } else if (0 == strcmp(command, "user")) {
-            return cmdUser(argc-2, argv+2);
+            return cmdUser(argc-1, argv+1);
 
         } else if (0 == strcmp(command, "clone")) {
             return cmdClone(argc-1, argv+1);

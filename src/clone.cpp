@@ -158,7 +158,7 @@ int cmdClone(int argc, char * const *argv)
 
     int c;
     int optionIndex = 0;
-    static struct option longOptions[] = {
+    struct option longOptions[] = {
         {"user", 1, 0, 0},
         {"passwd", 1, 0, 0},
         {NULL, 0, NULL, 0}
@@ -175,11 +175,11 @@ int cmdClone(int argc, char * const *argv)
             Verbose = true;
             break;
         case '?': // incorrect syntax, a message is printed by getopt_long
-            exit(1);
+            return helpClone();
             break;
         default:
             printf("?? getopt returned character code 0x%x ??\n", c);
-            exit(1);
+            return helpClone();
         }
     }
     // manage non-option ARGV elements
