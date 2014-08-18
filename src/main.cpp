@@ -71,26 +71,36 @@ int helpInit()
            "  If the directory does not exist, it is created.\n"
            "  If the directory is not given, . is used by default.\n"
            );
-    return 0;
+    return 1;
 }
 
-int helpUi()
+int initRepository(int argc, char **argv)
 {
-    printf("Usage: smit ui [<repository>] [options]\n"
-           "\n"
-           "  Start a smit local server (bound to 127.0.0.1), and a web browser.\n"
-           "\n"
-           "  <repository>      select a repository to serve (by default . is used)\n"
-           "\n"
-           "Options:\n"
-           "  --listen-port <port>   set TCP listening port (default is 8090)\n"
-           );
-    return 0;
+    const char *directory = ".";
 
-}
+    int c;
+    int optionIndex = 0;
+    struct option longOptions[] = { {NULL, 0, NULL, 0}  };
+    while ((c = getopt_long(argc, argv, "", longOptions, &optionIndex)) != -1) {
+        switch (c) {
+        case '?': // incorrect syntax, a message is printed by getopt_long
+            return helpInit();
+            break;
+        default:
+            printf("?? getopt returned character code 0x%x ??\n", c);
+            return helpInit();
+        }
+    }
+    // manage non-option ARGV elements
+    if (optind < argc) {
+        directory = argv[optind];
+        optind++;
+    }
+    if (optind < argc) {
+        printf("Too many arguments.\n\n");
+        return helpInit();
+    }
 
-int initRepository(const char *directory)
-{
     DIR *dirp;
     dirp = opendir(directory);
     if (!dirp) {
@@ -180,6 +190,10 @@ int cmdProject(int argc, char **argv)
     if (optind < argc) {
         projectName = argv[optind];
         optind++;
+    }
+    if (optind < argc) {
+        printf("Too many arguments.\n\n");
+        return helpProject();
     }
 
     // set log level to hide INFO logs
@@ -452,7 +466,7 @@ int serveRepository(int argc, char **argv)
     }
     if (optind < argc) {
         printf("Too many arguments.\n\n");
-        return helpUser();
+        return helpServe();
     }
 
     if (!repo) repo = ".";
@@ -529,25 +543,61 @@ void daemonize()
     //write(lfp,str,strlen(str)); /* record pid to lockfile */
 }
 #endif
-int cmdUi(int argc, char **args)
+
+int helpUi()
 {
-    int i = 0;
+    printf("Usage: smit ui [<repository>] [options]\n"
+           "\n"
+           "  Start a smit local server (bound to 127.0.0.1), and a web browser.\n"
+           "\n"
+           "  <repository>      select a repository to serve (by default . is used)\n"
+           "\n"
+           "Options:\n"
+           "  --listen-port <port>   set TCP listening port (default is 8090)\n"
+           );
+    return 1;
+
+}
+
+int cmdUi(int argc, char **argv)
+{
     std::string listenPort = "127.0.0.1:8090";
-    //const char *lang = "en";
     char *repo = 0;
 
-    while (i<argc) {
-        char *arg = args[i]; i++;
-        if (0 == strcmp(arg, "--listen-port")) {
-            if (i<argc) {
-                listenPort = "127.0.0.1:";
-                listenPort += args[i];
-                i++;
-            } else usage();
+    int c;
+    int optionIndex = 0;
+    struct option longOptions[] = {
+        {"listen-port", 1, 0, 0},
+        {NULL, 0, NULL, 0}
+    };
 
-        } else if (!repo) repo = arg;
-        else usage();
+    while ((c = getopt_long(argc, argv, "d", longOptions, &optionIndex)) != -1) {
+        switch (c) {
+        case 0: // manage long options
+            if (0 == strcmp(longOptions[optionIndex].name, "listen-port")) listenPort = optarg;
+            break;
+        case 'd':
+            setLoggingLevel(LL_DEBUG);
+            break;
+        case '?': // incorrect syntax, a message is printed by getopt_long
+            return helpUi();
+            break;
+        default:
+            printf("?? getopt returned character code 0x%x ??\n", c);
+            return helpUi();
+        }
     }
+
+    // manage non-option ARGV elements
+    if (optind < argc) {
+        repo = argv[optind];
+        optind++;
+    }
+    if (optind < argc) {
+        printf("Too many arguments.\n\n");
+        return helpUi();
+    }
+
     if (!repo) repo = (char*)".";
 
     UserBase::setLocalUserInterface();
@@ -555,7 +605,7 @@ int cmdUi(int argc, char **args)
     // start the local server
 
     char *serverArguments[4] = { 0, 0, 0, 0 };
-    serverArguments[0] = "ui";
+    serverArguments[0] = (char*)"ui";
     serverArguments[1] = (char*)"--listen-port";
     serverArguments[2] = (char*)listenPort.c_str();
     serverArguments[3] = repo;
@@ -686,9 +736,7 @@ int main(int argc, char **argv)
         command = argv[1]; i++;
 
         if (0 == strcmp(command, "init")) {
-            const char *dir = ".";
-            if (i < argc) dir = argv[i];
-            return initRepository(dir);
+            return initRepository(argc-1, argv+1);
 
         } else if (0 == strcmp(command, "version")) {
             return showVersion();

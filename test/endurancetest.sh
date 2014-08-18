@@ -15,7 +15,7 @@ init() {
     rm -rf $REPO && mkdir $REPO
     $SMIT init $REPO
     $SMIT project -c $PROJECT -d $REPO
-    $SMIT user $USER --passwd $PASSWD --project $PROJECT rw -d $REPO
+    $SMIT user $USER --passwd $PASSWD --project $PROJECT:rw -d $REPO
 }
 start() {
     $SMIT serve $REPO --listen-port $PORT &

@@ -21,8 +21,8 @@ init() {
     $SMIT init $REPO
     $SMIT project -c $PROJECT1 -d $REPO
     $SMIT project -c $PROJECT2 -d $REPO
-    $SMIT user $USER1 --passwd $PASSWD1 --project $PROJECT1 rw -d $REPO
-    $SMIT user $USER2 --passwd $PASSWD2 --project $PROJECT2 rw -d $REPO
+    $SMIT user $USER1 --passwd $PASSWD1 --project $PROJECT1:rw -d $REPO
+    $SMIT user $USER2 --passwd $PASSWD2 --project $PROJECT2:rw -d $REPO
 
     # create some files
     echo abc1 > $REPO/$PROJECT1/issues/abc1
