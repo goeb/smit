@@ -74,24 +74,6 @@ int helpInit()
     return 0;
 }
 
-int helpServe()
-{
-    printf("Usage: smit serve [<repository>] [options]\n"
-           "\n"
-           "  Start a smit server.\n"
-           "\n"
-           "  <repository>      select a repository to serve (by default . is used)\n"
-           "\n"
-           "Options:\n"
-           "  --listen-port <port>   set TCP listening port (default is 8090)\n"
-           "  --ssl-cert <certificate>\n"
-           "                         set HTTPS.\n"
-           "                         <certificate> must be a PEM certificate,\n"
-           "                         including public and private key.\n"
-           );
-    return 0;
-}
-
 int helpUi()
 {
     printf("Usage: smit ui [<repository>] [options]\n"
@@ -412,42 +394,65 @@ int cmdUser(int argc, char **argv)
     return 0;
 }
 
-int serveRepository(int argc, char **args)
+int helpServe()
+{
+    printf("Usage: smit serve [<repository>] [options]\n"
+           "\n"
+           "  Start a smit server.\n"
+           "\n"
+           "  <repository>      select a repository to serve (by default . is used)\n"
+           "\n"
+           "Options:\n"
+           "  --listen-port <port>   set TCP listening port (default is 8090)\n"
+           "  --ssl-cert <certificate>\n"
+           "                         set HTTPS.\n"
+           "                         <certificate> must be a PEM certificate,\n"
+           "                         including public and private key.\n"
+           );
+    return 1;
+}
+
+int serveRepository(int argc, char **argv)
 {
     LOG_INFO("Starting Smit v" VERSION);
 
-    int i = 0;
     std::string listenPort = "8090";
-    //const char *lang = "en";
     const char *repo = 0;
     const char *certificatePemFile = 0;
-    while (i<argc) {
-        const char *arg = args[i]; i++;
-        if (0 == strcmp(arg, "--listen-port")) {
-            if (i<argc) {
-                listenPort = args[i];
-                i++;
-            } else usage();
-#if 0
-        } else if (0 == strcmp(arg, "--lang")) {
-            if (i<argc) {
-                lang = args[i];
-                i++;
-            } else usage();
-#endif
-        } else if (0 == strcmp(arg, "-d")) {
-            setLoggingLevel(LL_DEBUG);
-        } else if (0 == strcmp(arg, "--ssl-cert")) {
-            if (i<argc) {
-                certificatePemFile = args[i];
-                i++;
-            } else usage();
 
-        } else if (!repo) {
-            repo = arg;
-        } else {
-            usage();
+    int c;
+    int optionIndex = 0;
+    struct option longOptions[] = {
+        {"listen-port", 1, 0, 0},
+        {"ssl-cert", 1, 0, 0},
+        {NULL, 0, NULL, 0}
+    };
+    while ((c = getopt_long(argc, argv, "d", longOptions, &optionIndex)) != -1) {
+        switch (c) {
+        case 0: // manage long options
+            if (0 == strcmp(longOptions[optionIndex].name, "listen-port")) listenPort = optarg;
+            else if (0 == strcmp(longOptions[optionIndex].name, "ssl-cert")) certificatePemFile = optarg;
+            break;
+        case 'd':
+            setLoggingLevel(LL_DEBUG);
+            break;
+        case '?': // incorrect syntax, a message is printed by getopt_long
+            return helpServe();
+            break;
+        default:
+            printf("?? getopt returned character code 0x%x ??\n", c);
+            return helpServe();
         }
+    }
+
+    // manage non-option ARGV elements
+    if (optind < argc) {
+        repo = argv[optind];
+        optind++;
+    }
+    if (optind < argc) {
+        printf("Too many arguments.\n\n");
+        return helpUser();
     }
 
     if (!repo) repo = ".";
@@ -549,10 +554,11 @@ int cmdUi(int argc, char **args)
 
     // start the local server
 
-    char *serverArguments[3] = { 0, 0, 0 };
-    serverArguments[0] = (char*)"--listen-port";
-    serverArguments[1] = (char*)listenPort.c_str();
-    serverArguments[2] = repo;
+    char *serverArguments[4] = { 0, 0, 0, 0 };
+    serverArguments[0] = "ui";
+    serverArguments[1] = (char*)"--listen-port";
+    serverArguments[2] = (char*)listenPort.c_str();
+    serverArguments[3] = repo;
 
     // start a web browser
     std::string url = "http://" + listenPort + "/";
@@ -588,7 +594,7 @@ int cmdUi(int argc, char **args)
     if (p) {
         // in parent, start local server
         close(pipefd[0]);
-        int r = serveRepository(3, serverArguments);
+        int r = serveRepository(4, serverArguments);
         if (r < 0) {
             fprintf(stderr, "Cannot start local server\n");
             exit(1);
@@ -688,7 +694,7 @@ int main(int argc, char **argv)
             return showVersion();
 
         } else if (0 == strcmp(command, "serve")) {
-            serveRepository(argc-2, argv+2);
+            serveRepository(argc-1, argv+1);
             return 1;
 
         } else if (0 == strcmp(command, "project")) {
