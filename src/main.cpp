@@ -506,10 +506,10 @@ int cmdUi(int argc, char **args)
     int i = 0;
     std::string listenPort = "127.0.0.1:8090";
     //const char *lang = "en";
-    const char *repo = 0;
+    char *repo = 0;
 
     while (i<argc) {
-        const char *arg = args[i]; i++;
+        char *arg = args[i]; i++;
         if (0 == strcmp(arg, "--listen-port")) {
             if (i<argc) {
                 listenPort = "127.0.0.1:";
@@ -520,15 +520,15 @@ int cmdUi(int argc, char **args)
         } else if (!repo) repo = arg;
         else usage();
     }
-    if (!repo) repo = ".";
+    if (!repo) repo = (char*)".";
 
     UserBase::setLocalUserInterface();
 
     // start the local server
 
-    const char *serverArguments[3];
-    serverArguments[0] = "--listen-port";
-    serverArguments[1] = listenPort.c_str();
+    char *serverArguments[3] = { 0, 0, 0 };
+    serverArguments[0] = (char*)"--listen-port";
+    serverArguments[1] = (char*)listenPort.c_str();
     serverArguments[2] = repo;
 
     // start a web browser
@@ -565,7 +565,7 @@ int cmdUi(int argc, char **args)
     if (p) {
         // in parent, start local server
         close(pipefd[0]);
-        int r = serveRepository(3, (char**)serverArguments);
+        int r = serveRepository(3, serverArguments);
         if (r < 0) {
             fprintf(stderr, "Cannot start local server\n");
             exit(1);
@@ -608,7 +608,7 @@ int cmdUi(int argc, char **args)
 
 #else // _WIN32
     // start local server
-    int r = serveRepository(3, serverArguments);
+    r = serveRepository(3, serverArguments);
 
     cmd = "start \"\" \"" + url + "\"";
     LOG_INFO("Running: %s...", cmd.c_str());
