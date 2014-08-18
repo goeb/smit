@@ -22,6 +22,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <errno.h>
+#include <getopt.h>
 
 #include "clone.h"
 #include "global.h"
@@ -148,36 +149,52 @@ std::string signin(const char *rooturl, const std::string &user, const std::stri
     return sessid;
 }
 
-int cmdClone(int argc, const char **argv)
+int cmdClone(int argc, char * const *argv)
 {
+    struct option longOptions[] = {
+        {"user", 1, 0, 0},
+        {"passwd", 1, 0, 0},
+        {NULL, 0, NULL, 0}
+    };
+
     std::string username;
     const char *passwd = 0;
     const char *url = 0;
     const char *dir = 0;
 
-    int i = 0;
-    while (i < argc) {
-        const char *arg = argv[i];
-        i++;
-        if (0 == strcmp(arg, "--user")) {
-            if (argc <= 0) return helpClone();
-            username = argv[i];
-            i++;
-        } else if (0 == strcmp(arg, "--passwd")) {
-            if (argc <= 0) return helpClone();
-            passwd = argv[i];
-            i++;
-        } else if (0 == strcmp(arg, "-v")) {
-            Verbose = true;
-        } else {
-            if (!url) url = arg;
-            else if (!dir) dir = arg;
-            else {
-                printf("Too many arguments.\n\n");
-                return helpClone();
+    int c;
+    int optionIndex = 0;
+    while ((c = getopt_long(argc, argv, "v", longOptions, &optionIndex)) != -1) {
+        switch (c) {
+        case 0: // manage long options
+            if (0 == strcmp(longOptions[optionIndex].name, "user")) {
+                username = optarg;
+            } else if (0 == strcmp(longOptions[optionIndex].name, "passwd")) {
+                passwd = optarg;
             }
+        case 'v':
+            Verbose = true;
+            break;
+        case '?':
+            break;
+        default:
+            printf("?? getopt returned character code 0x%x ??\n", c);
         }
     }
+    // manage non-option ARGV elements
+    if (optind < argc) {
+        url = argv[optind];
+        optind++;
+    }
+    if (optind < argc) {
+        dir = argv[optind];
+        optind++;
+    }
+    if (optind < argc) {
+        printf("Too many arguments.\n\n");
+        return helpClone();
+    }
+
     if (!url || !dir) {
         printf("You must specify a repository to clone and a directory.\n\n");
         return helpClone();

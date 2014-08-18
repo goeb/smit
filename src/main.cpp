@@ -195,7 +195,7 @@ int initRepository(const char *directory)
     return 0;
 }
 
-int cmdProject(int argc, const char **args)
+int cmdProject(int argc, char **args)
 {
     int i = 0;
     const char *repo = ".";
@@ -278,7 +278,7 @@ int showUser(const User &u)
     return 0;
 }
 
-int cmdUser(int argc, const char **args)
+int cmdUser(int argc, char **args)
 {
     int i = 0;
     const char *repo = ".";
@@ -389,7 +389,7 @@ int cmdUser(int argc, const char **args)
     return 0;
 }
 
-int serveRepository(int argc, const char **args)
+int serveRepository(int argc, char **args)
 {
     LOG_INFO("Starting Smit v" VERSION);
 
@@ -501,7 +501,7 @@ void daemonize()
     //write(lfp,str,strlen(str)); /* record pid to lockfile */
 }
 #endif
-int cmdUi(int argc, const char **args)
+int cmdUi(int argc, char **args)
 {
     int i = 0;
     std::string listenPort = "127.0.0.1:8090";
@@ -565,7 +565,7 @@ int cmdUi(int argc, const char **args)
     if (p) {
         // in parent, start local server
         close(pipefd[0]);
-        int r = serveRepository(3, serverArguments);
+        int r = serveRepository(3, (char**)serverArguments);
         if (r < 0) {
             fprintf(stderr, "Cannot start local server\n");
             exit(1);
@@ -646,7 +646,7 @@ int showVersion()
     exit(1);
 }
 
-int main(int argc, const char **argv)
+int main(int argc, char **argv)
 {
     if (argc < 2) usage();
 
