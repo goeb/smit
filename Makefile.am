@@ -81,7 +81,7 @@ smit_LDADD = @OPENSSL_LIBS@ @CURL_LIBS@
 if WINDOWS
 smit_LDADD += -lws2_32 -lgdi32
 else
-	smit_LDADD += -ldl
+smit_LDADD += -ldl
 endif
 
 

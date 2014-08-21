@@ -46,6 +46,7 @@ target_triplet = @target@
 @WINDOWS_TRUE@am__append_8 = -static -static-libgcc -Dopenssl_EXPORTS
 bin_PROGRAMS = smit$(EXEEXT)
 @WINDOWS_TRUE@am__append_9 = -lws2_32 -lgdi32
+@WINDOWS_FALSE@am__append_10 = -ldl
 subdir = .
 DIST_COMMON = README $(am__configure_deps) $(dist_pkgdata_DATA) \
 	$(srcdir)/Makefile.am $(srcdir)/Makefile.in \
@@ -81,7 +82,7 @@ am_smit_OBJECTS = src/smit-db.$(OBJEXT) src/smit-parseConfig.$(OBJEXT) \
 nodist_smit_OBJECTS = smit-embedcpio.$(OBJEXT)
 smit_OBJECTS = $(am_smit_OBJECTS) $(nodist_smit_OBJECTS)
 am__DEPENDENCIES_1 =
-smit_DEPENDENCIES = $(am__DEPENDENCIES_1)
+smit_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)/src
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -347,7 +348,8 @@ CLEANFILES = embedcpio.c embedcpio.h convertToC
 X = embedded_data
 SM_VERSION = $(X)/sm/version
 smit_CPPFLAGS = -I @srcdir@/mongoose @OPENSSL_CFLAGS@ @CURL_CFLAGS@
-smit_LDADD = @OPENSSL_LIBS@ @CURL_LIBS@ $(am__append_9)
+smit_LDADD = @OPENSSL_LIBS@ @CURL_LIBS@ $(am__append_9) \
+	$(am__append_10)
 
 # specific subdirs
 SUBDIRS = test
@@ -1381,7 +1383,6 @@ embedcpio.c embedcpio.h: @srcdir@/tools/convertToC.cpp
 .PHONY: clean-local-embedded-data
 clean-local-embedded-data:
 	rm -rf $(X)
-@WINDOWS_FALSE@	smit_LDADD += -ldl
 
 # Windows installer
 @WINDOWS_TRUE@all-local: @PACKAGE_TARNAME@-@VERSION@-setup$(EXEEXT)
