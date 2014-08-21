@@ -12,10 +12,10 @@ for i in `seq 1 $N`; do
         echo $i...
     fi
     echo -n "smp.1.1 " > $TMP.ref
-    ../get_random_value $i >> $TMP.ref
+    ./get_random_value $i >> $TMP.ref
     echo >> $TMP.ref
 
-    ../get_random_value $i | ../smparser -e | ../smparser - > $TMP
+    ./get_random_value $i | ./smparser -e | ./smparser - > $TMP
 
     diff $TMP.ref $TMP
 done
