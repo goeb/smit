@@ -51,18 +51,17 @@ CONFIG_CLEAN_FILES = parseConfig1.txt parseConfig2.txt
 CONFIG_CLEAN_VPATH_FILES =
 am__dirstamp = $(am__leading_dot)dirstamp
 am_T_parseConfig_OBJECTS = T_parseConfig.$(OBJEXT) \
-	$(top_srcdir)/src/parseConfig.$(OBJEXT)
+	../src/parseConfig.$(OBJEXT)
 T_parseConfig_OBJECTS = $(am_T_parseConfig_OBJECTS)
 T_parseConfig_LDADD = $(LDADD)
 am_T_stringTools_OBJECTS = T_stringTools.$(OBJEXT) \
-	$(top_srcdir)/src/stringTools.$(OBJEXT)
+	../src/stringTools.$(OBJEXT)
 T_stringTools_OBJECTS = $(am_T_stringTools_OBJECTS)
 T_stringTools_LDADD = $(LDADD)
 am_get_random_value_OBJECTS = get_random_value.$(OBJEXT)
 get_random_value_OBJECTS = $(am_get_random_value_OBJECTS)
 get_random_value_LDADD = $(LDADD)
-am_smparser_OBJECTS =  \
-	$(top_srcdir)/src/smparser-parseConfig.$(OBJEXT)
+am_smparser_OBJECTS = ../src/smparser-parseConfig.$(OBJEXT)
 smparser_OBJECTS = $(am_smparser_OBJECTS)
 smparser_LDADD = $(LDADD)
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)/src
@@ -220,10 +219,10 @@ target_vendor = @target_vendor@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-T_parseConfig_SOURCES = T_parseConfig.cpp $(top_srcdir)/src/parseConfig.cpp
-T_stringTools_SOURCES = T_stringTools.cpp $(top_srcdir)/src/stringTools.cpp
+T_parseConfig_SOURCES = T_parseConfig.cpp ../src/parseConfig.cpp
+T_stringTools_SOURCES = T_stringTools.cpp ../src/stringTools.cpp
 get_random_value_SOURCES = get_random_value.c
-smparser_SOURCES = $(top_srcdir)/src/parseConfig.cpp
+smparser_SOURCES = ../src/parseConfig.cpp
 smparser_CPPFLAGS = -DSM_PARSER
 AM_CPPFLAGS = -I$(top_srcdir)/src -include logging.h
 
@@ -270,46 +269,43 @@ parseConfig2.txt: $(top_builddir)/config.status $(srcdir)/parseConfig2.txt.in
 
 clean-checkPROGRAMS:
 	-test -z "$(check_PROGRAMS)" || rm -f $(check_PROGRAMS)
-$(top_srcdir)/src/$(am__dirstamp):
-	@$(MKDIR_P) $(top_srcdir)/src
-	@: > $(top_srcdir)/src/$(am__dirstamp)
-$(top_srcdir)/src/$(DEPDIR)/$(am__dirstamp):
-	@$(MKDIR_P) $(top_srcdir)/src/$(DEPDIR)
-	@: > $(top_srcdir)/src/$(DEPDIR)/$(am__dirstamp)
-$(top_srcdir)/src/parseConfig.$(OBJEXT):  \
-	$(top_srcdir)/src/$(am__dirstamp) \
-	$(top_srcdir)/src/$(DEPDIR)/$(am__dirstamp)
+../src/$(am__dirstamp):
+	@$(MKDIR_P) ../src
+	@: > ../src/$(am__dirstamp)
+../src/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) ../src/$(DEPDIR)
+	@: > ../src/$(DEPDIR)/$(am__dirstamp)
+../src/parseConfig.$(OBJEXT): ../src/$(am__dirstamp) \
+	../src/$(DEPDIR)/$(am__dirstamp)
 T_parseConfig$(EXEEXT): $(T_parseConfig_OBJECTS) $(T_parseConfig_DEPENDENCIES) $(EXTRA_T_parseConfig_DEPENDENCIES) 
 	@rm -f T_parseConfig$(EXEEXT)
 	$(AM_V_CXXLD)$(CXXLINK) $(T_parseConfig_OBJECTS) $(T_parseConfig_LDADD) $(LIBS)
-$(top_srcdir)/src/stringTools.$(OBJEXT):  \
-	$(top_srcdir)/src/$(am__dirstamp) \
-	$(top_srcdir)/src/$(DEPDIR)/$(am__dirstamp)
+../src/stringTools.$(OBJEXT): ../src/$(am__dirstamp) \
+	../src/$(DEPDIR)/$(am__dirstamp)
 T_stringTools$(EXEEXT): $(T_stringTools_OBJECTS) $(T_stringTools_DEPENDENCIES) $(EXTRA_T_stringTools_DEPENDENCIES) 
 	@rm -f T_stringTools$(EXEEXT)
 	$(AM_V_CXXLD)$(CXXLINK) $(T_stringTools_OBJECTS) $(T_stringTools_LDADD) $(LIBS)
 get_random_value$(EXEEXT): $(get_random_value_OBJECTS) $(get_random_value_DEPENDENCIES) $(EXTRA_get_random_value_DEPENDENCIES) 
 	@rm -f get_random_value$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(get_random_value_OBJECTS) $(get_random_value_LDADD) $(LIBS)
-$(top_srcdir)/src/smparser-parseConfig.$(OBJEXT):  \
-	$(top_srcdir)/src/$(am__dirstamp) \
-	$(top_srcdir)/src/$(DEPDIR)/$(am__dirstamp)
+../src/smparser-parseConfig.$(OBJEXT): ../src/$(am__dirstamp) \
+	../src/$(DEPDIR)/$(am__dirstamp)
 smparser$(EXEEXT): $(smparser_OBJECTS) $(smparser_DEPENDENCIES) $(EXTRA_smparser_DEPENDENCIES) 
 	@rm -f smparser$(EXEEXT)
 	$(AM_V_CXXLD)$(CXXLINK) $(smparser_OBJECTS) $(smparser_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
-	-rm -f $(top_srcdir)/src/parseConfig.$(OBJEXT)
-	-rm -f $(top_srcdir)/src/smparser-parseConfig.$(OBJEXT)
-	-rm -f $(top_srcdir)/src/stringTools.$(OBJEXT)
+	-rm -f ../src/parseConfig.$(OBJEXT)
+	-rm -f ../src/smparser-parseConfig.$(OBJEXT)
+	-rm -f ../src/stringTools.$(OBJEXT)
 
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@$(top_srcdir)/src/$(DEPDIR)/parseConfig.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@$(top_srcdir)/src/$(DEPDIR)/smparser-parseConfig.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@$(top_srcdir)/src/$(DEPDIR)/stringTools.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@../src/$(DEPDIR)/parseConfig.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@../src/$(DEPDIR)/smparser-parseConfig.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@../src/$(DEPDIR)/stringTools.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/T_parseConfig.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/T_stringTools.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/get_random_value.Po@am__quote@
@@ -346,19 +342,19 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXXCOMPILE) -c -o $@ `$(CYGPATH_W) '$<'`
 
-$(top_srcdir)/src/smparser-parseConfig.o: $(top_srcdir)/src/parseConfig.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smparser_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT $(top_srcdir)/src/smparser-parseConfig.o -MD -MP -MF $(top_srcdir)/src/$(DEPDIR)/smparser-parseConfig.Tpo -c -o $(top_srcdir)/src/smparser-parseConfig.o `test -f '$(top_srcdir)/src/parseConfig.cpp' || echo '$(srcdir)/'`$(top_srcdir)/src/parseConfig.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(top_srcdir)/src/$(DEPDIR)/smparser-parseConfig.Tpo $(top_srcdir)/src/$(DEPDIR)/smparser-parseConfig.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='$(top_srcdir)/src/parseConfig.cpp' object='$(top_srcdir)/src/smparser-parseConfig.o' libtool=no @AMDEPBACKSLASH@
+../src/smparser-parseConfig.o: ../src/parseConfig.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smparser_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT ../src/smparser-parseConfig.o -MD -MP -MF ../src/$(DEPDIR)/smparser-parseConfig.Tpo -c -o ../src/smparser-parseConfig.o `test -f '../src/parseConfig.cpp' || echo '$(srcdir)/'`../src/parseConfig.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) ../src/$(DEPDIR)/smparser-parseConfig.Tpo ../src/$(DEPDIR)/smparser-parseConfig.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='../src/parseConfig.cpp' object='../src/smparser-parseConfig.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smparser_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o $(top_srcdir)/src/smparser-parseConfig.o `test -f '$(top_srcdir)/src/parseConfig.cpp' || echo '$(srcdir)/'`$(top_srcdir)/src/parseConfig.cpp
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smparser_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o ../src/smparser-parseConfig.o `test -f '../src/parseConfig.cpp' || echo '$(srcdir)/'`../src/parseConfig.cpp
 
-$(top_srcdir)/src/smparser-parseConfig.obj: $(top_srcdir)/src/parseConfig.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smparser_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT $(top_srcdir)/src/smparser-parseConfig.obj -MD -MP -MF $(top_srcdir)/src/$(DEPDIR)/smparser-parseConfig.Tpo -c -o $(top_srcdir)/src/smparser-parseConfig.obj `if test -f '$(top_srcdir)/src/parseConfig.cpp'; then $(CYGPATH_W) '$(top_srcdir)/src/parseConfig.cpp'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/parseConfig.cpp'; fi`
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(top_srcdir)/src/$(DEPDIR)/smparser-parseConfig.Tpo $(top_srcdir)/src/$(DEPDIR)/smparser-parseConfig.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='$(top_srcdir)/src/parseConfig.cpp' object='$(top_srcdir)/src/smparser-parseConfig.obj' libtool=no @AMDEPBACKSLASH@
+../src/smparser-parseConfig.obj: ../src/parseConfig.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smparser_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT ../src/smparser-parseConfig.obj -MD -MP -MF ../src/$(DEPDIR)/smparser-parseConfig.Tpo -c -o ../src/smparser-parseConfig.obj `if test -f '../src/parseConfig.cpp'; then $(CYGPATH_W) '../src/parseConfig.cpp'; else $(CYGPATH_W) '$(srcdir)/../src/parseConfig.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) ../src/$(DEPDIR)/smparser-parseConfig.Tpo ../src/$(DEPDIR)/smparser-parseConfig.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='../src/parseConfig.cpp' object='../src/smparser-parseConfig.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smparser_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o $(top_srcdir)/src/smparser-parseConfig.obj `if test -f '$(top_srcdir)/src/parseConfig.cpp'; then $(CYGPATH_W) '$(top_srcdir)/src/parseConfig.cpp'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/parseConfig.cpp'; fi`
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smparser_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o ../src/smparser-parseConfig.obj `if test -f '../src/parseConfig.cpp'; then $(CYGPATH_W) '../src/parseConfig.cpp'; else $(CYGPATH_W) '$(srcdir)/../src/parseConfig.cpp'; fi`
 
 ID: $(HEADERS) $(SOURCES) $(LISP) $(TAGS_FILES)
 	list='$(SOURCES) $(HEADERS) $(LISP) $(TAGS_FILES)'; \
@@ -570,8 +566,8 @@ clean-generic:
 distclean-generic:
 	-test -z "$(CONFIG_CLEAN_FILES)" || rm -f $(CONFIG_CLEAN_FILES)
 	-test . = "$(srcdir)" || test -z "$(CONFIG_CLEAN_VPATH_FILES)" || rm -f $(CONFIG_CLEAN_VPATH_FILES)
-	-test -z "$(top_srcdir)/src/$(DEPDIR)/$(am__dirstamp)" || rm -f $(top_srcdir)/src/$(DEPDIR)/$(am__dirstamp)
-	-test -z "$(top_srcdir)/src/$(am__dirstamp)" || rm -f $(top_srcdir)/src/$(am__dirstamp)
+	-rm -f ../src/$(DEPDIR)/$(am__dirstamp)
+	-rm -f ../src/$(am__dirstamp)
 
 maintainer-clean-generic:
 	@echo "This command is intended for maintainers to use"
@@ -581,7 +577,7 @@ clean: clean-am
 clean-am: clean-checkPROGRAMS clean-generic clean-local mostlyclean-am
 
 distclean: distclean-am
-	-rm -rf $(top_srcdir)/src/$(DEPDIR) ./$(DEPDIR)
+	-rm -rf ../src/$(DEPDIR) ./$(DEPDIR)
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-tags
@@ -627,7 +623,7 @@ install-ps-am:
 installcheck-am:
 
 maintainer-clean: maintainer-clean-am
-	-rm -rf $(top_srcdir)/src/$(DEPDIR) ./$(DEPDIR)
+	-rm -rf ../src/$(DEPDIR) ./$(DEPDIR)
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 
