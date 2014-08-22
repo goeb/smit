@@ -299,6 +299,26 @@ std::map<std::string, Role> UserBase::getUsersRolesOfProject(const std::string &
     return result;
 }
 
+/** Get the list of users of a given project (grouped by roles)
+  */
+std::map<Role, std::set<std::string> > UserBase::getUsersByRole(const std::string &project)
+{
+    std::map<Role, std::set<std::string> > result;
+    if (localUserInterface) return result;
+
+    ScopeLocker(UserDb.locker, LOCK_READ_ONLY);
+
+    std::map<std::string, User*>::const_iterator u;
+    FOREACH(u, UserDb.configuredUsers) {
+        enum Role r = u->second->getRole(project);
+        if (r == ROLE_NONE) continue;
+
+        result[r].insert(u->first);
+    }
+    return result;
+}
+
+
 /** Update a users's configuration
   *
   * @param username

@@ -47,7 +47,7 @@ public:
 
     static void printPageProjectList(const ContextParameters &ctx,
                                      const std::list<std::pair<std::string, std::string> > &pList,
-                                     const std::map<std::string, std::map<std::string, Role> > &userRolesByProject,
+                                     const std::map<std::string, std::map<Role, std::set<std::string> > > &userRolesByProject,
                                      const std::list<User> &users);
     static void printProjectConfig(const ContextParameters &ctx);
     static void printPageIssuesFullContents(const ContextParameters &ctx, std::vector<struct Issue*> issueList);
@@ -70,7 +70,7 @@ public:
     static void printLinksToPredefinedViews(const ContextParameters &ctx);
     static void printProjects(const ContextParameters &ctx,
                               const std::list<std::pair<std::string, std::string> > &pList,
-                              const std::map<std::string, std::map<std::string, Role> > *userRolesByProject);
+                              const std::map<std::string, std::map<Role, std::set<std::string> > > *userRolesByProject);
     static void printUsers(const RequestContext *req, const std::list<User> &usersList);
     static void printScriptUpdateConfig(const ContextParameters &ctx);
     static std::string convertToRichText(const std::string &raw);

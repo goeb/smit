@@ -51,6 +51,7 @@ public:
     static void addUserByProject(std::string project, std::string username);
     static std::set<std::string> getUsersOfProject(const std::string &project);
     static std::map<std::string, Role> getUsersRolesOfProject(const std::string &project);
+    static std::map<Role, std::set<std::string> > getUsersByRole(const std::string &project);
     static int updateUser(const std::string &username, User newConfig);
     static int updatePassword(const std::string &username, const std::string &password);
     static std::list<User> getAllUsers();

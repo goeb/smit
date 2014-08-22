@@ -1,10 +1,12 @@
 +smv 2.0.0
 addUser "John Smith"     sha1 e61a3587b3f7a142b8c7b9263c82f8119398ecb7 \
     project things_to_do rw \
+    project myproject ro
 
 
 addUser alice     sha1 522b276a356bdf39013dfabea2cd43e141ecc9e8 \
     project things_to_do ro \
+    project myproject ro
 
 
 addUser fred superadmin \
@@ -20,18 +22,44 @@ addUser fred superadmin \
 addUser homer superadmin \
     sha1 9c38e24cb7d4f0b73f8b9cdf4f6a3612f989ce2b -salt 6cc8be554574aa67 \
     project things_to_do admin \
+    project myproject ro
 
 
 addUser "not assigned"     project myproject ref \
     project smit ref \
     project things_to_do ref \
+    project myproject ro
 
 
 addUser tyty 
+    project myproject ro
 
 addUser xxxt     sha1 0b9c2625dc21ef05f6ad4ddf47c5f203837aa32c \
     project myproject rw \
+    project mypxxx rw \
 
+addUser john1 \
+    project mypxxx rw \
+    project myproject ro
 
-addUser yy 
+addUser john2 \
+    project mypxxx rw \
+    project myproject ro
+
+addUser olivia \
+    project mypxxx rw \
+    project myproject ro
+
+addUser alexia \
+    project mypxxx rw \
+    project myproject ro
+
+addUser "Mister Myster" \
+    project mypxxx rw \
+    project myproject ro
+
+addUser "John the ripper" \
+    project mypxxx rw \
+    project myproject ro
+
 

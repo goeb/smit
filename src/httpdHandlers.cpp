@@ -653,12 +653,10 @@ void httpGetRoot(const RequestContext *req, User u)
     } else {
 
         // get the list of users and roles for each project
-        std::map<std::string, std::map<std::string, Role> > usersRolesByProject;
+        std::map<std::string, std::map<Role, std::set<std::string> > > usersRolesByProject;
         std::list<std::pair<std::string, std::string> >::const_iterator p;
         FOREACH(p, pList) {
-            std::map<std::string, Role> ur = UserBase::getUsersRolesOfProject(p->first);
-            // remove current user from others
-            ur.erase(u.username);
+            std::map<Role, std::set<std::string> > ur = UserBase::getUsersByRole(p->first);
             usersRolesByProject[p->first] = ur;
         }
 
