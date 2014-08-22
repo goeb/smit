@@ -441,6 +441,7 @@ int serveRepository(int argc, char **argv)
         {"ssl-cert", 1, 0, 0},
         {NULL, 0, NULL, 0}
     };
+    optind = 1; // reset this in case cmdUi has already parsed with getopt_long
     while ((c = getopt_long(argc, argv, "d", longOptions, &optionIndex)) != -1) {
         switch (c) {
         case 0: // manage long options
@@ -561,7 +562,7 @@ int helpUi()
 
 int cmdUi(int argc, char **argv)
 {
-    std::string listenPort = "127.0.0.1:8090";
+    std::string listenPort = "8199";
     char *repo = 0;
 
     int c;
@@ -602,8 +603,9 @@ int cmdUi(int argc, char **argv)
 
     UserBase::setLocalUserInterface();
 
-    // start the local server
+    listenPort = "127.0.0.1:" + listenPort;
 
+    // start the local server
     char *serverArguments[4] = { 0, 0, 0, 0 };
     serverArguments[0] = (char*)"ui";
     serverArguments[1] = (char*)"--listen-port";
@@ -614,7 +616,7 @@ int cmdUi(int argc, char **argv)
     std::string url = "http://" + listenPort + "/";
     std::string cmd;
     int r = 0;
-#ifndef _WIN32
+#ifndef _WIN32 // linux
     // try xdg-open
     r = system("xdg-open --version");
     if (r == 0) cmd = "xdg-open"; // use xdg-open
@@ -755,7 +757,7 @@ int main(int argc, char **argv)
             return cmdClone(argc-1, argv+1);
 
         } else if (0 == strcmp(command, "ui")) {
-            return cmdUi(argc-2, argv+2);
+            return cmdUi(argc-1, argv+1);
 
         } else if (0 == strcmp(command, "help")) {
             if (i < argc) {
