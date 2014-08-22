@@ -5,6 +5,7 @@
 #include <list>
 #include <map>
 #include <vector>
+#include <stdio.h>
 
 
 std::string popToken(std::string & uri, char separator);
