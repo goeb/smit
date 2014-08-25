@@ -44,9 +44,10 @@ target_triplet = @target@
 @GPROF_ENABLED_TRUE@am__append_6 = -pg -lgcov
 @WINDOWS_TRUE@am__append_7 = -static -static-libgcc -Dopenssl_EXPORTS
 @WINDOWS_TRUE@am__append_8 = -static -static-libgcc -Dopenssl_EXPORTS
+@WINDOWS_FALSE@am__append_9 = -pthread
 bin_PROGRAMS = smit$(EXEEXT)
-@WINDOWS_TRUE@am__append_9 = -lws2_32 -lgdi32
-@WINDOWS_FALSE@am__append_10 = -ldl
+@WINDOWS_TRUE@am__append_10 = -lws2_32 -lgdi32
+@WINDOWS_FALSE@am__append_11 = -ldl
 subdir = .
 DIST_COMMON = README $(am__configure_deps) $(dist_pkgdata_DATA) \
 	$(srcdir)/Makefile.am $(srcdir)/Makefile.in \
@@ -319,7 +320,7 @@ top_srcdir = @top_srcdir@
 AM_CPPFLAGS = -Wall
 AM_CFLAGS = -Wall $(am__append_1) $(am__append_4) $(am__append_7)
 AM_CXXFLAGS = -Wall $(am__append_2) $(am__append_5) $(am__append_8)
-AM_LDFLAGS = $(am__append_3) $(am__append_6)
+AM_LDFLAGS = $(am__append_3) $(am__append_6) $(am__append_9)
 smit_SOURCES = \
 			   src/db.cpp  \
 			   src/parseConfig.cpp \
@@ -348,8 +349,8 @@ CLEANFILES = embedcpio.c embedcpio.h convertToC
 X = embedded_data
 SM_VERSION = $(X)/sm/version
 smit_CPPFLAGS = -I @srcdir@/mongoose @OPENSSL_CFLAGS@ @CURL_CFLAGS@
-smit_LDADD = @OPENSSL_LIBS@ @CURL_LIBS@ $(am__append_9) \
-	$(am__append_10)
+smit_LDADD = @OPENSSL_LIBS@ @CURL_LIBS@ $(am__append_10) \
+	$(am__append_11)
 
 # specific subdirs
 SUBDIRS = test
@@ -1364,7 +1365,6 @@ uninstall-am: uninstall-binPROGRAMS uninstall-dist_pkgdataDATA
 	tags tags-recursive uninstall uninstall-am \
 	uninstall-binPROGRAMS uninstall-dist_pkgdataDATA
 
-@WINDOWS_FALSE@	AM_LDFLAGS += -pthread
 embedcpio.c embedcpio.h: @srcdir@/tools/convertToC.cpp
 	rm -rf $(X)
 	cp -r @srcdir@/data $(X)
