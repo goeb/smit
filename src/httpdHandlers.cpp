@@ -20,6 +20,7 @@
 #include <sys/types.h>
 #include <sys/types.h>
 #include <dirent.h>
+#include <time.h>
 
 #include <string>
 #include <sstream>
@@ -42,6 +43,25 @@
 #define K_ME "me"
 #define MAX_SIZE_UPLOAD (10*1024*1024)
 #define SESSID "sessid"
+
+
+// global variable statictics
+HttpStatistics HttpStats;
+
+void initHttpStats()
+{
+    memset(&HttpStats, 0, sizeof(HttpStatistics));
+    HttpStats.startupTime = time(0);
+}
+
+void addHttpStat(HttpEvent e)
+{
+    if (e >= HTTP_EVENT_SIZE || e < 0) return;
+    ScopeLocker(HttpStats.lock, LOCK_READ_WRITE);
+    HttpStats.httpCodes[e]++;
+}
+
+
 
 /** Read bytes from the socket, and store in data
   *
@@ -77,12 +97,14 @@ void sendHttpHeader200(const RequestContext *request)
 {
     LOG_FUNC();
     request->printf("HTTP/1.0 200 OK\r\n");
+    addHttpStat(H_2XX);
 }
 
 void sendHttpHeader204(const RequestContext *request)
 {
     LOG_FUNC();
     request->printf("HTTP/1.0 204 No Content\r\n");
+    addHttpStat(H_2XX);
 }
 
 
@@ -92,18 +114,22 @@ int sendHttpHeader400(const RequestContext *request, const char *msg)
     request->printf("HTTP/1.0 400 Bad Request\r\n\r\n");
     request->printf("400 Bad Request\r\n");
     request->printf("%s\r\n", msg);
+    addHttpStat(H_400);
+
     return 1; // request completely handled
 }
 void sendHttpHeader403(const RequestContext *request)
 {
     request->printf("HTTP/1.1 403 Forbidden\r\n\r\n");
     request->printf("403 Forbidden\r\n");
+    addHttpStat(H_403);
 }
 
 void sendHttpHeader413(const RequestContext *request, const char *msg)
 {
     request->printf("HTTP/1.1 413 Request Entity Too Large\r\n\r\n");
     request->printf("413 Request Entity Too Large\r\n%s\r\n", msg);
+    addHttpStat(H_413);
 }
 
 void sendHttpHeader404(const RequestContext *request)
@@ -117,6 +143,7 @@ void sendHttpHeader500(const RequestContext *request, const char *msg)
     request->printf("HTTP/1.1 500 Internal Server Error\r\n\r\n");
     request->printf("500 Internal Server Error\r\n");
     request->printf("%s\r\n", msg);
+    addHttpStat(H_500);
 }
 
 void sendCookie(const RequestContext *request, const std::string &key, const std::string &value)
@@ -322,6 +349,29 @@ void httpPostSignout(const RequestContext *request, const std::string &sessionId
 }
 
 
+void handleGetStats(const RequestContext *request)
+{
+    sendHttpHeader200(request);
+    request->printf("Content-Type: text/plain\r\n\r\n");
+    request->printf("Uptime: %d days\r\n", (time(0)-HttpStats.startupTime)/86400);
+    request->printf("All HTTP requests: %4d\r\n", HttpStats.httpCodes[H_REQUEST]);
+    request->printf("HTTP GET:          %4d\r\n", HttpStats.httpCodes[H_GET]);
+    request->printf("HTTP POST:         %4d\r\n", HttpStats.httpCodes[H_POST]);
+    request->printf("HTTP Responses:\r\n");
+    request->printf("HTTP 2xx: %4d\r\n", HttpStats.httpCodes[H_2XX]);
+    request->printf("HTTP 400: %4d\r\n", HttpStats.httpCodes[H_400]);
+    request->printf("HTTP 403: %4d\r\n", HttpStats.httpCodes[H_403]);
+    request->printf("HTTP 413: %4d\r\n", HttpStats.httpCodes[H_413]);
+    request->printf("HTTP 500: %4d\r\n", HttpStats.httpCodes[H_500]);
+    int others = HttpStats.httpCodes[H_GET] + HttpStats.httpCodes[H_POST];
+    others -= HttpStats.httpCodes[H_2XX];
+    others -= HttpStats.httpCodes[H_400];
+    others -= HttpStats.httpCodes[H_403];
+    others -= HttpStats.httpCodes[H_413];
+    others -= HttpStats.httpCodes[H_500];
+    request->printf("Others:   %4d\r\n", others);
+}
+
 void handleMessagePreview(const RequestContext *request)
 {
     LOG_FUNC();
@@ -347,6 +397,9 @@ int httpGetSm(const RequestContext *request, const std::string &file)
     const char *virtualFilePreview = "preview";
     if (0 == strncmp(file.c_str(), virtualFilePreview, strlen(virtualFilePreview))) {
         handleMessagePreview(request);
+        return 1;
+    } else if (0 == strcmp(file.c_str(), "stat")) {
+        handleGetStats(request);
         return 1;
     }
 
@@ -1763,12 +1816,16 @@ void httpPostEntry(const RequestContext *req, Project &pro, const std::string & 
 int begin_request_handler(const RequestContext *req)
 {
     LOG_FUNC();
+    addHttpStat(H_REQUEST);
 
     std::string uri = req->getUri();
     std::string method = req->getMethod();
     LOG_DEBUG("uri=%s, method=%s", uri.c_str(), method.c_str());
 
     if (method != "GET" && method != "POST") return sendHttpHeader400(req, "invalid method");
+
+    if (method == "GET") addHttpStat(H_GET);
+    else addHttpStat(H_POST);
 
     std::string resource = popToken(uri, '/');
 

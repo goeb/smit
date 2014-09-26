@@ -487,6 +487,8 @@ int serveRepository(int argc, char **argv)
         }
     }
 
+    initHttpStats();
+
     MongooseServerContext mc;
     mc.setRequestHandler(begin_request_handler);
 
