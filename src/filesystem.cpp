@@ -13,8 +13,14 @@
 #include "config.h"
 
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <errno.h>
+#include <sstream>
 
 #include "filesystem.h"
+#include "logging.h"
+#include "global.h"
 
 #if defined(_WIN32)
 
@@ -42,3 +48,28 @@ std::string getExePath()
     return exePath;
 }
 
+
+std::string getFileSize(std::string &path)
+{
+    struct stat fileStat;
+
+    int r = stat(path.c_str(), &fileStat);
+    if (r != 0) {
+        LOG_ERROR("stat(%s) error: %s", path.c_str(), strerror(errno));
+        return _("N/A");
+    }
+    off_t size = fileStat.st_size;
+    std::stringstream result;
+    result.setf( std::ios::fixed, std:: ios::floatfield);
+    result.precision(1);
+    if (size < 1024) {
+        result << size << "o";
+    } else if (size < 1024*1024) {
+        double s = size/1024;
+        result << s << "ko";
+    } else {
+        double s = size/1024/1024;
+        result << s << "Mo";
+    }
+    return result.str();
+}

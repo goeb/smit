@@ -4,6 +4,7 @@
 #include <string>
 
 std::string getExePath();
+std::string getFileSize(std::string &path);
 
 
 #endif

@@ -149,6 +149,7 @@ public:
     inline static std::string urlNameEncode(const std::string &name) { return urlEncode(name, '=', "._-"); }
     inline static std::string urlNameDecode(const std::string &name) { return urlDecode(name, false, '='); }
     inline std::string getPath() const { return path; }
+    inline std::string getPathUploadedFiles() const { return path + "/" + K_UPLOADED_FILES_DIR; }
     ProjectConfig getConfig() const;
     inline void setConfig(ProjectConfig pconfig) { config = pconfig; }
     int deleteEntry(const std::string &issueId, const std::string &entryId, const std::string &username);

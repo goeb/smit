@@ -1836,7 +1836,7 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
     // move the uploaded files (if any)
     std::map<std::string, std::list<std::string> >::iterator files = e->properties.find(K_FILE);
     if (files != e->properties.end()) {
-        std::string dir = path + "/" + K_UPLOADED_FILES_DIR;
+        std::string dir = getPathUploadedFiles();
         mg_mkdir(dir.c_str(), S_IRUSR | S_IWUSR | S_IXUSR); // create dir if needed
 
         std::list<std::string>::iterator f;
@@ -1846,7 +1846,7 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
 
             if (access(newpath.c_str(), F_OK ) != -1 ) {
                 // destination file already exists
-                // file already uploaded (or SHA1 collision)
+                // file already uploaded (or collision)
                 // do nothing, and erase temporary file
                 LOG_INFO("File '%s' already uploaded. Ignore new upload of this file.", f->c_str());
                 unlink(oldpath.c_str());

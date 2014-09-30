@@ -26,6 +26,7 @@
 #include "dateTools.h"
 #include "session.h"
 #include "global.h"
+#include "filesystem.h"
 
 /** Build a context for a user and project
   *
@@ -1641,7 +1642,7 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
         }
 
 
-        // uploaded files
+        // uploaded / attached files
         std::map<std::string, std::list<std::string> >::iterator files = ee.properties.find(K_FILE);
         if (files != ee.properties.end() && files->second.size() > 0) {
             ctx.req->printf("<div class=\"sm_entry_files\">\n");
@@ -1661,6 +1662,10 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
                     ctx.req->printf("<img src=\"../files/%s\" class=\"sm_entry_file\"><br>", urlEncode(*f).c_str());
                 }
                 ctx.req->printf("%s", htmlEscape(shortName).c_str());
+                // size of the file
+                std::string path = ctx.project->getPathUploadedFiles()+'/'+(*f);
+                std::string size = getFileSize(path);
+                ctx.req->printf("<span> (%s)</span>", size.c_str());
                 ctx.req->printf("</a>");
                 ctx.req->printf("</div>\n"); // end file
             }
