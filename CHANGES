@@ -1,6 +1,8 @@
-v2.0.1
+v2.0.1, 30 Sept 2014
 
+    - fix utf-8 characters in project config
     - fix smit-clone crash when authentication refused
+    - html page projects: display projects stakeholder by roles
 
 v2.0.0, 2 August 2014
 
