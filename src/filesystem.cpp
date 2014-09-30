@@ -65,10 +65,10 @@ std::string getFileSize(std::string &path)
     if (size < 1024) {
         result << size << "o";
     } else if (size < 1024*1024) {
-        double s = size/1024;
+        double s = (double)size/1024;
         result << s << "ko";
     } else {
-        double s = size/1024/1024;
+        double s = (double)size/1024/1024;
         result << s << "Mo";
     }
     return result.str();
