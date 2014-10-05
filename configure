@@ -605,6 +605,8 @@ LIBOBJS
 EGREP
 GREP
 CPP
+WITH_FCGI_FALSE
+WITH_FCGI_TRUE
 ISCC
 WINE
 GPROF_ENABLED_FALSE
@@ -731,6 +733,7 @@ enable_silent_rules
 enable_dependency_tracking
 enable_gcov
 enable_gprof
+with_fcgi
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1379,6 +1382,12 @@ Optional Features:
   --enable-dependency-tracking   do not reject slow dependency extractors
   --enable-gcov           Enable test suite code coverage
   --enable-gprof          Enable test suite code profiling
+
+Optional Packages:
+  --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
+  --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
+  --with-fcgi             Compile with FastCgi capability (default no)
+
 
 Some influential environment variables:
   CXX         C++ compiler command
@@ -4866,6 +4875,21 @@ fi
 
 fi
 
+
+# Check whether --with-fcgi was given.
+if test "${with_fcgi+set}" = set; then :
+  withval=$with_fcgi;
+fi
+
+ if test x$with_fcgi = xyes; then
+  WITH_FCGI_TRUE=
+  WITH_FCGI_FALSE='#'
+else
+  WITH_FCGI_TRUE='#'
+  WITH_FCGI_FALSE=
+fi
+
+
 # Checks for header files.
 
 ac_ext=c
@@ -5508,6 +5532,10 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${GPROF_ENABLED_TRUE}" && test -z "${GPROF_ENABLED_FALSE}"; then
   as_fn_error $? "conditional \"GPROF_ENABLED\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${WITH_FCGI_TRUE}" && test -z "${WITH_FCGI_FALSE}"; then
+  as_fn_error $? "conditional \"WITH_FCGI\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 

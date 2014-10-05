@@ -76,6 +76,11 @@ if test x$WINDOWS = xyes; then
     AC_SUBST(ISCC)
 fi
 
+AC_ARG_WITH(fcgi,
+            [AS_HELP_STRING([--with-fcgi], [Compile with FastCgi capability (default no)])]
+            )
+AM_CONDITIONAL([WITH_FCGI],[test x$with_fcgi = xyes])
+
 # Checks for header files.
 AC_CHECK_HEADERS([fcntl.h stdint.h stdlib.h string.h sys/time.h unistd.h])
 

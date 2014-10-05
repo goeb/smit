@@ -50,6 +50,12 @@ smit_SOURCES = \
 			   src/console.cpp \
 			   src/HttpContext.cpp \
 			   mongoose/mongoose.c 
+if WITH_FCGI
+smit_SOURCES += src/fastcgi.cpp
+else
+xx =  # nothing
+endif
+
 
 nodist_smit_SOURCES = embedcpio.c embedcpio.h 
 BUILT_SOURCES = embedcpio.c embedcpio.h

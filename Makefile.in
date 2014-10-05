@@ -46,8 +46,9 @@ target_triplet = @target@
 @WINDOWS_TRUE@am__append_8 = -static -static-libgcc -Dopenssl_EXPORTS
 @WINDOWS_FALSE@am__append_9 = -pthread
 bin_PROGRAMS = smit$(EXEEXT)
-@WINDOWS_TRUE@am__append_10 = -lws2_32 -lgdi32
-@WINDOWS_FALSE@am__append_11 = -ldl
+@WITH_FCGI_TRUE@am__append_10 = src/fastcgi.cpp
+@WINDOWS_TRUE@am__append_11 = -lws2_32 -lgdi32
+@WINDOWS_FALSE@am__append_12 = -ldl
 subdir = .
 DIST_COMMON = README $(am__configure_deps) $(dist_pkgdata_DATA) \
 	$(srcdir)/Makefile.am $(srcdir)/Makefile.in \
@@ -67,7 +68,16 @@ CONFIG_CLEAN_FILES = smit.iss
 CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)" "$(DESTDIR)$(pkgdatadir)"
 PROGRAMS = $(bin_PROGRAMS)
+am__smit_SOURCES_DIST = src/db.cpp src/parseConfig.cpp \
+	src/identifiers.cpp src/main.cpp src/httpdHandlers.cpp \
+	src/renderingText.cpp src/renderingCsv.cpp \
+	src/renderingHtml.cpp src/cpio.cpp src/stringTools.cpp \
+	src/mutexTools.cpp src/session.cpp src/dateTools.cpp \
+	src/logging.cpp src/Trigger.cpp src/filesystem.cpp \
+	src/clone.cpp src/console.cpp src/HttpContext.cpp \
+	mongoose/mongoose.c src/fastcgi.cpp
 am__dirstamp = $(am__leading_dot)dirstamp
+@WITH_FCGI_TRUE@am__objects_1 = src/smit-fastcgi.$(OBJEXT)
 am_smit_OBJECTS = src/smit-db.$(OBJEXT) src/smit-parseConfig.$(OBJEXT) \
 	src/smit-identifiers.$(OBJEXT) src/smit-main.$(OBJEXT) \
 	src/smit-httpdHandlers.$(OBJEXT) \
@@ -79,7 +89,7 @@ am_smit_OBJECTS = src/smit-db.$(OBJEXT) src/smit-parseConfig.$(OBJEXT) \
 	src/smit-logging.$(OBJEXT) src/smit-Trigger.$(OBJEXT) \
 	src/smit-filesystem.$(OBJEXT) src/smit-clone.$(OBJEXT) \
 	src/smit-console.$(OBJEXT) src/smit-HttpContext.$(OBJEXT) \
-	mongoose/smit-mongoose.$(OBJEXT)
+	mongoose/smit-mongoose.$(OBJEXT) $(am__objects_1)
 nodist_smit_OBJECTS = smit-embedcpio.$(OBJEXT)
 smit_OBJECTS = $(am_smit_OBJECTS) $(nodist_smit_OBJECTS)
 am__DEPENDENCIES_1 =
@@ -119,7 +129,7 @@ AM_V_GEN = $(am__v_GEN_@AM_V@)
 am__v_GEN_ = $(am__v_GEN_@AM_DEFAULT_V@)
 am__v_GEN_0 = @echo "  GEN   " $@;
 SOURCES = $(smit_SOURCES) $(nodist_smit_SOURCES)
-DIST_SOURCES = $(smit_SOURCES)
+DIST_SOURCES = $(am__smit_SOURCES_DIST)
 RECURSIVE_TARGETS = all-recursive check-recursive dvi-recursive \
 	html-recursive info-recursive install-data-recursive \
 	install-dvi-recursive install-exec-recursive \
@@ -321,36 +331,22 @@ AM_CPPFLAGS = -Wall
 AM_CFLAGS = -Wall $(am__append_1) $(am__append_4) $(am__append_7)
 AM_CXXFLAGS = -Wall $(am__append_2) $(am__append_5) $(am__append_8)
 AM_LDFLAGS = $(am__append_3) $(am__append_6) $(am__append_9)
-smit_SOURCES = \
-			   src/db.cpp  \
-			   src/parseConfig.cpp \
-			   src/identifiers.cpp \
-			   src/main.cpp \
-			   src/httpdHandlers.cpp \
-			   src/renderingText.cpp \
-			   src/renderingCsv.cpp \
-			   src/renderingHtml.cpp \
-			   src/cpio.cpp \
-			   src/stringTools.cpp \
-			   src/mutexTools.cpp \
-			   src/session.cpp \
-			   src/dateTools.cpp \
-			   src/logging.cpp \
-			   src/Trigger.cpp \
-			   src/filesystem.cpp \
-			   src/clone.cpp \
-			   src/console.cpp \
-			   src/HttpContext.cpp \
-			   mongoose/mongoose.c 
-
+smit_SOURCES = src/db.cpp src/parseConfig.cpp src/identifiers.cpp \
+	src/main.cpp src/httpdHandlers.cpp src/renderingText.cpp \
+	src/renderingCsv.cpp src/renderingHtml.cpp src/cpio.cpp \
+	src/stringTools.cpp src/mutexTools.cpp src/session.cpp \
+	src/dateTools.cpp src/logging.cpp src/Trigger.cpp \
+	src/filesystem.cpp src/clone.cpp src/console.cpp \
+	src/HttpContext.cpp mongoose/mongoose.c $(am__append_10)
+@WITH_FCGI_FALSE@xx = # nothing
 nodist_smit_SOURCES = embedcpio.c embedcpio.h 
 BUILT_SOURCES = embedcpio.c embedcpio.h
 CLEANFILES = embedcpio.c embedcpio.h convertToC
 X = embedded_data
 SM_VERSION = $(X)/sm/version
 smit_CPPFLAGS = -I @srcdir@/mongoose @OPENSSL_CFLAGS@ @CURL_CFLAGS@
-smit_LDADD = @OPENSSL_LIBS@ @CURL_LIBS@ $(am__append_10) \
-	$(am__append_11)
+smit_LDADD = @OPENSSL_LIBS@ @CURL_LIBS@ $(am__append_11) \
+	$(am__append_12)
 
 # specific subdirs
 SUBDIRS = test
@@ -502,6 +498,8 @@ mongoose/$(DEPDIR)/$(am__dirstamp):
 	@: > mongoose/$(DEPDIR)/$(am__dirstamp)
 mongoose/smit-mongoose.$(OBJEXT): mongoose/$(am__dirstamp) \
 	mongoose/$(DEPDIR)/$(am__dirstamp)
+src/smit-fastcgi.$(OBJEXT): src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
 smit$(EXEEXT): $(smit_OBJECTS) $(smit_DEPENDENCIES) $(EXTRA_smit_DEPENDENCIES) 
 	@rm -f smit$(EXEEXT)
 	$(AM_V_CXXLD)$(CXXLINK) $(smit_OBJECTS) $(smit_LDADD) $(LIBS)
@@ -516,6 +514,7 @@ mostlyclean-compile:
 	-rm -f src/smit-cpio.$(OBJEXT)
 	-rm -f src/smit-dateTools.$(OBJEXT)
 	-rm -f src/smit-db.$(OBJEXT)
+	-rm -f src/smit-fastcgi.$(OBJEXT)
 	-rm -f src/smit-filesystem.$(OBJEXT)
 	-rm -f src/smit-httpdHandlers.$(OBJEXT)
 	-rm -f src/smit-identifiers.$(OBJEXT)
@@ -541,6 +540,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-cpio.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-dateTools.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-db.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-fastcgi.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-filesystem.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-httpdHandlers.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-identifiers.Po@am__quote@
@@ -879,6 +879,20 @@ src/smit-HttpContext.obj: src/HttpContext.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/HttpContext.cpp' object='src/smit-HttpContext.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/smit-HttpContext.obj `if test -f 'src/HttpContext.cpp'; then $(CYGPATH_W) 'src/HttpContext.cpp'; else $(CYGPATH_W) '$(srcdir)/src/HttpContext.cpp'; fi`
+
+src/smit-fastcgi.o: src/fastcgi.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/smit-fastcgi.o -MD -MP -MF src/$(DEPDIR)/smit-fastcgi.Tpo -c -o src/smit-fastcgi.o `test -f 'src/fastcgi.cpp' || echo '$(srcdir)/'`src/fastcgi.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/smit-fastcgi.Tpo src/$(DEPDIR)/smit-fastcgi.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/fastcgi.cpp' object='src/smit-fastcgi.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/smit-fastcgi.o `test -f 'src/fastcgi.cpp' || echo '$(srcdir)/'`src/fastcgi.cpp
+
+src/smit-fastcgi.obj: src/fastcgi.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/smit-fastcgi.obj -MD -MP -MF src/$(DEPDIR)/smit-fastcgi.Tpo -c -o src/smit-fastcgi.obj `if test -f 'src/fastcgi.cpp'; then $(CYGPATH_W) 'src/fastcgi.cpp'; else $(CYGPATH_W) '$(srcdir)/src/fastcgi.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/smit-fastcgi.Tpo src/$(DEPDIR)/smit-fastcgi.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/fastcgi.cpp' object='src/smit-fastcgi.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/smit-fastcgi.obj `if test -f 'src/fastcgi.cpp'; then $(CYGPATH_W) 'src/fastcgi.cpp'; else $(CYGPATH_W) '$(srcdir)/src/fastcgi.cpp'; fi`
 install-dist_pkgdataDATA: $(dist_pkgdata_DATA)
 	@$(NORMAL_INSTALL)
 	test -z "$(pkgdatadir)" || $(MKDIR_P) "$(DESTDIR)$(pkgdatadir)"

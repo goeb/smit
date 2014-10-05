@@ -171,6 +171,7 @@ int cmdClone(int argc, char * const *argv)
             } else if (0 == strcmp(longOptions[optionIndex].name, "passwd")) {
                 passwd = optarg;
             }
+            break;
         case 'v':
             Verbose = true;
             break;
