@@ -35,20 +35,25 @@
   * ContextParameters::projectConfig gets the config once at initilisation,
   * and afterwards one can work with the copy (without locking).
   */
-ContextParameters::ContextParameters(const RequestContext *request, User u, Project &p)
+ContextParameters::ContextParameters(const RequestContext *request, const User &u, Project &p)
 {
+    init(request, u);
     project = &p;
     projectConfig = p.getConfig(); // take a copy of the config
-    user = u;
     userRole = u.getRole(p.getName());
-    req = request;
 }
 
-ContextParameters::ContextParameters(const RequestContext *request, User u)
+ContextParameters::ContextParameters(const RequestContext *request, const User &u)
+{
+    init(request, u);
+}
+
+void ContextParameters::init(const RequestContext *request, const User &u)
 {
     project = 0;
     user = u;
     req = request;
+    originView = 0;
 }
 
 const Project &ContextParameters::getProject() const
@@ -1719,15 +1724,19 @@ void RHtml::printPageIssue(const ContextParameters &ctx, const Issue &issue)
     const char* SM_ISSUE_NEXT = "sm_issue_next";
     const char* SM_ISSUE_PREVIOUS = "sm_issue_previous";
     ctx.req->printf("<script>");
-    if (ctx.originView.empty()) {
+    if (ctx.originView == 0) {
         // disable the next/previous links
         ctx.req->printf("updateHref('%s', null);\n", SM_ISSUE_NEXT);
         ctx.req->printf("updateHref('%s', null);\n", SM_ISSUE_PREVIOUS);
     } else {
-        std::string qs;
-        qs = ctx.originView + "&" QS_GOTO_NEXT "=" + urlEncode(issue.id);
+        // update NEXT
+        std::string qs = ctx.originView;
+        qs += "&" QS_GOTO_NEXT "=" + urlEncode(issue.id);
         ctx.req->printf("updateHref('%s', './?%s');\n", SM_ISSUE_NEXT, enquoteJs(qs).c_str());
-        qs = ctx.originView + "&" QS_GOTO_PREVIOUS "=" + urlEncode(issue.id);
+
+        // update PREVIOUS
+        qs = ctx.originView;
+        qs += "&" QS_GOTO_PREVIOUS "=" + urlEncode(issue.id);
         ctx.req->printf("updateHref('%s', './?%s');\n", SM_ISSUE_PREVIOUS, enquoteJs(qs).c_str());
     }
     ctx.req->printf("</script>");

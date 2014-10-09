@@ -632,26 +632,36 @@ void httpPostUsers(const RequestContext *request, User signedInUser, const std::
     }
 }
 
-std::string getFromCookie(const RequestContext *request, const std::string &key)
+/** Get a cookie after its name.
+  * @return
+  * 0 if cookie found
+  * -1 if no such cookie found
+  */
+int getFromCookie(const RequestContext *request, const std::string &key, std::string &value)
 {
     const char *cookie = request->getHeader("Cookie");
+    // There is a most 1 cookie as stated in rfc6265 "HTTP State Management Mechanism":
+    //     When the user agent generates an HTTP request, the user agent MUST
+    //     NOT attach more than one Cookie header field.
     if (cookie) {
         LOG_DEBUG("Cookie found: %s", cookie);
         std::string c = cookie;
         while (c.size() > 0) {
             std::string name = popToken(c, '=');
             trim(name, " "); // remove spaces around
-            std::string value = popToken(c, ';');
+            if (c.size() > 0 && c[0] == ';') {
+                value = ""; // manage following case: "Cookie: key1=; key2=other"
+                c = c.substr(1); // skip ';'
+            } else value = popToken(c, ';');
+
             trim(value, " "); // remove spaces around
 
             LOG_DEBUG("Cookie: name=%s, value=%s", name.c_str(), value.c_str());
-            if (name == key) return value;
+            if (name == key) return 0;
         }
-
-    } else {
-        LOG_DEBUG("no Cookie found");
     }
-    return "";
+    LOG_DEBUG("no Cookie found");
+    return -1;
 }
 
 void handleUnauthorizedAccess(const RequestContext *request, const std::string &resource)
@@ -1258,8 +1268,9 @@ void httpGetView(const RequestContext *req, Project &p, const std::string &view,
         if (pv.name.empty()) {
             // in this case (unnamed view, ie: advanced search)
             // handle the optional origin view
-            std::string originView = getFromCookie(req, QS_ORIGIN_VIEW);
-            if (originView.size()) {
+            std::string originView;
+            int r = getFromCookie(req, QS_ORIGIN_VIEW, originView);
+            if (r == 0) {
                 // build a view from QS_ORIGIN_VIEW
                 pv = PredefinedView::loadFromQueryString(originView);
             }
@@ -1469,12 +1480,15 @@ int httpGetIssue(const RequestContext *req, Project &p, const std::string &issue
         if (format == RENDERING_TEXT) RText::printIssue(req, issue);
         else {
             ContextParameters ctx = ContextParameters(req, u, p);
-            ctx.originView = getFromCookie(req, QS_ORIGIN_VIEW);
+            std::string originView;
+            int r = getFromCookie(req, QS_ORIGIN_VIEW, originView);
+            if (r == 0) ctx.originView = originView.c_str();
+
             // clear this cookie, so that getting any other issue
             // without coming from a view does not display get/next
             // (get/next use a redirection from a view, so the cookie will be set for these)
             req->printf("%s\r\n", getDeletedCookieString(QS_ORIGIN_VIEW).c_str());
-            LOG_DEBUG("originView=%s", ctx.originView.c_str());
+            if (ctx.originView) LOG_DEBUG("originView=%s", ctx.originView);
             RHtml::printPageIssue(ctx, issue);
         }
         return 1; // done
@@ -1861,8 +1875,10 @@ int begin_request_handler(const RequestContext *req)
     }
 
     // check access rights
-    std::string sessionId = getFromCookie(req, SESSID);
-    User user = SessionBase::getLoggedInUser(sessionId);
+    std::string sessionId;
+    int r = getFromCookie(req, SESSID, sessionId);
+    User user;
+    if (r == 0) user = SessionBase::getLoggedInUser(sessionId);
     // if username is empty, then no access is granted (only public pages will be available)
 
     bool handled = true; // by default, do not let Mongoose handle the request

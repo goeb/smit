@@ -22,8 +22,9 @@
   */
 class ContextParameters {
 public:
-    ContextParameters(const RequestContext *req, User u, Project &p);
-    ContextParameters(const RequestContext *req, User u);
+    ContextParameters(const RequestContext *req, const User &u, Project &p);
+    ContextParameters(const RequestContext *req, const User &u);
+    void init(const RequestContext *request, const User &u);
     const Project &getProject() const;
 
     User user;
@@ -37,7 +38,7 @@ public:
     std::set<std::string> usersOfProject;
     std::list<std::pair<std::string, uint8_t> > htmlFieldDisplay;
     const RequestContext *req;
-    std::string originView; // query string format
+    const char *originView; // query string format
 };
 
 class RHtml {

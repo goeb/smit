@@ -392,11 +392,11 @@ std::map<std::string, User*> configuredUsers;
 
 /** Get the role of the user for the given project
   */
-enum Role User::getRole(const std::string &project)
+enum Role User::getRole(const std::string &project) const
 {
     if (UserBase::isLocalUserInterface()) return ROLE_RO;
 
-    std::map<std::string, enum Role>::iterator r = rolesOnProjects.find(project);
+    std::map<std::string, enum Role>::const_iterator r = rolesOnProjects.find(project);
     if (r == rolesOnProjects.end()) return ROLE_NONE;
     else return r->second;
 }
@@ -404,10 +404,10 @@ enum Role User::getRole(const std::string &project)
 /** Get the projects where the user has access (read or write)
   * List of pairs (project, role)
   */
-std::list<std::pair<std::string, std::string> > User::getProjects()
+std::list<std::pair<std::string, std::string> > User::getProjects() const
 {
     std::list<std::pair<std::string, std::string> > result;
-    std::map<std::string, enum Role>::iterator r;
+    std::map<std::string, enum Role>::const_iterator r;
     for (r = rolesOnProjects.begin(); r != rolesOnProjects.end(); r++) {
         result.push_back(std::make_pair(r->first, roleToString(r->second)));
     }
