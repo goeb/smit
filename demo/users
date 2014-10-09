@@ -1,12 +1,24 @@
-+smv 2.0.0
++smv 2.0.1
 addUser "John Smith"     sha1 e61a3587b3f7a142b8c7b9263c82f8119398ecb7 \
+    project myproject ro \
     project things_to_do rw \
-    project myproject ro
+
+
+addUser "John the ripper"     project myproject ro \
+    project mypxxx rw \
+
+
+addUser "Mister Myster"     project myproject ro \
+    project mypxxx rw \
+
+
+addUser alexia     project myproject ro \
+    project mypxxx rw \
 
 
 addUser alice     sha1 522b276a356bdf39013dfabea2cd43e141ecc9e8 \
+    project myproject ro \
     project things_to_do ro \
-    project myproject ro
 
 
 addUser fred superadmin \
@@ -21,45 +33,40 @@ addUser fred superadmin \
 
 addUser homer superadmin \
     sha1 9c38e24cb7d4f0b73f8b9cdf4f6a3612f989ce2b -salt 6cc8be554574aa67 \
+    project myproject ro \
     project things_to_do admin \
-    project myproject ro
 
 
-addUser "not assigned"     project myproject ref \
+addUser john1     project myproject ro \
+    project mypxxx rw \
+
+
+addUser john2     project myproject ro \
+    project mypxxx rw \
+
+
+addUser "not assigned"     project myproject ro \
     project smit ref \
     project things_to_do ref \
-    project myproject ro
+
+
+addUser olivia     project myproject ro \
+    project mypxxx rw \
+
+
+addUser toto     sha1 308392258c55acae06b3a1afffe2a78e690f743e -salt b8cc575242c2b4c \
+    project "a b c" ro \
 
 
 addUser tyty 
-    project myproject ro
+
+addUser x     sha1 79f4a2e185629597fe49f18fc8db9f236eece01c -salt 769c186f5fc6cc7c \
+    project myproject rw \
+    project myproject/yoyo admin \
+
 
 addUser xxxt     sha1 0b9c2625dc21ef05f6ad4ddf47c5f203837aa32c \
     project myproject rw \
     project mypxxx rw \
-
-addUser john1 \
-    project mypxxx rw \
-    project myproject ro
-
-addUser john2 \
-    project mypxxx rw \
-    project myproject ro
-
-addUser olivia \
-    project mypxxx rw \
-    project myproject ro
-
-addUser alexia \
-    project mypxxx rw \
-    project myproject ro
-
-addUser "Mister Myster" \
-    project mypxxx rw \
-    project myproject ro
-
-addUser "John the ripper" \
-    project mypxxx rw \
-    project myproject ro
 
 

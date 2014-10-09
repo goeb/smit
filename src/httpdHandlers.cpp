@@ -42,7 +42,7 @@
 
 #define K_ME "me"
 #define MAX_SIZE_UPLOAD (10*1024*1024)
-#define SESSID "sessid"
+#define SESSID "smit-sessid"
 
 
 // global variable statictics
@@ -328,9 +328,21 @@ void httpPostSignin(const RequestContext *request)
 
 }
 
+std::string getDeletedCookieString(const std::string &name)
+{
+    std::string cookieString;
+    cookieString = "Set-Cookie: " + name + "=deleted; Path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    return cookieString;
+}
+
 void redirectToSignin(const RequestContext *request, const char *resource = 0)
 {
     sendHttpHeader200(request);
+
+    // delete session cookie
+    request->printf("%s\r\n", getDeletedCookieString(SESSID).c_str());
+
+    // prepare the redirection parameter
     std::string url;
     if (!resource) {
         url = request->getUri();
@@ -341,11 +353,19 @@ void redirectToSignin(const RequestContext *request, const char *resource = 0)
     RHtml::printPageSignin(request, resource);
 }
 
-
 void httpPostSignout(const RequestContext *request, const std::string &sessionId)
 {
     SessionBase::destroySession(sessionId);
-    redirectToSignin(request, "/");
+
+    enum RenderingFormat format = getFormat(request);
+    if (format == RENDERING_HTML) {
+        redirectToSignin(request, "/");
+
+    } else {
+        sendHttpHeader204(request);
+        // delete session cookie
+        request->printf("%s\r\n\r\n", getDeletedCookieString(SESSID).c_str());
+    }
 }
 
 
@@ -1453,7 +1473,7 @@ int httpGetIssue(const RequestContext *req, Project &p, const std::string &issue
             // clear this cookie, so that getting any other issue
             // without coming from a view does not display get/next
             // (get/next use a redirection from a view, so the cookie will be set for these)
-            req->printf("Set-Cookie: %s=deleted; Path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT\r\n", QS_ORIGIN_VIEW);
+            req->printf("%s\r\n", getDeletedCookieString(QS_ORIGIN_VIEW).c_str());
             LOG_DEBUG("originView=%s", ctx.originView.c_str());
             RHtml::printPageIssue(ctx, issue);
         }
