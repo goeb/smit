@@ -43,6 +43,9 @@
 #define K_ME "me"
 #define MAX_SIZE_UPLOAD (10*1024*1024)
 
+enum { REQUEST_NOT_PROCESSED = 0, // let Mongoose handle the request
+       REQUEST_COMPLETED = 1      // do not let Mongoose handle the request
+     };
 
 // global variable statictics
 HttpStatistics HttpStats;
@@ -115,7 +118,7 @@ int sendHttpHeader400(const RequestContext *request, const char *msg)
     request->printf("%s\r\n", msg);
     addHttpStat(H_400);
 
-    return 1; // request completely handled
+    return REQUEST_COMPLETED; // request completely handled
 }
 void sendHttpHeader403(const RequestContext *request)
 {
@@ -373,9 +376,9 @@ void handleGetStats(const RequestContext *request)
     sendHttpHeader200(request);
     request->printf("Content-Type: text/plain\r\n\r\n");
     request->printf("Uptime: %d days\r\n", (time(0)-HttpStats.startupTime)/86400);
-    request->printf("All HTTP requests: %4d\r\n", HttpStats.httpCodes[H_REQUEST]);
     request->printf("HTTP GET:          %4d\r\n", HttpStats.httpCodes[H_GET]);
     request->printf("HTTP POST:         %4d\r\n", HttpStats.httpCodes[H_POST]);
+    request->printf("HTTP other:        %4d\r\n", HttpStats.httpCodes[H_OTHER]);
     request->printf("HTTP Responses:\r\n");
     request->printf("HTTP 2xx: %4d\r\n", HttpStats.httpCodes[H_2XX]);
     request->printf("HTTP 400: %4d\r\n", HttpStats.httpCodes[H_400]);
@@ -663,24 +666,29 @@ int getFromCookie(const RequestContext *request, const std::string &key, std::st
     return -1;
 }
 
-void handleUnauthorizedAccess(const RequestContext *request, const std::string &resource)
+int handleUnauthorizedAccess(const RequestContext *req, bool signedIn)
 {
-    sendHttpHeader403(request);
+    if (!signedIn && getFormat(req) == RENDERING_HTML) redirectToSignin(req, 0);
+    else sendHttpHeader403(req);
+
+    return REQUEST_COMPLETED;
 }
 
-/** Serve a GET request to a file, for x-smit agent (cloning)
+/** Serve a GET request to a file
   *
   * Access restriction must have been done before calling this function.
   * (this function does not verify access rights)
   */
 int httpGetFile(const RequestContext *request)
 {
+    if (getFormat(request) != X_SMIT) return REQUEST_NOT_PROCESSED; // let mongoose handle it
+
     std::string uri = request->getUri();
     std::string dir = Database::Db.pathToRepository + uri; // uri contains a leading /
 
     struct dirent *dp;
     DIR *dirp;
-    if ((dirp = opendir(dir.c_str())) == NULL) return 0;  // not a directory: let Mongoose handle the GET
+    if ((dirp = opendir(dir.c_str())) == NULL) return REQUEST_NOT_PROCESSED; // not a directory: let Mongoose handle it
 
     // send the directory contents
     // walk through the directory and print the entries
@@ -696,7 +704,7 @@ int httpGetFile(const RequestContext *request)
     }
     closedir(dirp);
 
-    return 1; // the request is completely handled
+    return REQUEST_COMPLETED; // the request is completely handled
 }
 
 
@@ -1313,6 +1321,7 @@ void httpPostView(const RequestContext *req, Project &p, const std::string &name
             p.deletePredefinedView(name);
             std::string redirectUrl = "/" + p.getUrlName() + "/issues/";
             sendHttpRedirect(req, redirectUrl.c_str(), 0);
+            return;
         }
     }
 
@@ -1461,7 +1470,7 @@ void httpReloadProject(const RequestContext *req, Project &p, User u)
 }
 
 
-int httpGetIssue(const RequestContext *req, Project &p, const std::string &issueId, User u)
+void httpGetIssue(const RequestContext *req, Project &p, const std::string &issueId, User u)
 {
     LOG_DEBUG("httpGetIssue: project=%s, issue=%s", p.getName().c_str(), issueId.c_str());
 
@@ -1469,7 +1478,7 @@ int httpGetIssue(const RequestContext *req, Project &p, const std::string &issue
     int r = p.get(issueId, issue);
     if (r < 0) {
         // issue not found or other error
-        return 0; // let mongoose handle it
+        sendHttpHeader500(req, "Cannot get issue");
 
     } else {
         enum RenderingFormat format = getFormat(req);
@@ -1490,7 +1499,6 @@ int httpGetIssue(const RequestContext *req, Project &p, const std::string &issue
             if (ctx.originView) LOG_DEBUG("originView=%s", ctx.originView);
             RHtml::printPageIssue(ctx, issue);
         }
-        return 1; // done
     }
 }
 
@@ -1821,6 +1829,7 @@ void httpPostEntry(const RequestContext *req, Project &pro, const std::string & 
 
 }
 
+
 /** begin_request_handler is the main entry point of an incoming HTTP request
   *
   * Resources               Methods    Acces Granted     Description
@@ -1842,38 +1851,40 @@ void httpPostEntry(const RequestContext *req, Project &pro, const std::string & 
   * /myp/issues/x/y/delete  POST       user              delete an entry y of issue x
   * /myp/tags/x/y           POST       user              tag / untag an entry
   * /myp/reload             POST       admin             reload project from disk storage
-  * / * /issues               GET        user              issues of all projects
+  * / * /issues             GET        user              issues of all projects
   * /any/other/file         GET        user              any existing file (in the repository)
   */
 
 int begin_request_handler(const RequestContext *req)
 {
     LOG_FUNC();
-    addHttpStat(H_REQUEST);
 
     std::string uri = req->getUri();
     std::string method = req->getMethod();
-    LOG_DEBUG("uri=%s, method=%s", uri.c_str(), method.c_str());
-
-    if (method != "GET" && method != "POST") return sendHttpHeader400(req, "invalid method");
-
-    if (method == "GET") addHttpStat(H_GET);
-    else addHttpStat(H_POST);
-
     std::string resource = popToken(uri, '/');
 
-    // public access to /public and /sm
-    if (resource == "public") {
-        if ( (method == "GET") && (getFormat(req) == X_SMIT) ) return httpGetFile(req);
-        if (method == "GET") return 0; // let mongoose handle it
-        else return sendHttpHeader400(req, "invalid method");
-    }
-    if (resource == "sm") {
-        if (method == "GET") return httpGetSm(req, uri);
-        else return sendHttpHeader400(req, "invalid method");
-    }
+    LOG_DEBUG("uri=%s, method=%s, resource=%s", uri.c_str(), method.c_str(), resource.c_str());
 
-    // check access rights
+    // increase statistics
+    if (method == "GET") addHttpStat(H_GET);
+    else if (method == "POST") addHttpStat(H_POST);
+    else addHttpStat(H_OTHER);
+
+    // check method
+    if (method != "GET" && method != "POST") return sendHttpHeader400(req, "invalid method");
+
+    // public access to /public and /sm
+    if    ( (resource == "public") && (method == "GET")) return httpGetFile(req);
+    else if (resource == "public") return sendHttpHeader400(req, "invalid method");
+
+    if    ( (resource == "sm") && (method == "GET") ) return httpGetSm(req, uri);
+    else if (resource == "sm") return sendHttpHeader400(req, "invalid method");
+
+    if    ( (resource == "signin") && (method == "POST") ) httpPostSignin(req);
+    else if (resource == "signin") sendHttpRedirect(req, "/", 0);
+
+
+    // get signed-in user
     std::string sessionId;
     int r = getFromCookie(req, SESSID, sessionId);
     User user;
@@ -1882,16 +1893,11 @@ int begin_request_handler(const RequestContext *req)
 
     bool handled = true; // by default, do not let Mongoose handle the request
 
-    if ( (resource == "signin") && (method == "POST") ) httpPostSignin(req);
-    else if ( (resource == "signin") && (method == "GET") ) sendHttpRedirect(req, "/", 0);
+    if (user.username.empty()) return handleUnauthorizedAccess(req, false); // no user signed-in
 
-    else if ( (resource == "signout") && (method == "POST") ) httpPostSignout(req, sessionId);
-    else if (user.username.size() == 0) {
+    // at this point there is a signed-in user
 
-        // user not logged in
-        if (getFormat(req) == RENDERING_HTML) redirectToSignin(req, 0);
-        else handleUnauthorizedAccess(req, resource);
-    }
+    if      ( (resource == "signout") && (method == "POST") ) httpPostSignout(req, sessionId);
     else if ( (resource == "") && (method == "GET") ) httpGetRoot(req, user);
     else if ( (resource == "") && (method == "POST") ) httpPostRoot(req, user);
     else if ( (resource == "users") && (method == "GET") ) httpGetUsers(req, user, uri);
@@ -1903,49 +1909,48 @@ int begin_request_handler(const RequestContext *req)
         // check if it is a valid project resource such as /myp/issues, /myp/users, /myp/config
         std::string projectUrl = resource;
         std::string project = Project::urlNameDecode(projectUrl);
+        Project *p = Database::Db.getProject(project);
+        if (!p) return handleUnauthorizedAccess(req, true);
+
+        LOG_DEBUG("project %s, %p", project.c_str(), p);
 
         // check if user has at least read access
         enum Role r = user.getRole(project);
         if (r != ROLE_ADMIN && r != ROLE_RW && r != ROLE_RO && ! user.superadmin) {
             // no access granted for this user to this project
-            handleUnauthorizedAccess(req, resource);
-
-        } else {
-            // access granted to ressources inside a project
-
-            if (getFormat(req) == X_SMIT && method == "GET") return httpGetFile(req); // used for cloning
-
-            Project *p = Database::Db.getProject(project);
-            LOG_DEBUG("project %s, %p", project.c_str(), p);
-            if (p) {
-                bool isdir = false;
-                if (!uri.empty() && uri[uri.size()-1] == '/') isdir = true;
-
-                resource = popToken(uri, '/');
-                LOG_DEBUG("resource=%s", resource.c_str());
-                if      ( resource.empty()       && (method == "GET") ) httpGetProject(req, *p, user);
-                else if ( (resource == "issues") && (method == "GET") && uri.empty() ) httpGetListOfIssues(req, *p, user);
-                else if ( (resource == "issues") && (method == "POST") ) {
-                    std::string issueId = popToken(uri, '/');
-                    if (uri.empty()) httpPostEntry(req, *p, issueId, user);
-                    else httpDeleteEntry(req, *p, issueId, uri, user);
-
-                } else if ( (resource == "issues") && (uri == "new") && (method == "GET") ) httpGetNewIssueForm(req, *p, user);
-                else if ( (resource == "issues") && (method == "GET") ) return httpGetIssue(req, *p, uri, user);
-                else if ( (resource == "config") && (method == "GET") ) httpGetProjectConfig(req, *p, user);
-                else if ( (resource == "config") && (method == "POST") ) httpPostProjectConfig(req, *p, user);
-                else if ( (resource == "views") && (method == "GET") && !isdir && uri.empty()) sendHttpRedirect(req, "/" + projectUrl + "/views/", 0);
-                else if ( (resource == "views") && (method == "GET")) httpGetView(req, *p, uri, user);
-                else if ( (resource == "views") && (method == "POST") ) httpPostView(req, *p, uri, user);
-                else if ( (resource == "tags") && (method == "POST") ) httpPostTag(req, *p, uri, user);
-                else if ( (resource == "reload") && (method == "POST") ) httpReloadProject(req, *p, user);
-                else handled = false;
-
-            } else handled = false; // the resource is not a project
+            return handleUnauthorizedAccess(req, true);
         }
+
+        // at this point the user has read access to the resource inside the project
+
+        if (getFormat(req) == X_SMIT && method == "GET") return httpGetFile(req); // used for cloning
+
+        bool isdir = false;
+        if (!uri.empty() && uri[uri.size()-1] == '/') isdir = true;
+
+        resource = popToken(uri, '/');
+        LOG_DEBUG("resource=%s", resource.c_str());
+        if      ( resource.empty()       && (method == "GET") ) httpGetProject(req, *p, user);
+        else if ( (resource == "issues") && (method == "GET") && uri.empty() ) httpGetListOfIssues(req, *p, user);
+        else if ( (resource == "issues") && (method == "POST") ) {
+            std::string issueId = popToken(uri, '/');
+            if (uri.empty()) httpPostEntry(req, *p, issueId, user);
+            else httpDeleteEntry(req, *p, issueId, uri, user);
+
+        } else if ( (resource == "issues") && (uri == "new") && (method == "GET") ) httpGetNewIssueForm(req, *p, user);
+        else if ( (resource == "issues") && (method == "GET") ) httpGetIssue(req, *p, uri, user);
+        else if ( (resource == "config") && (method == "GET") ) httpGetProjectConfig(req, *p, user);
+        else if ( (resource == "config") && (method == "POST") ) httpPostProjectConfig(req, *p, user);
+        else if ( (resource == "views") && (method == "GET") && !isdir && uri.empty()) sendHttpRedirect(req, "/" + projectUrl + "/views/", 0);
+        else if ( (resource == "views") && (method == "GET")) httpGetView(req, *p, uri, user);
+        else if ( (resource == "views") && (method == "POST") ) httpPostView(req, *p, uri, user);
+        else if ( (resource == "tags") && (method == "POST") ) httpPostTag(req, *p, uri, user);
+        else if ( (resource == "reload") && (method == "POST") ) httpReloadProject(req, *p, user);
+        else handled = false;
+
     }
 
-    if (handled) return 1; // handled here. Do not let Mongoose handle the request
-    else return 0; // let Mongoose handle the request
+    if (handled) return REQUEST_COMPLETED; // do not let Mongoose handle the request
+    else return REQUEST_NOT_PROCESSED; // let Mongoose handle the request
 }
 

@@ -11,9 +11,9 @@ extern std::string ExeFile;
 int begin_request_handler(const RequestContext *req);
 
 enum HttpEvent {
-    H_REQUEST,
     H_GET,
     H_POST,
+    H_OTHER, // other than GET or POST
     H_2XX, // any request with code 2xx
     H_400,
     H_403,
