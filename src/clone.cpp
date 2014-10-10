@@ -143,7 +143,7 @@ std::string signin(const char *rooturl, const std::string &user, const std::stri
     // get the sessiond id
     std::string sessid;
     std::map<std::string, Cookie>::iterator c;
-    c = hr.cookies.find("sessid");
+    c = hr.cookies.find(SESSID);
     if (c != hr.cookies.end()) sessid = c->second.value;
 
     return sessid;
@@ -211,7 +211,7 @@ int cmdClone(int argc, char * const *argv)
     curl_global_init(CURL_GLOBAL_ALL);
 
     std::string sessid = signin(url, username, password);
-    if (Verbose) printf("sessid=%s\n", sessid.c_str());
+    if (Verbose) printf("%s=%s\n", SESSID, sessid.c_str());
 
     if (sessid.empty()) {
         fprintf(stderr, "Authentication failed\n");
@@ -491,7 +491,7 @@ HttpRequest::HttpRequest(const std::string &sessid)
     slist = 0;
     slist = curl_slist_append(slist, "Accept: " APP_X_SMIT);
     if (!sessionId.empty()) {
-        std::string cookie = "Cookie: sessid=" + sessionId;
+        std::string cookie = "Cookie: " SESSID "=" + sessionId;
         slist = curl_slist_append(slist, cookie.c_str());
     }
 

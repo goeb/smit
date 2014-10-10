@@ -42,7 +42,6 @@
 
 #define K_ME "me"
 #define MAX_SIZE_UPLOAD (10*1024*1024)
-#define SESSID "smit-sessid"
 
 
 // global variable statictics
