@@ -1,3 +1,7 @@
+v2.0.2, 10 Oct 2014
+
+    - fix freezed login page (caused by cookie 'view')
+
 v2.0.1, 30 Sept 2014
 
     - fix utf-8 characters in project config
