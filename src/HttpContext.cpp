@@ -26,6 +26,13 @@ MongooseServerContext::MongooseServerContext()
     init();
 }
 
+MongooseServerContext &MongooseServerContext::getInstance()
+{
+    static MongooseServerContext *instance = 0;
+    if (!instance) instance = new MongooseServerContext();
+    return *instance;
+}
+
 void MongooseServerContext::init()
 {
     int i;
@@ -34,7 +41,6 @@ void MongooseServerContext::init()
     memset(&callbacks, 0, sizeof(callbacks));
 
     callbacks.log_message = logMessage;
-
 }
 
 int MongooseServerContext::start()

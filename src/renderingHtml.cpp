@@ -80,6 +80,7 @@ const Project &ContextParameters::getProject() const
 #define K_SM_HTML_ISSUE_SUMMARY "SM_HTML_ISSUE_SUMMARY"
 #define K_SM_DIV_ISSUE_FORM "SM_DIV_ISSUE_FORM"
 #define K_SM_DIV_ISSUE_MSG_PREVIEW "SM_DIV_ISSUE_MSG_PREVIEW"
+#define K_SM_REWRITE_ROOT "SM_REWRITE_ROOT"
 
 
 /** Load a page for a specific project
@@ -248,6 +249,11 @@ public:
 
             } else if (varname == K_SM_DIV_PREDEFINED_VIEWS) {
                 RHtml::printLinksToPredefinedViews(ctx);
+
+            } else if (varname == K_SM_REWRITE_ROOT) {
+                // url-rewriting
+                MongooseServerContext &mc = MongooseServerContext::getInstance();
+                ctx.req->printf("%s", mc.getUrlRewritingRoot().c_str());
 
             } else if (varname == K_SM_DIV_ISSUE_MSG_PREVIEW) {
                 ctx.req->printf("<div id=\"sm_entry_preview\" class=\"sm_entry_message\">"
