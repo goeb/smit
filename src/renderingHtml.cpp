@@ -380,7 +380,9 @@ void RHtml::printPageView(const ContextParameters &ctx, const PredefinedView &pv
     }
 
     ctx.req->printf("setSearch('%s');\n", enquoteJs(pv.search).c_str());
-    ctx.req->printf("setUrl('/%s/issues/?%s');\n", ctx.getProject().getUrlName().c_str(),
+    ctx.req->printf("setUrl('%s/%s/issues/?%s');\n",
+                    MongooseServerContext::getInstance().getUrlRewritingRoot().c_str(),
+                    ctx.getProject().getUrlName().c_str(),
                     pv.generateQueryString().c_str());
 
     // filter in and out
