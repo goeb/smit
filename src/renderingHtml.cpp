@@ -475,7 +475,14 @@ public:
         if (n >= LOCAL_SIZE || n < 0) {
             LOG_ERROR("addAttribute error: vsnprintf n=%d", n);
         } else {
-            attributes[name] = value;
+            std::string val = value;
+            // do url rewriting if needed
+            if ( (0 == strcmp(name, "href") || 0 == strcmp(name, "src") )
+                 && value[0] == '/') {
+                val = MongooseServerContext::getInstance().getUrlRewritingRoot() + val;
+            }
+
+            attributes[name] = val;
         }
     }
 
@@ -674,7 +681,8 @@ void RHtml::printProjects(const ContextParameters &ctx,
         ctx.req->printf("<tr>\n");
 
         ctx.req->printf("<td class=\"sm_projects_link\">");
-        ctx.req->printf("<a href=\"/%s/issues/?defaultView=1\">%s</a></td>\n",
+        ctx.req->printf("<a href=\"%s/%s/issues/?defaultView=1\">%s</a></td>\n",
+                        MongooseServerContext::getInstance().getUrlRewritingRoot().c_str(),
                         Project::urlNameEncode(pname).c_str(), htmlEscape(pname).c_str());
         // my role
         ctx.req->printf("<td>%s</td>\n", htmlEscape(_(p->second.c_str())).c_str());
@@ -702,7 +710,7 @@ void RHtml::printProjects(const ContextParameters &ctx,
     }
     ctx.req->printf("</table><br>\n");
     if (ctx.user.superadmin) ctx.req->printf("<div class=\"sm_projects_new\">"
-                                             "<a href=\"/_\" class=\"sm_projects_new\">%s</a></div><br>",
+                                             "<a href=\"_\" class=\"sm_projects_new\">%s</a></div><br>",
                                              htmlEscape(_("New Project")).c_str());
 }
 
@@ -721,7 +729,8 @@ void RHtml::printUsers(const RequestContext *req, const std::list<User> &usersLi
     FOREACH(u, usersList) {
         req->printf("<tr class=\"sm_users\">");
         req->printf("<td class=\"sm_users\">\n");
-        req->printf("<a href=\"/users/%s\">%s<a><br>",
+        req->printf("<a href=\"%s/users/%s\">%s<a><br>",
+                    MongooseServerContext::getInstance().getUrlRewritingRoot().c_str(),
                     urlEncode(u->username).c_str(), htmlEscape(u->username).c_str());
         req->printf("</td>");
         // capability
@@ -733,7 +742,8 @@ void RHtml::printUsers(const RequestContext *req, const std::list<User> &usersLi
     }
     req->printf("</table><br>\n");
     req->printf("<div class=\"sm_users_new\">"
-                "<a href=\"/users/_\" class=\"sm_users_new\">%s</a></div><br>",
+                "<a href=\"%s/users/_\" class=\"sm_users_new\">%s</a></div><br>",
+                MongooseServerContext::getInstance().getUrlRewritingRoot().c_str(),
                 htmlEscape(_("New User")).c_str());
 
 }
@@ -1104,7 +1114,8 @@ void RHtml::printIssueList(const ContextParameters &ctx, const std::vector<struc
             std::string href_rhs = "";
             if ( (column == "id") || (column == "summary") ) {
                 href_lhs = "<a href=\"";
-                std::string href = "/" + ctx.getProject().getUrlName() + "/issues/";
+                std::string href = MongooseServerContext::getInstance().getUrlRewritingRoot() + "/";
+                href += ctx.getProject().getUrlName() + "/issues/";
                 href += urlEncode((*i)->id);
                 href_lhs = href_lhs + href;
                 href_lhs = href_lhs +  + "\">";
@@ -1599,7 +1610,8 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
         }
 
         // link to raw entry
-        ctx.req->printf("(<a href=\"/%s/issues/%s/%s\" class=\"sm_entry_raw\">%s</a>)\n",
+        ctx.req->printf("(<a href=\"%s/%s/issues/%s/%s\" class=\"sm_entry_raw\">%s</a>)\n",
+                        MongooseServerContext::getInstance().getUrlRewritingRoot().c_str(),
                         ctx.getProject().getUrlName().c_str(),
                         urlEncode(issue.id).c_str(), urlEncode(ee.id).c_str(), _("raw"));
 

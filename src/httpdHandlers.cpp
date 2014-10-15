@@ -177,7 +177,9 @@ void sendHttpRedirect(const RequestContext *request, const std::string &redirect
 
     if (redirectUrl[0] != '/') LOG_ERROR("Invalid redirect URL (missing first /): %s", redirectUrl.c_str());
 
-    request->printf("Location: %s://%s%s", scheme, host, redirectUrl.c_str());
+    request->printf("Location: %s://%s%s%s", scheme, host,
+                    MongooseServerContext::getInstance().getUrlRewritingRoot().c_str(),
+                    redirectUrl.c_str());
 
     if (otherHeader) request->printf("\r\n%s", otherHeader);
     request->printf("\r\n\r\n");
