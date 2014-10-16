@@ -469,8 +469,9 @@ public:
             LOG_ERROR("addAttribute error: vsnprintf n=%d", n);
         } else {
             std::string val = value;
+            std::string sname = name;
             // do url rewriting if needed
-            if ( (0 == strcmp(name, "href") || 0 == strcmp(name, "src") )
+            if ( ( (sname == "href") || (sname == "src") || (sname == "action") )
                  && value[0] == '/') {
                 val = MongooseServerContext::getInstance().getUrlRewritingRoot() + val;
             }
