@@ -62,7 +62,7 @@ public:
 
     static bool inList(const std::list<std::string> &listOfValues, const std::string &value);
     static void printIssueForm(const ContextParameters &ctx, const Issue *issue, bool autofocus);
-    static void printPageSignin(const RequestContext *req, const char *redirect);
+    static void printPageSignin(const ContextParameters &ctx, const char *redirect);
 
     static void printPageUser(const ContextParameters &ctx, const User *u);
 

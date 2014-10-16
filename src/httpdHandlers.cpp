@@ -348,7 +348,9 @@ void redirectToSignin(const RequestContext *request, const char *resource = 0)
         if (qs && strlen(qs)) url = url + '?' + qs;
         resource = url.c_str();
     }
-    RHtml::printPageSignin(request, resource);
+    User noUser;
+    ContextParameters ctx = ContextParameters(request, noUser);
+    RHtml::printPageSignin(ctx, resource);
 }
 
 void httpPostSignout(const RequestContext *request, const std::string &sessionId)
