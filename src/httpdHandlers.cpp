@@ -161,7 +161,7 @@ void sendCookie(const RequestContext *request, const std::string &key, const std
   *    Must not include the line-terminating \r\n
   *    May be NULL
   */
-void sendHttpRedirect(const RequestContext *request, const std::string &redirectUrl, const char *otherHeader)
+int sendHttpRedirect(const RequestContext *request, const std::string &redirectUrl, const char *otherHeader)
 {
     LOG_FUNC();
     request->printf("HTTP/1.1 303 See Other\r\n");
@@ -181,6 +181,7 @@ void sendHttpRedirect(const RequestContext *request, const std::string &redirect
 
     if (otherHeader) request->printf("\r\n%s", otherHeader);
     request->printf("\r\n\r\n");
+    return REQUEST_COMPLETED;
 }
 
 std::string getServerCookie(const std::string &name, const std::string &value, int maxAgeSeconds)
@@ -239,7 +240,7 @@ void httpPostRoot(const RequestContext *req, User u)
 {
 }
 
-void httpPostSignin(const RequestContext *request)
+int httpPostSignin(const RequestContext *request)
 {
     LOG_FUNC();
 
@@ -255,8 +256,7 @@ void httpPostSignin(const RequestContext *request)
         n = request->read(buffer, SIZ);
         if (n == SIZ) {
             LOG_ERROR("Post data for signin too long. Abort request.");
-            sendHttpHeader400(request, "Post data for signin too long");
-            return;
+            return sendHttpHeader400(request, "Post data for signin too long");
         }
         buffer[n] = 0;
         LOG_DEBUG("postData=%s", buffer);
@@ -268,8 +268,7 @@ void httpPostSignin(const RequestContext *request)
         if (r<=0) {
             // error: empty, or too long, or not present
             LOG_DEBUG("Cannot get username. r=%d, postData=%s", r, postData.c_str());
-            sendHttpHeader400(request, "Missing user name");
-            return;
+            return sendHttpHeader400(request, "Missing user name");
         }
         std::string username = buffer;
 
@@ -280,8 +279,7 @@ void httpPostSignin(const RequestContext *request)
         if (r<0) {
             // error: empty, or too long, or not present
             LOG_DEBUG("Cannot get password. r=%d, postData=%s", r, postData.c_str());
-            sendHttpHeader400(request, "Missing password");
-            return;
+            return sendHttpHeader400(request, "Missing password");
         }
         std::string password = buffer;
 
@@ -298,8 +296,7 @@ void httpPostSignin(const RequestContext *request)
             if (r<0) {
                 // error: empty, or too long, or not present
                 LOG_DEBUG("Cannot get redirect. r=%d, postData=%s", r, postData.c_str());
-                sendHttpHeader400(request, "Cannot get redirection");
-                return;
+                return sendHttpHeader400(request, "Cannot get redirection");
             }
             redirect = buffer;
         }
@@ -311,7 +308,7 @@ void httpPostSignin(const RequestContext *request)
         if (sessionId.size() == 0) {
             LOG_DEBUG("Authentication refused");
             sendHttpHeader403(request);
-            return;
+            return REQUEST_COMPLETED;
         }
 
         if (format == X_SMIT) {
@@ -324,10 +321,9 @@ void httpPostSignin(const RequestContext *request)
 
     } else {
         LOG_ERROR("Unsupported Content-Type in httpPostSignin: %s", contentType);
-        sendHttpHeader400(request, "Unsupported Content-Type");
-        return;
+        return sendHttpHeader400(request, "Unsupported Content-Type");
     }
-
+    return REQUEST_COMPLETED;
 }
 
 std::string getDeletedCookieString(const std::string &name)
@@ -580,7 +576,6 @@ void httpPostUsers(const RequestContext *request, User signedInUser, const std::
             LOG_INFO("passwd1 (%s) != passwd2 (%s)", passwd1.c_str(), passwd2.c_str());
             sendHttpHeader400(request, "passwords 1 and 2 do not match");
             return;
-
         }
 
         if (!signedInUser.superadmin) {
@@ -1880,8 +1875,8 @@ int begin_request_handler(const RequestContext *req)
     if    ( (resource == "sm") && (method == "GET") ) return httpGetSm(req, uri);
     else if (resource == "sm") return sendHttpHeader400(req, "invalid method");
 
-    if    ( (resource == "signin") && (method == "POST") ) httpPostSignin(req);
-    else if (resource == "signin") sendHttpRedirect(req, "/", 0);
+    if    ( (resource == "signin") && (method == "POST") ) return httpPostSignin(req);
+    else if (resource == "signin") return sendHttpRedirect(req, "/", 0);
 
 
     // get signed-in user
@@ -1891,11 +1886,11 @@ int begin_request_handler(const RequestContext *req)
     if (r == 0) user = SessionBase::getLoggedInUser(sessionId);
     // if username is empty, then no access is granted (only public pages will be available)
 
-    bool handled = true; // by default, do not let Mongoose handle the request
-
     if (user.username.empty()) return handleUnauthorizedAccess(req, false); // no user signed-in
 
     // at this point there is a signed-in user
+
+    bool handled = true; // by default, do not let Mongoose handle the request
 
     if      ( (resource == "signout") && (method == "POST") ) httpPostSignout(req, sessionId);
     else if ( (resource == "") && (method == "GET") ) httpGetRoot(req, user);
