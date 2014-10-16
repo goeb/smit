@@ -505,6 +505,8 @@ int serveRepository(int argc, char **argv)
     mc.addParam(listenPort.c_str());
     mc.addParam("document_root");
     mc.addParam(repo);
+    mc.addParam("enable_directory_listing");
+    mc.addParam("no");
 
     if (certificatePemFile) {
         mc.addParam("ssl_certificate");

@@ -282,23 +282,14 @@ private:
   * @param redirect
   *    May include a query string
   */
-void RHtml::printPageSignin(const RequestContext *req, const char *redirect)
+void RHtml::printPageSignin(const ContextParameters &ctx, const char *redirect)
 {
+    VariableNavigator vn("signin.html", ctx);
+    vn.printPage();
 
-    req->printf("Content-Type: text/html\r\n\r\n");
-
-    std::string path = Database::Db.getRootDir() + "/public/signin.html";
-    const char *data;
-    int r = loadFile(path.c_str(), &data);
-    if (r > 0) {
-        req->write(data, r);
-        // add javascript for updating the redirect URL
-        req->printf("<script>document.getElementById(\"redirect\").value = \"%s\"</script>",
-                    enquoteJs(redirect).c_str());
-        free((void*)data);
-    } else {
-        LOG_ERROR("Could not load %s (or empty file)", path.c_str());
-    }
+    // add javascript for updating the redirect URL
+    ctx.req->printf("<script>document.getElementById(\"redirect\").value = \"%s\"</script>",
+                enquoteJs(redirect).c_str());
 }
 
 
