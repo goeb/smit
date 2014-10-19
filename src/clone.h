@@ -4,6 +4,8 @@
 int cmdClone(int argc, char *const*argv);
 int helpClone();
 
+int cmdPull(int argc, char *const*argv);
+int helpPull();
 
 
 #endif

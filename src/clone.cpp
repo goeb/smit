@@ -29,8 +29,16 @@
 #include "stringTools.h"
 #include "mg_win32.h"
 #include "console.h"
+#include "filesystem.h"
 
 bool Verbose = false;
+
+#define LOGV(...) do { if (Verbose) { printf(__VA_ARGS__); fflush(stdout);} } while (0)
+
+#define SMIT_DIR ".smit"
+#define PATH_SESSID SMIT_DIR "/sessid"
+#define PATH_URL SMIT_DIR "/remote"
+
 
 int helpClone()
 {
@@ -54,6 +62,9 @@ int helpClone()
 }
 
 
+enum Mode { MODE_PULL, // fetch only missing files
+       MODE_CLONE // fetch all files
+     };
 
 
 class Cookie {
@@ -81,7 +92,8 @@ public:
     void post(const std::string &params);
     std::map<std::string, Cookie> cookies;
     std::list<std::string> lines; // fulfilled after calling getRequestLines()
-    void getAndStore(bool recursive, int recursionLevel);
+    void getAndStore(bool recursive, int recursionLevel, Mode cmode);
+    int test();
     void handleWriteToFile(void *data, size_t size);
     void openFile();
     void closeFile();
@@ -107,26 +119,104 @@ private:
     FILE *fd; // file descriptor of the file
     bool isDirectory;
     std::string repository; // base path for storage of files
+    enum Mode cloneMode;
 };
 
 
+int testSessid(const std::string url, const std::string &sessid)
+{
+    LOGV("testSessid(%s, %s)\n", url.c_str(), sessid.c_str());
 
+    HttpRequest hr(sessid);
+    hr.setUrl(url, "/");
+    int status = hr.test();
+    LOGV("status = %d\n", status);
+
+    if (status == 200) return 0;
+    return -1;
+
+}
 
 /** Get all the projects that we have read-access to.
   */
-int getProjects(const char *rooturl, const std::string &destdir, const std::string &sessid)
+int getProjects(const std::string &rooturl, const std::string &destdir, const std::string &sessid, enum Mode mode)
 {
-    if (Verbose) printf("getProjects(%s, %s, %s)\n", rooturl, destdir.c_str(), sessid.c_str());
+    LOGV("getProjects(%s, %s, %s)\n", rooturl.c_str(), destdir.c_str(), sessid.c_str());
 
     HttpRequest hr(sessid);
     hr.setUrl(rooturl, "/");
     hr.setRepository(destdir);
-    hr.getAndStore(true, 0);
+    hr.getAndStore(true, 0, mode);
 
     return 0;
 }
 
-std::string signin(const char *rooturl, const std::string &user, const std::string &passwd)
+std::string getSmitDir(const std::string &dir)
+{
+    return dir + "/" SMIT_DIR;
+}
+
+void createSmitDir(const std::string &dir)
+{
+    LOGV("createSmitDir(%s)...\n", dir.c_str());
+
+    mode_t mode = S_IRUSR | S_IWUSR | S_IXUSR;
+    int r = mg_mkdir(getSmitDir(dir).c_str(), mode);
+    if (r != 0) {
+        fprintf(stderr, "Cannot create directory '%s': %s\n", getSmitDir(dir).c_str(), strerror(errno));
+        fprintf(stderr, "Abort.\n");
+        exit(1);
+    }
+
+}
+// store sessid in .smit/sessid
+void storeSessid(const std::string &dir, const std::string &sessid)
+{
+    LOGV("storeSessid(%s, %s)...\n", dir.c_str(), sessid.c_str());
+    std::string path = dir + "/" PATH_SESSID;
+    int r = writeToFile(path.c_str(), sessid + "\n");
+    if (r < 0) {
+        fprintf(stderr, "Abort.\n");
+        exit(1);
+    }
+}
+
+std::string loadSessid(const std::string &dir)
+{
+    std::string path = dir + "/" PATH_SESSID;
+    std::string sessid;
+    loadFile(path.c_str(), sessid);
+    trim(sessid);
+
+    return sessid;
+}
+
+// store url in .smit/remote
+void storeUrl(const std::string &dir, const std::string &url)
+{
+    LOGV("storeUrl(%s, %s)...\n", dir.c_str(), url.c_str());
+    std::string path = dir + "/" PATH_URL;
+
+    int r = writeToFile(path.c_str(), url + "\n");
+    if (r < 0) {
+        fprintf(stderr, "Abort.\n");
+        exit(1);
+    }
+}
+
+std::string loadUrl(const std::string &dir)
+{
+    std::string path = dir + "/" PATH_URL;
+    std::string url;
+    loadFile(path.c_str(), url);
+    trim(url);
+
+    return url;
+}
+
+
+
+std::string signin(const std::string &rooturl, const std::string &user, const std::string &passwd)
 {
     HttpRequest hr("");
 
@@ -171,6 +261,7 @@ int cmdClone(int argc, char * const *argv)
             } else if (0 == strcmp(longOptions[optionIndex].name, "passwd")) {
                 passwd = optarg;
             }
+            break;
         case 'v':
             Verbose = true;
             break;
@@ -211,21 +302,138 @@ int cmdClone(int argc, char * const *argv)
     curl_global_init(CURL_GLOBAL_ALL);
 
     std::string sessid = signin(url, username, password);
-    if (Verbose) printf("%s=%s\n", SESSID, sessid.c_str());
+    LOGV("%s=%s\n", SESSID, sessid.c_str());
 
     if (sessid.empty()) {
         fprintf(stderr, "Authentication failed\n");
         return 1; // authentication failed
     }
 
-    getProjects(url, dir, sessid);
+    getProjects(url, dir, sessid, MODE_CLONE);
 
+    // ceate persistent configuration of the local clone
+    createSmitDir(dir);
+    storeSessid(dir, sessid);
+    storeUrl(dir, url);
 
     curl_global_cleanup();
 
     return 0;
 }
 
+
+
+int helpPull()
+{
+    printf("Usage: smit pull\n"
+           "\n"
+           "  Incorporates changes from a remote repository into the local copy.\n"
+           "\n"
+           "Options:\n"
+           "  --user <user> --passwd <password> \n"
+           "               Give the user name and the password.\n"
+           "\n"
+           );
+    return 1;
+}
+
+
+int cmdPull(int argc, char * const *argv)
+{
+    std::string username;
+    const char *passwd = 0;
+
+    int c;
+    int optionIndex = 0;
+    struct option longOptions[] = {
+        {"user", 1, 0, 0},
+        {"passwd", 1, 0, 0},
+        {NULL, 0, NULL, 0}
+    };
+    while ((c = getopt_long(argc, argv, "v", longOptions, &optionIndex)) != -1) {
+        switch (c) {
+        case 0: // manage long options
+            if (0 == strcmp(longOptions[optionIndex].name, "user")) {
+                username = optarg;
+            } else if (0 == strcmp(longOptions[optionIndex].name, "passwd")) {
+                passwd = optarg;
+            }
+            break;
+        case 'v':
+            Verbose = true;
+            break;
+        case '?': // incorrect syntax, a message is printed by getopt_long
+            return helpPull();
+            break;
+        default:
+            printf("?? getopt returned character code 0x%x ??\n", c);
+            return helpPull();
+        }
+    }
+    // manage non-option ARGV elements
+    if (optind < argc) {
+        printf("Too many arguments.\n\n");
+        return helpPull();
+    }
+
+    const char *dir = "."; // local dir
+
+    // get the remote url from local configuration file
+    std::string url = loadUrl(dir);
+    if (url.empty()) {
+        printf("Cannot get remote url.\n");
+        exit(1);
+    }
+
+    curl_global_init(CURL_GLOBAL_ALL);
+    std::string sessid;
+    std::string password;
+    bool redoSigin = false;
+
+    if (username.empty()) {
+        // check if the sessid is valid
+        sessid = loadSessid(dir);
+        int r = testSessid(url, sessid);
+
+        if (r < 0) {
+            // failed (session may have expired), then prompt for user name/password
+            username = getString("Username: ", false);
+            password = getString("Password: ", true);
+
+            // and redo the signing-in
+            redoSigin = true;
+        }
+
+    } else {
+        // do the signing-in with the given username / password
+        password = passwd;
+        redoSigin = true;
+    }
+
+    if (redoSigin) {
+        sessid = signin(url, username, password);
+        if (!sessid.empty()) {
+            storeSessid(dir, sessid);
+            storeUrl(dir, url);
+        }
+    }
+
+    LOGV("%s=%s\n", SESSID, sessid.c_str());
+
+    if (sessid.empty()) {
+        fprintf(stderr, "Authentication failed\n");
+        return 1; // authentication failed
+    }
+
+    // TODO add a flag that says to fetch only new remote files
+    getProjects(url, dir, sessid, MODE_PULL);
+
+    curl_global_cleanup();
+
+    return 0;
+
+
+}
 
 void HttpRequest::setUrl(const std::string &root, const std::string &path)
 {
@@ -246,11 +454,12 @@ void HttpRequest::setUrl(const std::string &root, const std::string &path)
   * @param recursionLevel
   *    used to track the depth in the sub-directories
   */
-void HttpRequest::getAndStore(bool recursive, int recursionLevel)
+void HttpRequest::getAndStore(bool recursive, int recursionLevel, enum Mode cmode)
 {
-    if (Verbose) printf("Entering getAndStore: resourcePath=%s\n", resourcePath.c_str());
+    LOGV("Entering getAndStore: resourcePath=%s\n", resourcePath.c_str());
     curl_easy_setopt(curlHandle, CURLOPT_WRITEDATA, (void *)this);
     curl_easy_setopt(curlHandle, CURLOPT_WRITEFUNCTION, writeToFileCallback);
+    cloneMode = cmode;
 
     performRequest();
 
@@ -266,9 +475,9 @@ void HttpRequest::getAndStore(bool recursive, int recursionLevel)
 
         // make current directory locally
         mode_t mode = S_IRUSR | S_IWUSR | S_IXUSR;
-        if (Verbose) printf("mkdir %s...\n", localPath.c_str());
+        LOGV("mkdir %s...\n", localPath.c_str());
         int r = mg_mkdir(localPath.c_str(), mode);
-        if (r != 0) {
+        if (r != 0 && cloneMode == MODE_CLONE) {
             fprintf(stderr, "Cannot create directory '%s': %s\n", localPath.c_str(), strerror(errno));
             fprintf(stderr, "Abort.\n");
             exit(1);
@@ -287,13 +496,13 @@ void HttpRequest::getAndStore(bool recursive, int recursionLevel)
             HttpRequest hr(sessionId);
             hr.setUrl(rooturl, subpath);
             hr.setRepository(repository);
-            hr.getAndStore(true, recursionLevel+1);
+            hr.getAndStore(true, recursionLevel+1, cmode);
         }
     }
-	if (!isDirectory) {
+    if (!isDirectory) {
         // make sure that even an empty file gets created as well
         handleWriteToFile(0, 0);
-		closeFile();
+        if (fd) closeFile();
     }
 }
 
@@ -306,11 +515,20 @@ void HttpRequest::post(const std::string &params)
 }
 
 
+
+int HttpRequest::test()
+{
+    curl_easy_setopt(curlHandle, CURLOPT_WRITEDATA, (void *)this);
+    curl_easy_setopt(curlHandle, CURLOPT_WRITEFUNCTION, receiveLinesCallback);
+    performRequest();
+    return httpStatusCode;
+}
+
 void HttpRequest::getRequestLines()
 {
     curl_easy_setopt(curlHandle, CURLOPT_WRITEFUNCTION, receiveLinesCallback);
     performRequest();
-    handleReceivedLines(0, 0);
+    handleReceivedLines(0, 0); // finalize the last line
 }
 
 
@@ -328,7 +546,7 @@ int Cookie::parse(std::string cookieLine)
     expiration = popToken(cookieLine, '\t');
     name = popToken(cookieLine, '\t');
     value = cookieLine;
-    if (Verbose) printf("cookie: %s = %s\n", name.c_str(), value.c_str());
+    LOGV("cookie: %s = %s\n", name.c_str(), value.c_str());
     return 0;
 }
 
@@ -336,7 +554,7 @@ void HttpRequest::performRequest()
 {
     CURLcode res;
 
-    if (Verbose) printf("resource: %s%s\n", rooturl.c_str(), resourcePath.c_str());
+    LOGV("resource: %s%s\n", rooturl.c_str(), resourcePath.c_str());
     res = curl_easy_perform(curlHandle);
 
     if(res != CURLE_OK) {
@@ -371,7 +589,7 @@ size_t HttpRequest::headerCallback(void *contents, size_t size, size_t nmemb, vo
     HttpRequest *hr = (HttpRequest*)userp;
     size_t realsize = size * nmemb;
 
-    if (Verbose) printf("HDR: %s", (char*)contents);
+    LOGV("HDR: %s", (char*)contents);
 
     if (hr->httpStatusCode == -1) {
         // this header should be the HTTP response code
@@ -406,11 +624,10 @@ void HttpRequest::handleReceivedRaw(void *data, size_t size)
     response.append((char*)data, size);
 }
 
-
 void HttpRequest::openFile()
 {
     filename = repository + resourcePath;
-    if (Verbose) printf("Opening file: %s\n", filename.c_str());
+    LOGV("Opening file: %s\n", filename.c_str());
     fd = fopen(filename.c_str(), "wbx");
     if (!fd) {
         fprintf(stderr, "Cannot create file '%s': %s\n", filename.c_str(), strerror(errno));
@@ -422,6 +639,7 @@ void HttpRequest::closeFile()
 {
     fclose(fd);
     fd = 0;
+    filename = "";
 }
 
 void HttpRequest::handleWriteToFile(void *data, size_t size)
@@ -431,12 +649,16 @@ void HttpRequest::handleWriteToFile(void *data, size_t size)
         handleReceivedLines((char*)data, size);
 
     } else {
-        // TODO in case of 'smit pull' command, then
-        // - do not overwrite files /<project>/issues/*/* (entries)
-        // - do not overwrite files /<project>/files/*/* (files)
-        // because these are immutables
+        std::string path = repository + resourcePath;
+        if (cloneMode == MODE_PULL) {
+            // do not overwrite files
+            if (fileExists(path)) return;
+        }
 
-        if (!fd) openFile();
+        if (!fd) {
+            if (cloneMode == MODE_PULL) printf("%s\n", path.c_str());
+            openFile();
+        }
         if (size) {
             size_t n = fwrite(data, size, 1, fd);
             if (n != 1) {

@@ -50,6 +50,7 @@ void usage()
            "  clone       Clone a smit repository\n"
            "  init        Initialise a smit repository\n"
            "  project     List, create, or update a smit project\n"
+           "  pull        Fetch from a remote repository\n"
            "  serve       Start a smit web server\n"
            "  user        List, create, or update a smit user\n"
            "  ui          Browse a local smit repository (read-only)\n"
@@ -759,6 +760,9 @@ int main(int argc, char **argv)
 
         } else if (0 == strcmp(command, "clone")) {
             return cmdClone(argc-1, argv+1);
+
+        } else if (0 == strcmp(command, "pull")) {
+            return cmdPull(argc-1, argv+1);
 
         } else if (0 == strcmp(command, "ui")) {
             return cmdUi(argc-1, argv+1);

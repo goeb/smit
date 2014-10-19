@@ -31,6 +31,7 @@
 
 #include "db.h"
 #include "parseConfig.h"
+#include "filesystem.h"
 #include "logging.h"
 #include "identifiers.h"
 #include "global.h"
@@ -962,6 +963,11 @@ int Project::createProjectFiles(const char *repositoryPath, const char *projectN
         LOG_ERROR("Cannot create project with empty name");
         return -1;
     }
+    if (projectName[0] == '.') {
+        LOG_ERROR("Cannot create project with name starting with '.'");
+        return -1;
+    }
+
 
     resultingPath = std::string(repositoryPath) + "/" + Project::urlNameEncode(projectName);
     std::string path = resultingPath;

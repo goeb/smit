@@ -19,8 +19,9 @@
 #include "session.h"
 #include "logging.h"
 #include "identifiers.h"
-#include "parseConfig.h"
+#include "filesystem.h"
 #include "global.h"
+#include "parseConfig.h"
 #include "db.h"
 
 // static members

@@ -39,6 +39,7 @@
 #include "mg_win32.h"
 #include "cpio.h"
 #include "Trigger.h"
+#include "filesystem.h"
 
 #define K_ME "me"
 #define MAX_SIZE_UPLOAD (10*1024*1024)

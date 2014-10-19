@@ -11,7 +11,7 @@
 std::string popToken(std::string & uri, char separator);
 void trimLeft(std::string & s, const char *c);
 void trimRight(std::string &s, const char *c);
-void trim(std::string &s, const char *c);
+void trim(std::string &s, const char *c = " \t\n\r");
 void trimBlanks(std::string &s);
 std::string toString(const std::list<std::string> &values, const char *sep = 0);
 std::string urlDecode(const std::string &src, int is_form_url_encoded=true, char mark='%');

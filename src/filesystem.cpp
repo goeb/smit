@@ -12,11 +12,13 @@
  */
 #include "config.h"
 
+#include <fcntl.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <errno.h>
 #include <sstream>
+#include <fstream>
 
 #include "filesystem.h"
 #include "logging.h"
@@ -31,6 +33,125 @@
 #define MAX_PATH 2048
 
 #endif
+
+
+
+int loadFile(const char *filepath, std::string &data)
+{
+    std::ifstream f(filepath);
+    if (!f.good()) return -1;
+    std::stringstream buffer;
+    buffer << f.rdbuf();
+    data = buffer.str();
+    return 0;
+}
+
+// Allocate a buffer (malloc) and load a file into this buffer.
+// @return the number of bytes read (that is also the size of the buffer)
+//         -1 in case of error
+// If the file is empty, 0 is returned and the buffer is not allocated.
+// It is up to the caller to free the buffer (if the return value is > 0).
+int loadFile(const char *filepath, const char **data)
+{
+    //LOG_DEBUG("Loading file '%s'...", filepath);
+    *data = 0;
+    FILE *f = fopen(filepath, "rb");
+    if (NULL == f) {
+        LOG_DEBUG("Could not open file '%s', %s", filepath, strerror(errno));
+        return -1;
+    }
+    // else continue and parse the file
+
+    int r = fseek(f, 0, SEEK_END); // go to the end of the file
+    if (r != 0) {
+        LOG_ERROR("could not fseek(%s): %s", filepath, strerror(errno));
+        fclose(f);
+        return -1;
+    }
+    long filesize = ftell(f);
+    if (filesize > 4*1024*1024) { // max 4 MByte
+        LOG_ERROR("loadFile: file '%s'' over-sized (%ld bytes)", filepath, filesize);
+        fclose(f);
+        return -1;
+    }
+
+    if (0 == filesize) {
+        // the file is empty
+        fclose(f);
+        return 0;
+    }
+
+    rewind(f);
+    char *buffer = (char *)malloc(filesize+1); // allow +1 for terminating null char
+    LOG_DEBUG("allocated buffer %p: %ld bytes", buffer, filesize+1);
+    long n = fread(buffer, 1, filesize, f);
+    if (n != filesize) {
+        LOG_ERROR("fread(%s): short read. feof=%d, ferror=%d", filepath, feof(f), ferror(f));
+        fclose(f);
+        free(buffer);
+        return -1;
+    }
+    buffer[filesize] = 0;
+    *data = buffer;
+    fclose(f);
+    return n;
+}
+
+/** Write a string to a file
+  *
+  * @return
+  *    0 if success
+  *    <0 if error
+  */
+int writeToFile(const char *filepath, const std::string &data)
+{
+    return writeToFile(filepath, data.data(), data.size());
+}
+
+int writeToFile(const char *filepath, const char *data, size_t len)
+{
+    int result = 0;
+    mode_t mode = O_CREAT | O_TRUNC | O_WRONLY;
+    int flags = S_IRUSR;
+
+#if defined(_WIN32)
+    mode |= O_BINARY;
+    flags |= S_IWUSR;
+#else
+    flags |= S_IRGRP | S_IROTH;
+#endif
+
+    std::string tmp = filepath;
+    tmp += ".tmp";
+    int f = open(tmp.c_str(), mode, flags);
+    if (-1 == f) {
+        LOG_ERROR("Could not create file '%s', (%d) %s", tmp.c_str(), errno, strerror(errno));
+        return -1;
+    }
+
+    if (len > 0) {
+        size_t n = write(f, data, len);
+        if (n != len) {
+            LOG_ERROR("Could not write all data, incomplete file '%s': (%d) %s",
+                      filepath, errno, strerror(errno));
+            return -1;
+        }
+    }
+
+    close(f);
+
+#if defined(_WIN32)
+    _unlink(filepath);
+#endif
+
+    int r = rename(tmp.c_str(), filepath);
+    if (r != 0) {
+        LOG_ERROR("Cannot rename '%s' -> '%s': (%d) %s", tmp.c_str(), filepath, errno, strerror(errno));
+        return -1;
+    }
+
+    return result;
+}
 
 std::string getExePath()
 {
@@ -48,6 +169,13 @@ std::string getExePath()
     return exePath;
 }
 
+bool fileExists(std::string &path)
+{
+    struct stat fileStat;
+
+    int r = stat(path.c_str(), &fileStat);
+    return (r==0);
+}
 
 std::string getFileSize(std::string &path)
 {
