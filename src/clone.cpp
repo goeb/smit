@@ -241,12 +241,19 @@ void HttpRequest::setUrl(const std::string &root, const std::string &path)
 }
 
 
+/** Get files recursively through sub-directories
+  *
+  * @param recursionLevel
+  *    used to track the depth in the sub-directories
+  */
 void HttpRequest::getAndStore(bool recursive, int recursionLevel)
 {
     if (Verbose) printf("Entering getAndStore: resourcePath=%s\n", resourcePath.c_str());
     curl_easy_setopt(curlHandle, CURLOPT_WRITEDATA, (void *)this);
     curl_easy_setopt(curlHandle, CURLOPT_WRITEFUNCTION, writeToFileCallback);
+
     performRequest();
+
     if (isDirectory && recursive) {
         // finalize received lines
         handleReceivedLines(0, 0);
@@ -257,6 +264,7 @@ void HttpRequest::getAndStore(bool recursive, int recursionLevel)
         trimRight(localPath, "/");
         if (recursionLevel < 2) printf("%s...\n", localPath.c_str());
 
+        // make current directory locally
         mode_t mode = S_IRUSR | S_IWUSR | S_IXUSR;
         if (Verbose) printf("mkdir %s...\n", localPath.c_str());
         int r = mg_mkdir(localPath.c_str(), mode);
@@ -423,6 +431,11 @@ void HttpRequest::handleWriteToFile(void *data, size_t size)
         handleReceivedLines((char*)data, size);
 
     } else {
+        // TODO in case of 'smit pull' command, then
+        // - do not overwrite files /<project>/issues/*/* (entries)
+        // - do not overwrite files /<project>/files/*/* (files)
+        // because these are immutables
+
         if (!fd) openFile();
         if (size) {
             size_t n = fwrite(data, size, 1, fd);
