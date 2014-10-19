@@ -148,12 +148,6 @@ void sendHttpHeader500(const RequestContext *request, const char *msg)
     addHttpStat(H_500);
 }
 
-void sendCookie(const RequestContext *request, const std::string &key, const std::string &value)
-{
-    request->printf("Set-Cookie: %s=%s; Path=/\r\n", key.c_str(), value.c_str());
-}
-
-
 /**
   * @redirectUrl
   *    Must be an absolute path (starting with /)
@@ -190,9 +184,16 @@ std::string getServerCookie(const std::string &name, const std::string &value, i
 {
     std::ostringstream s;
     s << "Set-Cookie: " << name << "=" << value;
-    s << "; Path=/";
+    s << "; Path=" << MongooseServerContext::getInstance().getUrlRewritingRoot() << "/";
     if (maxAgeSeconds > 0) s << ";  Max-Age=" << maxAgeSeconds;
     return s.str();
+}
+
+void sendCookie(const RequestContext *request, const std::string &name, const std::string &value, int duration)
+{
+    std::string s = getServerCookie(name, value, duration);
+
+    request->printf("%s\r\n", s.c_str());
 }
 
 void setCookieAndRedirect(const RequestContext *request, const char *name, const char *value, const char *redirectUrl)
@@ -331,7 +332,9 @@ int httpPostSignin(const RequestContext *request)
 std::string getDeletedCookieString(const std::string &name)
 {
     std::string cookieString;
-    cookieString = "Set-Cookie: " + name + "=deleted; Path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    cookieString = "Set-Cookie: " + name + "=deleted";
+    cookieString += "Path=" + MongooseServerContext::getInstance().getUrlRewritingRoot() + "/" ;
+    cookieString += "expires=Thu, 01 Jan 1970 00:00:00 GMT";
     return cookieString;
 }
 
@@ -1225,7 +1228,7 @@ void httpGetListOfIssues(const RequestContext *req, Project &p, User u)
         if (full == "1") {
             RHtml::printPageIssuesFullContents(ctx, issueList);
         } else {
-            sendCookie(req, QS_ORIGIN_VIEW, q);
+            sendCookie(req, QS_ORIGIN_VIEW, q, COOKIE_VIEW_DURATION);
             RHtml::printPageIssueList(ctx, issueList, cols);
         }
     }
