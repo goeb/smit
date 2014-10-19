@@ -333,8 +333,8 @@ std::string getDeletedCookieString(const std::string &name)
 {
     std::string cookieString;
     cookieString = "Set-Cookie: " + name + "=deleted";
-    cookieString += "Path=" + MongooseServerContext::getInstance().getUrlRewritingRoot() + "/" ;
-    cookieString += "expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    cookieString += ";Path=" + MongooseServerContext::getInstance().getUrlRewritingRoot() + "/" ;
+    cookieString += ";expires=Thu, 01 Jan 1970 00:00:00 GMT";
     return cookieString;
 }
 
