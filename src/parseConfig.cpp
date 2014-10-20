@@ -320,6 +320,8 @@ std::string serializeTokens(const std::list<std::list<std::string> > &linesOfTok
 
 #ifdef SM_PARSER
 
+#include "filesystem.h"
+
 /** smparser is a standalone executable that help parsing smit config and entries syntax.
   * It may be useful for triggers that need parsing of entries.
   *

@@ -251,7 +251,7 @@ int Project::load()
 
     loadTags();
 
-    LOG_INFO("Project %s loaded.", path.c_str());
+    LOG_INFO("Project %s loaded: %d issues", path.c_str(), issues.size());
 
     consolidateIssues();
     computeAssociations();
@@ -387,6 +387,8 @@ int Project::loadEntries()
     // load files path/issues/*/*
     std::string pathToEntries = path;
     pathToEntries = pathToEntries + '/' + ISSUES;
+    LOG_DEBUG("Loading issues: %s", pathToEntries.c_str());
+
     DIR *entriesDirHandle;
     if ((entriesDirHandle = opendir(pathToEntries.c_str())) == NULL) {
         LOG_ERROR("Cannot open directory '%s'", pathToEntries.c_str());
@@ -405,11 +407,15 @@ int Project::loadEntries()
         issuePath = issuePath + '/' + issueDir->d_name;
         // open this subdir and look for all files of this subdir
         DIR *issueDirHandle;
-        if ((issueDirHandle = opendir(issuePath.c_str())) == NULL) continue; // not a directory
-        else {
+        if ((issueDirHandle = opendir(issuePath.c_str())) == NULL) {
+            LOG_ERROR("Not a directory '%s'", issuePath.c_str());
+            continue; // not a directory
+        } else {
             // we are in a issue directory
             Issue *issue = new Issue();
             issue->id.assign(issueDir->d_name);
+
+            LOG_DEBUG("Loading issue: %s", issueDir->d_name);
 
             // check the maximum id
             int intId = atoi(issueDir->d_name);
@@ -428,6 +434,8 @@ int Project::loadEntries()
                     continue;
                 }
                 // regular entry
+                LOG_DEBUG("Loading entry: %s", entryFile->d_name);
+
                 std::string filePath = issuePath + '/' + entryFile->d_name;
                 Entry *e = loadEntry(issuePath, entryFile->d_name);
                 if (e) issue->entries[e->id] = e;

@@ -25,8 +25,10 @@ init() {
     $SMIT user $USER2 --passwd $PASSWD2 --project $PROJECT2:rw -d $REPO
 
     # create some files
-    echo abc1 > $REPO/$PROJECT1/issues/abc1
-    echo abc2 > $REPO/$PROJECT2/issues/abc2
+    mkdir $REPO/$PROJECT1/issues/abc1
+    echo +parent null > $REPO/$PROJECT1/issues/abc1/abc1
+    mkdir $REPO/$PROJECT2/issues/abc2
+    echo +parent null > $REPO/$PROJECT2/issues/abc2/abc2
     echo file1 > $REPO/$PROJECT1/files/file1
     echo file2 > $REPO/$PROJECT2/files/file2
 }
@@ -58,16 +60,16 @@ startServer
 # check that clone of p1 has correct content
 $SMIT clone http://127.0.0.1:$PORT --user $USER1 --passwd $PASSWD1 clone1
 echo $?
-[ -f clone1/$PROJECT1/issues/abc1 ] || fail "missing file 'clone1/$PROJECT1/issues/abc1'"
+[ -f clone1/$PROJECT1/issues/abc1/abc1 ] || fail "missing file 'clone1/$PROJECT1/issues/abc1/abc1'"
 [ -f clone1/$PROJECT1/files/file1 ] || fail "missing file 'clone1/$PROJECT1/files/file1'"
-[ -f clone1/$PROJECT2/issues/abc2 ] && fail "unexpected file 'clone1/$PROJECT2/issues/abc2'"
+[ -f clone1/$PROJECT2/issues/abc2/abc2 ] && fail "unexpected file 'clone1/$PROJECT2/issues/abc2/abc2'"
 [ -f clone1/$PROJECT2/files/file2 ] && fail "unexpected file 'clone1/$PROJECT2/files/file2'"
 
 # check that clone of p2 has correct content
 $SMIT clone http://127.0.0.1:$PORT --user $USER2 --passwd $PASSWD2 clone2
-[ -f clone2/$PROJECT1/issues/abc1 ] && fail "unexpected file 'clone2/$PROJECT1/issues/abc1'"
+[ -f clone2/$PROJECT1/issues/abc1/abc1 ] && fail "unexpected file 'clone2/$PROJECT1/issues/abc1/abc1'"
 [ -f clone2/$PROJECT1/files/file1 ] && fail "unexpected file 'clone2/$PROJECT1/files/file1'"
-[ -f clone2/$PROJECT2/issues/abc2 ] || fail "missing file 'clone2/$PROJECT2/issues/abc2'"
+[ -f clone2/$PROJECT2/issues/abc2/abc2 ] || fail "missing file 'clone2/$PROJECT2/issues/abc2/abc2'"
 [ -f clone2/$PROJECT2/files/file2 ] || fail "missing file 'clone2/$PROJECT2/files/file2'"
 
 # check that user 1 with password of user 2 raises an error

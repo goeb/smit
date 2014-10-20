@@ -61,7 +61,8 @@ T_stringTools_LDADD = $(LDADD)
 am_get_random_value_OBJECTS = get_random_value.$(OBJEXT)
 get_random_value_OBJECTS = $(am_get_random_value_OBJECTS)
 get_random_value_LDADD = $(LDADD)
-am_smparser_OBJECTS = ../src/smparser-parseConfig.$(OBJEXT)
+am_smparser_OBJECTS = ../src/smparser-parseConfig.$(OBJEXT) \
+	../src/smparser-filesystem.$(OBJEXT)
 smparser_OBJECTS = $(am_smparser_OBJECTS)
 smparser_LDADD = $(LDADD)
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)/src
@@ -222,8 +223,8 @@ top_srcdir = @top_srcdir@
 T_parseConfig_SOURCES = T_parseConfig.cpp ../src/parseConfig.cpp
 T_stringTools_SOURCES = T_stringTools.cpp ../src/stringTools.cpp
 get_random_value_SOURCES = get_random_value.c
-smparser_SOURCES = ../src/parseConfig.cpp
-smparser_CPPFLAGS = -DSM_PARSER
+smparser_SOURCES = ../src/parseConfig.cpp ../src/filesystem.cpp
+smparser_CPPFLAGS = -DSM_PARSER -I$(top_srcdir)/mongoose -include logging.h
 AM_CPPFLAGS = -I$(top_srcdir)/src -include logging.h
 
 # include the tests on the distribution
@@ -290,6 +291,8 @@ get_random_value$(EXEEXT): $(get_random_value_OBJECTS) $(get_random_value_DEPEND
 	$(AM_V_CCLD)$(LINK) $(get_random_value_OBJECTS) $(get_random_value_LDADD) $(LIBS)
 ../src/smparser-parseConfig.$(OBJEXT): ../src/$(am__dirstamp) \
 	../src/$(DEPDIR)/$(am__dirstamp)
+../src/smparser-filesystem.$(OBJEXT): ../src/$(am__dirstamp) \
+	../src/$(DEPDIR)/$(am__dirstamp)
 smparser$(EXEEXT): $(smparser_OBJECTS) $(smparser_DEPENDENCIES) $(EXTRA_smparser_DEPENDENCIES) 
 	@rm -f smparser$(EXEEXT)
 	$(AM_V_CXXLD)$(CXXLINK) $(smparser_OBJECTS) $(smparser_LDADD) $(LIBS)
@@ -297,6 +300,7 @@ smparser$(EXEEXT): $(smparser_OBJECTS) $(smparser_DEPENDENCIES) $(EXTRA_smparser
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
 	-rm -f ../src/parseConfig.$(OBJEXT)
+	-rm -f ../src/smparser-filesystem.$(OBJEXT)
 	-rm -f ../src/smparser-parseConfig.$(OBJEXT)
 	-rm -f ../src/stringTools.$(OBJEXT)
 
@@ -304,6 +308,7 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@../src/$(DEPDIR)/parseConfig.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@../src/$(DEPDIR)/smparser-filesystem.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@../src/$(DEPDIR)/smparser-parseConfig.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@../src/$(DEPDIR)/stringTools.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/T_parseConfig.Po@am__quote@
@@ -355,6 +360,20 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='../src/parseConfig.cpp' object='../src/smparser-parseConfig.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smparser_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o ../src/smparser-parseConfig.obj `if test -f '../src/parseConfig.cpp'; then $(CYGPATH_W) '../src/parseConfig.cpp'; else $(CYGPATH_W) '$(srcdir)/../src/parseConfig.cpp'; fi`
+
+../src/smparser-filesystem.o: ../src/filesystem.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smparser_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT ../src/smparser-filesystem.o -MD -MP -MF ../src/$(DEPDIR)/smparser-filesystem.Tpo -c -o ../src/smparser-filesystem.o `test -f '../src/filesystem.cpp' || echo '$(srcdir)/'`../src/filesystem.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) ../src/$(DEPDIR)/smparser-filesystem.Tpo ../src/$(DEPDIR)/smparser-filesystem.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='../src/filesystem.cpp' object='../src/smparser-filesystem.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smparser_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o ../src/smparser-filesystem.o `test -f '../src/filesystem.cpp' || echo '$(srcdir)/'`../src/filesystem.cpp
+
+../src/smparser-filesystem.obj: ../src/filesystem.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smparser_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT ../src/smparser-filesystem.obj -MD -MP -MF ../src/$(DEPDIR)/smparser-filesystem.Tpo -c -o ../src/smparser-filesystem.obj `if test -f '../src/filesystem.cpp'; then $(CYGPATH_W) '../src/filesystem.cpp'; else $(CYGPATH_W) '$(srcdir)/../src/filesystem.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) ../src/$(DEPDIR)/smparser-filesystem.Tpo ../src/$(DEPDIR)/smparser-filesystem.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='../src/filesystem.cpp' object='../src/smparser-filesystem.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smparser_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o ../src/smparser-filesystem.obj `if test -f '../src/filesystem.cpp'; then $(CYGPATH_W) '../src/filesystem.cpp'; else $(CYGPATH_W) '$(srcdir)/../src/filesystem.cpp'; fi`
 
 ID: $(HEADERS) $(SOURCES) $(LISP) $(TAGS_FILES)
 	list='$(SOURCES) $(HEADERS) $(LISP) $(TAGS_FILES)'; \

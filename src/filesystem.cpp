@@ -19,6 +19,7 @@
 #include <errno.h>
 #include <sstream>
 #include <fstream>
+#include <stdlib.h>
 
 #include "filesystem.h"
 #include "logging.h"
