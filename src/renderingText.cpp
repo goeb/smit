@@ -30,7 +30,7 @@ void RText::printProjectList(const RequestContext *req, const std::list<std::pai
     }
 }
 
-void RText::printIssueList(const RequestContext *req, std::vector<struct Issue*> issueList, std::list<std::string> colspec)
+void RText::printIssueList(const RequestContext *req, std::vector<const Issue*> issueList, std::list<std::string> colspec)
 {
     req->printf("Content-Type: text/plain\r\n\r\n");
 
@@ -43,7 +43,7 @@ void RText::printIssueList(const RequestContext *req, std::vector<struct Issue*>
     req->printf("\n");
 
     // list of issues
-    std::vector<struct Issue*>::iterator i;
+    std::vector<const Issue*>::const_iterator i;
     for (i=issueList.begin(); i!=issueList.end(); i++) {
 
         std::list<std::string>::iterator c;
@@ -56,8 +56,8 @@ void RText::printIssueList(const RequestContext *req, std::vector<struct Issue*>
             else if (column == "ctime") text = epochToString((*i)->ctime);
             else if (column == "mtime") text = epochToString((*i)->mtime);
             else {
-                std::map<std::string, std::list<std::string> >::iterator p;
-                std::map<std::string, std::list<std::string> > & properties = (*i)->properties;
+                std::map<std::string, std::list<std::string> >::const_iterator p;
+                const std::map<std::string, std::list<std::string> > & properties = (*i)->properties;
 
                 p = properties.find(column);
                 if (p != properties.end()) text = toString(p->second);

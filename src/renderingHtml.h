@@ -51,11 +51,11 @@ public:
                                      const std::map<std::string, std::map<Role, std::set<std::string> > > &userRolesByProject,
                                      const std::list<User> &users);
     static void printProjectConfig(const ContextParameters &ctx);
-    static void printPageIssuesFullContents(const ContextParameters &ctx, std::vector<struct Issue*> issueList);
-    static void printPageIssueList(const ContextParameters &ctx, std::vector<struct Issue*> issueList,
+    static void printPageIssuesFullContents(const ContextParameters &ctx, std::vector<const Issue*> issueList);
+    static void printPageIssueList(const ContextParameters &ctx, std::vector<const Issue*> issueList,
                                    std::list<std::string> colspec);
     static void printPageIssueAccrossProjects(const ContextParameters &ctx,
-                                             std::map<std::string, std::vector<Issue*> > issues,
+                                             std::map<std::string, std::vector<const Issue*> > issues,
 											 std::list<std::string> colspec);
     static void printPageIssue(const ContextParameters &ctx, const Issue &issue);
     static void printPageNewIssue(const ContextParameters &ctx);
@@ -79,11 +79,11 @@ public:
     static void printIssueNext(const ContextParameters &ctx, const Issue &issue);
     static void printIssuePrevious(const ContextParameters &ctx, const Issue &issue);
     static void printIssue(const ContextParameters &ctx, const Issue &issue);
-    static void printIssueListFullContents(const ContextParameters &ctx, std::vector<struct Issue*> issueList);
-    static void printIssueList(const ContextParameters &ctx, const std::vector<struct Issue*> &issueList,
+    static void printIssueListFullContents(const ContextParameters &ctx, std::vector<const Issue*> issueList);
+    static void printIssueList(const ContextParameters &ctx, const std::vector<const Issue*> &issueList,
                                const std::list<std::string> &colspec, bool showOtherFormats);
     static void printIssuesAccrossProjects(ContextParameters ctx,
-                                           const std::map<std::string, std::vector<struct Issue*> >&issues,
+                                           const std::map<std::string, std::vector<const Issue*> >&issues,
                                            const std::list<std::string> &colspec);
 
 };

@@ -297,11 +297,6 @@ Entry *loadEntry(std::string dir, const char* basename)
             e->properties[key] = *line;
         }
     }
-    // if value is not 1.x, then raise a warning
-    if (smitVersion.empty() || 0 != strncmp("1.", smitVersion.c_str(), 2)) {
-        LOG_INFO("Version %s of entry %s higher than current Smit version (%s). Check compatibility.",
-                 smitVersion.c_str(), basename, VERSION);
-    }
 
     return e;
 }
@@ -493,6 +488,11 @@ int Issue::computeLatestEntry()
                 Entry *parent = parentIt->second;
                 if (parent->next) {
                     // error: the next of the parent was already assigned
+                    //
+                    //  a <-- parent <-- c <-- e
+                    //              \--- d
+                    // We relocate d as a child of e.
+                    // TODO relocate after the date ?
                     LOG_ERROR("Entry '%s' has already a child: '%s'", parent->id.c_str(),
                               parent->next->id.c_str());
                     // try to resolve this
@@ -1265,7 +1265,7 @@ private:
   * sortingSpec: a list of pairs (ascending-order, property-name)
   *
   */
-void sort(std::vector<Issue*> &inout, const std::list<std::pair<bool, std::string> > &sortingSpec)
+void sort(std::vector<const Issue*> &inout, const std::list<std::pair<bool, std::string> > &sortingSpec)
 {
     if (sortingSpec.size()==0) return;
 
@@ -1317,7 +1317,7 @@ bool isPropertyInFilter(const std::string &propertyValue,
   *    true, if the issue should be kept
   *    false, if the issue should be excluded
   */
-bool Issue::isInFilter(const std::map<std::string, std::list<std::string> > &filter)
+bool Issue::isInFilter(const std::map<std::string, std::list<std::string> > &filter) const
 {
     if (filter.empty()) return false;
 
@@ -1367,7 +1367,7 @@ bool Issue::isInFilter(const std::map<std::string, std::list<std::string> > &fil
   * filterIn=propA:valueA1, filterOut=propA:valueA1
   *     => filterOut takes precedence, valueA1 is excluded from the result
   */
-std::vector<Issue*> Project::search(const char *fulltextSearch,
+std::vector<const Issue*> Project::search(const char *fulltextSearch,
                                     const std::map<std::string, std::list<std::string> > &filterIn,
                                     const std::map<std::string, std::list<std::string> > &filterOut,
                                     const char *sortingSpec)
@@ -1380,12 +1380,12 @@ std::vector<Issue*> Project::search(const char *fulltextSearch,
     //     2. then, if fulltext is not null, walk through these issues and their
     //        related messages and keep those that contain <fulltext>
     //     3. then, do the sorting according to <sortingSpec>
-    std::vector<struct Issue*> result;
+    std::vector<const Issue*> result;
 
-    std::map<std::string, Issue*>::iterator i;
+    std::map<std::string, Issue*>::const_iterator i;
     for (i=issues.begin(); i!=issues.end(); i++) {
 
-        Issue* issue = i->second;
+        const Issue* issue = i->second;
         // 1. filters
         if (!filterIn.empty() && !issue->isInFilter(filterIn)) continue;
         if (!filterOut.empty() && issue->isInFilter(filterOut)) continue;

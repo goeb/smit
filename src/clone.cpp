@@ -502,7 +502,7 @@ void HttpRequest::getAndStore(bool recursive, int recursionLevel, enum Mode cmod
     if (!isDirectory) {
         // make sure that even an empty file gets created as well
         handleWriteToFile(0, 0);
-        if (fd) closeFile();
+        if (fd) closeFile(); // it may happen that the file was not open in MODE_PULL
     }
 }
 
@@ -652,6 +652,14 @@ void HttpRequest::handleWriteToFile(void *data, size_t size)
         std::string path = repository + resourcePath;
         if (cloneMode == MODE_PULL) {
             // do not overwrite files
+            // TODO force resolution of conflicting history
+            //  A---B---C---E (remote entries)
+            //           \
+            //            D (local entry)
+            // 2 alternatives:
+            // - D relocated after E (modification of parent and of entry id)
+            // - D removed (if user decides that D is made obsolete by E)
+
             if (fileExists(path)) return;
         }
 

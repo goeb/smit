@@ -54,7 +54,7 @@ struct Issue {
     // of its entries. For a given key, the most recent value has priority.
     std::string getSummary() const;
     bool lessThan(const Issue *other, const std::list<std::pair<bool, std::string> > &sortingSpec) const;
-    bool isInFilter(const std::map<std::string, std::list<std::string> > &filter);
+    bool isInFilter(const std::map<std::string, std::list<std::string> > &filter) const;
     std::map<std::string, Entry*> entries;
 
     int computeLatestEntry();
@@ -136,7 +136,7 @@ struct ProjectConfig {
 class Project {
 public:
     static Project *init(const char *path); // init and load a project
-    std::vector<Issue*> search(const char *fulltextSearch,
+    std::vector<const Issue*> search(const char *fulltextSearch,
                                const std::map<std::string, std::list<std::string> > &filterIn,
                                const std::map<std::string, std::list<std::string> > &filterOut,
                                const char *sortingSpec);
