@@ -1256,10 +1256,12 @@ void httpGetProject(const RequestContext *req, Project &p, User u)
         req->printf("Content-Type: text/directory\r\n\r\n");
 
         req->printf("files\n");
-        req->printf("html\n");
+        std::string path = p.getPath()+"/html";
+        if (fileExists(path)) req->printf("html\n");
         req->printf("issues\n");
         req->printf("project\n");
-        req->printf("tags\n");
+        path = p.getPath()+"/tags";
+        if (fileExists(path)) req->printf("tags\n");
         req->printf("views\n");
         return;
     }
@@ -1502,7 +1504,7 @@ void httpReloadProject(const RequestContext *req, Project &p, User u)
 }
 
 
-void httpGetIssue(const RequestContext *req, Project &p, const std::string &issueId, User u)
+int httpGetIssue(const RequestContext *req, Project &p, const std::string &issueId, User u)
 {
     LOG_DEBUG("httpGetIssue: project=%s, issue=%s", p.getName().c_str(), issueId.c_str());
     enum RenderingFormat format = getFormat(req);
@@ -1511,7 +1513,8 @@ void httpGetIssue(const RequestContext *req, Project &p, const std::string &issu
     int r = p.get(issueId, issue);
     if (r < 0) {
         // issue not found or other error
-        sendHttpHeader404(req);
+        // for example because the issueId has also the entry id: id/entry
+        return REQUEST_NOT_PROCESSED;
 
     } else if (format == X_SMIT) {
         // for cloning, print the entries in the right order
@@ -1520,7 +1523,8 @@ void httpGetIssue(const RequestContext *req, Project &p, const std::string &issu
         if (!e) {
             std::string msg = "null entry for issue: ";
             msg += issue.id;
-            return sendHttpHeader500(req, msg.c_str());
+            sendHttpHeader500(req, msg.c_str());
+            return REQUEST_COMPLETED;
         }
 
         // rewind to oldest entry
@@ -1554,6 +1558,7 @@ void httpGetIssue(const RequestContext *req, Project &p, const std::string &issu
             RHtml::printPageIssue(ctx, issue);
         }
     }
+    return REQUEST_COMPLETED;
 }
 
 /** Used for deleting an entry
@@ -1990,7 +1995,7 @@ int begin_request_handler(const RequestContext *req)
             else httpDeleteEntry(req, *p, issueId, uri, user);
 
         } else if ( (resource == "issues") && (uri == "new") && (method == "GET") ) httpGetNewIssueForm(req, *p, user);
-        else if ( (resource == "issues") && (method == "GET") ) httpGetIssue(req, *p, uri, user);
+        else if ( (resource == "issues") && (method == "GET") ) return httpGetIssue(req, *p, uri, user);
         else if ( (resource == "config") && (method == "GET") ) httpGetProjectConfig(req, *p, user);
         else if ( (resource == "config") && (method == "POST") ) httpPostProjectConfig(req, *p, user);
         else if ( (resource == "views") && (method == "GET") && !isdir && uri.empty()) return httpGetFile(req);
