@@ -148,22 +148,59 @@ int getProjects(const std::string &rooturl, const std::string &destdir, const st
     return 0;
 }
 
+int pullProject(const std::string &rooturl, const std::string &localRepo, const std::string &sessid, Project &p)
+{
+    // get the remote issues
+    HttpRequest hr(sessid);
+    std::string resource = "/" + p.getUrlName() + "/issues/";
+    hr.setUrl(rooturl, resource);
+    hr.setRepository(localRepo);
+    hr.getRequestLines();
+
+    std::list<std::string>::iterator issueId;
+    FOREACH(issueId, hr.lines) {
+        if (issueId->empty()) continue;
+        LOGV("Remote: %s/issues/%s\n", p.getName().c_str(), issueId->c_str());
+    }
+    return 0; // ok
+}
+
+
 /** Pull issues of all local projects
   * - pull entries
   * - pull files
   *
   * Things not pulled: tags, views, project config, files in html, public, etc.
   */
-int pullProjects(const std::string &rooturl, const std::string &repo, const std::string &sessid)
+int pullProjects(const std::string &rooturl, const std::string &localRepo, const std::string &sessid)
 {
     // Load all local projects
-    int r = dbLoad(repo.c_str());
+    int r = dbLoad(localRepo.c_str());
     if (r < 0) {
-        fprintf(stderr, "Cannot load repository '%s'. Aborting.", repo.c_str());
+        fprintf(stderr, "Cannot load repository '%s'. Aborting.", localRepo.c_str());
         exit(1);
     }
 
+    // get the list of remote projects
+    HttpRequest hr(sessid);
+    hr.setUrl(rooturl, "/");
+    hr.setRepository(localRepo);
+    hr.getRequestLines();
 
+    std::list<std::string>::iterator projectName;
+    FOREACH(projectName, hr.lines) {
+        if ((*projectName) == "public") continue;
+        if (projectName->empty()) continue;
+
+        printf("Pulling entries of project: %s...\n", projectName->c_str());
+        Project *p = Database::Db.getProject(*projectName);
+        if (!p) {
+            fprintf(stderr, "remote project not existing locally. TODO. Exiting...\n");
+            exit(1);
+        }
+        int r = pullProject(rooturl, localRepo, sessid, *p);
+    }
+    return 0; //ok
 }
 
 std::string getSmitDir(const std::string &dir)
@@ -482,6 +519,8 @@ void HttpRequest::doCloning(bool recursive, int recursionLevel)
         // finalize received lines
         handleReceivedLines(0, 0);
 
+        // free some resource before going recursive
+        // force this cleanup before destructor of this HttpRequest instance
         closeCurl();
 
         std::string localPath = repository + resourcePath;
@@ -541,6 +580,7 @@ int HttpRequest::test()
 
 void HttpRequest::getRequestLines()
 {
+    curl_easy_setopt(curlHandle, CURLOPT_WRITEDATA, (void *)this);
     curl_easy_setopt(curlHandle, CURLOPT_WRITEFUNCTION, receiveLinesCallback);
     performRequest();
     handleReceivedLines(0, 0); // finalize the last line
@@ -714,7 +754,7 @@ void HttpRequest::handleReceivedLines(const char *data, size_t size)
     size_t notConsumedOffset = 0;
     while (i < size) {
         if (data[i] == '\n') {
-            // clean up possible \r before the \n
+            // clean up character \r before the \n (if any)
             size_t endl = i;
             if (i > 0 && data[i-1] == '\r') endl--;
 
