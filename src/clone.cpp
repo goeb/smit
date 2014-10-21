@@ -62,9 +62,6 @@ int helpClone()
 }
 
 
-enum Mode { MODE_PULL, // fetch only missing files
-       MODE_CLONE // fetch all files
-     };
 
 
 class Cookie {
@@ -92,7 +89,7 @@ public:
     void post(const std::string &params);
     std::map<std::string, Cookie> cookies;
     std::list<std::string> lines; // fulfilled after calling getRequestLines()
-    void getAndStore(bool recursive, int recursionLevel, Mode cmode);
+    void doCloning(bool recursive, int recursionLevel);
     int test();
     void handleWriteToFile(void *data, size_t size);
     void openFile();
@@ -119,7 +116,6 @@ private:
     FILE *fd; // file descriptor of the file
     bool isDirectory;
     std::string repository; // base path for storage of files
-    enum Mode cloneMode;
 };
 
 
@@ -139,14 +135,14 @@ int testSessid(const std::string url, const std::string &sessid)
 
 /** Get all the projects that we have read-access to.
   */
-int getProjects(const std::string &rooturl, const std::string &destdir, const std::string &sessid, enum Mode mode)
+int getProjects(const std::string &rooturl, const std::string &destdir, const std::string &sessid)
 {
     LOGV("getProjects(%s, %s, %s)\n", rooturl.c_str(), destdir.c_str(), sessid.c_str());
 
     HttpRequest hr(sessid);
     hr.setUrl(rooturl, "/");
     hr.setRepository(destdir);
-    hr.getAndStore(true, 0, mode);
+    hr.doCloning(true, 0);
 
     return 0;
 }
@@ -309,7 +305,7 @@ int cmdClone(int argc, char * const *argv)
         return 1; // authentication failed
     }
 
-    getProjects(url, dir, sessid, MODE_CLONE);
+    getProjects(url, dir, sessid);
 
     // ceate persistent configuration of the local clone
     createSmitDir(dir);
@@ -426,7 +422,7 @@ int cmdPull(int argc, char * const *argv)
     }
 
     // TODO add a flag that says to fetch only new remote files
-    getProjects(url, dir, sessid, MODE_PULL);
+    //getProjects(url, dir, sessid, MODE_PULL);
 
     curl_global_cleanup();
 
@@ -454,12 +450,11 @@ void HttpRequest::setUrl(const std::string &root, const std::string &path)
   * @param recursionLevel
   *    used to track the depth in the sub-directories
   */
-void HttpRequest::getAndStore(bool recursive, int recursionLevel, enum Mode cmode)
+void HttpRequest::doCloning(bool recursive, int recursionLevel)
 {
-    LOGV("Entering getAndStore: resourcePath=%s\n", resourcePath.c_str());
+    LOGV("Entering doCloning: resourcePath=%s\n", resourcePath.c_str());
     curl_easy_setopt(curlHandle, CURLOPT_WRITEDATA, (void *)this);
     curl_easy_setopt(curlHandle, CURLOPT_WRITEFUNCTION, writeToFileCallback);
-    cloneMode = cmode;
 
     performRequest();
 
@@ -477,7 +472,7 @@ void HttpRequest::getAndStore(bool recursive, int recursionLevel, enum Mode cmod
         mode_t mode = S_IRUSR | S_IWUSR | S_IXUSR;
         LOGV("mkdir %s...\n", localPath.c_str());
         int r = mg_mkdir(localPath.c_str(), mode);
-        if (r != 0 && cloneMode == MODE_CLONE) {
+        if (r != 0) {
             fprintf(stderr, "Cannot create directory '%s': %s\n", localPath.c_str(), strerror(errno));
             fprintf(stderr, "Abort.\n");
             exit(1);
@@ -496,7 +491,7 @@ void HttpRequest::getAndStore(bool recursive, int recursionLevel, enum Mode cmod
             HttpRequest hr(sessionId);
             hr.setUrl(rooturl, subpath);
             hr.setRepository(repository);
-            hr.getAndStore(true, recursionLevel+1, cmode);
+            hr.doCloning(true, recursionLevel+1);
         }
     }
     if (!isDirectory) {
@@ -642,6 +637,17 @@ void HttpRequest::closeFile()
     filename = "";
 }
 
+// Mode Pull
+// do not overwrite files
+// TODO force resolution of conflicting history
+//  A---B---C---E (remote entries)
+//           \
+//            D (local entry)
+// 2 alternatives:
+// - D relocated after E (modification of parent and of entry id)
+// - D removed (if user decides that D is made obsolete by E)
+
+
 void HttpRequest::handleWriteToFile(void *data, size_t size)
 {
     if (isDirectory) {
@@ -649,24 +655,8 @@ void HttpRequest::handleWriteToFile(void *data, size_t size)
         handleReceivedLines((char*)data, size);
 
     } else {
-        std::string path = repository + resourcePath;
-        if (cloneMode == MODE_PULL) {
-            // do not overwrite files
-            // TODO force resolution of conflicting history
-            //  A---B---C---E (remote entries)
-            //           \
-            //            D (local entry)
-            // 2 alternatives:
-            // - D relocated after E (modification of parent and of entry id)
-            // - D removed (if user decides that D is made obsolete by E)
+        if (!fd) openFile();
 
-            if (fileExists(path)) return;
-        }
-
-        if (!fd) {
-            if (cloneMode == MODE_PULL) printf("%s\n", path.c_str());
-            openFile();
-        }
         if (size) {
             size_t n = fwrite(data, size, 1, fd);
             if (n != 1) {
