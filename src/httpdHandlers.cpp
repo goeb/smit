@@ -1097,7 +1097,7 @@ void httpIssuesAccrossProjects(const RequestContext *req, User u, const std::str
     FOREACH(p, projectsAndRoles) {
         const std::string &project = p->first;
 
-        Project *p = Database::Db.getProject(project);
+        const Project *p = Database::Db.getProject(project);
         if (!p) continue;
 
         // replace user "me" if any...
@@ -1107,7 +1107,7 @@ void httpIssuesAccrossProjects(const RequestContext *req, User u, const std::str
         if (vcopy.search == "me") vcopy.search = u.username;
 
         std::vector<const Issue*> issueList = p->search(vcopy.search.c_str(),
-                                                         vcopy.filterin, vcopy.filterout, vcopy.sort.c_str());
+                                                        vcopy.filterin, vcopy.filterout, vcopy.sort.c_str());
         issues[project] = issueList;
     }
 
@@ -1142,7 +1142,7 @@ void httpIssuesAccrossProjects(const RequestContext *req, User u, const std::str
 
 }
 
-void httpCloneIssues(const RequestContext *req, Project &p)
+void httpCloneIssues(const RequestContext *req, const Project &p)
 {
     const std::map<std::string, std::list<std::string> > filterIn;
     const std::map<std::string, std::list<std::string> > filterOut;
@@ -1158,7 +1158,7 @@ void httpCloneIssues(const RequestContext *req, Project &p)
     }
 }
 
-void httpGetListOfIssues(const RequestContext *req, Project &p, User u)
+void httpGetListOfIssues(const RequestContext *req, const Project &p, User u)
 {
     if (getFormat(req) == X_SMIT) return httpCloneIssues(req, p); // used for cloning
 
@@ -1248,7 +1248,7 @@ void httpGetListOfIssues(const RequestContext *req, Project &p, User u)
     }
 }
 
-void httpGetProject(const RequestContext *req, Project &p, User u)
+void httpGetProject(const RequestContext *req, const Project &p, User u)
 {
 
     if (getFormat(req) == X_SMIT) { // used for cloning

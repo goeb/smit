@@ -30,6 +30,7 @@
 #include "mg_win32.h"
 #include "console.h"
 #include "filesystem.h"
+#include "db.h"
 
 bool Verbose = false;
 
@@ -145,6 +146,24 @@ int getProjects(const std::string &rooturl, const std::string &destdir, const st
     hr.doCloning(true, 0);
 
     return 0;
+}
+
+/** Pull issues of all local projects
+  * - pull entries
+  * - pull files
+  *
+  * Things not pulled: tags, views, project config, files in html, public, etc.
+  */
+int pullProjects(const std::string &rooturl, const std::string &repo, const std::string &sessid)
+{
+    // Load all local projects
+    int r = dbLoad(repo.c_str());
+    if (r < 0) {
+        fprintf(stderr, "Cannot load repository '%s'. Aborting.", repo.c_str());
+        exit(1);
+    }
+
+
 }
 
 std::string getSmitDir(const std::string &dir)
@@ -422,11 +441,12 @@ int cmdPull(int argc, char * const *argv)
     }
 
     // TODO add a flag that says to fetch only new remote files
-    //getProjects(url, dir, sessid, MODE_PULL);
+    int r = pullProjects(url, dir, sessid);
 
     curl_global_cleanup();
 
-    return 0;
+    if (r < 0) return 1;
+    else return 0;
 
 
 }

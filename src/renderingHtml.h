@@ -22,7 +22,7 @@
   */
 class ContextParameters {
 public:
-    ContextParameters(const RequestContext *req, const User &u, Project &p);
+    ContextParameters(const RequestContext *req, const User &u, const Project &p);
     ContextParameters(const RequestContext *req, const User &u);
     void init(const RequestContext *request, const User &u);
     const Project &getProject() const;

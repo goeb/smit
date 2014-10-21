@@ -157,7 +157,7 @@ int UserBase::init(const char *path, bool checkProject)
                     }
                     // check if project exists
                     if (checkProject) {
-                        Project *p = Database::getProject(project);
+                        const Project *p = Database::getProject(project);
                         if (!p) {
                             LOG_ERROR("Invalid project name '%s' for user %s", project.c_str(), u.username.c_str());
                             continue;

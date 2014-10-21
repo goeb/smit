@@ -139,7 +139,7 @@ public:
     std::vector<const Issue*> search(const char *fulltextSearch,
                                const std::map<std::string, std::list<std::string> > &filterIn,
                                const std::map<std::string, std::list<std::string> > &filterOut,
-                               const char *sortingSpec);
+                               const char *sortingSpec) const;
     int get(const std::string &issueId, Issue &issue) const;
     int addEntry(std::map<std::string, std::list<std::string> > properties, std::string &iid, std::string &eid, std::string username);
     Entry *getEntry(const std::string &id) const;
@@ -158,13 +158,13 @@ public:
     PredefinedView getPredefinedView(const std::string &name);
     int setPredefinedView(const std::string &name, const PredefinedView &pv);
     int deletePredefinedView(const std::string &name);
-    PredefinedView getDefaultView();
+    PredefinedView getDefaultView() const;
     static int createProjectFiles(const char *repositoryPath, const char *projectName, std::string &resultingPath);
     int toggleTag(const std::string &issueId, const std::string &entryId, const std::string &tagid);
     uint32_t allocateNewIssueId();
     void updateMaxIssueId(uint32_t i);
     int reload(); // reload a project from disk storage
-    int getNumIssues();
+    int getNumIssues() const;
     std::map<std::string, std::set<std::string> > getReverseAssociations(const std::string &issue) const;
 
 
@@ -207,7 +207,6 @@ class Database {
 public:
     static Database Db;
     Database() : maxIssueId(0) {}
-    std::map<std::string, Project*> projects;
     static Project *getProject(const std::string &projectName);
     std::string pathToRepository;
     inline static std::string getRootDir() { return Db.pathToRepository; }
@@ -217,8 +216,10 @@ public:
     static uint32_t allocateNewIssueId();
     static void updateMaxIssueId(uint32_t i);
     inline static uint32_t getMaxIssueId() { return Db.maxIssueId; }
-
+    inline size_t getNumProjects() const { return projects.size(); }
+    const Project *getNext(const Project *p) const;
 private:
+    std::map<std::string, Project*> projects;
     Locker locker;
     uint32_t maxIssueId;
 };

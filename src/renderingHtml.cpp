@@ -35,7 +35,7 @@
   * ContextParameters::projectConfig gets the config once at initilisation,
   * and afterwards one can work with the copy (without locking).
   */
-ContextParameters::ContextParameters(const RequestContext *request, const User &u, Project &p)
+ContextParameters::ContextParameters(const RequestContext *request, const User &u, const Project &p)
 {
     init(request, u);
     project = &p;

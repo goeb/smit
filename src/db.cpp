@@ -92,7 +92,7 @@ int dbLoad(const char * pathToRepository)
         }
         closedir(dirp);
     }
-    return Database::Db.projects.size();
+    return Database::Db.getNumProjects();
 }
 
 
@@ -953,7 +953,7 @@ int Project::deletePredefinedView(const std::string &name)
 }
 
 
-PredefinedView Project::getDefaultView()
+PredefinedView Project::getDefaultView() const
 {
     ScopeLocker scopeLocker(lockerForConfig, LOCK_READ_ONLY);
     std::map<std::string, PredefinedView>::const_iterator i;
@@ -1142,7 +1142,7 @@ int Project::reload()
     return r;
 }
 
-int Project::getNumIssues()
+int Project::getNumIssues() const
 {
     ScopeLocker scopeLocker(locker, LOCK_READ_ONLY);
     return issues.size();
@@ -1378,7 +1378,7 @@ bool Issue::isInFilter(const std::map<std::string, std::list<std::string> > &fil
 std::vector<const Issue*> Project::search(const char *fulltextSearch,
                                     const std::map<std::string, std::list<std::string> > &filterIn,
                                     const std::map<std::string, std::list<std::string> > &filterOut,
-                                    const char *sortingSpec)
+                                    const char *sortingSpec) const
 {
     ScopeLocker scopeLocker(locker, LOCK_READ_ONLY);
 
@@ -2042,6 +2042,23 @@ void Database::updateMaxIssueId(uint32_t i)
     if (i > Db.maxIssueId) Db.maxIssueId = i;
 }
 
+const Project *Database::getNext(const Project *p) const
+{
+    std::map<std::string, Project*>::const_iterator pit;
+
+    if (!p) {
+        // get the first item
+        pit = projects.begin();
+
+    } else {
+        pit = projects.find(p->getName());
+        if (pit == projects.end()) return 0;
+        pit++; // get next
+    }
+
+    if (pit == projects.end()) return 0;
+    else return pit->second;
+}
 
 
 std::string PredefinedView::getDirectionName(bool d)
