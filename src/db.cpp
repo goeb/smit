@@ -473,10 +473,9 @@ int Project::get(const std::string &issueId, Issue &issue) const
         // issue not found
         LOG_DEBUG("Issue not found: %s", issueId.c_str());
         return -1;
-    } else {
-        issue = *i;
     }
 
+    issue = *i;
     return 0;
 }
 

@@ -148,19 +148,100 @@ int getProjects(const std::string &rooturl, const std::string &destdir, const st
     return 0;
 }
 
+int pullIssue(const std::string &rooturl, const std::string &localRepo, const std::string &sessid, Project &p, const Issue &i)
+{
+    // compare the remote and local issue
+    // get the first entry of the issue
+    // check conflict on issue id*
+    std::string resource = "/" + p.getUrlName() + "/issues/" + i.id;
+    HttpRequest hr(sessid);
+    hr.setUrl(rooturl, resource);
+    hr.getRequestLines();
+    hr.closeCurl(); // free the curl resource
+
+    if (hr.lines.empty() || hr.lines.front().empty()) {
+        // should not happen
+        fprintf(stderr, "Got remote issue with no entry: %s", i.id.c_str());
+        exit(1);
+    }
+
+    // get first entry of local issue
+    const Entry *e = i.latest;
+    while (e && e->prev) e = e->prev;
+    if (!e) {
+        // should not happen
+        fprintf(stderr, "Got local issue with no first entry: %s", i.id.c_str());
+        exit(1);
+    }
+
+    const Entry *localEntry = e;
+
+    if (localEntry->id != hr.lines.front())  {
+        // the remote issue and the local issue are not the same
+        // the local issue has to be renamed
+        LOGV("Issue %s: local (%s) and remote (%s) diverge", i.id.c_str(),
+             localEntry->id.c_str(), hr.lines.front().c_str());
+        // TODO propose to the user a new id for the issue
+    } else {
+        // same issue. Walk through the entries and pull...
+        std::list<std::string>::iterator reid;
+        FOREACH(reid, hr.lines) {
+            std::string remoteEid = *reid;
+            if (remoteEid.empty()) continue; // ignore (usually last item in the directory listing)
+
+            if (!localEntry) {
+                // remote issue has more entries. download them locally
+                resource = "/" + p.getUrlName() + "/issues/" + i.id + "/" + remoteEid;
+                printf("GET %s\n", resource.c_str());
+                HttpRequest hr(sessid);
+                hr.setUrl(rooturl, resource);
+                hr.setRepository(localRepo);
+                hr.doCloning(true, 0);
+                continue;
+
+            } else if (localEntry->id != remoteEid) {
+                // diverge
+                // TODO propose to the user to relocate his/her local entries after those of the remote.
+
+            } // else nothing to do: local and remote still aligned
+            localEntry = localEntry->next;
+        }
+    }
+
+    return 0; // ok
+}
+
 int pullProject(const std::string &rooturl, const std::string &localRepo, const std::string &sessid, Project &p)
 {
     // get the remote issues
     HttpRequest hr(sessid);
     std::string resource = "/" + p.getUrlName() + "/issues/";
     hr.setUrl(rooturl, resource);
-    hr.setRepository(localRepo);
     hr.getRequestLines();
+    hr.closeCurl(); // free the resource
 
     std::list<std::string>::iterator issueId;
     FOREACH(issueId, hr.lines) {
-        if (issueId->empty()) continue;
-        LOGV("Remote: %s/issues/%s\n", p.getName().c_str(), issueId->c_str());
+        std::string id = *issueId;
+        if (id.empty()) continue;
+        LOGV("Remote: %s/issues/%s\n", p.getName().c_str(), id.c_str());
+
+        // get the issue with same id in local repository
+        Issue i;
+        int r = p.get(id, i);
+
+        if (r < 0) {
+            // simply clone the remote issue
+            LOGV("Cloning issue: %s/issues/%s\n", p.getName().c_str(), id.c_str());
+            resource = "/" + p.getUrlName() + "/issues/" + id;
+            HttpRequest hr(sessid);
+            hr.setUrl(rooturl, resource);
+            hr.setRepository(localRepo);
+            hr.doCloning(true, 0);
+        } else {
+            LOGV("Pulling issue: %s/issues/%s\n", p.getName().c_str(), id.c_str());
+            pullIssue(rooturl, localRepo, sessid, p, i);
+        }
     }
     return 0; // ok
 }
@@ -184,7 +265,6 @@ int pullProjects(const std::string &rooturl, const std::string &localRepo, const
     // get the list of remote projects
     HttpRequest hr(sessid);
     hr.setUrl(rooturl, "/");
-    hr.setRepository(localRepo);
     hr.getRequestLines();
 
     std::list<std::string>::iterator projectName;
