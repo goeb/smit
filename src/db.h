@@ -161,12 +161,12 @@ public:
     PredefinedView getDefaultView() const;
     static int createProjectFiles(const char *repositoryPath, const char *projectName, std::string &resultingPath);
     int toggleTag(const std::string &issueId, const std::string &entryId, const std::string &tagid);
-    uint32_t allocateNewIssueId();
+    std::string allocateNewIssueId();
     void updateMaxIssueId(uint32_t i);
     int reload(); // reload a project from disk storage
     int getNumIssues() const;
     std::map<std::string, std::set<std::string> > getReverseAssociations(const std::string &issue) const;
-
+    std::string renameIssue(const std::string &id);
 
 private:
     int load(); // load a project: config, views, entries, tags
@@ -213,7 +213,7 @@ public:
     static std::list<std::string> getProjects();
     static Project *loadProject(const char *path); // load a project
     static Project *createProject(const std::string &projectName);
-    static uint32_t allocateNewIssueId();
+    static std::string allocateNewIssueId();
     static void updateMaxIssueId(uint32_t i);
     inline static uint32_t getMaxIssueId() { return Db.maxIssueId; }
     inline size_t getNumProjects() const { return projects.size(); }

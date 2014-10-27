@@ -148,6 +148,7 @@ int getProjects(const std::string &rooturl, const std::string &destdir, const st
     return 0;
 }
 
+
 int pullIssue(const std::string &rooturl, const std::string &localRepo, const std::string &sessid, Project &p, const Issue &i)
 {
     // compare the remote and local issue
@@ -181,7 +182,23 @@ int pullIssue(const std::string &rooturl, const std::string &localRepo, const st
         // the local issue has to be renamed
         LOGV("Issue %s: local (%s) and remote (%s) diverge", i.id.c_str(),
              localEntry->id.c_str(), hr.lines.front().c_str());
-        // TODO propose to the user a new id for the issue
+        // propose to the user a new id for the issue
+
+        // TODO this implementation does not manage global numerotation of issue accross several projects
+
+        printf("Issue conflicting with remote: %s %s\n", i.id.c_str(), i.getSummary().c_str());
+        std::string newId = p.renameIssue(i.id);
+        if (newId.empty()) {
+            fprintf(stderr, "Cannot rename issue %s. Aborting", i.id.c_str());
+            exit(1);
+        }
+
+        resource = "/" + p.getUrlName() + "/issues/" + i.id;
+        HttpRequest hr(sessid);
+        hr.setUrl(rooturl, resource);
+        hr.setRepository(localRepo);
+        hr.doCloning(true, 0);
+
     } else {
         // same issue. Walk through the entries and pull...
         std::list<std::string>::iterator reid;
@@ -278,7 +295,7 @@ int pullProjects(const std::string &rooturl, const std::string &localRepo, const
             fprintf(stderr, "remote project not existing locally. TODO. Exiting...\n");
             exit(1);
         }
-        int r = pullProject(rooturl, localRepo, sessid, *p);
+        pullProject(rooturl, localRepo, sessid, *p);
     }
     return 0; //ok
 }

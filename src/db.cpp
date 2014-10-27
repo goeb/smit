@@ -1099,13 +1099,18 @@ int Project::toggleTag(const std::string &issueId, const std::string &entryId, c
     }
 }
 
-uint32_t Project::allocateNewIssueId()
+std::string Project::allocateNewIssueId()
 {
     if (config.numberIssueAcrossProjects) return Database::allocateNewIssueId();
 
     maxIssueId++;
     if (maxIssueId == 0) LOG_ERROR("Project: max issue id zero: wrapped");
-    return maxIssueId;
+
+    const int SIZ = 25;
+    char buffer[SIZ];
+    snprintf(buffer, SIZ, "%u", maxIssueId);
+
+    return std::string(buffer);
 }
 
 void Project::updateMaxIssueId(uint32_t i)
@@ -1565,6 +1570,42 @@ std::map<std::string, std::set<std::string> > Project::getReverseAssociations(co
     if (raIssue == reverseAssociations.end()) return std::map<std::string, std::set<std::string> >();
     else return raIssue->second;
 }
+
+/** Rename an issue. Take the next available id.
+  */
+std::string Project::renameIssue(const std::string &id)
+{
+    ScopeLocker scopeLocker(locker, LOCK_READ_WRITE);
+
+    //
+    std::map<std::string, Issue*>::const_iterator i;
+    i = issues.find(id);
+    if (i == issues.end()) {
+        LOG_ERROR("Cannot rename issue %s: not in database", id.c_str());
+        return "";
+    }
+
+    // get a new id
+    std::string newId = allocateNewIssueId();
+
+    // add the issue in the table
+    issues[newId] = i->second;
+
+    // delete the old slot
+    issues.erase(id);
+
+    // move the directory on persistent storage
+    std::string oldpath = getPath() + "/" ISSUES "/" + id;
+    std::string newpath = getPath() + "/" ISSUES "/" + newId;
+    int r = rename(oldpath.c_str(), newpath.c_str());
+    if (r != 0) {
+        LOG_ERROR("Cannot move directory of entry %s to %s", oldpath.c_str(), newpath.c_str());
+        return "";
+    }
+    return newId;
+}
+
+
 /**
   * issues may be a list of 1 empty string, meaning that associations have been removed
   */
@@ -1790,12 +1831,7 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
     // if issueId is empty, generate a new issueId
     if (issueId.empty()) {
         // create new directory for this issue
-
-        const int SIZ = 25;
-        char buffer[SIZ];
-        int newId = allocateNewIssueId();
-        snprintf(buffer, SIZ, "%d", newId);
-        issueId = buffer;
+        issueId = allocateNewIssueId();
 
         pathOfIssue = path + '/' + ISSUES + '/' + issueId;
 
@@ -2026,14 +2062,19 @@ std::list<std::string> Database::getProjects()
 }
 
 
-uint32_t Database::allocateNewIssueId()
+std::string Database::allocateNewIssueId()
 {
     ScopeLocker scopeLocker(Db.locker, LOCK_READ_WRITE);
 
     Db.maxIssueId++;
     if (Db.maxIssueId == 0) LOG_ERROR("Database: max issue id zero: wrapped");
-    LOG_DEBUG("allocateNewIssueId: %d", Db.maxIssueId);
-    return Db.maxIssueId;
+    LOG_DEBUG("allocateNewIssueId: %u", Db.maxIssueId);
+
+    const int SIZ = 25;
+    char buffer[SIZ];
+    snprintf(buffer, SIZ, "%u", Db.maxIssueId);
+
+    return std::string(buffer);
 }
 
 void Database::updateMaxIssueId(uint32_t i)

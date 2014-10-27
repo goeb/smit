@@ -1945,7 +1945,7 @@ int begin_request_handler(const RequestContext *req)
 
     // get signed-in user
     std::string sessionId;
-    int r = getFromCookie(req, SESSID, sessionId);
+    getFromCookie(req, SESSID, sessionId);
     // even if cookie not found, call getLoggedInUser in order to manage
     // local user interface case (smit ui)
     User user = SessionBase::getLoggedInUser(sessionId);
