@@ -1280,13 +1280,10 @@ void sort(std::vector<const Issue*> &inout, const std::list<std::pair<bool, std:
     std::sort(inout.begin(), inout.end(), ic);
 }
 
-enum FilterSearch {
-    PROPERTY_NOT_FILTERED,
-    PROPERTY_FILTERED_FOUND,
-    PROPERTY_FILTERED_NOT_FOUND
-};
-
 /** Look if the given multi-valued property is present in the given list
+  *
+  * The match may occur on a part of the value, and in a case insensitive manner.
+  *
   */
 bool isPropertyInFilter(const std::list<std::string> &propertyValue,
                         const std::list<std::string> &filteredValues)
@@ -1296,7 +1293,7 @@ bool isPropertyInFilter(const std::list<std::string> &propertyValue,
 
     FOREACH (fv, filteredValues) {
         FOREACH (v, propertyValue) {
-            if (mg_strcasestr(v->c_str(), fv->c_str())) return PROPERTY_FILTERED_FOUND;
+            if (mg_strcasestr(v->c_str(), fv->c_str())) return true;
         }
         if (fv->empty() && propertyValue.empty()) {
             // allow filtering for empty values
@@ -1306,7 +1303,9 @@ bool isPropertyInFilter(const std::list<std::string> &propertyValue,
     return false; // not found
 }
 
-/** Look if the given property is present in the given list
+/** Look if the given value is present in the given list
+  *
+  * Exact match
   */
 bool isPropertyInFilter(const std::string &propertyValue,
                         const std::list<std::string> &filteredValues)
@@ -1321,8 +1320,17 @@ bool isPropertyInFilter(const std::string &propertyValue,
 
 /**
   * @return
-  *    true, if the issue should be kept
-  *    false, if the issue should be excluded
+  *    true, if the issue does match the filter
+  *    false, if the issue does not match
+  *
+  * A logical OR is done for the filters on the same property
+  * and a logical AND is done between different properties.
+  * Example:
+  *    status:open, status:closed, author:john
+  * is interpreted as:
+  *    status == open OR status == closed
+  *    AND author == john
+  *
   */
 bool Issue::isInFilter(const std::map<std::string, std::list<std::string> > &filter) const
 {
@@ -1336,7 +1344,8 @@ bool Issue::isInFilter(const std::map<std::string, std::list<std::string> > &fil
 
         if (filteredProperty == K_ISSUE_ID) {
             // id
-            if (isPropertyInFilter(id, f->second)) return true;
+            // look if id matches one of the filter values
+            if (!isPropertyInFilter(id, f->second)) return false;
 
         } else {
             std::map<std::string, std::list<std::string> >::const_iterator p;
@@ -1345,10 +1354,10 @@ bool Issue::isInFilter(const std::map<std::string, std::list<std::string> > &fil
             if (p == properties.end()) fs = isPropertyInFilter("", f->second);
             else fs = isPropertyInFilter(p->second, f->second);
 
-            if (fs) return true;
+            if (!fs) return false;
         }
     }
-    return false;
+    return true;
 }
 
 /** search
