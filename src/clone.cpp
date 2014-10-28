@@ -31,6 +31,7 @@
 #include "console.h"
 #include "filesystem.h"
 #include "db.h"
+#include "logging.h"
 
 bool Verbose = false;
 
@@ -148,7 +149,12 @@ int getProjects(const std::string &rooturl, const std::string &destdir, const st
     return 0;
 }
 
-
+/** Pull an issue
+  *
+  * If the remote issue conflicts with a local issue:
+  * - rename the local issue (thus changing its id)
+  * - clone the remote issue
+  */
 int pullIssue(const std::string &rooturl, const std::string &localRepo, const std::string &sessid, Project &p, const Issue &i)
 {
     // compare the remote and local issue
@@ -184,8 +190,6 @@ int pullIssue(const std::string &rooturl, const std::string &localRepo, const st
              localEntry->id.c_str(), hr.lines.front().c_str());
         // propose to the user a new id for the issue
 
-        // TODO this implementation does not manage global numerotation of issue accross several projects
-
         printf("Issue conflicting with remote: %s %s\n", i.id.c_str(), i.getSummary().c_str());
         std::string newId = p.renameIssue(i.id);
         if (newId.empty()) {
@@ -193,6 +197,10 @@ int pullIssue(const std::string &rooturl, const std::string &localRepo, const st
             exit(1);
         }
 
+        // inform the user
+        printf("Local issue %s renamed %s (%s)\n", i.id.c_str(), newId.c_str(), i.getSummary().c_str());
+
+        // clone the remote issue
         resource = "/" + p.getUrlName() + "/issues/" + i.id;
         HttpRequest hr(sessid);
         hr.setUrl(rooturl, resource);
@@ -201,6 +209,9 @@ int pullIssue(const std::string &rooturl, const std::string &localRepo, const st
 
     } else {
         // same issue. Walk through the entries and pull...
+
+        // TODO manage deleted remote entries
+
         std::list<std::string>::iterator reid;
         FOREACH(reid, hr.lines) {
             std::string remoteEid = *reid;
@@ -209,16 +220,23 @@ int pullIssue(const std::string &rooturl, const std::string &localRepo, const st
             if (!localEntry) {
                 // remote issue has more entries. download them locally
                 resource = "/" + p.getUrlName() + "/issues/" + i.id + "/" + remoteEid;
-                printf("GET %s\n", resource.c_str());
                 HttpRequest hr(sessid);
                 hr.setUrl(rooturl, resource);
                 hr.setRepository(localRepo);
-                hr.doCloning(true, 0);
+                hr.doCloning(false, 0);
                 continue;
 
             } else if (localEntry->id != remoteEid) {
                 // diverge
-                // TODO propose to the user to relocate his/her local entries after those of the remote.
+                // remote: a--b--c--d
+                // local:  a--b--e
+                // local modification: a--b--c--d--e
+                // (c and d cloned, and e moved after d)
+
+                // TODO
+                // the local entry (e) has to be changed:
+                // - parent becomes the last remote entry (d)
+                // - add a flag +merged <date>
 
             } // else nothing to do: local and remote still aligned
             localEntry = localEntry->next;
@@ -272,6 +290,9 @@ int pullProject(const std::string &rooturl, const std::string &localRepo, const 
   */
 int pullProjects(const std::string &rooturl, const std::string &localRepo, const std::string &sessid)
 {
+    // set log level to hide INFO logs
+    setLoggingLevel(LL_ERROR);
+
     // Load all local projects
     int r = dbLoad(localRepo.c_str());
     if (r < 0) {
@@ -574,7 +595,7 @@ int cmdPull(int argc, char * const *argv)
         return 1; // authentication failed
     }
 
-    // TODO add a flag that says to fetch only new remote files
+    // pull new entries and new attached files of all projects
     int r = pullProjects(url, dir, sessid);
 
     curl_global_cleanup();
@@ -610,6 +631,7 @@ void HttpRequest::doCloning(bool recursive, int recursionLevel)
     curl_easy_setopt(curlHandle, CURLOPT_WRITEDATA, (void *)this);
     curl_easy_setopt(curlHandle, CURLOPT_WRITEFUNCTION, writeToFileCallback);
 
+    if (recursionLevel < 2) printf("%s\n", resourcePath.c_str());
     performRequest();
 
     if (isDirectory && recursive) {
@@ -622,7 +644,6 @@ void HttpRequest::doCloning(bool recursive, int recursionLevel)
 
         std::string localPath = repository + resourcePath;
         trimRight(localPath, "/");
-        if (recursionLevel < 2) printf("%s...\n", localPath.c_str());
 
         // make current directory locally
         mode_t mode = S_IRUSR | S_IWUSR | S_IXUSR;
@@ -793,16 +814,6 @@ void HttpRequest::closeFile()
     fd = 0;
     filename = "";
 }
-
-// Mode Pull
-// do not overwrite files
-// TODO force resolution of conflicting history
-//  A---B---C---E (remote entries)
-//           \
-//            D (local entry)
-// 2 alternatives:
-// - D relocated after E (modification of parent and of entry id)
-// - D removed (if user decides that D is made obsolete by E)
 
 
 void HttpRequest::handleWriteToFile(void *data, size_t size)

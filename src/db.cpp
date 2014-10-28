@@ -1571,12 +1571,11 @@ std::map<std::string, std::set<std::string> > Project::getReverseAssociations(co
     else return raIssue->second;
 }
 
-/** Rename an issue. Take the next available id.
+/** Rename an issue (take the next available id)
   */
 std::string Project::renameIssue(const std::string &id)
 {
     ScopeLocker scopeLocker(locker, LOCK_READ_WRITE);
-
     //
     std::map<std::string, Issue*>::const_iterator i;
     i = issues.find(id);
