@@ -56,6 +56,7 @@ struct Issue {
     bool lessThan(const Issue *other, const std::list<std::pair<bool, std::string> > &sortingSpec) const;
     bool isInFilter(const std::map<std::string, std::list<std::string> > &filter) const;
     std::map<std::string, Entry*> entries;
+    Entry* mergePending; // null if no merge-pending entry
 
     int computeLatestEntry();
     void consolidate();

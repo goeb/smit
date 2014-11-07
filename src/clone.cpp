@@ -211,6 +211,7 @@ int pullIssue(const std::string &rooturl, const std::string &localRepo, const st
         // same issue. Walk through the entries and pull...
 
         // TODO manage deleted remote entries
+        const Entry *conflictingLocalEntry = 0;// used in case of conflicting local entry
 
         std::list<std::string>::iterator reid;
         FOREACH(reid, hr.lines) {
@@ -224,23 +225,46 @@ int pullIssue(const std::string &rooturl, const std::string &localRepo, const st
                 hr.setUrl(rooturl, resource);
                 hr.setRepository(localRepo);
                 hr.doCloning(false, 0);
+
+                // load this entry in memory
+                p.loadEntries()
                 continue;
 
             } else if (localEntry->id != remoteEid) {
-                // diverge
+                // the entries diverge
                 // remote: a--b--c--d
                 // local:  a--b--e
                 // local modification: a--b--c--d--e
                 // (c and d cloned, and e moved after d)
 
-                // TODO
                 // the local entry (e) has to be changed:
                 // - parent becomes the last remote entry (d)
-                // - add a flag +merged <date>
+                // - add a flag +relocated <datetime>
+                // keep its reference
+                conflictingLocalEntry = localEntry;
+                // TODO merge of entries should be done
+
+                // 1. mark local entry as merge-pending
+                // localEntry->setMergePending(); // in memory and in non-volatile storage
+
+                // 2. download remote entries
+
+                // 3. reload all the entries of the issue
+                // i.reload();
+
+                // 4. resolve merge (interactive)
+                // i.resolveMerge()
+
 
             } // else nothing to do: local and remote still aligned
             localEntry = localEntry->next;
         }
+
+        if (conflictingLocalEntry)   {
+            // relocate TODO
+            p.relocateEntry()
+        }
+
     }
 
     return 0; // ok

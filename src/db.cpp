@@ -487,9 +487,13 @@ int Issue::computeLatestEntry()
 {
     std::map<std::string, Entry*>::iterator eit;
     FOREACH(eit, entries) {
+
+        // TODO if entry is marked as merge-pending, then keep it apart
+
         Entry *e = eit->second;
         if (e->parent == K_PARENT_NULL) e->prev = 0;
         else {
+            // get parent of current entry
             std::map<std::string, Entry*>::iterator parentIt = entries.find(e->parent);
             if (parentIt != entries.end()) {
                 Entry *parent = parentIt->second;
@@ -514,7 +518,7 @@ int Issue::computeLatestEntry()
             }
         }
     }
-    // now find the entry that has no 'next'
+    // raise errors if several entries have no 'next'
     FOREACH(eit, entries) {
         Entry *e = eit->second;
         if (e->next == 0) {
