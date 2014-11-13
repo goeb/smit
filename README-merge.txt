@@ -5,6 +5,10 @@ Eg:
 remote: A---B---C---D
 local:  A---E---F
 
+The 2 following strategies are in a research state. Not implemented yet.
+
+Strategy-1
+------------
 Merging (via 'smit pull') shall proceed with the following steps:
 
 Step 1:
@@ -38,5 +42,31 @@ Step 5: when all merges are done:
 - remove F
 - remove E (this last removing also removes the global merge-pending state on
   the issue)
+
+
+Strategy-2
+------------
+In this strategy, the merging is first done in $REPO/$PROJECT/tmp.
+The recovery after a sudden stop (power fail, network down, control-C, etc.) is
+simpler than in strategy-1.
+
+Step 1:
+- create $REPO/$PROJECT/tmp/$ISSUE (remove previous one if any)
+- copy all local entries to this tmp
+
+Step 2:
+- download remote entries in this tmp
+
+Step 3:
+- merge E and F (similar to strategy-1/step-3)
+
+Step 4: officialize
+- mv $REPO/$PROJECT/issues/$ISSUE $REPO/$PROJECT/issues/$ISSUE-merge-pending
+- mv $REPO/$PROJECT/tmp/$ISSUE $REPO/$PROJECT/issues/
+- remove $REPO/$PROJECT/issues/$ISSUE-merge-pending
+
+
+
+
 
 

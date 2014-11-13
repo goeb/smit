@@ -1850,7 +1850,7 @@ void httpPostEntry(const RequestContext *req, Project &pro, const std::string & 
             return;
         }
 
-        std::string tmpDir = pro.getPath() + "/tmp";
+        std::string tmpDir = pro.getTmpDir();
         parseMultipartAndStoreUploadedFiles(postData, boundary, vars, tmpDir);
 
     } else {

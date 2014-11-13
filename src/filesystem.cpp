@@ -20,6 +20,7 @@
 #include <sstream>
 #include <fstream>
 #include <stdlib.h>
+#include <dirent.h>
 
 #include "filesystem.h"
 #include "logging.h"
@@ -178,7 +179,7 @@ bool fileExists(std::string &path)
     return (r==0);
 }
 
-std::string getFileSize(std::string &path)
+std::string getFileSize(const std::string &path)
 {
     struct stat fileStat;
 
@@ -201,4 +202,76 @@ std::string getFileSize(std::string &path)
         result << s << "Mo";
     }
     return result.str();
+}
+/** Remove a directory and its contents
+  *
+  * Not fully recursive. Only the regular files of
+  * the directory are removed before removing the directory.
+  */
+int removeDir(const std::string &path)
+{
+    DIR *d;
+    if ((d = opendir(path.c_str())) == NULL) {
+        if (errno == ENOENT) {
+            // no such file or directory
+            // not really an error
+            LOG_DEBUG("Cannot opendir non-existing dir '%s' (%s)", path.c_str(), strerror(errno));
+            return 0;
+        } else {
+            LOG_ERROR("Cannot opendir '%s': %s", path.c_str(), strerror(errno));
+            return -1;
+        }
+    }
+
+    struct dirent *f;
+    while ((f = readdir(d)) != NULL) {
+        if (0 == strcmp(f->d_name, ".")) continue;
+        if (0 == strcmp(f->d_name, "..")) continue;
+        std::string filepath = path + "/" + f->d_name;
+        int r = unlink(filepath.c_str());
+        if (r < 0) {
+            if (errno == ENOENT) {
+                // no such file or directory
+                // not really an error
+                LOG_DEBUG("Cannot unlink non-existing file '%s' (%s)", path.c_str(), strerror(errno));
+            } else {
+                LOG_ERROR("Cannot unlink '%s': %s", filepath.c_str(), strerror(errno));
+                return -1;
+            }
+        }
+    }
+
+    // remove the directory, that should be empty now
+    int r = rmdir(path.c_str());
+    if (r < 0) {
+        if (errno == ENOENT) {
+            // no such file or directory
+            // not really an error
+            LOG_DEBUG("Cannot rmdir non-existing directory '%s' (%s)", path.c_str(), strerror(errno));
+        } else {
+            LOG_ERROR("Cannot rmdir '%s': %s", path.c_str(), strerror(errno));
+            return -1;
+        }
+    }
+    return 0;
+}
+
+int copyFile(const std::string &srcPath, const std::string &destPath)
+{
+    std::ifstream src(srcPath.c_str(), std::ios::binary);
+    if (!src.is_open()) {
+        LOG_ERROR("Cannot open source file '%s' for copying", srcPath.c_str());
+        return -1;
+    }
+
+    std::ofstream dst(destPath.c_str(), std::ios::binary);
+    if (!dst.is_open()) {
+        LOG_ERROR("Cannot open destination file '%s' for copying", srcPath.c_str());
+        return -1;
+    }
+
+    dst << src.rdbuf();
+
+    src.close();
+    dst.close();
 }

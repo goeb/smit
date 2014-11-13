@@ -1031,7 +1031,7 @@ int Project::createProjectFiles(const char *repositoryPath, const char *projectN
     }
 
     // create directory 'tmp'
-    subpath = path + "/tmp";
+    subpath = path + "/" K_PROJECT_TMP;
     r = mg_mkdir(subpath.c_str(), S_IRUSR | S_IXUSR | S_IWUSR);
     if (r != 0) {
         LOG_ERROR("Could not create directory '%s': %s", subpath.c_str(), strerror(errno));
@@ -1893,7 +1893,7 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
 
         std::list<std::string>::iterator f;
         FOREACH(f, files->second) {
-            std::string oldpath = path + "/tmp/" + *f;
+            std::string oldpath = getTmpDir() + "/" + *f;
             std::string newpath = dir + "/" + *f;
 
             if (access(newpath.c_str(), F_OK ) != -1 ) {
@@ -2000,7 +2000,7 @@ int Entry::getCtime() const
 }
 
 
-std::string Entry::serialize()
+std::string Entry::serialize() const
 {
     std::ostringstream s;
 
@@ -2009,7 +2009,7 @@ std::string Entry::serialize()
     s << K_AUTHOR << " " << author << "\n";
     s << K_CTIME << " " << ctime << "\n";
 
-    std::map<std::string, std::list<std::string> >::iterator p;
+    std::map<std::string, std::list<std::string> >::const_iterator p;
     for (p = properties.begin(); p != properties.end(); p++) {
         std::string key = p->first;
         std::list<std::string> value = p->second;

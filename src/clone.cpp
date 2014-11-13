@@ -96,7 +96,15 @@ public:
     void handleWriteToFile(void *data, size_t size);
     void openFile();
     void closeFile();
+    /** In order to download files, the caller must set either set
+      * - the repository
+      *            the downloaded file will be located in a path depending
+      *            on the repo and the resource path.
+      * - or the download dir
+      *            the downloaded file will be located directly in this dir.
+      */
     inline void setRepository(const std::string &r) { repository = r; }
+    inline void setDownloadDir(const std::string &r) { downloadDir = r; }
 
     static size_t receiveLinesCallback(void *contents, size_t size, size_t nmemb, void *userp);
     static size_t writeToFileCallback(void *contents, size_t size, size_t nmemb, void *userp);
@@ -118,6 +126,7 @@ private:
     FILE *fd; // file descriptor of the file
     bool isDirectory;
     std::string repository; // base path for storage of files
+    std::string downloadDir; // alternative to repository for storage
 };
 
 
@@ -174,7 +183,7 @@ int pullIssue(const std::string &rooturl, const std::string &localRepo, const st
 
     // get first entry of local issue
     const Entry *e = i.latest;
-    while (e && e->prev) e = e->prev;
+    while (e && e->prev) e = e->prev; // rewind to the first entry
     if (!e) {
         // should not happen
         fprintf(stderr, "Got local issue with no first entry: %s", i.id.c_str());
@@ -182,6 +191,7 @@ int pullIssue(const std::string &rooturl, const std::string &localRepo, const st
     }
 
     const Entry *localEntry = e;
+    const Entry *firstEntry = e;
 
     if (localEntry->id != hr.lines.front())  {
         // the remote issue and the local issue are not the same
@@ -212,6 +222,7 @@ int pullIssue(const std::string &rooturl, const std::string &localRepo, const st
 
         // TODO manage deleted remote entries
         const Entry *conflictingLocalEntry = 0;// used in case of conflicting local entry
+        std::string tmpPath;
 
         std::list<std::string>::iterator reid;
         FOREACH(reid, hr.lines) {
@@ -227,42 +238,64 @@ int pullIssue(const std::string &rooturl, const std::string &localRepo, const st
                 hr.doCloning(false, 0);
 
                 // load this entry in memory
-                p.loadEntries()
-                continue;
+                // TODO p.loadEntries()
 
             } else if (localEntry->id != remoteEid) {
                 // the entries diverge
                 // remote: a--b--c--d
                 // local:  a--b--e
-                // local modification: a--b--c--d--e
-                // (c and d cloned, and e moved after d)
 
-                // the local entry (e) has to be changed:
-                // - parent becomes the last remote entry (d)
-                // - add a flag +relocated <datetime>
-                // keep its reference
                 conflictingLocalEntry = localEntry;
-                // TODO merge of entries should be done
 
-                // 1. mark local entry as merge-pending
-                // localEntry->setMergePending(); // in memory and in non-volatile storage
+                // clone the current issue to a temporary directory and download the remote entries
 
-                // 2. download remote entries
+                // clean up if previous aborted merging left a such temporary dir
+                tmpPath = p.getTmpDir() + "/" + i.id;
+                int r = removeDir(tmpPath);
+                if (r<0) exit(1);
 
-                // 3. reload all the entries of the issue
-                // i.reload();
+                // create the tmp dir
+                mode_t mode = S_IRUSR | S_IWUSR | S_IXUSR;
+                r = mg_mkdir(tmpPath.c_str(), mode);
+                if (r != 0) {
+                    fprintf(stderr, "Cannot create tmp directory '%s': %s\n", tmpPath.c_str(), strerror(errno));
+                    fprintf(stderr, "Abort.\n");
+                    exit(1);
+                }
 
-                // 4. resolve merge (interactive)
-                // i.resolveMerge()
+                // download the remote entry
+                resource = "/" + p.getUrlName() + "/issues/" + i.id + "/" + remoteEid;
+                HttpRequest hr(sessid);
+                hr.setUrl(rooturl, resource);
+                hr.setDownloadDir(tmpPath);
+                hr.doCloning(false, 0);
+
 
 
             } // else nothing to do: local and remote still aligned
-            localEntry = localEntry->next;
+
+            // move the local entry pointer forward, except if already at the end
+            if (localEntry) localEntry = localEntry->next;
         }
 
         if (conflictingLocalEntry)   {
-            // relocate TODO
-            p.relocateEntry()
+            // copy local entries to the tmp dir
+            LOGV("Copying local entries to tmp dir");
+            const Entry *e = firstEntry;
+            while (e != 0 && e != conflictingLocalEntry) {
+                std::string path = tmpPath + "/" + e->id;
+                int r = writeToFile(tmpPath.c_str(), e->serialize());
+                if (r != 0) {
+                    fprintf(stderr, "Cannot store entry in tmp directory: %s\n", e->id.c_str());
+                    fprintf(stderr, "Abort.\n");
+                    exit(1);
+                }
+            }
+
+            // TODO load this tmp issue in memory (it is the same as the remote issue)
+            // TODO merge conflictingLocalEntry and followers into this tmp issue
+
+            //p.relocateEntry()
         }
 
     }
@@ -823,7 +856,12 @@ void HttpRequest::handleReceivedRaw(void *data, size_t size)
 
 void HttpRequest::openFile()
 {
-    filename = repository + resourcePath;
+    if (repository.size() > 0) filename = repository + resourcePath; // resourcePath has a starting '/'
+    else if (downloadDir.size() > 0) filename = downloadDir + "/" + getBasename(resourcePath);
+    else {
+        fprintf(stderr, "repository and downloadDir are both empty strings\n");
+        exit(1);
+    }
     LOGV("Opening file: %s\n", filename.c_str());
     fd = fopen(filename.c_str(), "wbx");
     if (!fd) {

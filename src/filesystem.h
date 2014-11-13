@@ -11,7 +11,9 @@ int writeToFile(const char *filepath, const char *data, size_t len);
 bool fileExists(std::string &path);
 
 std::string getExePath();
-std::string getFileSize(std::string &path);
+std::string getFileSize(const std::string &path);
+int removeDir(const std::string &path);
+int copyFile(const std::string &srcPath, const std::string &destPath);
 
 
 #endif

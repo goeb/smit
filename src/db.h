@@ -16,6 +16,7 @@
 #define K_FILE "+file" // keyword used for uploaded files
 #define K_SUMMARY "summary"
 #define K_UPLOADED_FILES_DIR "files"
+#define K_PROJECT_TMP "tmp"
 
 #define DELETE_DELAY_S (10*60) // seconds
 
@@ -28,7 +29,7 @@ struct Entry {
     long ctime; // creation time
     std::string author;
     std::map<std::string, std::list<std::string> > properties;
-    std::string serialize();
+    std::string serialize() const;
     int getCtime() const;
     std::string getMessage() const;
     // chainlist pointers
@@ -150,6 +151,7 @@ public:
     inline static std::string urlNameEncode(const std::string &name) { return urlEncode(name, '=', "._-"); }
     inline static std::string urlNameDecode(const std::string &name) { return urlDecode(name, false, '='); }
     inline std::string getPath() const { return path; }
+    inline std::string getTmpDir() const { return path + "/" K_PROJECT_TMP; }
     inline std::string getPathUploadedFiles() const { return path + "/" + K_UPLOADED_FILES_DIR; }
     ProjectConfig getConfig() const;
     inline void setConfig(ProjectConfig pconfig) { config = pconfig; }
