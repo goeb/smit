@@ -158,20 +158,42 @@ int getProjects(const std::string &rooturl, const std::string &destdir, const st
     return 0;
 }
 
+struct PullContext {
+    std::string rooturl; // eg: http://example.com:8090/
+    std::string localRepo; // path to local repository
+    std::string sessid; // session identifier
+};
+
+/** Download entries, starting at the given iterator
+  */
+void downloadEntries(const PullContext &pullCtx, const Project &p, const Issue &i, const std::list<std::string> &remoteEntries, std::list<std::string>::iterator reid)
+{
+    while (reid != remoteEntries.end()) {
+        std::string remoteEid = *reid;
+        std::string resource = "/" + p.getUrlName() + "/issues/" + i.id + "/" + remoteEid;
+        HttpRequest hr(pullCtx.sessid);
+        hr.setUrl(pullCtx.rooturl, resource);
+        hr.setRepository(pullCtx.localRepo);
+        hr.doCloning(false, 0);
+        reid++;
+    }
+}
+
+
 /** Pull an issue
   *
   * If the remote issue conflicts with a local issue:
   * - rename the local issue (thus changing its id)
   * - clone the remote issue
   */
-int pullIssue(const std::string &rooturl, const std::string &localRepo, const std::string &sessid, Project &p, const Issue &i)
+int pullIssue(const PullContext &pullCtx, Project &p, const Issue &i)
 {
     // compare the remote and local issue
     // get the first entry of the issue
     // check conflict on issue id*
     std::string resource = "/" + p.getUrlName() + "/issues/" + i.id;
-    HttpRequest hr(sessid);
-    hr.setUrl(rooturl, resource);
+    HttpRequest hr(pullCtx.sessid);
+    hr.setUrl(pullCtx.rooturl, resource);
     hr.getRequestLines();
     hr.closeCurl(); // free the curl resource
 
@@ -212,9 +234,9 @@ int pullIssue(const std::string &rooturl, const std::string &localRepo, const st
 
         // clone the remote issue
         resource = "/" + p.getUrlName() + "/issues/" + i.id;
-        HttpRequest hr(sessid);
-        hr.setUrl(rooturl, resource);
-        hr.setRepository(localRepo);
+        HttpRequest hr(pullCtx.sessid);
+        hr.setUrl(pullCtx.rooturl, resource);
+        hr.setRepository(pullCtx.localRepo);
         hr.doCloning(true, 0);
 
     } else {
@@ -231,14 +253,13 @@ int pullIssue(const std::string &rooturl, const std::string &localRepo, const st
 
             if (!localEntry) {
                 // remote issue has more entries. download them locally
-                resource = "/" + p.getUrlName() + "/issues/" + i.id + "/" + remoteEid;
-                HttpRequest hr(sessid);
-                hr.setUrl(rooturl, resource);
-                hr.setRepository(localRepo);
-                hr.doCloning(false, 0);
 
-                // load this entry in memory
-                // TODO p.loadEntries()
+                downloadEntries(pullCtx, p, i, hr.lines, reid);
+
+                // reload the issue in memory
+                // i.reload();
+
+                break; // leave the loop as all the remaining remotes have been managed by downloadEntries
 
             } else if (localEntry->id != remoteEid) {
                 // the entries diverge
@@ -265,8 +286,8 @@ int pullIssue(const std::string &rooturl, const std::string &localRepo, const st
 
                 // download the remote entry
                 resource = "/" + p.getUrlName() + "/issues/" + i.id + "/" + remoteEid;
-                HttpRequest hr(sessid);
-                hr.setUrl(rooturl, resource);
+                HttpRequest hr(pullCtx.sessid);
+                hr.setUrl(pullCtx.rooturl, resource);
                 hr.setDownloadDir(tmpPath);
                 hr.doCloning(false, 0);
 
@@ -303,12 +324,12 @@ int pullIssue(const std::string &rooturl, const std::string &localRepo, const st
     return 0; // ok
 }
 
-int pullProject(const std::string &rooturl, const std::string &localRepo, const std::string &sessid, Project &p)
+int pullProject(const PullContext &pullCtx, Project &p)
 {
     // get the remote issues
-    HttpRequest hr(sessid);
+    HttpRequest hr(pullCtx.sessid);
     std::string resource = "/" + p.getUrlName() + "/issues/";
-    hr.setUrl(rooturl, resource);
+    hr.setUrl(pullCtx.rooturl, resource);
     hr.getRequestLines();
     hr.closeCurl(); // free the resource
 
@@ -326,13 +347,13 @@ int pullProject(const std::string &rooturl, const std::string &localRepo, const 
             // simply clone the remote issue
             LOGV("Cloning issue: %s/issues/%s\n", p.getName().c_str(), id.c_str());
             resource = "/" + p.getUrlName() + "/issues/" + id;
-            HttpRequest hr(sessid);
-            hr.setUrl(rooturl, resource);
-            hr.setRepository(localRepo);
+            HttpRequest hr(pullCtx.sessid);
+            hr.setUrl(pullCtx.rooturl, resource);
+            hr.setRepository(pullCtx.localRepo);
             hr.doCloning(true, 0);
         } else {
             LOGV("Pulling issue: %s/issues/%s\n", p.getName().c_str(), id.c_str());
-            pullIssue(rooturl, localRepo, sessid, p, i);
+            pullIssue(pullCtx, p, i);
         }
     }
     return 0; // ok
@@ -345,21 +366,22 @@ int pullProject(const std::string &rooturl, const std::string &localRepo, const 
   *
   * Things not pulled: tags, views, project config, files in html, public, etc.
   */
-int pullProjects(const std::string &rooturl, const std::string &localRepo, const std::string &sessid)
+int pullProjects(const PullContext &pullCtx)
+
 {
     // set log level to hide INFO logs
     setLoggingLevel(LL_ERROR);
 
     // Load all local projects
-    int r = dbLoad(localRepo.c_str());
+    int r = dbLoad(pullCtx.localRepo.c_str());
     if (r < 0) {
-        fprintf(stderr, "Cannot load repository '%s'. Aborting.", localRepo.c_str());
+        fprintf(stderr, "Cannot load repository '%s'. Aborting.", pullCtx.localRepo.c_str());
         exit(1);
     }
 
     // get the list of remote projects
-    HttpRequest hr(sessid);
-    hr.setUrl(rooturl, "/");
+    HttpRequest hr(pullCtx.sessid);
+    hr.setUrl(pullCtx.rooturl, "/");
     hr.getRequestLines();
 
     std::list<std::string>::iterator projectName;
@@ -373,7 +395,7 @@ int pullProjects(const std::string &rooturl, const std::string &localRepo, const
             fprintf(stderr, "remote project not existing locally. TODO. Exiting...\n");
             exit(1);
         }
-        pullProject(rooturl, localRepo, sessid, *p);
+        pullProject(pullCtx, *p);
     }
     return 0; //ok
 }
@@ -653,7 +675,11 @@ int cmdPull(int argc, char * const *argv)
     }
 
     // pull new entries and new attached files of all projects
-    int r = pullProjects(url, dir, sessid);
+    PullContext pullCtx;
+    pullCtx.rooturl = url;
+    pullCtx.localRepo = dir;
+    pullCtx.sessid = sessid;
+    int r = pullProjects(pullCtx);
 
     curl_global_cleanup();
 

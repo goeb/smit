@@ -381,6 +381,10 @@ void Project::computeAssociations()
         }
     }
 }
+/*int Project::loadIssue()
+{
+
+}*/
 
 int Project::loadEntries()
 {
@@ -413,7 +417,7 @@ int Project::loadEntries()
         } else {
             // we are in a issue directory
             Issue *issue = new Issue();
-            issue->id.assign(issueDir->d_name);
+            issue->id = issueDir->d_name;
 
             LOG_DEBUG("Loading issue: %s", issueDir->d_name);
 
