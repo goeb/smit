@@ -253,7 +253,6 @@ int Project::load()
 
     LOG_INFO("Project %s loaded: %d issues", path.c_str(), issues.size());
 
-    consolidateIssues();
     computeAssociations();
 
     return 0;
@@ -344,21 +343,6 @@ void Issue::consolidate()
     }
 }
 
-/** 1. Walk through all loaded issues and compute the head
-  *    if it was not found earlier during the loadEntries.
-  * 2. Once the head is found, walk through all the entries
-  *    and fulfill the properties of the issue.
-  */
-void Project::consolidateIssues()
-{
-    std::map<std::string, Issue*>::iterator i;
-    for (i = issues.begin(); i != issues.end(); i++) {
-        Issue *currentIssue = i->second;
-        currentIssue->consolidate();
-    }
-    LOG_DEBUG("consolidateIssues() done.");
-}
-
 /** computeAssociations
   * For each issue, look if it has some F_ASSOCIATION properties
   * and if so, then update the associations tables
@@ -381,10 +365,6 @@ void Project::computeAssociations()
         }
     }
 }
-/*int Project::loadIssue()
-{
-
-}*/
 
 int Project::loadEntries()
 {
@@ -409,45 +389,21 @@ int Project::loadEntries()
 
         std::string issuePath = pathToEntries;
         issuePath = issuePath + '/' + issueDir->d_name;
-        // open this subdir and look for all files of this subdir
-        DIR *issueDirHandle;
-        if ((issueDirHandle = opendir(issuePath.c_str())) == NULL) {
-            LOG_ERROR("Not a directory '%s'", issuePath.c_str());
-            continue; // not a directory
-        } else {
-            // we are in a issue directory
-            Issue *issue = new Issue();
-            issue->id = issueDir->d_name;
 
-            LOG_DEBUG("Loading issue: %s", issueDir->d_name);
-
-            // check the maximum id
+        Issue *issue = new Issue();
+        issue->id = issueDir->d_name;
+        int r = issue->load(issuePath);
+        if (r == 0) {
+            // update the maximum id
             int intId = atoi(issueDir->d_name);
             if (intId > 0 && (uint32_t)intId > localMaxId) localMaxId = intId;
 
+            // store the issue in memory
             issues[issue->id] = issue;
 
-            struct dirent *entryFile;
-            while ((entryFile = readdir(issueDirHandle)) != NULL) {
-                if (0 == strcmp(entryFile->d_name, ".")) continue;
-                if (0 == strcmp(entryFile->d_name, "..")) continue;
-                if (0 == strcmp(entryFile->d_name, K_DELETED)) continue;
-                if (0 == strcmp(entryFile->d_name, "_HEAD")) {
-                    // obsolete.
-                    LOG_INFO("Found obsolete _HEAD");
-                    continue;
-                }
-                // regular entry
-                LOG_DEBUG("Loading entry: %s", entryFile->d_name);
-
-                std::string filePath = issuePath + '/' + entryFile->d_name;
-                Entry *e = loadEntry(issuePath, entryFile->d_name);
-                if (e) issue->entries[e->id] = e;
-                else LOG_ERROR("Cannot load entry '%s'", filePath.c_str());
-            }
-
-            closedir(issueDirHandle);
-            issue->computeLatestEntry();
+        } else {
+            // error, file ignored
+            delete issue;
         }
     }
 
@@ -483,6 +439,45 @@ int Project::get(const std::string &issueId, Issue &issue) const
     return 0;
 }
 
+/** Load an issue from its directory
+  */
+int Issue::load(const std::string &issuePath)
+{
+    path = issuePath;
+    LOG_DEBUG("Loading issue: %s", path.c_str());
+    // open the directory and look for all files of this directory
+    DIR *issueDirHandle;
+    if ((issueDirHandle = opendir(path.c_str())) == NULL) {
+        LOG_ERROR("Not a directory '%s'", path.c_str());
+        return -1; // not a directory
+    }
+
+    struct dirent *entryFile;
+    while ((entryFile = readdir(issueDirHandle)) != NULL) {
+        if (0 == strcmp(entryFile->d_name, ".")) continue;
+        if (0 == strcmp(entryFile->d_name, "..")) continue;
+        if (0 == strcmp(entryFile->d_name, K_DELETED)) continue;
+        if (0 == strcmp(entryFile->d_name, "_HEAD")) {
+            // obsolete.
+            LOG_INFO("Found obsolete _HEAD");
+            continue;
+        }
+        // regular entry
+        LOG_DEBUG("Loading entry: %s", entryFile->d_name);
+
+        std::string filePath = path + '/' + entryFile->d_name;
+        Entry *e = loadEntry(path, entryFile->d_name);
+        if (e) entries[e->id] = e;
+        else LOG_ERROR("Cannot load entry '%s'", filePath.c_str());
+    }
+
+    closedir(issueDirHandle);
+    computeLatestEntry();
+    consolidate();
+
+    return 0;
+}
+
 /** Guess the head from the previously loaded entries
   *
   * And resolve missing nodes.
@@ -491,9 +486,6 @@ int Issue::computeLatestEntry()
 {
     std::map<std::string, Entry*>::iterator eit;
     FOREACH(eit, entries) {
-
-        // TODO if entry is marked as merge-pending, then keep it apart
-
         Entry *e = eit->second;
         if (e->parent == K_PARENT_NULL) e->prev = 0;
         else {
@@ -1128,6 +1120,8 @@ void Project::updateMaxIssueId(uint32_t i)
     if (i > maxIssueId) maxIssueId = i;
 }
 
+/** Reload a whole project
+  */
 int Project::reload()
 {
     LOG_INFO("Reloading project '%s'...", getName().c_str());

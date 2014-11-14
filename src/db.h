@@ -43,6 +43,7 @@ struct Entry {
 // An issue is consolidated over all its entries
 struct Issue {
     std::string id; // same as the first entry
+    std::string path; // path of the directory where the issue is stored
     Entry *latest; // the latest entry
     int ctime; // creation time (the one of the first entry)
     int mtime; // modification time (the one of the last entry)
@@ -65,6 +66,9 @@ struct Issue {
     bool searchFullText(const char *text) const;
     int getNumberOfTaggedIEntries(const std::string &tagId) const;
     Entry *getEntry(const std::string id);
+
+    int load(const std::string &issuePath);
+
 };
 
 
@@ -177,10 +181,8 @@ private:
     int loadEntries();
     void loadPredefinedViews();
     void loadTags();
-    void consolidateIssues();
     void computeAssociations();
 
-    void consolidateIssue(Issue *i);
     void cleanupMultiselect(std::list<std::string> &values, const std::list<std::string> &selectOptions);
 
     int storeViewsToFile();

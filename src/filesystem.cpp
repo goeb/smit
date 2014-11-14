@@ -21,6 +21,7 @@
 #include <fstream>
 #include <stdlib.h>
 #include <dirent.h>
+#include <string.h>
 
 #include "filesystem.h"
 #include "logging.h"

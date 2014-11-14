@@ -256,9 +256,6 @@ int pullIssue(const PullContext &pullCtx, Project &p, const Issue &i)
 
                 downloadEntries(pullCtx, p, i, hr.lines, reid);
 
-                // reload the issue in memory
-                // i.reload();
-
                 break; // leave the loop as all the remaining remotes have been managed by downloadEntries
 
             } else if (localEntry->id != remoteEid) {
