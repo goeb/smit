@@ -1,3 +1,9 @@
+v2.1.0, 20 Nov 2014
+
+    - improve advanced search filtering with more usage-friendly AND/OR
+      combination
+    - fix smit ui session
+
 v2.0.2, 10 Oct 2014
 
     - fix freezed login page (caused by cookie 'view')
