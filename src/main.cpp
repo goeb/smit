@@ -422,8 +422,8 @@ int helpServe()
            "                         set HTTPS.\n"
            "                         <certificate> must be a PEM certificate,\n"
            "                         including public and private key.\n"
-           "  --url-rewriting-root\n"
-           "                         set URL-rewriting root\n"
+           "  --url-rewrite-root\n"
+           "                         set URL-rewriting root, for usage through a reverse proxy.\n"
            );
     return 1;
 }
@@ -442,7 +442,7 @@ int serveRepository(int argc, char **argv)
     struct option longOptions[] = {
         {"listen-port", 1, 0, 0},
         {"ssl-cert", 1, 0, 0},
-        {"url-rewriting-root", 1, 0, 0},
+        {"url-rewrite-root", 1, 0, 0},
         {NULL, 0, NULL, 0}
     };
     optind = 1; // reset this in case cmdUi has already parsed with getopt_long
@@ -451,7 +451,7 @@ int serveRepository(int argc, char **argv)
         case 0: // manage long options
             if (0 == strcmp(longOptions[optionIndex].name, "listen-port")) listenPort = optarg;
             else if (0 == strcmp(longOptions[optionIndex].name, "ssl-cert")) certificatePemFile = optarg;
-            else if (0 == strcmp(longOptions[optionIndex].name, "url-rewriting-root")) urlRewritingRoot = optarg;
+            else if (0 == strcmp(longOptions[optionIndex].name, "url-rewrite-root")) urlRewritingRoot = optarg;
             break;
         case 'd':
             setLoggingLevel(LL_DEBUG);
@@ -498,8 +498,9 @@ int serveRepository(int argc, char **argv)
     mc.setRequestHandler(begin_request_handler);
 
     if (urlRewritingRoot) mc.setUrlRewritingRoot(urlRewritingRoot);
-
-    LOG_INFO("Starting http server on port %s", listenPort.c_str());
+    std::string serverMsg = "Starting http server on port " + listenPort;
+    if (urlRewritingRoot) serverMsg += std::string(" --url-rewrite-root ") + urlRewritingRoot;
+    LOG_INFO("%s", serverMsg.c_str());
 
     mc.addParam("listening_ports");
     mc.addParam(listenPort.c_str());
