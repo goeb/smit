@@ -972,7 +972,8 @@ void printFilters(const ContextParameters &ctx)
         ctx.req->printf("<div class=\"sm_issues_filters\">");
         if (!ctx.search.empty()) ctx.req->printf("search: %s<br>", htmlEscape(ctx.search).c_str());
         if (!ctx.filterin.empty()) ctx.req->printf("filterin: %s<br>", htmlEscape(toString(ctx.filterin)).c_str());
-        if (!ctx.filterout.empty()) ctx.req->printf("filterout: %s", htmlEscape(toString(ctx.filterout)).c_str());
+        if (!ctx.filterout.empty()) ctx.req->printf("filterout: %s<br>", htmlEscape(toString(ctx.filterout)).c_str());
+        if (!ctx.sort.empty())  ctx.req->printf("sort: %s<br>", htmlEscape(ctx.sort).c_str());
         ctx.req->printf("</div>");
     }
 }
