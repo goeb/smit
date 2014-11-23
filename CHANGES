@@ -1,3 +1,7 @@
+v2.2.0
+
+    - support for root-URL rewriting (for using behind a reverse proxy)
+
 v2.1.0, 20 Nov 2014
 
     - improve advanced search filtering with more usage-friendly AND/OR
