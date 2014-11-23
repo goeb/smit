@@ -31,6 +31,7 @@
 
 #include "db.h"
 #include "parseConfig.h"
+#include "filesystem.h"
 #include "logging.h"
 #include "identifiers.h"
 #include "global.h"
@@ -91,7 +92,7 @@ int dbLoad(const char * pathToRepository)
         }
         closedir(dirp);
     }
-    return Database::Db.projects.size();
+    return Database::Db.getNumProjects();
 }
 
 
@@ -250,7 +251,7 @@ int Project::load()
 
     loadTags();
 
-    LOG_INFO("Project %s loaded.", path.c_str());
+    LOG_INFO("Project %s loaded: %d issues", path.c_str(), issues.size());
 
     consolidateIssues();
     computeAssociations();
@@ -295,11 +296,6 @@ Entry *loadEntry(std::string dir, const char* basename)
         else {
             e->properties[key] = *line;
         }
-    }
-    // if value is not 1.x, then raise a warning
-    if (smitVersion.empty() || 0 != strncmp("1.", smitVersion.c_str(), 2)) {
-        LOG_INFO("Version %s of entry %s higher than current Smit version (%s). Check compatibility.",
-                 smitVersion.c_str(), basename, VERSION);
     }
 
     return e;
@@ -391,6 +387,8 @@ int Project::loadEntries()
     // load files path/issues/*/*
     std::string pathToEntries = path;
     pathToEntries = pathToEntries + '/' + ISSUES;
+    LOG_DEBUG("Loading issues: %s", pathToEntries.c_str());
+
     DIR *entriesDirHandle;
     if ((entriesDirHandle = opendir(pathToEntries.c_str())) == NULL) {
         LOG_ERROR("Cannot open directory '%s'", pathToEntries.c_str());
@@ -409,11 +407,15 @@ int Project::loadEntries()
         issuePath = issuePath + '/' + issueDir->d_name;
         // open this subdir and look for all files of this subdir
         DIR *issueDirHandle;
-        if ((issueDirHandle = opendir(issuePath.c_str())) == NULL) continue; // not a directory
-        else {
+        if ((issueDirHandle = opendir(issuePath.c_str())) == NULL) {
+            LOG_ERROR("Not a directory '%s'", issuePath.c_str());
+            continue; // not a directory
+        } else {
             // we are in a issue directory
             Issue *issue = new Issue();
             issue->id.assign(issueDir->d_name);
+
+            LOG_DEBUG("Loading issue: %s", issueDir->d_name);
 
             // check the maximum id
             int intId = atoi(issueDir->d_name);
@@ -432,6 +434,8 @@ int Project::loadEntries()
                     continue;
                 }
                 // regular entry
+                LOG_DEBUG("Loading entry: %s", entryFile->d_name);
+
                 std::string filePath = issuePath + '/' + entryFile->d_name;
                 Entry *e = loadEntry(issuePath, entryFile->d_name);
                 if (e) issue->entries[e->id] = e;
@@ -469,10 +473,9 @@ int Project::get(const std::string &issueId, Issue &issue) const
         // issue not found
         LOG_DEBUG("Issue not found: %s", issueId.c_str());
         return -1;
-    } else {
-        issue = *i;
     }
 
+    issue = *i;
     return 0;
 }
 
@@ -492,6 +495,11 @@ int Issue::computeLatestEntry()
                 Entry *parent = parentIt->second;
                 if (parent->next) {
                     // error: the next of the parent was already assigned
+                    //
+                    //  a <-- parent <-- c <-- e
+                    //              \--- d
+                    // We relocate d as a child of e.
+                    // TODO relocate after the date ?
                     LOG_ERROR("Entry '%s' has already a child: '%s'", parent->id.c_str(),
                               parent->next->id.c_str());
                     // try to resolve this
@@ -944,7 +952,7 @@ int Project::deletePredefinedView(const std::string &name)
 }
 
 
-PredefinedView Project::getDefaultView()
+PredefinedView Project::getDefaultView() const
 {
     ScopeLocker scopeLocker(lockerForConfig, LOCK_READ_ONLY);
     std::map<std::string, PredefinedView>::const_iterator i;
@@ -962,6 +970,11 @@ int Project::createProjectFiles(const char *repositoryPath, const char *projectN
         LOG_ERROR("Cannot create project with empty name");
         return -1;
     }
+    if (projectName[0] == '.') {
+        LOG_ERROR("Cannot create project with name starting with '.'");
+        return -1;
+    }
+
 
     resultingPath = std::string(repositoryPath) + "/" + Project::urlNameEncode(projectName);
     std::string path = resultingPath;
@@ -1128,7 +1141,7 @@ int Project::reload()
     return r;
 }
 
-int Project::getNumIssues()
+int Project::getNumIssues() const
 {
     ScopeLocker scopeLocker(locker, LOCK_READ_ONLY);
     return issues.size();
@@ -1259,7 +1272,7 @@ private:
   * sortingSpec: a list of pairs (ascending-order, property-name)
   *
   */
-void sort(std::vector<Issue*> &inout, const std::list<std::pair<bool, std::string> > &sortingSpec)
+void sort(std::vector<const Issue*> &inout, const std::list<std::pair<bool, std::string> > &sortingSpec)
 {
     if (sortingSpec.size()==0) return;
 
@@ -1267,13 +1280,10 @@ void sort(std::vector<Issue*> &inout, const std::list<std::pair<bool, std::strin
     std::sort(inout.begin(), inout.end(), ic);
 }
 
-enum FilterSearch {
-    PROPERTY_NOT_FILTERED,
-    PROPERTY_FILTERED_FOUND,
-    PROPERTY_FILTERED_NOT_FOUND
-};
-
 /** Look if the given multi-valued property is present in the given list
+  *
+  * The match may occur on a part of the value, and in a case insensitive manner.
+  *
   */
 bool isPropertyInFilter(const std::list<std::string> &propertyValue,
                         const std::list<std::string> &filteredValues)
@@ -1283,7 +1293,7 @@ bool isPropertyInFilter(const std::list<std::string> &propertyValue,
 
     FOREACH (fv, filteredValues) {
         FOREACH (v, propertyValue) {
-            if (mg_strcasestr(v->c_str(), fv->c_str())) return PROPERTY_FILTERED_FOUND;
+            if (mg_strcasestr(v->c_str(), fv->c_str())) return true;
         }
         if (fv->empty() && propertyValue.empty()) {
             // allow filtering for empty values
@@ -1293,7 +1303,9 @@ bool isPropertyInFilter(const std::list<std::string> &propertyValue,
     return false; // not found
 }
 
-/** Look if the given property is present in the given list
+/** Look if the given value is present in the given list
+  *
+  * Exact match
   */
 bool isPropertyInFilter(const std::string &propertyValue,
                         const std::list<std::string> &filteredValues)
@@ -1308,10 +1320,19 @@ bool isPropertyInFilter(const std::string &propertyValue,
 
 /**
   * @return
-  *    true, if the issue should be kept
-  *    false, if the issue should be excluded
+  *    true, if the issue does match the filter
+  *    false, if the issue does not match
+  *
+  * A logical OR is done for the filters on the same property
+  * and a logical AND is done between different properties.
+  * Example:
+  *    status:open, status:closed, author:john
+  * is interpreted as:
+  *    status == open OR status == closed
+  *    AND author == john
+  *
   */
-bool Issue::isInFilter(const std::map<std::string, std::list<std::string> > &filter)
+bool Issue::isInFilter(const std::map<std::string, std::list<std::string> > &filter) const
 {
     if (filter.empty()) return false;
 
@@ -1323,7 +1344,8 @@ bool Issue::isInFilter(const std::map<std::string, std::list<std::string> > &fil
 
         if (filteredProperty == K_ISSUE_ID) {
             // id
-            if (isPropertyInFilter(id, f->second)) return true;
+            // look if id matches one of the filter values
+            if (!isPropertyInFilter(id, f->second)) return false;
 
         } else {
             std::map<std::string, std::list<std::string> >::const_iterator p;
@@ -1332,10 +1354,10 @@ bool Issue::isInFilter(const std::map<std::string, std::list<std::string> > &fil
             if (p == properties.end()) fs = isPropertyInFilter("", f->second);
             else fs = isPropertyInFilter(p->second, f->second);
 
-            if (fs) return true;
+            if (!fs) return false;
         }
     }
-    return false;
+    return true;
 }
 
 /** search
@@ -1361,10 +1383,10 @@ bool Issue::isInFilter(const std::map<std::string, std::list<std::string> > &fil
   * filterIn=propA:valueA1, filterOut=propA:valueA1
   *     => filterOut takes precedence, valueA1 is excluded from the result
   */
-std::vector<Issue*> Project::search(const char *fulltextSearch,
+std::vector<const Issue*> Project::search(const char *fulltextSearch,
                                     const std::map<std::string, std::list<std::string> > &filterIn,
                                     const std::map<std::string, std::list<std::string> > &filterOut,
-                                    const char *sortingSpec)
+                                    const char *sortingSpec) const
 {
     ScopeLocker scopeLocker(locker, LOCK_READ_ONLY);
 
@@ -1374,12 +1396,12 @@ std::vector<Issue*> Project::search(const char *fulltextSearch,
     //     2. then, if fulltext is not null, walk through these issues and their
     //        related messages and keep those that contain <fulltext>
     //     3. then, do the sorting according to <sortingSpec>
-    std::vector<struct Issue*> result;
+    std::vector<const Issue*> result;
 
-    std::map<std::string, Issue*>::iterator i;
+    std::map<std::string, Issue*>::const_iterator i;
     for (i=issues.begin(); i!=issues.end(); i++) {
 
-        Issue* issue = i->second;
+        const Issue* issue = i->second;
         // 1. filters
         if (!filterIn.empty() && !issue->isInFilter(filterIn)) continue;
         if (!filterOut.empty() && issue->isInFilter(filterOut)) continue;
@@ -2028,6 +2050,23 @@ void Database::updateMaxIssueId(uint32_t i)
     if (i > Db.maxIssueId) Db.maxIssueId = i;
 }
 
+const Project *Database::getNext(const Project *p) const
+{
+    std::map<std::string, Project*>::const_iterator pit;
+
+    if (!p) {
+        // get the first item
+        pit = projects.begin();
+
+    } else {
+        pit = projects.find(p->getName());
+        if (pit == projects.end()) return 0;
+        pit++; // get next
+    }
+
+    if (pit == projects.end()) return 0;
+    else return pit->second;
+}
 
 
 std::string PredefinedView::getDirectionName(bool d)

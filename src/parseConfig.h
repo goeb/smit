@@ -7,11 +7,6 @@
 #include <list>
 
 std::list<std::list<std::string> > parseConfigTokens(const char *buf, size_t len);
-
-int loadFile(const char *filepath, const char **data);
-int writeToFile(const char *filepath, const std::string &data);
-int writeToFile(const char *filepath, const char *data, size_t len);
-
 std::list<std::string> parseColspec(const char *spec, const std::list<std::string> &knownProperties);
 std::string serializeSimpleToken(const std::string token);
 std::string serializeProperty(const std::string &key, const std::list<std::string> &values);

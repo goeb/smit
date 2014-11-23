@@ -29,8 +29,17 @@
 #include "stringTools.h"
 #include "mg_win32.h"
 #include "console.h"
+#include "filesystem.h"
+#include "db.h"
 
 bool Verbose = false;
+
+#define LOGV(...) do { if (Verbose) { printf(__VA_ARGS__); fflush(stdout);} } while (0)
+
+#define SMIT_DIR ".smit"
+#define PATH_SESSID SMIT_DIR "/sessid"
+#define PATH_URL SMIT_DIR "/remote"
+
 
 int helpClone()
 {
@@ -81,7 +90,8 @@ public:
     void post(const std::string &params);
     std::map<std::string, Cookie> cookies;
     std::list<std::string> lines; // fulfilled after calling getRequestLines()
-    void getAndStore(bool recursive, int recursionLevel);
+    void doCloning(bool recursive, int recursionLevel);
+    int test();
     void handleWriteToFile(void *data, size_t size);
     void openFile();
     void closeFile();
@@ -110,23 +120,235 @@ private:
 };
 
 
+int testSessid(const std::string url, const std::string &sessid)
+{
+    LOGV("testSessid(%s, %s)\n", url.c_str(), sessid.c_str());
 
+    HttpRequest hr(sessid);
+    hr.setUrl(url, "/");
+    int status = hr.test();
+    LOGV("status = %d\n", status);
+
+    if (status == 200) return 0;
+    return -1;
+
+}
 
 /** Get all the projects that we have read-access to.
   */
-int getProjects(const char *rooturl, const std::string &destdir, const std::string &sessid)
+int getProjects(const std::string &rooturl, const std::string &destdir, const std::string &sessid)
 {
-    if (Verbose) printf("getProjects(%s, %s, %s)\n", rooturl, destdir.c_str(), sessid.c_str());
+    LOGV("getProjects(%s, %s, %s)\n", rooturl.c_str(), destdir.c_str(), sessid.c_str());
 
     HttpRequest hr(sessid);
     hr.setUrl(rooturl, "/");
     hr.setRepository(destdir);
-    hr.getAndStore(true, 0);
+    hr.doCloning(true, 0);
 
     return 0;
 }
 
-std::string signin(const char *rooturl, const std::string &user, const std::string &passwd)
+int pullIssue(const std::string &rooturl, const std::string &localRepo, const std::string &sessid, Project &p, const Issue &i)
+{
+    // compare the remote and local issue
+    // get the first entry of the issue
+    // check conflict on issue id*
+    std::string resource = "/" + p.getUrlName() + "/issues/" + i.id;
+    HttpRequest hr(sessid);
+    hr.setUrl(rooturl, resource);
+    hr.getRequestLines();
+    hr.closeCurl(); // free the curl resource
+
+    if (hr.lines.empty() || hr.lines.front().empty()) {
+        // should not happen
+        fprintf(stderr, "Got remote issue with no entry: %s", i.id.c_str());
+        exit(1);
+    }
+
+    // get first entry of local issue
+    const Entry *e = i.latest;
+    while (e && e->prev) e = e->prev;
+    if (!e) {
+        // should not happen
+        fprintf(stderr, "Got local issue with no first entry: %s", i.id.c_str());
+        exit(1);
+    }
+
+    const Entry *localEntry = e;
+
+    if (localEntry->id != hr.lines.front())  {
+        // the remote issue and the local issue are not the same
+        // the local issue has to be renamed
+        LOGV("Issue %s: local (%s) and remote (%s) diverge", i.id.c_str(),
+             localEntry->id.c_str(), hr.lines.front().c_str());
+        // TODO propose to the user a new id for the issue
+    } else {
+        // same issue. Walk through the entries and pull...
+        std::list<std::string>::iterator reid;
+        FOREACH(reid, hr.lines) {
+            std::string remoteEid = *reid;
+            if (remoteEid.empty()) continue; // ignore (usually last item in the directory listing)
+
+            if (!localEntry) {
+                // remote issue has more entries. download them locally
+                resource = "/" + p.getUrlName() + "/issues/" + i.id + "/" + remoteEid;
+                printf("GET %s\n", resource.c_str());
+                HttpRequest hr(sessid);
+                hr.setUrl(rooturl, resource);
+                hr.setRepository(localRepo);
+                hr.doCloning(true, 0);
+                continue;
+
+            } else if (localEntry->id != remoteEid) {
+                // diverge
+                // TODO propose to the user to relocate his/her local entries after those of the remote.
+
+            } // else nothing to do: local and remote still aligned
+            localEntry = localEntry->next;
+        }
+    }
+
+    return 0; // ok
+}
+
+int pullProject(const std::string &rooturl, const std::string &localRepo, const std::string &sessid, Project &p)
+{
+    // get the remote issues
+    HttpRequest hr(sessid);
+    std::string resource = "/" + p.getUrlName() + "/issues/";
+    hr.setUrl(rooturl, resource);
+    hr.getRequestLines();
+    hr.closeCurl(); // free the resource
+
+    std::list<std::string>::iterator issueId;
+    FOREACH(issueId, hr.lines) {
+        std::string id = *issueId;
+        if (id.empty()) continue;
+        LOGV("Remote: %s/issues/%s\n", p.getName().c_str(), id.c_str());
+
+        // get the issue with same id in local repository
+        Issue i;
+        int r = p.get(id, i);
+
+        if (r < 0) {
+            // simply clone the remote issue
+            LOGV("Cloning issue: %s/issues/%s\n", p.getName().c_str(), id.c_str());
+            resource = "/" + p.getUrlName() + "/issues/" + id;
+            HttpRequest hr(sessid);
+            hr.setUrl(rooturl, resource);
+            hr.setRepository(localRepo);
+            hr.doCloning(true, 0);
+        } else {
+            LOGV("Pulling issue: %s/issues/%s\n", p.getName().c_str(), id.c_str());
+            pullIssue(rooturl, localRepo, sessid, p, i);
+        }
+    }
+    return 0; // ok
+}
+
+
+/** Pull issues of all local projects
+  * - pull entries
+  * - pull files
+  *
+  * Things not pulled: tags, views, project config, files in html, public, etc.
+  */
+int pullProjects(const std::string &rooturl, const std::string &localRepo, const std::string &sessid)
+{
+    // Load all local projects
+    int r = dbLoad(localRepo.c_str());
+    if (r < 0) {
+        fprintf(stderr, "Cannot load repository '%s'. Aborting.", localRepo.c_str());
+        exit(1);
+    }
+
+    // get the list of remote projects
+    HttpRequest hr(sessid);
+    hr.setUrl(rooturl, "/");
+    hr.getRequestLines();
+
+    std::list<std::string>::iterator projectName;
+    FOREACH(projectName, hr.lines) {
+        if ((*projectName) == "public") continue;
+        if (projectName->empty()) continue;
+
+        printf("Pulling entries of project: %s...\n", projectName->c_str());
+        Project *p = Database::Db.getProject(*projectName);
+        if (!p) {
+            fprintf(stderr, "remote project not existing locally. TODO. Exiting...\n");
+            exit(1);
+        }
+        int r = pullProject(rooturl, localRepo, sessid, *p);
+    }
+    return 0; //ok
+}
+
+std::string getSmitDir(const std::string &dir)
+{
+    return dir + "/" SMIT_DIR;
+}
+
+void createSmitDir(const std::string &dir)
+{
+    LOGV("createSmitDir(%s)...\n", dir.c_str());
+
+    mode_t mode = S_IRUSR | S_IWUSR | S_IXUSR;
+    int r = mg_mkdir(getSmitDir(dir).c_str(), mode);
+    if (r != 0) {
+        fprintf(stderr, "Cannot create directory '%s': %s\n", getSmitDir(dir).c_str(), strerror(errno));
+        fprintf(stderr, "Abort.\n");
+        exit(1);
+    }
+
+}
+// store sessid in .smit/sessid
+void storeSessid(const std::string &dir, const std::string &sessid)
+{
+    LOGV("storeSessid(%s, %s)...\n", dir.c_str(), sessid.c_str());
+    std::string path = dir + "/" PATH_SESSID;
+    int r = writeToFile(path.c_str(), sessid + "\n");
+    if (r < 0) {
+        fprintf(stderr, "Abort.\n");
+        exit(1);
+    }
+}
+
+std::string loadSessid(const std::string &dir)
+{
+    std::string path = dir + "/" PATH_SESSID;
+    std::string sessid;
+    loadFile(path.c_str(), sessid);
+    trim(sessid);
+
+    return sessid;
+}
+
+// store url in .smit/remote
+void storeUrl(const std::string &dir, const std::string &url)
+{
+    LOGV("storeUrl(%s, %s)...\n", dir.c_str(), url.c_str());
+    std::string path = dir + "/" PATH_URL;
+
+    int r = writeToFile(path.c_str(), url + "\n");
+    if (r < 0) {
+        fprintf(stderr, "Abort.\n");
+        exit(1);
+    }
+}
+
+std::string loadUrl(const std::string &dir)
+{
+    std::string path = dir + "/" PATH_URL;
+    std::string url;
+    loadFile(path.c_str(), url);
+    trim(url);
+
+    return url;
+}
+
+
+
+std::string signin(const std::string &rooturl, const std::string &user, const std::string &passwd)
 {
     HttpRequest hr("");
 
@@ -171,6 +393,7 @@ int cmdClone(int argc, char * const *argv)
             } else if (0 == strcmp(longOptions[optionIndex].name, "passwd")) {
                 passwd = optarg;
             }
+            break;
         case 'v':
             Verbose = true;
             break;
@@ -211,7 +434,7 @@ int cmdClone(int argc, char * const *argv)
     curl_global_init(CURL_GLOBAL_ALL);
 
     std::string sessid = signin(url, username, password);
-    if (Verbose) printf("%s=%s\n", SESSID, sessid.c_str());
+    LOGV("%s=%s\n", SESSID, sessid.c_str());
 
     if (sessid.empty()) {
         fprintf(stderr, "Authentication failed\n");
@@ -220,12 +443,130 @@ int cmdClone(int argc, char * const *argv)
 
     getProjects(url, dir, sessid);
 
+    // ceate persistent configuration of the local clone
+    createSmitDir(dir);
+    storeSessid(dir, sessid);
+    storeUrl(dir, url);
 
     curl_global_cleanup();
 
     return 0;
 }
 
+
+
+int helpPull()
+{
+    printf("Usage: smit pull\n"
+           "\n"
+           "  Incorporates changes from a remote repository into the local copy.\n"
+           "\n"
+           "Options:\n"
+           "  --user <user> --passwd <password> \n"
+           "               Give the user name and the password.\n"
+           "\n"
+           );
+    return 1;
+}
+
+
+int cmdPull(int argc, char * const *argv)
+{
+    std::string username;
+    const char *passwd = 0;
+
+    int c;
+    int optionIndex = 0;
+    struct option longOptions[] = {
+        {"user", 1, 0, 0},
+        {"passwd", 1, 0, 0},
+        {NULL, 0, NULL, 0}
+    };
+    while ((c = getopt_long(argc, argv, "v", longOptions, &optionIndex)) != -1) {
+        switch (c) {
+        case 0: // manage long options
+            if (0 == strcmp(longOptions[optionIndex].name, "user")) {
+                username = optarg;
+            } else if (0 == strcmp(longOptions[optionIndex].name, "passwd")) {
+                passwd = optarg;
+            }
+            break;
+        case 'v':
+            Verbose = true;
+            break;
+        case '?': // incorrect syntax, a message is printed by getopt_long
+            return helpPull();
+            break;
+        default:
+            printf("?? getopt returned character code 0x%x ??\n", c);
+            return helpPull();
+        }
+    }
+    // manage non-option ARGV elements
+    if (optind < argc) {
+        printf("Too many arguments.\n\n");
+        return helpPull();
+    }
+
+    const char *dir = "."; // local dir
+
+    // get the remote url from local configuration file
+    std::string url = loadUrl(dir);
+    if (url.empty()) {
+        printf("Cannot get remote url.\n");
+        exit(1);
+    }
+
+    curl_global_init(CURL_GLOBAL_ALL);
+    std::string sessid;
+    std::string password;
+    bool redoSigin = false;
+
+    if (username.empty()) {
+        // check if the sessid is valid
+        sessid = loadSessid(dir);
+        int r = testSessid(url, sessid);
+
+        if (r < 0) {
+            // failed (session may have expired), then prompt for user name/password
+            username = getString("Username: ", false);
+            password = getString("Password: ", true);
+
+            // and redo the signing-in
+            redoSigin = true;
+        }
+
+    } else {
+        // do the signing-in with the given username / password
+        password = passwd;
+        redoSigin = true;
+    }
+
+    if (redoSigin) {
+        sessid = signin(url, username, password);
+        if (!sessid.empty()) {
+            storeSessid(dir, sessid);
+            storeUrl(dir, url);
+        }
+    }
+
+    LOGV("%s=%s\n", SESSID, sessid.c_str());
+
+    if (sessid.empty()) {
+        fprintf(stderr, "Authentication failed\n");
+        return 1; // authentication failed
+    }
+
+    // TODO add a flag that says to fetch only new remote files
+    int r = pullProjects(url, dir, sessid);
+
+    curl_global_cleanup();
+
+    if (r < 0) return 1;
+    else return 0;
+
+
+}
 
 void HttpRequest::setUrl(const std::string &root, const std::string &path)
 {
@@ -241,24 +582,34 @@ void HttpRequest::setUrl(const std::string &root, const std::string &path)
 }
 
 
-void HttpRequest::getAndStore(bool recursive, int recursionLevel)
+/** Get files recursively through sub-directories
+  *
+  * @param recursionLevel
+  *    used to track the depth in the sub-directories
+  */
+void HttpRequest::doCloning(bool recursive, int recursionLevel)
 {
-    if (Verbose) printf("Entering getAndStore: resourcePath=%s\n", resourcePath.c_str());
+    LOGV("Entering doCloning: resourcePath=%s\n", resourcePath.c_str());
     curl_easy_setopt(curlHandle, CURLOPT_WRITEDATA, (void *)this);
     curl_easy_setopt(curlHandle, CURLOPT_WRITEFUNCTION, writeToFileCallback);
+
     performRequest();
+
     if (isDirectory && recursive) {
         // finalize received lines
         handleReceivedLines(0, 0);
 
+        // free some resource before going recursive
+        // force this cleanup before destructor of this HttpRequest instance
         closeCurl();
 
         std::string localPath = repository + resourcePath;
         trimRight(localPath, "/");
         if (recursionLevel < 2) printf("%s...\n", localPath.c_str());
 
+        // make current directory locally
         mode_t mode = S_IRUSR | S_IWUSR | S_IXUSR;
-        if (Verbose) printf("mkdir %s...\n", localPath.c_str());
+        LOGV("mkdir %s...\n", localPath.c_str());
         int r = mg_mkdir(localPath.c_str(), mode);
         if (r != 0) {
             fprintf(stderr, "Cannot create directory '%s': %s\n", localPath.c_str(), strerror(errno));
@@ -279,13 +630,13 @@ void HttpRequest::getAndStore(bool recursive, int recursionLevel)
             HttpRequest hr(sessionId);
             hr.setUrl(rooturl, subpath);
             hr.setRepository(repository);
-            hr.getAndStore(true, recursionLevel+1);
+            hr.doCloning(true, recursionLevel+1);
         }
     }
-	if (!isDirectory) {
+    if (!isDirectory) {
         // make sure that even an empty file gets created as well
         handleWriteToFile(0, 0);
-		closeFile();
+        if (fd) closeFile(); // it may happen that the file was not open in MODE_PULL
     }
 }
 
@@ -298,11 +649,21 @@ void HttpRequest::post(const std::string &params)
 }
 
 
-void HttpRequest::getRequestLines()
+
+int HttpRequest::test()
 {
+    curl_easy_setopt(curlHandle, CURLOPT_WRITEDATA, (void *)this);
     curl_easy_setopt(curlHandle, CURLOPT_WRITEFUNCTION, receiveLinesCallback);
     performRequest();
-    handleReceivedLines(0, 0);
+    return httpStatusCode;
+}
+
+void HttpRequest::getRequestLines()
+{
+    curl_easy_setopt(curlHandle, CURLOPT_WRITEDATA, (void *)this);
+    curl_easy_setopt(curlHandle, CURLOPT_WRITEFUNCTION, receiveLinesCallback);
+    performRequest();
+    handleReceivedLines(0, 0); // finalize the last line
 }
 
 
@@ -320,7 +681,7 @@ int Cookie::parse(std::string cookieLine)
     expiration = popToken(cookieLine, '\t');
     name = popToken(cookieLine, '\t');
     value = cookieLine;
-    if (Verbose) printf("cookie: %s = %s\n", name.c_str(), value.c_str());
+    LOGV("cookie: %s = %s\n", name.c_str(), value.c_str());
     return 0;
 }
 
@@ -328,7 +689,7 @@ void HttpRequest::performRequest()
 {
     CURLcode res;
 
-    if (Verbose) printf("resource: %s%s\n", rooturl.c_str(), resourcePath.c_str());
+    LOGV("resource: %s%s\n", rooturl.c_str(), resourcePath.c_str());
     res = curl_easy_perform(curlHandle);
 
     if(res != CURLE_OK) {
@@ -363,7 +724,7 @@ size_t HttpRequest::headerCallback(void *contents, size_t size, size_t nmemb, vo
     HttpRequest *hr = (HttpRequest*)userp;
     size_t realsize = size * nmemb;
 
-    if (Verbose) printf("HDR: %s", (char*)contents);
+    LOGV("HDR: %s", (char*)contents);
 
     if (hr->httpStatusCode == -1) {
         // this header should be the HTTP response code
@@ -398,11 +759,10 @@ void HttpRequest::handleReceivedRaw(void *data, size_t size)
     response.append((char*)data, size);
 }
 
-
 void HttpRequest::openFile()
 {
     filename = repository + resourcePath;
-    if (Verbose) printf("Opening file: %s\n", filename.c_str());
+    LOGV("Opening file: %s\n", filename.c_str());
     fd = fopen(filename.c_str(), "wbx");
     if (!fd) {
         fprintf(stderr, "Cannot create file '%s': %s\n", filename.c_str(), strerror(errno));
@@ -414,7 +774,19 @@ void HttpRequest::closeFile()
 {
     fclose(fd);
     fd = 0;
+    filename = "";
 }
+
+// Mode Pull
+// do not overwrite files
+// TODO force resolution of conflicting history
+//  A---B---C---E (remote entries)
+//           \
+//            D (local entry)
+// 2 alternatives:
+// - D relocated after E (modification of parent and of entry id)
+// - D removed (if user decides that D is made obsolete by E)
+
 
 void HttpRequest::handleWriteToFile(void *data, size_t size)
 {
@@ -424,6 +796,7 @@ void HttpRequest::handleWriteToFile(void *data, size_t size)
 
     } else {
         if (!fd) openFile();
+
         if (size) {
             size_t n = fwrite(data, size, 1, fd);
             if (n != 1) {
@@ -461,7 +834,7 @@ void HttpRequest::handleReceivedLines(const char *data, size_t size)
     size_t notConsumedOffset = 0;
     while (i < size) {
         if (data[i] == '\n') {
-            // clean up possible \r before the \n
+            // clean up character \r before the \n (if any)
             size_t endl = i;
             if (i > 0 && data[i-1] == '\r') endl--;
 

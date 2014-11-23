@@ -35,7 +35,7 @@
   * ContextParameters::projectConfig gets the config once at initilisation,
   * and afterwards one can work with the copy (without locking).
   */
-ContextParameters::ContextParameters(const RequestContext *request, const User &u, Project &p)
+ContextParameters::ContextParameters(const RequestContext *request, const User &u, const Project &p)
 {
     init(request, u);
     project = &p;
@@ -114,9 +114,9 @@ int loadProjectPage(const RequestContext *req, const std::string &projectPath, c
   */
 class VariableNavigator {
 public:
-    std::vector<struct Issue*> *issueList;
-    std::map<std::string, std::vector<Issue*> > *issuesOfAllProjects;
-    std::vector<struct Issue*> *issueListFullContents;
+    std::vector<const Issue*> *issueList;
+    std::map<std::string, std::vector<const Issue*> > *issuesOfAllProjects;
+    std::vector<const Issue*> *issueListFullContents;
     std::list<std::string> *colspec;
     const ContextParameters &ctx;
     const std::list<std::pair<std::string, std::string> > *projectList;
@@ -977,7 +977,7 @@ void printFilters(const ContextParameters &ctx)
     }
 }
 
-void RHtml::printIssueListFullContents(const ContextParameters &ctx, std::vector<struct Issue*> issueList)
+void RHtml::printIssueListFullContents(const ContextParameters &ctx, std::vector<const Issue*> issueList)
 {
     ctx.req->printf("<div class=\"sm_issues\">\n");
 
@@ -987,7 +987,7 @@ void RHtml::printIssueListFullContents(const ContextParameters &ctx, std::vector
                     _("Issues found"), L(issueList.size()));
 
 
-    std::vector<struct Issue*>::iterator i;
+    std::vector<const Issue*>::const_iterator i;
     if (!ctx.project) {
         LOG_ERROR("Null project");
         return;
@@ -1014,22 +1014,21 @@ void RHtml::printIssueListFullContents(const ContextParameters &ctx, std::vector
 
 }
 
-/** concatenate a param to the URL (add ? or &)
+/** concatenate a param to the query string (add ? or &)
   */
-std::string urlAdd(const RequestContext *req, const char *param)
+std::string queryStringAdd(const RequestContext *req, const char *param)
 {
 
-    std::string uri = req->getUri();
     std::string qs = req->getQueryString();
 
-    std::string url = uri + '?';
+    std::string url = "?";
     if (qs.size() > 0) url = url + qs + '&' + param;
     else url += param;
 
     return url;
 }
 
-void RHtml::printIssueList(const ContextParameters &ctx, const std::vector<struct Issue*> &issueList,
+void RHtml::printIssueList(const ContextParameters &ctx, const std::vector<const Issue*> &issueList,
                            const std::list<std::string> &colspec, bool showOtherFormats)
 {
     ctx.req->printf("<div class=\"sm_issues\">\n");
@@ -1038,9 +1037,9 @@ void RHtml::printIssueList(const ContextParameters &ctx, const std::vector<struc
     if (showOtherFormats) {
         ctx.req->printf("<div class=\"sm_issues_other_formats\">");
         ctx.req->printf("<a href=\"%s\" class=\"sm_issues_other_formats\">csv</a> ",
-                        urlAdd(ctx.req, "format=csv").c_str());
+                        queryStringAdd(ctx.req, "format=csv").c_str());
         ctx.req->printf("<a href=\"%s\" class=\"sm_issues_other_formats\">full-contents</a></div>\n",
-                        urlAdd(ctx.req, "full=1").c_str());
+                        queryStringAdd(ctx.req, "full=1").c_str());
     }
 
     printFilters(ctx);
@@ -1072,7 +1071,7 @@ void RHtml::printIssueList(const ContextParameters &ctx, const std::vector<struc
     ctx.req->printf("</tr>\n");
 
     // print the rows of the issues
-    std::vector<struct Issue*>::const_iterator i;
+    std::vector<const Issue*>::const_iterator i;
     for (i=issueList.begin(); i!=issueList.end(); i++) {
 
         if (! group.empty() &&
@@ -1097,8 +1096,8 @@ void RHtml::printIssueList(const ContextParameters &ctx, const std::vector<struc
             else if (column == "ctime") text << epochToStringDelta((*i)->ctime);
             else if (column == "mtime") text << epochToStringDelta((*i)->mtime);
             else {
-                std::map<std::string, std::list<std::string> >::iterator p;
-                std::map<std::string, std::list<std::string> > & properties = (*i)->properties;
+                std::map<std::string, std::list<std::string> >::const_iterator p;
+                const std::map<std::string, std::list<std::string> > & properties = (*i)->properties;
 
                 p = properties.find(column);
                 if (p != properties.end()) text << toString(p->second);
@@ -1127,11 +1126,11 @@ void RHtml::printIssueList(const ContextParameters &ctx, const std::vector<struc
 }
 
 void RHtml::printIssuesAccrossProjects(ContextParameters ctx,
-                                       const std::map<std::string, std::vector<struct Issue*> >&issues,
+                                       const std::map<std::string, std::vector<const Issue*> >&issues,
                                        const std::list<std::string> &colspec)
 {
     ctx.req->printf("<div class=\"sm_accross_issues\">");
-    std::map<std::string, std::vector<struct Issue*> >::const_iterator i;
+    std::map<std::string, std::vector<const Issue*> >::const_iterator i;
     FOREACH(i, issues) {
         const Project *p = Database::Db.getProject(i->first);
         if (!p) continue;
@@ -1147,7 +1146,7 @@ void RHtml::printIssuesAccrossProjects(ContextParameters ctx,
 /** Print HTML page with the given issues and their full contents
   *
   */
-void RHtml::printPageIssuesFullContents(const ContextParameters &ctx, std::vector<struct Issue*> issueList)
+void RHtml::printPageIssuesFullContents(const ContextParameters &ctx, std::vector<const Issue*> issueList)
 {
     VariableNavigator vn("issues.html", ctx);
     vn.issueListFullContents = &issueList;
@@ -1155,7 +1154,7 @@ void RHtml::printPageIssuesFullContents(const ContextParameters &ctx, std::vecto
 }
 
 void RHtml::printPageIssueList(const ContextParameters &ctx,
-                               std::vector<struct Issue*> issueList, std::list<std::string> colspec)
+                               std::vector<const Issue*> issueList, std::list<std::string> colspec)
 {
     VariableNavigator vn("issues.html", ctx);
     vn.issueList = &issueList;
@@ -1163,7 +1162,7 @@ void RHtml::printPageIssueList(const ContextParameters &ctx,
     vn.printPage();
 }
 void RHtml::printPageIssueAccrossProjects(const ContextParameters &ctx,
-                                          std::map<std::string, std::vector<Issue*> > issues,
+                                          std::map<std::string, std::vector<const Issue*> > issues,
                                           std::list<std::string> colspec)
 {
     VariableNavigator vn("issuesAccross.html", ctx);

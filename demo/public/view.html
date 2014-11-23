@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html><head>
         <title>Configuration of Predefined Views</title>
-    <link href="SM_REWRITE_ROOT/public/style.css" type="text/css" rel="stylesheet">
+        <link href="../../public/style.css" type="text/css" rel="stylesheet">
         <meta content="text/html;charset=UTF-8" http-equiv="Content-Type">
-        <script src="SM_REWRITE_ROOT/sm/smit.js"></script>
+        <script src="../../sm/smit.js"></script>
         <style>
             h2 { padding: 0; margin: 0; font-size: medium;}
             td { padding-bottom: 1.5em; }
@@ -14,7 +14,7 @@
     </head>
     <body>
         <div style="position: fixed; top: 0; padding-top: 15px; width: 100%; background: white;">
-            <table><tr><td><img src="SM_REWRITE_ROOT/public/logo.png" class="logo" alt="Logo"></td>
+            <table><tr><td><img src="../../public/logo.png" class="logo" alt="Logo"></td>
                     <td>SM_DIV_NAVIGATION_GLOBAL SM_DIV_NAVIGATION_ISSUES</td></tr></table>
         </div>
 
@@ -52,10 +52,10 @@
                 <tr>
                     <td class="align_right">
                         <h2>Search text</h2>
-                        The search is done through all
-                        messages, names of uploaded files, 
+                        through all messages, names of uploaded files, 
                         properties, and authors of entries.<br>
-                        (case insensitive)
+                        (case insensitive)<br>
+                        The keyword <span class="tag">me</span> may be used to indicate the current signed-in user.
                     </td>
                     <td>
                         <input id="search" name="search" type="text">
@@ -71,7 +71,7 @@
                 <tr>
                     <td class="align_right">
                         <h2>Filter-Out</h2>
-                        Select the properties/values for which the issues will <b>not</b> be returned.
+                        Select the properties/values for which the issues shall <b>not</b> be returned.
                     </td>
                     <td>
                         <div id="filterout"></div>
@@ -81,8 +81,15 @@
                 </tr>
                 <tr>
                     <td colspan="2">
-                        Notes on search text and filters (in or out):
+                        Notes on filters (filter-in or filter-out):
                         <ul><li>The keyword <span class="tag">me</span> may be used on selectUser-typed properties to indicate the current signed-in user.
+
+                            <li>The matching is case insensitive.
+                            <li>When several criteria, they are logically combined as follows:
+                            <ul><li>criteria on same properties are combined with a logical OR
+                                <li>criteria on different properties are combined with a logical AND
+                            </ul>
+                            Example: status=open, status=closed, summary=xyz is interpreted as: (status=open OR status=closed) AND summary=xyz 
                         </ul>
                     </td>
                 </tr>

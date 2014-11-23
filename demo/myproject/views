@@ -1,5 +1,5 @@
-+smv 1.7.1
-addView "Deleted issues" \
++smv 2.0.2
+addView "Deleted issues-x" \
     filterin id deleted \
     filterin test_injection "'];</script><script>alert('x')</script>" \
 

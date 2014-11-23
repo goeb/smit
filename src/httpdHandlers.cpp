@@ -39,6 +39,7 @@
 #include "mg_win32.h"
 #include "cpio.h"
 #include "Trigger.h"
+#include "filesystem.h"
 
 #define K_ME "me"
 #define MAX_SIZE_UPLOAD (10*1024*1024)
@@ -1048,11 +1049,11 @@ enum IssueNavigation { ISSUE_NEXT, ISSUE_PREVIOUS };
   *     a string containing the url to redirect to
   *     "" if the next or previous the redirection could not be done
   */
-std::string getRedirectionToIssue(const Project &p, std::vector<struct Issue*> issueList,
+std::string getRedirectionToIssue(const Project &p, std::vector<const Issue*> issueList,
                     const std::string &issueId, IssueNavigation direction, const std::string &qs)
 {
     // get current issue
-    std::vector<struct Issue*>::const_iterator i;
+    std::vector<const Issue*>::const_iterator i;
     FOREACH(i, issueList) {
         if ((*i)->id == issueId) {
             break;
@@ -1094,14 +1095,14 @@ void httpIssuesAccrossProjects(const RequestContext *req, User u, const std::str
     std::string q = req->getQueryString();
     PredefinedView v = PredefinedView::loadFromQueryString(q); // unamed view, used as handle on the viewing parameters
 
-    std::map<std::string, std::vector<struct Issue*> > issues;
+    std::map<std::string, std::vector<const Issue*> > issues;
 
     // foreach project, get list of issues
     std::list<std::pair<std::string, std::string> >::const_iterator p;
     FOREACH(p, projectsAndRoles) {
         const std::string &project = p->first;
 
-        Project *p = Database::Db.getProject(project);
+        const Project *p = Database::Db.getProject(project);
         if (!p) continue;
 
         // replace user "me" if any...
@@ -1110,8 +1111,8 @@ void httpIssuesAccrossProjects(const RequestContext *req, User u, const std::str
         replaceUserMe(vcopy.filterout, *p, u.username);
         if (vcopy.search == "me") vcopy.search = u.username;
 
-        std::vector<struct Issue*> issueList = p->search(vcopy.search.c_str(),
-                                                         vcopy.filterin, vcopy.filterout, vcopy.sort.c_str());
+        std::vector<const Issue*> issueList = p->search(vcopy.search.c_str(),
+                                                        vcopy.filterin, vcopy.filterout, vcopy.sort.c_str());
         issues[project] = issueList;
     }
 
@@ -1146,8 +1147,26 @@ void httpIssuesAccrossProjects(const RequestContext *req, User u, const std::str
 
 }
 
-void httpGetListOfIssues(const RequestContext *req, Project &p, User u)
+void httpCloneIssues(const RequestContext *req, const Project &p)
 {
+    const std::map<std::string, std::list<std::string> > filterIn;
+    const std::map<std::string, std::list<std::string> > filterOut;
+
+    sendHttpHeader200(req);
+    req->printf("Content-Type: text/directory\r\n\r\n");
+
+    // get all the issues, sorted by id
+    std::vector<const Issue*> issues = p.search(0, filterIn, filterOut, "id");
+    std::vector<const Issue*>::const_iterator i;
+    FOREACH(i, issues) {
+        req->printf("%s\n", (*i)->id.c_str());
+    }
+}
+
+void httpGetListOfIssues(const RequestContext *req, const Project &p, User u)
+{
+    if (getFormat(req) == X_SMIT) return httpCloneIssues(req, p); // used for cloning
+
     // get query string parameters:
     //     colspec    which fields are to be displayed in the table, and their order
     //     filter     select issues with fields of the given values
@@ -1176,7 +1195,7 @@ void httpGetListOfIssues(const RequestContext *req, Project &p, User u)
     if (v.search == "me") v.search = u.username;
 
 
-    std::vector<struct Issue*> issueList = p.search(v.search.c_str(),
+    std::vector<const Issue*> issueList = p.search(v.search.c_str(),
                                                     v.filterin, v.filterout, v.sort.c_str());
 
     // check for redirection to specific issue (used for previous/next)
@@ -1234,8 +1253,26 @@ void httpGetListOfIssues(const RequestContext *req, Project &p, User u)
     }
 }
 
-void httpGetProject(const RequestContext *req, Project &p, User u)
+void httpGetProject(const RequestContext *req, const Project &p, User u)
 {
+
+    if (getFormat(req) == X_SMIT) { // used for cloning
+        sendHttpHeader200(req);
+        req->printf("Content-Type: text/directory\r\n\r\n");
+
+        req->printf("files\n");
+        std::string path = p.getPath()+"/html";
+        if (fileExists(path)) req->printf("html\n");
+        req->printf("issues\n");
+        req->printf("project\n");
+        path = p.getPath()+"/tags";
+        if (fileExists(path)) req->printf("tags\n");
+        req->printf("views\n");
+        return;
+    }
+
+    // case of HTML web client
+
     // redirect to list of issues
     std::string url = "/";
     url += p.getUrlName() + "/issues?defaultView=1";
@@ -1472,18 +1509,42 @@ void httpReloadProject(const RequestContext *req, Project &p, User u)
 }
 
 
-void httpGetIssue(const RequestContext *req, Project &p, const std::string &issueId, User u)
+int httpGetIssue(const RequestContext *req, Project &p, const std::string &issueId, User u)
 {
     LOG_DEBUG("httpGetIssue: project=%s, issue=%s", p.getName().c_str(), issueId.c_str());
+    enum RenderingFormat format = getFormat(req);
 
     Issue issue;
     int r = p.get(issueId, issue);
     if (r < 0) {
         // issue not found or other error
-        sendHttpHeader500(req, "Cannot get issue");
+        // for example because the issueId has also the entry id: id/entry
+        return REQUEST_NOT_PROCESSED;
+
+    } else if (format == X_SMIT) {
+        // for cloning, print the entries in the right order
+        const Entry *e = issue.latest;
+
+        if (!e) {
+            std::string msg = "null entry for issue: ";
+            msg += issue.id;
+            sendHttpHeader500(req, msg.c_str());
+            return REQUEST_COMPLETED;
+        }
+
+        // rewind to oldest entry
+        while (e->prev) e = e->prev;
+
+        // print the entries in the rigth order
+        sendHttpHeader200(req);
+        req->printf("Content-Type: text/directory\r\n\r\n");
+
+        while (e) {
+           req->printf("%s\n", e->id.c_str());
+           e = e->next;
+        }
 
     } else {
-        enum RenderingFormat format = getFormat(req);
 
         sendHttpHeader200(req);
 
@@ -1502,6 +1563,7 @@ void httpGetIssue(const RequestContext *req, Project &p, const std::string &issu
             RHtml::printPageIssue(ctx, issue);
         }
     }
+    return REQUEST_COMPLETED;
 }
 
 /** Used for deleting an entry
@@ -1889,8 +1951,9 @@ int begin_request_handler(const RequestContext *req)
     // get signed-in user
     std::string sessionId;
     int r = getFromCookie(req, SESSID, sessionId);
-    User user;
-    if (r == 0) user = SessionBase::getLoggedInUser(sessionId);
+    // even if cookie not found, call getLoggedInUser in order to manage
+    // local user interface case (smit ui)
+    User user = SessionBase::getLoggedInUser(sessionId);
     // if username is empty, then no access is granted (only public pages will be available)
 
     if (user.username.empty()) return handleUnauthorizedAccess(req, false); // no user signed-in
@@ -1925,8 +1988,6 @@ int begin_request_handler(const RequestContext *req)
 
         // at this point the user has read access to the resource inside the project
 
-        if (getFormat(req) == X_SMIT && method == "GET") return httpGetFile(req); // used for cloning
-
         bool isdir = false;
         if (!uri.empty() && uri[uri.size()-1] == '/') isdir = true;
 
@@ -1940,12 +2001,13 @@ int begin_request_handler(const RequestContext *req)
             else httpDeleteEntry(req, *p, issueId, uri, user);
 
         } else if ( (resource == "issues") && (uri == "new") && (method == "GET") ) httpGetNewIssueForm(req, *p, user);
-        else if ( (resource == "issues") && (method == "GET") ) httpGetIssue(req, *p, uri, user);
+        else if ( (resource == "issues") && (method == "GET") ) return httpGetIssue(req, *p, uri, user);
         else if ( (resource == "config") && (method == "GET") ) httpGetProjectConfig(req, *p, user);
         else if ( (resource == "config") && (method == "POST") ) httpPostProjectConfig(req, *p, user);
-        else if ( (resource == "views") && (method == "GET") && !isdir && uri.empty()) sendHttpRedirect(req, "/" + projectUrl + "/views/", 0);
+        else if ( (resource == "views") && (method == "GET") && !isdir && uri.empty()) return httpGetFile(req);
         else if ( (resource == "views") && (method == "GET")) httpGetView(req, *p, uri, user);
         else if ( (resource == "views") && (method == "POST") ) httpPostView(req, *p, uri, user);
+        else if ( (resource == "tags") && (method == "GET") ) return httpGetFile(req);
         else if ( (resource == "tags") && (method == "POST") ) httpPostTag(req, *p, uri, user);
         else if ( (resource == "reload") && (method == "POST") ) httpReloadProject(req, *p, user);
         else handled = false;
@@ -1953,6 +2015,6 @@ int begin_request_handler(const RequestContext *req)
     }
 
     if (handled) return REQUEST_COMPLETED; // do not let Mongoose handle the request
-    else return REQUEST_NOT_PROCESSED; // let Mongoose handle the request
+    else return httpGetFile(req);
 }
 

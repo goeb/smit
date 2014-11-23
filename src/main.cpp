@@ -50,6 +50,7 @@ void usage()
            "  clone       Clone a smit repository\n"
            "  init        Initialise a smit repository\n"
            "  project     List, create, or update a smit project\n"
+           "  pull        Fetch from a remote repository\n"
            "  serve       Start a smit web server\n"
            "  user        List, create, or update a smit user\n"
            "  ui          Browse a local smit repository (read-only)\n"
@@ -212,11 +213,12 @@ int cmdProject(int argc, char **argv)
             return 1;
         }
         // list projects
-        std::map<std::string, Project*>::const_iterator p;
-        FOREACH(p, Database::Db.projects) {
-            printf("%s: %d issues\n", p->first.c_str(), p->second->getNumIssues());
+        const Project *p = Database::Db.getNext(0);
+        while (p) {
+            printf("%s: %d issues\n", p->getName().c_str(), p->getNumIssues());
+            p = Database::Db.getNext(p);
         }
-        printf("%lu project(s)\n", L(Database::Db.projects.size()));
+        printf("%lu project(s)\n", L(Database::Db.getNumProjects()));
         return 0;
     }
 
@@ -227,13 +229,12 @@ int cmdProject(int argc, char **argv)
         printf("Project created: %s\n", resultingPath.c_str());
     } else {
         // print project
-        std::map<std::string, Project*>::const_iterator p;
-        p = Database::Db.projects.find(projectName);
-        if (p == Database::Db.projects.end()) {
+        const Project* p = Database::Db.getProject(projectName);
+        if (!p) {
             printf("No such project: %s\n", projectName);
             return 1;
         }
-        printf("%s: %d issue(s)\n", p->first.c_str(), p->second->getNumIssues());
+        printf("%s: %d issue(s)\n", projectName, p->getNumIssues());
     }
     return 0;
 }
@@ -767,6 +768,9 @@ int main(int argc, char **argv)
 
         } else if (0 == strcmp(command, "clone")) {
             return cmdClone(argc-1, argv+1);
+
+        } else if (0 == strcmp(command, "pull")) {
+            return cmdPull(argc-1, argv+1);
 
         } else if (0 == strcmp(command, "ui")) {
             return cmdUi(argc-1, argv+1);
