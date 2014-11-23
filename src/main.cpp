@@ -424,7 +424,7 @@ int helpServe()
            "                         <certificate> must be a PEM certificate,\n"
            "                         including public and private key.\n"
            "  --url-rewrite-root\n"
-           "                         set URL-rewriting root, for usage through a reverse proxy.\n"
+           "                         set URL-rewriting root, for usage behind a reverse proxy.\n"
            );
     return 1;
 }
