@@ -165,15 +165,25 @@ struct PullContext {
 };
 
 /** Download entries, starting at the given iterator
+  *
+  * @param localDir
+  *    Specifies the location where the entries should be downloaded.
+  *    If empty, then the default location is used inside the local repository.
   */
-void downloadEntries(const PullContext &pullCtx, const Project &p, const Issue &i, const std::list<std::string> &remoteEntries, std::list<std::string>::iterator reid)
+void downloadEntries(const PullContext &pullCtx, const Project &p, const Issue &i,
+                     const std::list<std::string> &remoteEntries, std::list<std::string>::iterator reid, const std::string &localDir)
 {
+    LOGV("downloadEntries: %s ...", reid->c_str());
     while (reid != remoteEntries.end()) {
         std::string remoteEid = *reid;
         std::string resource = "/" + p.getUrlName() + "/issues/" + i.id + "/" + remoteEid;
         HttpRequest hr(pullCtx.sessid);
         hr.setUrl(pullCtx.rooturl, resource);
-        hr.setRepository(pullCtx.localRepo);
+        std::string downloadDir = localDir;
+
+        if (downloadDir.empty()) downloadDir = pullCtx.localRepo + resource;
+
+        hr.setDownloadDir(downloadDir);
         hr.doCloning(false, 0);
         reid++;
     }
@@ -254,12 +264,13 @@ int pullIssue(const PullContext &pullCtx, Project &p, const Issue &i)
             if (!localEntry) {
                 // remote issue has more entries. download them locally
 
-                downloadEntries(pullCtx, p, i, hr.lines, reid);
+                downloadEntries(pullCtx, p, i, hr.lines, reid, "");
 
                 break; // leave the loop as all the remaining remotes have been managed by downloadEntries
 
             } else if (localEntry->id != remoteEid) {
-                // the entries diverge
+                // remote issue has conflicting entries. download them locally in a separate directory
+
                 // remote: a--b--c--d
                 // local:  a--b--e
 
@@ -281,13 +292,10 @@ int pullIssue(const PullContext &pullCtx, Project &p, const Issue &i)
                     exit(1);
                 }
 
-                // download the remote entry
-                resource = "/" + p.getUrlName() + "/issues/" + i.id + "/" + remoteEid;
-                HttpRequest hr(pullCtx.sessid);
-                hr.setUrl(pullCtx.rooturl, resource);
-                hr.setDownloadDir(tmpPath);
-                hr.doCloning(false, 0);
+                // download all the remaining remote entries
+                downloadEntries(pullCtx, p, i, hr.lines, reid, tmpPath);
 
+                break; // leave the loop. Solving the conflict is handled below
 
 
             } // else nothing to do: local and remote still aligned
@@ -296,7 +304,9 @@ int pullIssue(const PullContext &pullCtx, Project &p, const Issue &i)
             if (localEntry) localEntry = localEntry->next;
         }
 
-        if (conflictingLocalEntry)   {
+        if (conflictingLocalEntry)   { // TODO move this block to a separate function
+            // handle the conflict on the issue
+
             // copy local entries to the tmp dir
             LOGV("Copying local entries to tmp dir");
             const Entry *e = firstEntry;
@@ -310,10 +320,45 @@ int pullIssue(const PullContext &pullCtx, Project &p, const Issue &i)
                 }
             }
 
-            // TODO load this tmp issue in memory (it is the same as the remote issue)
+            // load this tmp issue in memory (it is the same as the remote issue)
+            Issue remoteIssue;
+            int r = remoteIssue.load(tmpPath);
+            if (r != 0) {
+                fprintf(stderr, "Cannot load downloaded issue: %s\n", tmpPath.c_str());
+                fprintf(stderr, "Abort.\n");
+                exit(1);
+
+            }
+
+            // compute the remote part of the issue that is conflicting with local entries
+            std::string commonParent = conflictingLocalEntry->parent;
+            // look for this parent in the remote issue
+            Entry *re = remoteIssue.latest;
+            while (re && re->prev) re = re->prev; // rewind
+            while (re && re->id != commonParent) re = re->next;
+            if (!re) {
+                fprintf(stderr, "Cannot find remote common parent in locally downloaded issue: %s\n", commonParent.c_str());
+                fprintf(stderr, "Abort.\n");
+                exit(1);
+            }
+            Issue remoteConflictingIssuePart;
+            re = re->next; // start with the first conflicting entry
+            while (re) {
+                remoteConflictingIssuePart.consolidateIssueWithSingleEntry(re, true);
+                re = re->next;
+            }
+            // at this point, remoteConflictingIssuePart contains the conflicting remote part of the issue
+
+            // for each local conflicting entry, do the merge
+            // - either rewrite automatically the local entry:
+            //     + rewrite the parent,
+            //     + remove redundant properties changes
+            //     + keep the message and attached files, if any
+            // - or ask the user to merge some conflicting properties
+            // and add the +merge indication
             // TODO merge conflictingLocalEntry and followers into this tmp issue
 
-            //p.relocateEntry()
+            // TODO move the merge issue from tmp to official storage
         }
 
     }

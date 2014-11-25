@@ -25,6 +25,15 @@
 // Entry
 struct Entry {
     std::string parent; // id of the parent entry, empty if top-level
+
+    /** The id of an entry
+      * - must not start by a dot (reserved for hidden file)
+      * - must notcontain characters forbidden for file names (Linux and Windows):
+      *        <>:"/\|?*
+      * - must be unique case insensitively (as HTML identifiers are case insensitive)
+      *
+      * The ids of entries in the current implementation contain: lower case letters and digits
+      */
     std::string id; // unique id of this entry
     long ctime; // creation time
     std::string author;
