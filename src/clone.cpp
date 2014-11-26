@@ -189,6 +189,68 @@ void downloadEntries(const PullContext &pullCtx, const Project &p, const Issue &
     }
 }
 
+/** Merge a local entry into a remote branch (downloaded locally)
+  *
+  */
+void mergeEntry(const Entry *localEntry, const std::string &dir, const Issue &remoteIssue, const Issue &remoteConflictingIssuePart)
+{
+    Entry newEntry; // the resulting entry after the merging
+
+    // merge the properties
+    std::map<std::string, std::list<std::string> >::const_iterator localProperty;
+    FOREACH(localProperty, localEntry->properties) {
+        // look if the property has been modified on the remote side
+        std::string propertyName = localProperty->first;
+        std::list<std::string> localValue = localProperty->second;
+        std::map<std::string, std::list<std::string> >::const_iterator remoteProperty;
+        remoteProperty = remoteConflictingIssuePart.properties.find(propertyName);
+        if (remoteProperty == remoteConflictingIssuePart.properties.end()) {
+            // This property has not been changed on the remote side
+            // Keep it unchanged
+            newEntry.properties[propertyName] = localValue;
+        } else {
+            // This property has also been changed on the remote side.
+            if (localProperty->second == remoteProperty->second) {
+                // same value for this property
+                // do not keep it for the new entry
+            } else {
+                // This is a conflict.
+                std::list<std::string> remoteValue = remoteProperty->second;
+                printf("-- Conflict on issue %s: %s\n", remoteIssue.id.c_str(), remoteIssue.getSummary().c_str());
+                printf("Remote property: %s => %s\n", propertyName.c_str(), toString(remoteValue).c_str());
+                printf("Local property : %s => %s\n", propertyName.c_str(), toString(localValue).c_str());
+                printf("Select: (l)ocal, (r)emote: ");
+                std::string response;
+                while (response != "l" && response != "L" && response != "r" && response != "R") {
+                    std::cin >> response;
+                }
+                if (response == "l" && response == "L") {
+                    // keep the local property
+                    newEntry.properties[propertyName] = localValue;
+                } else {
+                    // keep the remote property
+                    newEntry.properties[propertyName] = remoteValue;
+                }
+            }
+        }
+    }
+
+    // merge the attached files
+    // TODO
+
+    // keep the message (ask for confirmation?)
+    if (localEntry->getMessage().size() > 0) {
+        // TODO
+    }
+
+    // check if this new entry must be kept
+    if (newEntry.getMessage().size() || newEntry.properties.size() > 0 /* TODO files */) {
+        // TODO
+        // store the new entry
+    }
+
+}
+
 
 /** Pull an issue
   *
@@ -357,6 +419,10 @@ int pullIssue(const PullContext &pullCtx, Project &p, const Issue &i)
             // - or ask the user to merge some conflicting properties
             // and add the +merge indication
             // TODO merge conflictingLocalEntry and followers into this tmp issue
+            while (conflictingLocalEntry) {
+                mergeEntry(conflictingLocalEntry, tmpPath, remoteIssue, remoteConflictingIssuePart);
+                conflictingLocalEntry = conflictingLocalEntry->next;
+            }
 
             // TODO move the merge issue from tmp to official storage
         }
