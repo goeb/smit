@@ -77,6 +77,9 @@ struct Issue {
     Entry *getEntry(const std::string id);
 
     int load(const std::string &issuePath);
+    Entry *addEntry(std::map<std::string, std::list<std::string> > properties,
+                    const std::string &username, const std::string &issueDir);
+
 
 };
 

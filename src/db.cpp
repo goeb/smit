@@ -101,6 +101,61 @@ std::string Issue::getSummary() const
     return getProperty(properties, "summary");
 }
 
+Entry *Issue::addEntry(std::map<std::string, std::list<std::string> > properties, const std::string &username, const std::string &issueDir)
+{
+    // create Entry object with properties
+    Entry *e = new Entry;
+    if (latest) e->parent = latest->id;
+    else e->parent = K_PARENT_NULL;
+    e->ctime = time(0);
+    //e->id
+    e->author = username;
+    e->properties = properties;
+
+    // modification time of the issue it the creation time of the latest entry
+    mtime = e->ctime;
+
+    // if the issue had no entries then set the creation time
+    if (!latest) ctime = e->ctime;
+
+    // update the chain list of entries
+    e->prev = latest;
+    if (latest) {
+        latest->next = e;
+    }
+    latest = e;
+
+    // serialize the entry
+    std::string data = e->serialize();
+
+    // generate a id for this entry
+    std::string newEntryId = getSha1(data.c_str(), data.size());
+
+    LOG_DEBUG("new entry: %s", newEntryId.c_str());
+
+    // check that this entry ID does not already exist
+    if (entries.find(newEntryId) != entries.end()) {
+        LOG_ERROR("Entry with same id already exists: %s", newEntryId.c_str());
+        return 0;
+    }
+    std::string pathOfIssue = issueDir + '/' + id;
+    std::string pathOfNewEntry = pathOfIssue + '/' + newEntryId;
+    int r = writeToFile(pathOfNewEntry.c_str(), data);
+    if (r != 0) {
+        // error.
+        LOG_ERROR("Could not write new entry to disk");
+        return 0;
+    }
+
+    // add this entry in Issue::entries
+    e->id = newEntryId;
+    entries[newEntryId] = e;
+
+    // consolidate the issue
+    consolidateIssueWithSingleEntry(e, true);
+}
+
+
 /** Get the specification of a given property
   *
   * @return 0 if not found.
@@ -1798,33 +1853,6 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
         LOG_DEBUG("properties: %s => %s", p->first.c_str(), join(p->second, ", ").c_str());
     }
 
-
-    Entry *parent;
-    if (i) parent = i->latest;
-    else parent = 0;
-
-    // create Entry object with properties
-    Entry *e = new Entry;
-    if (parent) e->parent = parent->id;
-    else e->parent = K_PARENT_NULL;
-    e->ctime = time(0);
-    //e->id
-    e->author = username;
-    e->properties = properties;
-
-    if (i) {
-        e->prev = parent;
-        parent->next = e;
-    }
-
-    // serialize the entry
-    std::string data = e->serialize();
-
-    // generate a id for this entry
-    std::string newEntryId = getSha1(data.c_str(), data.size());
-
-    LOG_DEBUG("new entry: %s", newEntryId.c_str());
-
     std::string pathOfNewEntry;
     std::string pathOfIssue;
 
@@ -1843,37 +1871,16 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
             return -1;
         }
         i = new Issue();
-        i->ctime = e->ctime;
         i->id = issueId;
 
         // add it to the internal memory
         issues[issueId] = i;
-
-    } else {
-        // check that this entry ID does not exist
-        if (i->entries.find(newEntryId) != i->entries.end()) {
-            LOG_ERROR("Entry with same id already exists: %s", newEntryId.c_str());
-            return -1;
-        }
-        pathOfIssue = path + '/' + ISSUES + '/' + issueId;
     }
 
-    pathOfNewEntry = pathOfIssue + '/' + newEntryId;
-    int r = writeToFile(pathOfNewEntry.c_str(), data);
-    if (r != 0) {
-        // error.
-        LOG_ERROR("Could not write new entry to disk");
-        return r;
-    }
+    std::string issueDir = path + '/' + ISSUES + '/' + issueId;
+    Entry *e = i->addEntry(properties, username, issueDir);
 
-    // add this entry in Project::entries
-    e->id = newEntryId;
-    i->entries[newEntryId] = e;
-
-    // consolidate the issue
-    i->consolidateIssueWithSingleEntry(e, true);
-    i->mtime = e->ctime;
-    i->latest = e;
+    if (!e) return -1;
 
     // if some association has been updated, then update the associations tables
     FOREACH(p, properties) {
@@ -1911,9 +1918,9 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
         }
     } // end of processing of uploaded files
 
-    entryId = newEntryId;
+    entryId = e->id;
 
-    return r;
+    return 0; // success
 }
 
 ProjectConfig Project::getConfig() const

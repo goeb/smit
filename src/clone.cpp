@@ -249,6 +249,11 @@ void mergeEntry(const Entry *localEntry, const std::string &dir, const Issue &re
         // store the new entry
     }
 
+
+//    Entry *addEntry(std::map<std::string, std::list<std::string> > properties,
+  //                  const std::string &username, const std::string &issueDir);
+
+
 }
 
 
