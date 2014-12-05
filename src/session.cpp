@@ -499,10 +499,10 @@ std::string SessionBase::createSession(const std::string &username)
     ScopeLocker(locker, LOCK_READ_WRITE);
 
     std::stringstream randomStr;
-    randomStr << std::hex << rand() << rand() << rand();
+    randomStr << std::hex << rand() << rand();
     Session s;
     s.ctime = time(0);
-    s.id = randomStr.str();
+    s.id = getSha1(randomStr.str());
     LOG_DEBUG("session-id: %s", s.id.c_str());
     s.username = username;
     s.duration = SESSION_DURATION;
