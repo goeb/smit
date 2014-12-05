@@ -502,6 +502,8 @@ std::string SessionBase::createSession(const std::string &username)
     randomStr << std::hex << rand() << rand();
     Session s;
     s.ctime = time(0);
+    // use sha1 in order to make difficult to predict session-id from previous session-ids
+    // (an attacker cannot know the randoms, and thus cannot predict the next randoms)
     s.id = getSha1(randomStr.str());
     LOG_DEBUG("session-id: %s", s.id.c_str());
     s.username = username;
