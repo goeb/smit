@@ -478,6 +478,17 @@ void httpGetUsers(const RequestContext *request, User signedInUser, const std::s
 {
     ContextParameters ctx = ContextParameters(request, signedInUser);
 
+    enum RenderingFormat format = getFormat(request);
+
+    if (format == X_SMIT) {
+        // print the list of the projects (for cloning tool)
+        sendHttpHeader200(request);
+        request->printf("Content-Type: text/plain\r\n\r\n");
+        request->printf("%s\n", signedInUser.serialize().c_str());
+        return;
+    }
+    // else serve page for normal HTML client
+
     if (username.empty() || username == "_") {
         // display form for a new user
         // only a superadmin may do this
@@ -736,6 +747,7 @@ void httpGetRoot(const RequestContext *req, User u)
            req->printf("%s\n", Project::urlNameEncode(p->first).c_str());
         }
         req->printf("public\n");
+        req->printf("users\n");
 
 
     } else {
