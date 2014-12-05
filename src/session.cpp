@@ -376,8 +376,6 @@ std::list<User> UserBase::getAllUsers()
 {
     std::list<User> result;
 
-    if (localUserInterface) return result;
-
     ScopeLocker(UserDb.locker, LOCK_READ_ONLY);
     std::map<std::string, User*>::const_iterator u;
     FOREACH(u, UserDb.configuredUsers) {
@@ -395,8 +393,6 @@ std::map<std::string, User*> configuredUsers;
   */
 enum Role User::getRole(const std::string &project) const
 {
-    if (UserBase::isLocalUserInterface()) return ROLE_RO;
-
     std::map<std::string, enum Role>::const_iterator r = rolesOnProjects.find(project);
     if (r == rolesOnProjects.end()) return ROLE_NONE;
     else return r->second;
@@ -450,9 +446,17 @@ std::string SessionBase::requestSession(const std::string &username, const std::
 User SessionBase::getLoggedInUser(const std::string &sessionId)
 {
     if (UserBase::isLocalUserInterface()) {
-        User u;
-        u.username = "local user";
-        return u;
+        // case of a command smit ui
+        // return the first user in database (there should be only one when the repo is a clone)
+        std::list<User> users = UserBase::getAllUsers();
+
+        std::list<User>::iterator uit = users.begin();
+        if (uit == users.end()) {
+            LOG_ERROR("getLoggedInUser: Cannot get local user");
+            User u;
+            return u;
+        }
+        return *(uit);
     }
 
     LOG_DEBUG("getLoggedInUser(%s)...", sessionId.c_str());

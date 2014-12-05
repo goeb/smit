@@ -480,12 +480,10 @@ int serveRepository(int argc, char **argv)
         LOG_ERROR("Cannot serve repository '%s'. Aborting.", repo);
         exit(1);
     }
-    if (!UserBase::isLocalUserInterface()) {
-        r = UserBase::init(repo);
-        if (r < 0) {
-            LOG_ERROR("Cannot loads users of repository '%s'. Aborting.", repo);
-            exit(1);
-        }
+    r = UserBase::init(repo);
+    if (r < 0) {
+        LOG_ERROR("Cannot loads users of repository '%s'. Aborting.", repo);
+        exit(1);
     }
 
     initHttpStats();
@@ -521,8 +519,6 @@ int serveRepository(int argc, char **argv)
 
     if (!UserBase::isLocalUserInterface()) {
         while (1) sleep(1); // block until ctrl-C
-        getchar();  // Wait until user hits "enter"
-        mc.stop();
     }
     // else, we return, and the cmdUi() will launch the web browser
     return 0;
