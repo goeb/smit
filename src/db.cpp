@@ -138,8 +138,7 @@ Entry *Issue::addEntry(std::map<std::string, std::list<std::string> > properties
         LOG_ERROR("Entry with same id already exists: %s", newEntryId.c_str());
         return 0;
     }
-    std::string pathOfIssue = issueDir + '/' + id;
-    std::string pathOfNewEntry = pathOfIssue + '/' + newEntryId;
+    std::string pathOfNewEntry = issueDir + '/' + newEntryId;
     int r = writeToFile(pathOfNewEntry.c_str(), data);
     if (r != 0) {
         // error.
@@ -153,6 +152,7 @@ Entry *Issue::addEntry(std::map<std::string, std::list<std::string> > properties
 
     // consolidate the issue
     consolidateIssueWithSingleEntry(e, true);
+    return e;
 }
 
 
