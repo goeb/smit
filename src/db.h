@@ -76,7 +76,7 @@ struct Issue {
     int getNumberOfTaggedIEntries(const std::string &tagId) const;
     Entry *getEntry(const std::string id);
 
-    int load(const std::string &issuePath);
+    int load(const std::string &issueId, const std::string &issuePath);
     Entry *addEntry(std::map<std::string, std::list<std::string> > properties,
                     const std::string &username, const std::string &issueDir);
 
@@ -149,6 +149,7 @@ struct ProjectConfig {
     std::string getLabelOfProperty(const std::string &propertyName) const;
     std::string getReverseLabelOfProperty(const std::string &propertyName) const;
     bool isValidPropertyName(const std::string &name) const;
+    static bool isValidProjectName(const std::string &name);
 };
 
 class Project {

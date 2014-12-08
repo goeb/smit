@@ -173,19 +173,20 @@ struct PullContext {
 void downloadEntries(const PullContext &pullCtx, const Project &p, const Issue &i,
                      const std::list<std::string> &remoteEntries, std::list<std::string>::iterator reid, const std::string &localDir)
 {
-    LOGV("downloadEntries: %s ...", reid->c_str());
-    while (reid != remoteEntries.end()) {
+    LOGV("downloadEntries: %s ...\n", reid->c_str());
+    for ( ; reid != remoteEntries.end(); reid++) {
+        if (reid->empty()) continue; // directory listing may end by an empty line
         std::string remoteEid = *reid;
-        std::string resource = "/" + p.getUrlName() + "/issues/" + i.id + "/" + remoteEid;
+        std::string resourceDir = "/" + p.getUrlName() + "/issues/" + i.id;
+        std::string resource = resourceDir + "/" + remoteEid;
         HttpRequest hr(pullCtx.sessid);
         hr.setUrl(pullCtx.rooturl, resource);
         std::string downloadDir = localDir;
 
-        if (downloadDir.empty()) downloadDir = pullCtx.localRepo + resource;
+        if (downloadDir.empty()) downloadDir = pullCtx.localRepo + resourceDir;
 
         hr.setDownloadDir(downloadDir);
         hr.doCloning(false, 0);
-        reid++;
     }
 }
 
@@ -347,11 +348,17 @@ int pullIssue(const PullContext &pullCtx, Project &p, const Issue &i)
 
                 // clean up if previous aborted merging left a such temporary dir
                 tmpPath = p.getTmpDir() + "/" + i.id;
+                LOGV("Removing directory: %s\n", tmpPath.c_str());
                 int r = removeDir(tmpPath);
                 if (r<0) exit(1);
 
                 // create the tmp dir
                 mode_t mode = S_IRUSR | S_IWUSR | S_IXUSR;
+                r = mg_mkdir(p.getTmpDir().c_str(), mode);
+                // if it could not be created because it already exists, ok, not an error
+                // if it could not be created fior another reason, the following mkdir will fail
+                // if no error, ok, continue.
+
                 r = mg_mkdir(tmpPath.c_str(), mode);
                 if (r != 0) {
                     fprintf(stderr, "Cannot create tmp directory '%s': %s\n", tmpPath.c_str(), strerror(errno));
@@ -375,21 +382,22 @@ int pullIssue(const PullContext &pullCtx, Project &p, const Issue &i)
             // handle the conflict on the issue
 
             // copy local entries to the tmp dir
-            LOGV("Copying local entries to tmp dir");
+            LOGV("Copying local entries to tmp dir\n");
             const Entry *e = firstEntry;
             while (e != 0 && e != conflictingLocalEntry) {
                 std::string path = tmpPath + "/" + e->id;
-                int r = writeToFile(tmpPath.c_str(), e->serialize());
+                int r = writeToFile(path.c_str(), e->serialize());
                 if (r != 0) {
                     fprintf(stderr, "Cannot store entry in tmp directory: %s\n", e->id.c_str());
                     fprintf(stderr, "Abort.\n");
                     exit(1);
                 }
+                e = e->next;
             }
 
             // load this tmp issue in memory (it is the same as the remote issue)
             Issue remoteIssue;
-            int r = remoteIssue.load(tmpPath);
+            int r = remoteIssue.load(i.id, tmpPath);
             if (r != 0) {
                 fprintf(stderr, "Cannot load downloaded issue: %s\n", tmpPath.c_str());
                 fprintf(stderr, "Abort.\n");
@@ -500,6 +508,7 @@ int pullProjects(const PullContext &pullCtx)
     std::list<std::string>::iterator projectName;
     FOREACH(projectName, hr.lines) {
         if ((*projectName) == "public") continue;
+        if ((*projectName) == "users") continue;
         if (projectName->empty()) continue;
 
         printf("Pulling entries of project: %s...\n", projectName->c_str());

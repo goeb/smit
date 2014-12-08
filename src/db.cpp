@@ -244,6 +244,16 @@ bool ProjectConfig::isValidPropertyName(const std::string &name) const
     return false;
 
 }
+/** Check if a name is valid for a project
+  *
+  * Characters \r and \n are forbidden
+  */
+bool ProjectConfig::isValidProjectName(const std::string &name)
+{
+    std::size_t found = name.find_first_of("\r\n");
+    if (found != std::string::npos) return false;
+    return true;
+}
 
 /** init and load in memory the given project
   *
@@ -446,8 +456,7 @@ int Project::loadEntries()
         issuePath = issuePath + '/' + issueDir->d_name;
 
         Issue *issue = new Issue();
-        issue->id = issueDir->d_name;
-        int r = issue->load(issuePath);
+        int r = issue->load(issueDir->d_name, issuePath);
         if (r == 0) {
             // update the maximum id
             int intId = atoi(issueDir->d_name);
@@ -496,8 +505,9 @@ int Project::get(const std::string &issueId, Issue &issue) const
 
 /** Load an issue from its directory
   */
-int Issue::load(const std::string &issuePath)
+int Issue::load(const std::string &issueId, const std::string &issuePath)
 {
+    id = issueId;
     path = issuePath;
     LOG_DEBUG("Loading issue: %s", path.c_str());
     // open the directory and look for all files of this directory

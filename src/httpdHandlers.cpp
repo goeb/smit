@@ -744,7 +744,7 @@ void httpGetRoot(const RequestContext *req, User u)
         req->printf("Content-Type: text/directory\r\n\r\n");
         std::list<std::pair<std::string, std::string> >::iterator p;
         FOREACH(p, pList) {
-           req->printf("%s\n", Project::urlNameEncode(p->first).c_str());
+           req->printf("%s\n", p->first.c_str());
         }
         req->printf("public\n");
         req->printf("users\n");
@@ -970,7 +970,14 @@ void httpPostProjectConfig(const RequestContext *req, Project &p, User u)
         }
 
         Project *ptr;
+        // check if project name is valid
+        if (!ProjectConfig::isValidProjectName(projectName)) {
+            sendHttpHeader400(req, "Invalid project name");
+            return;
+        }
+
         if (p.getName().empty()) {
+            // request to create a new project
             if (!u.superadmin) return sendHttpHeader403(req);
             if (projectName.empty()) {
                 sendHttpHeader400(req, "Empty project name");
