@@ -192,69 +192,103 @@ void downloadEntries(const PullContext &pullCtx, const Project &p, const Issue &
 
 /** Merge a local entry into a remote branch (downloaded locally)
   *
+  * @param remoteIssue
+  *      in/out: The remote issue instance is updated by the merging
   */
-void mergeEntry(const Entry *localEntry, const std::string &dir, const Issue &remoteIssue, const Issue &remoteConflictingIssuePart)
+void mergeEntry(const Entry *localEntry, const std::string &dir, Issue &remoteIssue, const Issue &remoteConflictingIssuePart)
 {
-    Entry newEntry; // the resulting entry after the merging
+    PropertiesMap newProperties; // the resulting properties of the new entry
 
     // merge the properties
+    // for each property in the local entry, look if it must be:
+    // - ignored
+    // - kept
+    // - interactively merged
     std::map<std::string, std::list<std::string> >::const_iterator localProperty;
     FOREACH(localProperty, localEntry->properties) {
-        // look if the property has been modified on the remote side
         std::string propertyName = localProperty->first;
+        if (propertyName == K_MESSAGE) continue; // handled below
+        if (propertyName == K_FILE) continue; // handled below
+
         std::list<std::string> localValue = localProperty->second;
         std::map<std::string, std::list<std::string> >::const_iterator remoteProperty;
+
+        // look if the value in the local entry is the same as in the remote issue
+        remoteProperty = remoteIssue.properties.find(propertyName);
+        if (remoteProperty != remoteIssue.properties.end()) {
+            if (remoteProperty->second == localValue) {
+                // (case1) the local entry brings no change: ignore this property
+                continue;
+            }
+        }
+
+        // look if the property has been modified on the remote side
         remoteProperty = remoteConflictingIssuePart.properties.find(propertyName);
         if (remoteProperty == remoteConflictingIssuePart.properties.end()) {
             // This property has not been changed on the remote side
             // Keep it unchanged
-            newEntry.properties[propertyName] = localValue;
+            newProperties[propertyName] = localValue;
+
         } else {
             // This property has also been changed on the remote side.
             if (localProperty->second == remoteProperty->second) {
                 // same value for this property
                 // do not keep it for the new entry
-            } else {
-                // This is a conflict.
-                std::list<std::string> remoteValue = remoteProperty->second;
-                printf("-- Conflict on issue %s: %s\n", remoteIssue.id.c_str(), remoteIssue.getSummary().c_str());
-                printf("Remote property: %s => %s\n", propertyName.c_str(), toString(remoteValue).c_str());
-                printf("Local property : %s => %s\n", propertyName.c_str(), toString(localValue).c_str());
+                // should not happen as this case should be covered by (case1)
+                continue;
+            }
+
+            // there is a conflict: the remote side has changed this property,
+            // but with a different value than the local entry
+            std::list<std::string> remoteValue = remoteProperty->second;
+            printf("-- Conflict on issue %s: %s\n", remoteIssue.id.c_str(), remoteIssue.getSummary().c_str());
+            printf("Remote property: %s => %s\n", propertyName.c_str(), toString(remoteValue).c_str());
+            printf("Local property : %s => %s\n", propertyName.c_str(), toString(localValue).c_str());
+            std::string response;
+            while (response != "l" && response != "L" && response != "r" && response != "R") {
                 printf("Select: (l)ocal, (r)emote: ");
-                std::string response;
-                while (response != "l" && response != "L" && response != "r" && response != "R") {
-                    std::cin >> response;
-                }
-                if (response == "l" && response == "L") {
-                    // keep the local property
-                    newEntry.properties[propertyName] = localValue;
-                } else {
-                    // keep the remote property
-                    newEntry.properties[propertyName] = remoteValue;
-                }
+                std::cin >> response;
+            }
+            if (response == "l" || response == "L") {
+                // keep the local property
+                newProperties[propertyName] = localValue;
+            } else {
+                // keep the remote property
+                newProperties[propertyName] = remoteValue;
             }
         }
     }
 
     // merge the attached files
-    // TODO
+    // TODO newProperties[K_FILE]
 
     // keep the message (ask for confirmation?)
     if (localEntry->getMessage().size() > 0) {
-        // TODO
+        printf("Local message:\n");
+        printf("--------------------------------------------------\n");
+        printf("%s\n", localEntry->getMessage().c_str());
+        printf("--------------------------------------------------\n");
+        std::string response;
+        while (response != "k" && response != "K" && response != "d" && response != "D") {
+            printf("Select: (k)eep message, (d)rop message: ");
+            std::cin >> response;
+        }
+        if (response == "k" || response == "K") {
+            // keep the message
+            newProperties[K_MESSAGE].push_back(localEntry->getMessage());
+        }
     }
 
     // check if this new entry must be kept
-    if (newEntry.getMessage().size() || newEntry.properties.size() > 0 /* TODO files */) {
-        // TODO
+    if (newProperties.size() > 0) {
         // store the new entry
+        Entry *e = remoteIssue.addEntry(newProperties, localEntry->author, dir);
+        if (!e) {
+            fprintf(stderr, "Abort.");
+            exit(1);
+        }
+        printf("New entry: %s\n", e->id.c_str());
     }
-
-
-//    Entry *addEntry(std::map<std::string, std::list<std::string> > properties,
-  //                  const std::string &username, const std::string &issueDir);
-
-
 }
 
 

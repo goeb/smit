@@ -7,6 +7,8 @@
 #include <vector>
 #include <stdio.h>
 
+typedef std::map<std::string, std::list<std::string> > PropertiesMap;
+typedef std::map<std::string, std::list<std::string> >::const_iterator PropertiesIt;
 
 std::string popToken(std::string & uri, char separator);
 void trimLeft(std::string & s, const char *c);
@@ -18,7 +20,7 @@ std::string urlDecode(const std::string &src, int is_form_url_encoded=true, char
 std::string urlEncode(const std::string &src, char mark = '%', const char *dontEscape="._-$,;~()");
 std::string htmlEscape(const std::string &value);
 std::string pop(std::list<std::string> & L);
-std::string getProperty(const std::map<std::string, std::list<std::string> > &properties, const std::string &name);
+std::string getProperty(const PropertiesMap &properties, const std::string &name);
 std::string replaceAll(const std::string &in, char c, const char *replaceBy);
 std::string enquoteJs(const std::string &in);
 std::string toJavascriptArray(const std::list<std::string> &items);

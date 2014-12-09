@@ -15,6 +15,7 @@
 #define K_MESSAGE "+message" // keyword used for the message
 #define K_FILE "+file" // keyword used for uploaded files
 #define K_SUMMARY "summary"
+
 #define K_UPLOADED_FILES_DIR "files"
 #define K_PROJECT_TMP "tmp"
 
@@ -37,7 +38,7 @@ struct Entry {
     std::string id; // unique id of this entry
     long ctime; // creation time
     std::string author;
-    std::map<std::string, std::list<std::string> > properties;
+    PropertiesMap properties;
     std::string serialize() const;
     int getCtime() const;
     std::string getMessage() const;
@@ -77,8 +78,7 @@ struct Issue {
     Entry *getEntry(const std::string id);
 
     int load(const std::string &issueId, const std::string &issuePath);
-    Entry *addEntry(std::map<std::string, std::list<std::string> > properties,
-                    const std::string &username, const std::string &issueDir);
+    Entry *addEntry(const PropertiesMap &properties, const std::string &username, const std::string &issueDir);
 
 
 };
@@ -160,7 +160,7 @@ public:
                                const std::map<std::string, std::list<std::string> > &filterOut,
                                const char *sortingSpec) const;
     int get(const std::string &issueId, Issue &issue) const;
-    int addEntry(std::map<std::string, std::list<std::string> > properties, std::string &iid, std::string &eid, std::string username);
+    int addEntry(PropertiesMap properties, std::string &iid, std::string &eid, std::string username);
     Entry *getEntry(const std::string &id) const;
 
     inline std::string getName() const { return name; }

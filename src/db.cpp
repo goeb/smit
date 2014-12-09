@@ -101,7 +101,13 @@ std::string Issue::getSummary() const
     return getProperty(properties, "summary");
 }
 
-Entry *Issue::addEntry(std::map<std::string, std::list<std::string> > properties, const std::string &username, const std::string &issueDir)
+/** Add an entry
+  *
+  * This does:
+  * - update the issue in memory
+  * - store the on persistent storage (in issueDir)
+  */
+Entry *Issue::addEntry(const PropertiesMap &properties, const std::string &username, const std::string &issueDir)
 {
     // create Entry object with properties
     Entry *e = new Entry;
@@ -1777,7 +1783,7 @@ void Project::cleanupMultiselect(std::list<std::string> &values, const std::list
   *     0 if no error. The entryId is fullfilled.
   *       except if no entry was created due to no change.
   */
-int Project::addEntry(std::map<std::string, std::list<std::string> > properties, std::string &issueId, std::string &entryId, std::string username)
+int Project::addEntry(PropertiesMap properties, std::string &issueId, std::string &entryId, std::string username)
 {
     ScopeLocker scopeLocker(locker, LOCK_READ_WRITE);
     ScopeLocker scopeLockerConfig(lockerForConfig, LOCK_READ_ONLY);
