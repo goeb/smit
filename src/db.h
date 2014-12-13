@@ -187,6 +187,7 @@ public:
     int getNumIssues() const;
     std::map<std::string, std::set<std::string> > getReverseAssociations(const std::string &issue) const;
     std::string renameIssue(const std::string &id);
+    int officializeMerging(const Issue &i);
 
 private:
     int load(); // load a project: config, views, entries, tags

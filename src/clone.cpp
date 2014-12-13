@@ -459,19 +459,14 @@ int pullIssue(const PullContext &pullCtx, Project &p, const Issue &i)
             // at this point, remoteConflictingIssuePart contains the conflicting remote part of the issue
 
             // for each local conflicting entry, do the merge
-            // - either rewrite automatically the local entry:
-            //     + rewrite the parent,
-            //     + remove redundant properties changes
-            //     + keep the message and attached files, if any
-            // - or ask the user to merge some conflicting properties
-            // and add the +merge indication
-            // TODO merge conflictingLocalEntry and followers into this tmp issue
             while (conflictingLocalEntry) {
                 mergeEntry(conflictingLocalEntry, tmpPath, remoteIssue, remoteConflictingIssuePart);
                 conflictingLocalEntry = conflictingLocalEntry->next;
             }
 
-            // TODO move the merge issue from tmp to official storage
+            // move the merge issue from tmp to official storage
+            p.officializeMerging(remoteIssue);
+            // no need to update the issue in memory, as it will not be re-accessed during the smit pulling
         }
 
     }

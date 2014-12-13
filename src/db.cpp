@@ -1677,6 +1677,43 @@ std::string Project::renameIssue(const std::string &id)
     return newId;
 }
 
+/** Officialize the merging of an issue
+  *
+  * move away the local issue : $PROJECT/issues/$ID -> $PROJECT/issues/$ID.merge-pending
+  * move the merged issue : $PROJECT/tmp/$ID -> $PROJECT/issues/$ID
+  * remove the obsolete local issue : $PROJECT/issues/$ID.merge-pending
+  *
+  */
+int Project::officializeMerging(const Issue &i)
+{
+    std::string officialIssuePath = getPath() + "/" ISSUES "/" + i.id;
+    std::string pathMergePending = officialIssuePath + ".merge-pending";
+    // move away the local issue : $PROJECT/issues/$ID -> $PROJECT/issues/$ID.merge-pending
+    int r = rename(officialIssuePath.c_str(), pathMergePending.c_str());
+    if (r != 0) {
+        // TODO the cause of this error is the interruption of a previous merging
+        // TODO then we should continue and not raise an error
+        LOG_ERROR("Cannot move directory of issue %s to %s", officialIssuePath.c_str(), pathMergePending.c_str());
+        return -1;
+    }
+
+    // move the merged issue : $PROJECT/tmp/$ID -> $PROJECT/issues/$ID
+    std::string oldpath = i.path;
+    r = rename(oldpath.c_str(), officialIssuePath.c_str());
+    if (r != 0) {
+        LOG_ERROR("Cannot move directory of issue %s to %s", oldpath.c_str(), officialIssuePath.c_str());
+        return -1;
+    }
+
+    // remove the obsolete local issue : $PROJECT/issues/$ID.merge-pending
+    r = removeDir(pathMergePending);
+    if (r != 0) {
+        LOG_ERROR("Cannot remove directory: %s", pathMergePending.c_str());
+        return -1;
+    }
+}
+
+
 
 /**
   * issues may be a list of 1 empty string, meaning that associations have been removed
