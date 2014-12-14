@@ -744,7 +744,7 @@ void httpGetRoot(const RequestContext *req, User u)
         req->printf("Content-Type: text/directory\r\n\r\n");
         std::list<std::pair<std::string, std::string> >::iterator p;
         FOREACH(p, pList) {
-           req->printf("%s\n", p->first.c_str());
+           req->printf("%s\n", Project::urlNameEncode(p->first).c_str());
         }
         req->printf("public\n");
         req->printf("users\n");

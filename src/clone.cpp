@@ -541,7 +541,9 @@ int pullProjects(const PullContext &pullCtx)
         if (projectName->empty()) continue;
 
         printf("Pulling entries of project: %s...\n", projectName->c_str());
-        Project *p = Database::Db.getProject(*projectName);
+        // project name is mangled
+        std::string unmangledName = Project::urlNameDecode(*projectName);
+        Project *p = Database::Db.getProject(unmangledName);
         if (!p) {
             fprintf(stderr, "remote project not existing locally. TODO. Exiting...\n");
             exit(1);
