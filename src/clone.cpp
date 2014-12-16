@@ -92,8 +92,11 @@ public:
     std::map<std::string, Cookie> cookies;
     std::list<std::string> lines; // fulfilled after calling getRequestLines()
     void doCloning(bool recursive, int recursionLevel);
+    int downloadFile(const std::string &resource, const std::string localPath);
+
     int test();
-    void handleWriteToFile(void *data, size_t size);
+    void handleReceiveFileOrDirectory(void *data, size_t size);
+    void handleDownload(void *data, size_t size);
     void openFile();
     void closeFile();
     /** In order to download files, the caller must set either set
@@ -107,7 +110,8 @@ public:
     inline void setDownloadDir(const std::string &r) { downloadDir = r; }
 
     static size_t receiveLinesCallback(void *contents, size_t size, size_t nmemb, void *userp);
-    static size_t writeToFileCallback(void *contents, size_t size, size_t nmemb, void *userp);
+    static size_t downloadCallback(void *contents, size_t size, size_t nmemb, void *userp);
+    static size_t writeToFileOrDirCallback(void *contents, size_t size, size_t nmemb, void *userp);
     static size_t headerCallback(void *contents, size_t size, size_t nmemb, void *userp);
     static size_t ignoreResponseCallback(void *contents, size_t size, size_t nmemb, void *userp);
 
@@ -169,6 +173,7 @@ struct PullContext {
   * @param localDir
   *    Specifies the location where the entries should be downloaded.
   *    If empty, then the default location is used inside the local repository.
+  *
   */
 void downloadEntries(const PullContext &pullCtx, const Project &p, const Issue &i,
                      const std::list<std::string> &remoteEntries, std::list<std::string>::iterator reid, const std::string &localDir)
@@ -179,14 +184,47 @@ void downloadEntries(const PullContext &pullCtx, const Project &p, const Issue &
         std::string remoteEid = *reid;
         std::string resourceDir = "/" + p.getUrlName() + "/issues/" + i.id;
         std::string resource = resourceDir + "/" + remoteEid;
+
         HttpRequest hr(pullCtx.sessid);
         hr.setUrl(pullCtx.rooturl, resource);
-        std::string downloadDir = localDir;
 
+        std::string downloadDir = localDir;
         if (downloadDir.empty()) downloadDir = pullCtx.localRepo + resourceDir;
 
-        hr.setDownloadDir(downloadDir);
-        hr.doCloning(false, 0);
+        // TODO download to tmp storage, then move (in order to have an atomic dowload)
+        std::string localEntryFile = downloadDir + "/" + remoteEid;
+        hr.downloadFile(resource, localEntryFile);
+
+        // download attached files as well
+        Entry *e = Entry::loadEntry(downloadDir, remoteEid.c_str());
+        if (!e) {
+            // should not happen
+            fprintf(stderr, "Cannot load locally downloaded entry: %s/%s", downloadDir.c_str(), remoteEid.c_str());
+            fprintf(stderr, "Abort.");
+            exit(1);
+        }
+        PropertiesIt files = e->properties.find(K_FILE);
+        if (files != e->properties.end()) {
+            std::list<std::string>::const_iterator f;
+            // download each file
+            FOREACH(f, files->second) {
+                std::string fResource = "/" + p.getUrlName() + "/" K_UPLOADED_FILES_DIR "/" + *f;
+                HttpRequest hr(pullCtx.sessid);
+                hr.setUrl(pullCtx.rooturl, fResource);
+                std::string localFile = p.getTmpDir() + "/" + *f;
+                hr.downloadFile(fResource, localFile);
+
+                // move the tmp file to official 'files'
+                std::string officialPath = p.getPathUploadedFiles() + "/" + *f;
+                int r = rename(localFile.c_str(), officialPath.c_str());
+                if (r != 0) {
+                    fprintf(stderr, "Canno move '%s' -> '%s': %s\n", localFile.c_str(), officialPath.c_str(), strerror(errno));
+                    fprintf(stderr, "Abort.\n");
+                    exit(1);
+                }
+            }
+        }
+
     }
 }
 
@@ -199,6 +237,7 @@ void mergeEntry(const Entry *localEntry, const std::string &dir, Issue &remoteIs
 {
     PropertiesMap newProperties; // the resulting properties of the new entry
 
+    bool isConflicting = false;
     // merge the properties
     // for each property in the local entry, look if it must be:
     // - ignored
@@ -240,10 +279,12 @@ void mergeEntry(const Entry *localEntry, const std::string &dir, Issue &remoteIs
 
             // there is a conflict: the remote side has changed this property,
             // but with a different value than the local entry
+            isConflicting = true;
+
             std::list<std::string> remoteValue = remoteProperty->second;
             printf("-- Conflict on issue %s: %s\n", remoteIssue.id.c_str(), remoteIssue.getSummary().c_str());
-            printf("Remote property: %s => %s\n", propertyName.c_str(), toString(remoteValue).c_str());
-            printf("Local property : %s => %s\n", propertyName.c_str(), toString(localValue).c_str());
+            printf("Remote: %s => %s\n", propertyName.c_str(), toString(remoteValue).c_str());
+            printf("Local : %s => %s\n", propertyName.c_str(), toString(localValue).c_str());
             std::string response;
             while (response != "l" && response != "L" && response != "r" && response != "R") {
                 printf("Select: (l)ocal, (r)emote: ");
@@ -264,17 +305,23 @@ void mergeEntry(const Entry *localEntry, const std::string &dir, Issue &remoteIs
 
     // keep the message (ask for confirmation?)
     if (localEntry->getMessage().size() > 0) {
-        printf("Local message:\n");
-        printf("--------------------------------------------------\n");
-        printf("%s\n", localEntry->getMessage().c_str());
-        printf("--------------------------------------------------\n");
-        std::string response;
-        while (response != "k" && response != "K" && response != "d" && response != "D") {
-            printf("Select: (k)eep message, (d)rop message: ");
-            std::cin >> response;
-        }
-        if (response == "k" || response == "K") {
-            // keep the message
+        // if a conflict was detected before, then ask the user to keep the message of not
+        if (isConflicting) {
+            printf("Local message:\n");
+            printf("--------------------------------------------------\n");
+            printf("%s\n", localEntry->getMessage().c_str());
+            printf("--------------------------------------------------\n");
+            std::string response;
+            while (response != "k" && response != "K" && response != "d" && response != "D") {
+                printf("Select: (k)eep message, (d)rop message: ");
+                std::cin >> response;
+            }
+            if (response == "k" || response == "K") {
+                // keep the message
+                newProperties[K_MESSAGE].push_back(localEntry->getMessage());
+            }
+        } else {
+            // no conflict on the properties. keep the message unchanged
             newProperties[K_MESSAGE].push_back(localEntry->getMessage());
         }
     }
@@ -350,6 +397,7 @@ int pullIssue(const PullContext &pullCtx, Project &p, const Issue &i)
         hr.setUrl(pullCtx.rooturl, resource);
         hr.setRepository(pullCtx.localRepo);
         hr.doCloning(true, 0);
+        // TODO pull attached files
 
     } else {
         // same issue. Walk through the entries and pull...
@@ -419,10 +467,11 @@ int pullIssue(const PullContext &pullCtx, Project &p, const Issue &i)
             LOGV("Copying local entries to tmp dir\n");
             const Entry *e = firstEntry;
             while (e != 0 && e != conflictingLocalEntry) {
-                std::string path = tmpPath + "/" + e->id;
-                int r = writeToFile(path.c_str(), e->serialize());
+                std::string srcPath = i.path + "/" + e->id;
+                std::string destPath = tmpPath + "/" + e->id;
+                int r = copyFile(srcPath, destPath);
                 if (r != 0) {
-                    fprintf(stderr, "Cannot store entry in tmp directory: %s\n", e->id.c_str());
+                    fprintf(stderr, "Cannot copy entry to tmp location: %s\n", destPath.c_str());
                     fprintf(stderr, "Abort.\n");
                     exit(1);
                 }
@@ -501,6 +550,7 @@ int pullProject(const PullContext &pullCtx, Project &p)
             hr.setUrl(pullCtx.rooturl, resource);
             hr.setRepository(pullCtx.localRepo);
             hr.doCloning(true, 0);
+            // TODO pull attached files
         } else {
             LOGV("Pulling issue: %s/issues/%s\n", p.getName().c_str(), id.c_str());
             pullIssue(pullCtx, p, i);
@@ -855,6 +905,15 @@ void HttpRequest::setUrl(const std::string &root, const std::string &path)
     curl_easy_setopt(curlHandle, CURLOPT_URL, url.c_str());
 }
 
+int HttpRequest::downloadFile(const std::string &resource, const std::string localPath)
+{
+    LOGV("downloadFile: resourcePath=%s\n", resourcePath.c_str());
+    curl_easy_setopt(curlHandle, CURLOPT_WRITEDATA, (void *)this);
+    curl_easy_setopt(curlHandle, CURLOPT_WRITEFUNCTION, downloadCallback);
+    filename = localPath;
+    performRequest();
+    if (fd) closeFile();
+}
 
 /** Get files recursively through sub-directories
   *
@@ -865,7 +924,7 @@ void HttpRequest::doCloning(bool recursive, int recursionLevel)
 {
     LOGV("Entering doCloning: resourcePath=%s\n", resourcePath.c_str());
     curl_easy_setopt(curlHandle, CURLOPT_WRITEDATA, (void *)this);
-    curl_easy_setopt(curlHandle, CURLOPT_WRITEFUNCTION, writeToFileCallback);
+    curl_easy_setopt(curlHandle, CURLOPT_WRITEFUNCTION, writeToFileOrDirCallback);
 
     if (recursionLevel < 2) printf("%s\n", resourcePath.c_str());
     performRequest();
@@ -909,8 +968,10 @@ void HttpRequest::doCloning(bool recursive, int recursionLevel)
     }
     if (!isDirectory) {
         // make sure that even an empty file gets created as well
-        handleWriteToFile(0, 0);
-        if (fd) closeFile(); // it may happen that the file was not open in MODE_PULL
+        handleReceiveFileOrDirectory(0, 0);
+        if (!fd) { // defensive programming
+            fprintf(stderr, "unexpected null file descriptor\n");
+        } else closeFile();
     }
 }
 
@@ -1019,11 +1080,18 @@ size_t HttpRequest::headerCallback(void *contents, size_t size, size_t nmemb, vo
     return realsize;
 }
 
-size_t HttpRequest::writeToFileCallback(void *contents, size_t size, size_t nmemb, void *userp)
+size_t HttpRequest::writeToFileOrDirCallback(void *contents, size_t size, size_t nmemb, void *userp)
 {
     HttpRequest *hr = (HttpRequest*)userp;
     size_t realsize = size * nmemb;
-    hr->handleWriteToFile(contents, realsize);
+    hr->handleReceiveFileOrDirectory(contents, realsize);
+    return realsize;
+}
+size_t HttpRequest::downloadCallback(void *contents, size_t size, size_t nmemb, void *userp)
+{
+    HttpRequest *hr = (HttpRequest*)userp;
+    size_t realsize = size * nmemb;
+    hr->handleDownload(contents, realsize);
     return realsize;
 }
 
@@ -1035,11 +1103,13 @@ void HttpRequest::handleReceivedRaw(void *data, size_t size)
 
 void HttpRequest::openFile()
 {
-    if (repository.size() > 0) filename = repository + resourcePath; // resourcePath has a starting '/'
-    else if (downloadDir.size() > 0) filename = downloadDir + "/" + getBasename(resourcePath);
-    else {
-        fprintf(stderr, "repository and downloadDir are both empty strings\n");
-        exit(1);
+    if (filename.empty()) {
+        if (repository.size() > 0) filename = repository + resourcePath; // resourcePath has a starting '/'
+        else if (downloadDir.size() > 0) filename = downloadDir + "/" + getBasename(resourcePath);
+        else {
+            fprintf(stderr, "Error: repository and downloadDir are both empty strings\n");
+            exit(1);
+        }
     }
     LOGV("Opening file: %s\n", filename.c_str());
     fd = fopen(filename.c_str(), "wbx");
@@ -1056,8 +1126,11 @@ void HttpRequest::closeFile()
     filename = "";
 }
 
-
-void HttpRequest::handleWriteToFile(void *data, size_t size)
+/** Handle bytes received
+  *
+  * The bytes may either be part of a directory listing or a file.
+  */
+void HttpRequest::handleReceiveFileOrDirectory(void *data, size_t size)
 {
     if (isDirectory) {
         // store the lines temporarily in memory
@@ -1075,6 +1148,20 @@ void HttpRequest::handleWriteToFile(void *data, size_t size)
         } // else the size is zero, an empty file has been created
     }
 }
+
+void HttpRequest::handleDownload(void *data, size_t size)
+{
+    if (!fd) openFile();
+
+    if (size) {
+        size_t n = fwrite(data, size, 1, fd);
+        if (n != 1) {
+            fprintf(stderr, "Cannot write to '%s': %s\n", filename.c_str(), strerror(errno));
+            exit(1);
+        }
+    } // else the size is zero, an empty file has been created
+}
+
 
 /** Ignore the response
   * (do not save it into a file, as the default lib curl behaviour)

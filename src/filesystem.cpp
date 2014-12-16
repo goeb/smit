@@ -275,4 +275,5 @@ int copyFile(const std::string &srcPath, const std::string &destPath)
 
     src.close();
     dst.close();
+    return 0;
 }

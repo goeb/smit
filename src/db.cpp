@@ -329,7 +329,7 @@ int Project::load()
     return 0;
 }
 
-Entry *loadEntry(std::string dir, const char* basename)
+Entry *Entry::loadEntry(std::string dir, const char* basename)
 {
     // load a given entry
     std::string path = dir + '/' + basename;
@@ -537,7 +537,7 @@ int Issue::load(const std::string &issueId, const std::string &issuePath)
         LOG_DEBUG("Loading entry: %s", entryFile->d_name);
 
         std::string filePath = path + '/' + entryFile->d_name;
-        Entry *e = loadEntry(path, entryFile->d_name);
+        Entry *e = Entry::loadEntry(path, entryFile->d_name);
         if (e) entries[e->id] = e;
         else LOG_ERROR("Cannot load entry '%s'", filePath.c_str());
     }
@@ -1598,7 +1598,7 @@ bool Issue::searchFullText(const char *text) const
         if (mg_strcasestr(e->getMessage().c_str(), text)) return true; // found
 
         // look through uploaded files
-        std::map<std::string, std::list<std::string> >::const_iterator files = e->properties.find(K_FILE);
+        PropertiesIt files = e->properties.find(K_FILE);
         if (files != e->properties.end()) {
             std::list<std::string>::const_iterator f;
             FOREACH(f, files->second) {

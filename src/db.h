@@ -47,6 +47,7 @@ struct Entry {
     struct Entry *prev; // parent
     std::set<std::string> tags;
     Entry() : ctime(0), next(0), prev(0) {}
+    static Entry *loadEntry(std::string dir, const char* basename);
 };
 
 // Issue
