@@ -98,14 +98,12 @@ std::string Trigger::formatEntry(const Project &project, const Issue &issue, con
     std::map<std::string, std::list<std::string> >::const_iterator p;
 
     // put the uploaded files, if any
-    std::ostringstream files;
-    FOREACH(p, entry.properties) {
-        if (p->first == K_FILE) {
-            if (files.str().size()) files << ",";
-            files << toJson(p->second.front());
-        }
+    std::string files;
+    p = entry.properties.find(K_FILE);
+    if (p != entry.properties.end()) {
+        files = toJson(p->second);
     }
-    if (files.str().size()) s << ",\n" << toJson("files") << ":[" << files << "]\n";
+    if (files.size() > 0) s << ",\n" << toJson("files") << ": " << files << "\n";
 
     // put the list of the properties modified by the entry
     s << ",\n" << toJson("modified") << ":[";
