@@ -1834,8 +1834,6 @@ void httpPostEntry(const RequestContext *req, Project &pro, const std::string & 
         parseQueryString(postData, vars);
 
     } else if (0 == strncmp(multipart, contentType, strlen(multipart))) {
-        //std::string x = request2string(req);
-        //mg_printf(req, "%s", x.c_str());
 
         // extract the boundary
         const char *b = "boundary=";
@@ -1872,11 +1870,12 @@ void httpPostEntry(const RequestContext *req, Project &pro, const std::string & 
         sendHttpHeader500(req, "Cannot add entry");
 
     } else {
+        // entry correctly added
 
 #if !defined(_WIN32)
         // launch the trigger, if any
         // launch the trigger only if a new entry was actually created
-        if (!entryId.empty()) Trigger::notifyEntry(pro, issueId, entryId);
+        if (!entryId.empty()) Trigger::notifyEntry(pro, id, entryId);
 #endif
 
 
