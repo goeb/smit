@@ -1,6 +1,7 @@
 v2.2.0
 
     - support for root-URL rewriting (for using behind a reverse proxy)
+    - fix trigger notification on creation of new issue
 
 v2.1.0, 20 Nov 2014
 
