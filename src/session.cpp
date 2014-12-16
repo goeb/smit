@@ -350,6 +350,7 @@ int UserBase::updateUser(const std::string &username, User newConfig)
         // keep the same as before
         newConfig.hashType = u->second->hashType;
         newConfig.hashValue = u->second->hashValue;
+        newConfig.hashSalt = u->second->hashSalt;
     }
     *(u->second) = newConfig;
 
