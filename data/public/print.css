@@ -22,3 +22,9 @@ form {
 .sm_issues_other_formats {
     display: none !important;
 }
+img.sm_entry_file {
+    width: auto;
+    height: auto;
+    border: 0;
+}
+
