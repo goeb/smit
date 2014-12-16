@@ -37,6 +37,17 @@ def getEmail(username):
     
     return email
 
+def getMailOfNewAssignee(jsonMsg, assigneePropertyName):
+    "return emails of people newly assigned on the issue (it makes sense only if the project has a dedicated property)"
+    if assigneePropertyName in jsonMsg['modified']:
+        adressees = []
+        newAssignee = getPropertyValue(jsonMsg, assigneePropertyName)
+        email = getEmail(newAssignee)
+        if email is not None:
+            adressees.append(email)
+
+    return adressees
+
 def getMailOfAdmins(jsonMsg):
     "return emails of the administrators of the project"
     adressees = []
@@ -45,7 +56,7 @@ def getMailOfAdmins(jsonMsg):
         if users[u] == "admin":
             email = getEmail(u)
             if email is not None:
-                adressees.append(getEmail(u))
+                adressees.append(email)
 
     # remove duplicates
     adressees = list(set(adressees))
