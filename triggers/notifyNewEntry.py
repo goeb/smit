@@ -83,6 +83,9 @@ def getMailSubject(jsonMsg):
 def getMailBody(jsonMsg):
     "print a recap of the properties of the issue, and the message"
     body = getMailSubject(jsonMsg) + "\r\n"
+    if jsonMsg['isNew']: body += "(new issue created)"
+    else: body += "(issue modified)"
+    body += '\r\n'
     body += "---- properties ------------\r\n"
     for p in jsonMsg['properties']:
         if p in jsonMsg['modified']: body += '** '

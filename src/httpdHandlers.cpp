@@ -1862,7 +1862,11 @@ void httpPostEntry(const RequestContext *req, Project &pro, const std::string & 
     }
 
     std::string id = issueId;
-    if (id == "new") id = "";
+    bool isNewIssue = false;
+    if (id == "new") {
+        id = "";
+        isNewIssue = true;
+    }
     std::string entryId;
     int status = pro.addEntry(vars, id, entryId, u.username);
     if (status != 0) {
@@ -1875,7 +1879,7 @@ void httpPostEntry(const RequestContext *req, Project &pro, const std::string & 
 #if !defined(_WIN32)
         // launch the trigger, if any
         // launch the trigger only if a new entry was actually created
-        if (!entryId.empty()) Trigger::notifyEntry(pro, id, entryId);
+        if (!entryId.empty()) Trigger::notifyEntry(pro, id, entryId, isNewIssue);
 #endif
 
 
