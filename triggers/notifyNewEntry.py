@@ -12,19 +12,6 @@ How to install this trigger:
 
 """
 
-EMAILS_TO = {
-        'smit-user-1' : 'smit-user-1@example.com',
-        'smit-user-2' : 'smit-user-2@example.com',
-        'smit-user-3' : 'smit-user-3@example.com'
-        }
-GPG_KEYS = {
-        'smit-user-3@example.com' : '01020304'
-}
-
-EMAIL_FROM = 'smit@example.com'
-SMTP_HOST = 'smtp.example.com',
-
-
 import json
 import sys
 import smtplib
@@ -34,10 +21,12 @@ from email.mime.text import MIMEText
 from email.header import Header
 import subprocess
 
+import MailConfig
+
 def getGpgKey(email):
     "return the GPG id of a user, if any"
     try:
-        gpgKey = GPG_KEYS[email]
+        gpgKey = MailConfig.GPG_KEYS[email]
     except:
         gpgKey = None
     
@@ -47,22 +36,21 @@ def getGpgKey(email):
 def getEmail(username):
     "return the email of a user"
     try:
-        email = EMAILS_TO[username]
+        email = MailConfig.EMAILS_TO[username]
     except:
         email = None
     
     return email
 
-def getMailOfNewAssignee(jsonMsg, assigneePropertyName):
-    "return emails of people newly assigned on the issue (it makes sense only if the project has a dedicated property)"
+def getMailOfProperty(jsonMsg, propertyName):
+    "return email addresses of people designated in the given property"
     addressees = set()
-    if assigneePropertyName in jsonMsg['modified']:
-        newAssignee = getPropertyValue(jsonMsg, assigneePropertyName)
-        email = getEmail(newAssignee)
-        if email is not None:
-            addressees.add(email)
-    #else:
-    #    print('not \'%s\' in: %s' % (assigneePropertyName, jsonMsg['modified']))
+    people = getPropertyValue(jsonMsg, propertyName)
+    if isinstance(people, list):
+        for p in people:
+            addressees.add(getEmail(p))
+    else:
+        addressees.add(getEmail(people))
 
     return addressees
 
@@ -99,11 +87,11 @@ def getMailSubject(jsonMsg):
 # GNUPGHOME initialized in gnupg.d
 # export GNUPGHOME=gnupg.d
 # gpg --import <file>
-def gpgEncrypt(text, addresees):
+def gpgEncrypt(text, addressees):
     "Encrypt text, if at least one GPG key is configured"
     basedir = os.path.dirname(__file__)
     gpgKeys = set()
-    for a in addresees:
+    for a in addressees:
 	k = getGpgKey(a)
 	if k is None:
             print('Missing GPG key for \'%s\'' % (a))
@@ -170,11 +158,11 @@ def getTestData():
 "entry":"34588ff8b582016f1f29ce8e531fbab9996fbc5a",
 "author":"homer",
 "users":{
-  "hoerni":"admin",
-  "homer":"rw"},
+  "homer":"admin",
+  "alice":"rw"},
 "modified":["type", "assignee"],
 "properties":{
-  "assignee":["assignee","hoerni"],
+  "assignee":["assignee","homer"],
   "description":["Description",""],
   "status":["status","closed"],
   "summary":["summary","test notification"]
@@ -184,28 +172,26 @@ def getTestData():
 """
 
 def parseCommandLine():
-    testMode = False
-    notificationPolicy = None
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('--mail-assignee-if-changed', nargs=1)
-    parser.add_argument('--test', nargs='?')
+    parser.add_argument('--if-property-modified', help='send an email if the given property is modified')
+    parser.add_argument('--mailto-property', help='send the email to the people in the given property')
+    parser.add_argument('--mailto-admins', action='store_true', help='send the email to all administrators of the project')
+    parser.add_argument('--test', action='store_true', help='test with dummy data (useful for command line debugging)')
     args = parser.parse_args()
 
-    if hasattr(args, 'test'): testMode = True
-    if hasattr(args, 'mail_assignee_if_changed'):
-	notificationPolicy = 'mail_assignee_if_changed'
-	notificationPolicyOpt = args.mail_assignee_if_changed[0]
-
-    return (testMode, notificationPolicy, notificationPolicyOpt)
+    print "--if-property-modified", args.if_property_modified
+    print "--mailto-property", args.mailto_property
+    print "--test", args.test
+    return args
 	
 
 # main --------------------------------------------
 
-print "triggers/notifyNewEntry.py(%s)" % (sys.argv)
-testMode, notificationPolicy, notificationPolicyOpt = parseCommandLine()
+#print "triggers/notifyNewEntry.py(%s)" % (sys.argv)
+args = parseCommandLine()
 
-if testMode:
+if args.test:
     raw = getTestData()
 else:
     raw = sys.stdin.read()
@@ -217,12 +203,27 @@ except:
     print("raw=>>>\n%s\n<<<\n" % (raw))
     sys.exit(1);
 
-# if option --mail-assignee-if-changed is set, then send the email to the person
-if notificationPolicy == 'mail_assignee_if_changed':
-    addressees = getMailOfNewAssignee(jsonMsg, notificationPolicyOpt)
+# check the conditions for sending the email
+doSendMail = False
+if args.if_property_modified:
+    if args.if_property_modified in jsonMsg['modified']:
+        doSendMail = True
 else:
-    # email to admins
-    addressees = getMailOfAdmins(jsonMsg)
+    doSendMail = True
+
+if not doSendMail:
+    print('doSendMail=False') # debug
+    sys.exit(0)
+
+# build the list of addressees
+addressees = set()
+if args.mailto_property:
+    # send email if
+    addressees = addressees.union(getMailOfProperty(jsonMsg, args.mailto_property))
+
+if args.mailto_admins:
+    # send email to admins
+    addressees = addressees.union(getMailOfAdmins(jsonMsg))
 
 if len(addressees) == 0:
     # no addressees, no email to send
@@ -235,8 +236,8 @@ body = getMailBody(jsonMsg)
 body = gpgEncrypt(body, addressees)
 msg = MIMEText(body, 'plain', 'utf-8')
 msg['Subject'] = Header(subject, 'utf-8')
-msg['From'] = EMAIL_FROM
+msg['From'] = MailConfig.EMAIL_FROM
 msg['To'] = ";".join(addressees)
-s = smtplib.SMTP(SMTP_HOST)
-s.sendmail(EMAIL_FROM, addressees, msg.as_string())
+s = smtplib.SMTP(MailConfig.SMTP_HOST)
+s.sendmail(MailConfig.EMAIL_FROM, addressees, msg.as_string())
 s.quit()
