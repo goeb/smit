@@ -48,9 +48,11 @@ def getMailOfProperty(jsonMsg, propertyName):
     people = getPropertyValue(jsonMsg, propertyName)
     if isinstance(people, list):
         for p in people:
-            addressees.add(getEmail(p))
+            email = getEmail(p)
+            if email: addressees.add(email)
     else:
-        addressees.add(getEmail(people))
+        email = getEmail(people)
+        if email: addressees.add(email)
 
     return addressees
 
