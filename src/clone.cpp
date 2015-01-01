@@ -745,6 +745,7 @@ int cmdPull(int argc, char * const *argv)
             break;
         case 'v':
             Verbose = true;
+            HttpRequest::setVerbose(true);
             break;
         case '?': // incorrect syntax, a message is printed by getopt_long
             return helpPull();

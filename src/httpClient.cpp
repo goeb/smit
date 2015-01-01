@@ -29,9 +29,9 @@
 #include "console.h"
 #include "filesystem.h"
 
-extern bool Verbose;
+bool HttpRequest::Verbose = false;
 
-#define LOGV(...) do { if (Verbose) { printf(__VA_ARGS__); fflush(stdout);} } while (0)
+#define LOGV(...) do { if (HttpRequest::Verbose) { printf(__VA_ARGS__); fflush(stdout);} } while (0)
 
 
 void HttpRequest::setUrl(const std::string &root, const std::string &path)

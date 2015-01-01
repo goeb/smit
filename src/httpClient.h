@@ -55,6 +55,8 @@ public:
     static size_t ignoreResponseCallback(void *contents, size_t size, size_t nmemb, void *userp);
 
     int httpStatusCode;
+    static inline void setVerbose(bool v) {Verbose = v;}
+    static bool Verbose;
 
 private:
     void performRequest();
