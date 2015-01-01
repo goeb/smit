@@ -42,8 +42,6 @@
 #define ISSUES "issues" // sub-directory of a project where the entries are stored
 #define VIEWS_FILE "views"
 #define TAGS_DIR "tags"
-#define K_DELETED "_del"
-
 
 #define K_PARENT "+parent"
 #define K_AUTHOR "+author"
@@ -527,7 +525,7 @@ int Issue::load(const std::string &issueId, const std::string &issuePath)
     while ((entryFile = readdir(issueDirHandle)) != NULL) {
         if (0 == strcmp(entryFile->d_name, ".")) continue;
         if (0 == strcmp(entryFile->d_name, "..")) continue;
-        if (0 == strcmp(entryFile->d_name, K_DELETED)) continue;
+        if (0 == strcmp(entryFile->d_name, DIR_DELETED)) continue;
         if (0 == strcmp(entryFile->d_name, "_HEAD")) {
             // obsolete.
             LOG_INFO("Found obsolete _HEAD");
@@ -2034,7 +2032,7 @@ int Project::deleteEntry(const std::string &issueId, const std::string &entryId,
 
     // move the file to _del
     std::string issuePath = getPath() + "/" + ISSUES + "/" + issueId;
-    std::string deletePath = issuePath + "/" + K_DELETED;
+    std::string deletePath = issuePath + "/" + DIR_DELETED;
     mg_mkdir(deletePath.c_str(), S_IRUSR | S_IWUSR | S_IXUSR); // create it if not already done
     deletePath += "/" + entryId;
     std::string entryPath = issuePath + "/" + entryId;

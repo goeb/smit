@@ -12,6 +12,8 @@
 #include "mutexTools.h"
 #include "stringTools.h"
 
+#define DIR_DELETED ".deleted"
+
 #define K_MESSAGE "+message" // keyword used for the message
 #define K_FILE "+file" // keyword used for uploaded files
 #define K_SUMMARY "summary"
