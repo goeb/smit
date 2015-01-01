@@ -79,7 +79,7 @@ struct Issue {
     Entry *getEntry(const std::string id);
 
     int load(const std::string &issueId, const std::string &issuePath);
-    Entry *addEntry(const PropertiesMap &properties, const std::string &username, const std::string &issueDir);
+    Entry *addEntry(const PropertiesMap &properties, const std::string &username);
 
 
 };

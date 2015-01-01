@@ -105,9 +105,9 @@ std::string Issue::getSummary() const
   *
   * This does:
   * - update the issue in memory
-  * - store the on persistent storage (in issueDir)
+  * - store the on persistent storage
   */
-Entry *Issue::addEntry(const PropertiesMap &properties, const std::string &username, const std::string &issueDir)
+Entry *Issue::addEntry(const PropertiesMap &properties, const std::string &username)
 {
     // create Entry object with properties
     Entry *e = new Entry;
@@ -144,7 +144,7 @@ Entry *Issue::addEntry(const PropertiesMap &properties, const std::string &usern
         LOG_ERROR("Entry with same id already exists: %s", newEntryId.c_str());
         return 0;
     }
-    std::string pathOfNewEntry = issueDir + '/' + newEntryId;
+    std::string pathOfNewEntry = path + '/' + newEntryId;
     int r = writeToFile(pathOfNewEntry.c_str(), data);
     if (r != 0) {
         // error.
@@ -1711,6 +1711,7 @@ int Project::officializeMerging(const Issue &i)
         LOG_ERROR("Cannot remove directory: %s", pathMergePending.c_str());
         return -1;
     }
+    return 0;
 }
 
 
@@ -1910,7 +1911,7 @@ int Project::addEntry(PropertiesMap properties, std::string &issueId, std::strin
     std::string pathOfIssue;
 
     // write this entry to disk
-    // if issueId is empty, generate a new issueId
+    // if issueId is empty, create a new issue
     if (issueId.empty()) {
         // create new directory for this issue
         issueId = allocateNewIssueId();
@@ -1925,13 +1926,13 @@ int Project::addEntry(PropertiesMap properties, std::string &issueId, std::strin
         }
         i = new Issue();
         i->id = issueId;
+        i->path = path + '/' + ISSUES + '/' + issueId;
 
         // add it to the internal memory
         issues[issueId] = i;
     }
 
-    std::string issueDir = path + '/' + ISSUES + '/' + issueId;
-    Entry *e = i->addEntry(properties, username, issueDir);
+    Entry *e = i->addEntry(properties, username);
 
     if (!e) return -1;
 

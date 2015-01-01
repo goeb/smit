@@ -165,7 +165,7 @@ void downloadEntries(const PullContext &pullCtx, const Project &p, const Issue &
   * @param remoteIssue
   *      in/out: The remote issue instance is updated by the merging
   */
-void mergeEntry(const Entry *localEntry, const std::string &dir, Issue &remoteIssue, const Issue &remoteConflictingIssuePart)
+void mergeEntry(const Entry *localEntry, Issue &remoteIssue, const Issue &remoteConflictingIssuePart)
 {
     PropertiesMap newProperties; // the resulting properties of the new entry
 
@@ -261,7 +261,7 @@ void mergeEntry(const Entry *localEntry, const std::string &dir, Issue &remoteIs
     // check if this new entry must be kept
     if (newProperties.size() > 0) {
         // store the new entry
-        Entry *e = remoteIssue.addEntry(newProperties, localEntry->author, dir);
+        Entry *e = remoteIssue.addEntry(newProperties, localEntry->author);
         if (!e) {
             fprintf(stderr, "Abort.");
             exit(1);
@@ -441,7 +441,7 @@ int pullIssue(const PullContext &pullCtx, Project &p, const Issue &i)
 
             // for each local conflicting entry, do the merge
             while (conflictingLocalEntry) {
-                mergeEntry(conflictingLocalEntry, tmpPath, remoteIssue, remoteConflictingIssuePart);
+                mergeEntry(conflictingLocalEntry, remoteIssue, remoteConflictingIssuePart);
                 conflictingLocalEntry = conflictingLocalEntry->next;
             }
 
