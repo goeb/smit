@@ -571,7 +571,7 @@ int Issue::computeLatestEntry()
                     //              \--- d
                     // We relocate d as a child of e.
                     // TODO relocate after the date ?
-                    LOG_ERROR("Entry '%s' has already a child: '%s'", parent->id.c_str(),
+                    LOG_ERROR("[issue %s] Entry '%s' has already a child: '%s'", id.c_str(), parent->id.c_str(),
                               parent->next->id.c_str());
                     // try to resolve this
                     while (parent->next) parent = parent->next;
