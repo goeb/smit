@@ -125,7 +125,7 @@ void downloadEntries(const PullContext &pullCtx, const Project &p, const Issue &
 
         // TODO download to tmp storage, then move (in order to have an atomic dowload)
         std::string localEntryFile = downloadDir + "/" + remoteEid;
-        hr.downloadFile(resource, localEntryFile);
+        hr.downloadFile(localEntryFile);
 
         // download attached files as well
         Entry *e = Entry::loadEntry(downloadDir, remoteEid.c_str());
@@ -144,7 +144,7 @@ void downloadEntries(const PullContext &pullCtx, const Project &p, const Issue &
                 HttpRequest hr(pullCtx.sessid);
                 hr.setUrl(pullCtx.rooturl, fResource);
                 std::string localFile = p.getTmpDir() + "/" + *f;
-                hr.downloadFile(fResource, localFile);
+                hr.downloadFile(localFile);
 
                 // move the tmp file to official 'files'
                 std::string officialPath = p.getPathUploadedFiles() + "/" + *f;
@@ -705,7 +705,125 @@ int cmdClone(int argc, char * const *argv)
     return 0;
 }
 
+int helpGet()
+{
+    printf("Usage: smit get <root-url> <resource>\n"
+           "\n"
+           "  Get with format x-smit.\n"
+           "\n"
+           "Options:\n"
+           "  --user <user> --passwd <password> \n"
+           "               Give the user name and the password.\n"
+           "  --use-signin-cookie\n"
+           "               Use the cookie of the cloned repository for signin in.\n"
+           "\n"
+           );
+    return 1;
+}
 
+int cmdGet(int argc, char * const *argv)
+{
+    std::string rooturl;
+    std::string resource;
+    std::string username;
+    const char *passwd = 0;
+    bool useSigninCookie = false;
+
+    int c;
+    int optionIndex = 0;
+    struct option longOptions[] = {
+        {"use-signin-cookie", 0, 0, 0},
+        {"user", 1, 0, 0},
+        {"passwd", 1, 0, 0},
+        {NULL, 0, NULL, 0}
+    };
+    while ((c = getopt_long(argc, argv, "v", longOptions, &optionIndex)) != -1) {
+        switch (c) {
+        case 0: // manage long options
+            if (0 == strcmp(longOptions[optionIndex].name, "user")) {
+                username = optarg;
+            } else if (0 == strcmp(longOptions[optionIndex].name, "passwd")) {
+                passwd = optarg;
+            } else if (0 == strcmp(longOptions[optionIndex].name, "use-signin-cookie")) {
+                useSigninCookie = true;
+            }
+            break;
+        case 'v':
+            Verbose = true;
+            HttpRequest::setVerbose(true);
+            break;
+        case '?': // incorrect syntax, a message is printed by getopt_long
+            return helpGet();
+            break;
+        default:
+            printf("?? getopt returned character code 0x%x ??\n", c);
+            return helpGet();
+        }
+    }
+
+    // manage non-option ARGV elements
+    if (optind < argc) {
+        rooturl = argv[optind];
+        optind++;
+    }
+    if (optind < argc) {
+        resource = argv[optind];
+        optind++;
+    }
+
+    if (optind < argc) {
+        printf("Too many arguments.\n\n");
+        return helpGet();
+    }
+    if (rooturl.empty()) {
+        printf("Missing url.\n");
+        return helpGet();
+    }
+
+    curl_global_init(CURL_GLOBAL_ALL);
+    std::string sessid;
+    std::string password;
+    bool redoSigin = false;
+
+    if (useSigninCookie) {
+        // check if the sessid is valid
+        sessid = loadSessid(".");
+        int r = testSessid(rooturl, sessid);
+
+        if (r < 0) {
+            // failed (session may have expired), then prompt for user name/password
+            username = getString("Username: ", false);
+            password = getString("Password: ", true);
+
+            // and redo the signing-in
+            redoSigin = true;
+        }
+
+    } else if (username.size() && passwd){
+        // do the signing-in with the given username / password
+        password = passwd;
+        redoSigin = true;
+    }
+
+    if (redoSigin) {
+        sessid = signin(rooturl, username, password);
+        if (sessid.empty()) {
+            fprintf(stderr, "Authentication failed\n");
+            return 1; // authentication failed
+        }
+    }
+
+    LOGV("%s=%s\n", SESSID, sessid.c_str());
+
+    // pull new entries and new attached files of all projects
+    HttpRequest hr(sessid);
+    hr.setUrl(rooturl, resource);
+    hr.getFileStdout();
+
+    curl_global_cleanup();
+
+    return 0;
+}
 
 int helpPull()
 {

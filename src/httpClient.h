@@ -31,7 +31,8 @@ public:
     std::map<std::string, Cookie> cookies;
     std::list<std::string> lines; // fulfilled after calling getRequestLines()
     void doCloning(bool recursive, int recursionLevel);
-    int downloadFile(const std::string &resource, const std::string localPath);
+    int getFileStdout();
+    int downloadFile(const std::string localPath);
 
     int test();
     void handleReceiveFileOrDirectory(void *data, size_t size);
@@ -51,6 +52,7 @@ public:
     static size_t receiveLinesCallback(void *contents, size_t size, size_t nmemb, void *userp);
     static size_t downloadCallback(void *contents, size_t size, size_t nmemb, void *userp);
     static size_t writeToFileOrDirCallback(void *contents, size_t size, size_t nmemb, void *userp);
+    static size_t getStdoutCallback(void *contents, size_t size, size_t nmemb, void *userp);
     static size_t headerCallback(void *contents, size_t size, size_t nmemb, void *userp);
     static size_t ignoreResponseCallback(void *contents, size_t size, size_t nmemb, void *userp);
 

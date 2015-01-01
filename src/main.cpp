@@ -760,6 +760,9 @@ int main(int argc, char **argv)
         } else if (0 == strcmp(command, "pull")) {
             return cmdPull(argc-1, argv+1);
 
+        } else if (0 == strcmp(command, "get")) {
+            return cmdGet(argc-1, argv+1);
+
         } else if (0 == strcmp(command, "ui")) {
             return cmdUi(argc-1, argv+1);
 
@@ -772,6 +775,8 @@ int main(int argc, char **argv)
                 else if (0 == strcmp(help, "serve")) return helpServe();
                 else if (0 == strcmp(help, "ui")) return helpUi();
                 else if (0 == strcmp(help, "clone")) return helpClone();
+                else if (0 == strcmp(help, "pull")) return helpPull();
+                else if (0 == strcmp(help, "get")) return helpGet();
                 else {
                     printf("No help for '%s'\n", help);
                     exit(1);

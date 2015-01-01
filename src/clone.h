@@ -7,5 +7,7 @@ int helpClone();
 int cmdPull(int argc, char *const*argv);
 int helpPull();
 
+int cmdGet(int argc, char *const*argv);
+int helpGet();
 
 #endif

@@ -33,7 +33,6 @@ bool HttpRequest::Verbose = false;
 
 #define LOGV(...) do { if (HttpRequest::Verbose) { printf(__VA_ARGS__); fflush(stdout);} } while (0)
 
-
 void HttpRequest::setUrl(const std::string &root, const std::string &path)
 {
     if (path.empty() || path[0] != '/') {
@@ -47,7 +46,14 @@ void HttpRequest::setUrl(const std::string &root, const std::string &path)
     curl_easy_setopt(curlHandle, CURLOPT_URL, url.c_str());
 }
 
-int HttpRequest::downloadFile(const std::string &resource, const std::string localPath)
+int HttpRequest::getFileStdout()
+{
+    curl_easy_setopt(curlHandle, CURLOPT_WRITEDATA, (void *)this);
+    curl_easy_setopt(curlHandle, CURLOPT_WRITEFUNCTION, getStdoutCallback);
+    performRequest();
+}
+
+int HttpRequest::downloadFile(const std::string localPath)
 {
     LOGV("downloadFile: resourcePath=%s\n", resourcePath.c_str());
     curl_easy_setopt(curlHandle, CURLOPT_WRITEDATA, (void *)this);
@@ -229,6 +235,14 @@ size_t HttpRequest::writeToFileOrDirCallback(void *contents, size_t size, size_t
     hr->handleReceiveFileOrDirectory(contents, realsize);
     return realsize;
 }
+
+size_t HttpRequest::getStdoutCallback(void *contents, size_t size, size_t nmemb, void *userp)
+{
+    size_t realsize = size * nmemb;
+    write(1, contents, realsize);
+    return realsize;
+}
+
 size_t HttpRequest::downloadCallback(void *contents, size_t size, size_t nmemb, void *userp)
 {
     HttpRequest *hr = (HttpRequest*)userp;
@@ -303,7 +317,6 @@ void HttpRequest::handleDownload(void *data, size_t size)
         }
     } // else the size is zero, an empty file has been created
 }
-
 
 /** Ignore the response
   * (do not save it into a file, as the default lib curl behaviour)
