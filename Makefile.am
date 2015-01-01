@@ -47,6 +47,7 @@ smit_SOURCES = \
 			   src/Trigger.cpp \
 			   src/filesystem.cpp \
 			   src/clone.cpp \
+			   src/httpClient.cpp \
 			   src/console.cpp \
 			   src/HttpContext.cpp \
 			   mongoose/mongoose.c 

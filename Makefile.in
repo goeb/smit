@@ -78,7 +78,8 @@ am_smit_OBJECTS = src/smit-db.$(OBJEXT) src/smit-parseConfig.$(OBJEXT) \
 	src/smit-session.$(OBJEXT) src/smit-dateTools.$(OBJEXT) \
 	src/smit-logging.$(OBJEXT) src/smit-Trigger.$(OBJEXT) \
 	src/smit-filesystem.$(OBJEXT) src/smit-clone.$(OBJEXT) \
-	src/smit-console.$(OBJEXT) src/smit-HttpContext.$(OBJEXT) \
+	src/smit-httpClient.$(OBJEXT) src/smit-console.$(OBJEXT) \
+	src/smit-HttpContext.$(OBJEXT) \
 	mongoose/smit-mongoose.$(OBJEXT)
 nodist_smit_OBJECTS = smit-embedcpio.$(OBJEXT)
 smit_OBJECTS = $(am_smit_OBJECTS) $(nodist_smit_OBJECTS)
@@ -339,6 +340,7 @@ smit_SOURCES = \
 			   src/Trigger.cpp \
 			   src/filesystem.cpp \
 			   src/clone.cpp \
+			   src/httpClient.cpp \
 			   src/console.cpp \
 			   src/HttpContext.cpp \
 			   mongoose/mongoose.c 
@@ -490,6 +492,8 @@ src/smit-filesystem.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/smit-clone.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
+src/smit-httpClient.$(OBJEXT): src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
 src/smit-console.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/smit-HttpContext.$(OBJEXT): src/$(am__dirstamp) \
@@ -517,6 +521,7 @@ mostlyclean-compile:
 	-rm -f src/smit-dateTools.$(OBJEXT)
 	-rm -f src/smit-db.$(OBJEXT)
 	-rm -f src/smit-filesystem.$(OBJEXT)
+	-rm -f src/smit-httpClient.$(OBJEXT)
 	-rm -f src/smit-httpdHandlers.$(OBJEXT)
 	-rm -f src/smit-identifiers.$(OBJEXT)
 	-rm -f src/smit-logging.$(OBJEXT)
@@ -542,6 +547,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-dateTools.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-db.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-filesystem.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-httpClient.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-httpdHandlers.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-identifiers.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-logging.Po@am__quote@
@@ -851,6 +857,20 @@ src/smit-clone.obj: src/clone.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/clone.cpp' object='src/smit-clone.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/smit-clone.obj `if test -f 'src/clone.cpp'; then $(CYGPATH_W) 'src/clone.cpp'; else $(CYGPATH_W) '$(srcdir)/src/clone.cpp'; fi`
+
+src/smit-httpClient.o: src/httpClient.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/smit-httpClient.o -MD -MP -MF src/$(DEPDIR)/smit-httpClient.Tpo -c -o src/smit-httpClient.o `test -f 'src/httpClient.cpp' || echo '$(srcdir)/'`src/httpClient.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/smit-httpClient.Tpo src/$(DEPDIR)/smit-httpClient.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/httpClient.cpp' object='src/smit-httpClient.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/smit-httpClient.o `test -f 'src/httpClient.cpp' || echo '$(srcdir)/'`src/httpClient.cpp
+
+src/smit-httpClient.obj: src/httpClient.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/smit-httpClient.obj -MD -MP -MF src/$(DEPDIR)/smit-httpClient.Tpo -c -o src/smit-httpClient.obj `if test -f 'src/httpClient.cpp'; then $(CYGPATH_W) 'src/httpClient.cpp'; else $(CYGPATH_W) '$(srcdir)/src/httpClient.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/smit-httpClient.Tpo src/$(DEPDIR)/smit-httpClient.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/httpClient.cpp' object='src/smit-httpClient.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/smit-httpClient.obj `if test -f 'src/httpClient.cpp'; then $(CYGPATH_W) 'src/httpClient.cpp'; else $(CYGPATH_W) '$(srcdir)/src/httpClient.cpp'; fi`
 
 src/smit-console.o: src/console.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/smit-console.o -MD -MP -MF src/$(DEPDIR)/smit-console.Tpo -c -o src/smit-console.o `test -f 'src/console.cpp' || echo '$(srcdir)/'`src/console.cpp
