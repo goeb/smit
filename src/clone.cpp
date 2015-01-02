@@ -107,14 +107,15 @@ struct PullContext {
   *    If empty, then the default location is used inside the local repository.
   *
   */
-void downloadEntries(const PullContext &pullCtx, const Project &p, const Issue &i,
-                     const std::list<std::string> &remoteEntries, std::list<std::string>::iterator reid, const std::string &localDir)
+void downloadEntries(const PullContext &pullCtx, const Project &p, const std::string &issueId,
+                     const std::list<std::string> &remoteEntries, std::list<std::string>::const_iterator reid,
+                     const std::string &localDir)
 {
     LOGV("downloadEntries: %s ...\n", reid->c_str());
     for ( ; reid != remoteEntries.end(); reid++) {
         if (reid->empty()) continue; // directory listing may end by an empty line
         std::string remoteEid = *reid;
-        std::string resourceDir = "/" + p.getUrlName() + "/issues/" + i.id;
+        std::string resourceDir = "/" + p.getUrlName() + "/issues/" + issueId;
         std::string resource = resourceDir + "/" + remoteEid;
 
         HttpRequest hr(pullCtx.sessid);
@@ -270,6 +271,79 @@ void mergeEntry(const Entry *localEntry, Issue &remoteIssue, const Issue &remote
     }
 }
 
+/** Download the entries of remote issue
+  */
+std::string downloadRemoteIssue(const PullContext &pullCtx, Project &p, const std::string &issueId,
+                                const std::list<std::string> &remoteEntries)
+{
+    // clone the issue to a temporary directory and download the remote entries
+
+    // clean up if previous aborted merging left a such temporary dir
+    std::string tmpPath = p.getTmpDir() + "/" + issueId;
+    LOGV("Removing directory: %s\n", tmpPath.c_str());
+    int r = removeDir(tmpPath);
+    if (r<0) exit(1);
+
+    // create the tmp dir
+    mode_t mode = S_IRUSR | S_IWUSR | S_IXUSR;
+    r = mg_mkdir(p.getTmpDir().c_str(), mode);
+    // if it could not be created because it already exists, ok, not an error
+    // if it could not be created for another reason, the following mkdir will fail
+    // if no error, ok, continue.
+
+    r = mg_mkdir(tmpPath.c_str(), mode);
+    if (r != 0) {
+        fprintf(stderr, "Cannot create tmp directory '%s': %s\n", tmpPath.c_str(), strerror(errno));
+        fprintf(stderr, "Abort.\n");
+        exit(1);
+    }
+
+    // download all the remaining remote entries
+    downloadEntries(pullCtx, p, issueId, remoteEntries, remoteEntries.begin(), tmpPath);
+    return tmpPath;
+}
+
+/** Manage the merging of conflicting entries of an issue
+  *
+  */
+void handleConflictOnEntries(const PullContext &pullCtx, Project &p,
+                             const Issue &localIssue, const Entry *conflictingLocalEntry,
+                             Issue &remoteIssue)
+{
+    // remote: a--b--c--d
+    // local:  a--b--e
+    // remote issue has conflicting entries. download them locally in a separate directory
+
+    // compute the remote part of the issue that is conflicting with local entries
+    std::string commonParent = conflictingLocalEntry->parent;
+    // look for this parent in the remote issue
+    Entry *re = remoteIssue.latest;
+    while (re && re->prev) re = re->prev; // rewind
+    while (re && re->id != commonParent) re = re->next;
+    if (!re) {
+        fprintf(stderr, "Cannot find remote common parent in locally downloaded issue: %s\n", commonParent.c_str());
+        fprintf(stderr, "Abort.\n");
+        exit(1);
+    }
+    Issue remoteConflictingIssuePart;
+    re = re->next; // start with the first conflicting entry
+    while (re) {
+        remoteConflictingIssuePart.consolidateIssueWithSingleEntry(re, true);
+        re = re->next;
+    }
+    // at this point, remoteConflictingIssuePart contains the conflicting remote part of the issue
+
+    // for each local conflicting entry, do the merge
+    while (conflictingLocalEntry) {
+        mergeEntry(conflictingLocalEntry, remoteIssue, remoteConflictingIssuePart);
+        conflictingLocalEntry = conflictingLocalEntry->next;
+    }
+
+    // move the merge issue from tmp to official storage
+    p.officializeMerging(remoteIssue);
+    // no need to update the issue in memory, as it will not be re-accessed during the smit pulling
+}
+
 
 /** Pull an issue
   *
@@ -304,7 +378,6 @@ int pullIssue(const PullContext &pullCtx, Project &p, const Issue &i)
     }
 
     const Entry *localEntry = e;
-    const Entry *firstEntry = e;
 
     if (localEntry->id != hr.lines.front())  {
         // the remote issue and the local issue are not the same
@@ -335,10 +408,9 @@ int pullIssue(const PullContext &pullCtx, Project &p, const Issue &i)
         // same issue. Walk through the entries and pull...
 
         // TODO manage deleted remote entries
-        const Entry *conflictingLocalEntry = 0;// used in case of conflicting local entry
         std::string tmpPath;
 
-        std::list<std::string>::iterator reid;
+        std::list<std::string>::const_iterator reid;
         FOREACH(reid, hr.lines) {
             std::string remoteEid = *reid;
             if (remoteEid.empty()) continue; // ignore (usually last item in the directory listing)
@@ -346,44 +418,29 @@ int pullIssue(const PullContext &pullCtx, Project &p, const Issue &i)
             if (!localEntry) {
                 // remote issue has more entries. download them locally
 
-                downloadEntries(pullCtx, p, i, hr.lines, reid, "");
+                downloadEntries(pullCtx, p, i.id, hr.lines, reid, "");
 
                 break; // leave the loop as all the remaining remotes have been managed by downloadEntries
 
             } else if (localEntry->id != remoteEid) {
-                // remote issue has conflicting entries. download them locally in a separate directory
 
                 // remote: a--b--c--d
                 // local:  a--b--e
 
-                conflictingLocalEntry = localEntry;
-
-                // clone the current issue to a temporary directory and download the remote entries
-
-                // clean up if previous aborted merging left a such temporary dir
-                tmpPath = p.getTmpDir() + "/" + i.id;
-                LOGV("Removing directory: %s\n", tmpPath.c_str());
-                int r = removeDir(tmpPath);
-                if (r<0) exit(1);
-
-                // create the tmp dir
-                mode_t mode = S_IRUSR | S_IWUSR | S_IXUSR;
-                r = mg_mkdir(p.getTmpDir().c_str(), mode);
-                // if it could not be created because it already exists, ok, not an error
-                // if it could not be created fior another reason, the following mkdir will fail
-                // if no error, ok, continue.
-
-                r = mg_mkdir(tmpPath.c_str(), mode);
+                std::string tmpPath = downloadRemoteIssue(pullCtx, p, i.id, hr.lines);
+                // load this remote issue in memory
+                Issue remoteIssue;
+                int r = remoteIssue.load(i.id, tmpPath);
                 if (r != 0) {
-                    fprintf(stderr, "Cannot create tmp directory '%s': %s\n", tmpPath.c_str(), strerror(errno));
+                    fprintf(stderr, "Cannot load downloaded issue: %s\n", tmpPath.c_str());
                     fprintf(stderr, "Abort.\n");
                     exit(1);
+
                 }
 
-                // download all the remaining remote entries
-                downloadEntries(pullCtx, p, i, hr.lines, reid, tmpPath);
+                handleConflictOnEntries(pullCtx, p, i, localEntry, remoteIssue);
 
-                break; // leave the loop. Solving the conflict is handled below
+                break; // leave the loop.
 
 
             } // else nothing to do: local and remote still aligned
@@ -391,65 +448,6 @@ int pullIssue(const PullContext &pullCtx, Project &p, const Issue &i)
             // move the local entry pointer forward, except if already at the end
             if (localEntry) localEntry = localEntry->next;
         }
-
-        if (conflictingLocalEntry)   { // TODO move this block to a separate function
-            // handle the conflict on the issue
-
-            // copy local entries to the tmp dir
-            LOGV("Copying local entries to tmp dir\n");
-            const Entry *e = firstEntry;
-            while (e != 0 && e != conflictingLocalEntry) {
-                std::string srcPath = i.path + "/" + e->id;
-                std::string destPath = tmpPath + "/" + e->id;
-                int r = copyFile(srcPath, destPath);
-                if (r != 0) {
-                    fprintf(stderr, "Cannot copy entry to tmp location: %s\n", destPath.c_str());
-                    fprintf(stderr, "Abort.\n");
-                    exit(1);
-                }
-                e = e->next;
-            }
-
-            // load this tmp issue in memory (it is the same as the remote issue)
-            Issue remoteIssue;
-            int r = remoteIssue.load(i.id, tmpPath);
-            if (r != 0) {
-                fprintf(stderr, "Cannot load downloaded issue: %s\n", tmpPath.c_str());
-                fprintf(stderr, "Abort.\n");
-                exit(1);
-
-            }
-
-            // compute the remote part of the issue that is conflicting with local entries
-            std::string commonParent = conflictingLocalEntry->parent;
-            // look for this parent in the remote issue
-            Entry *re = remoteIssue.latest;
-            while (re && re->prev) re = re->prev; // rewind
-            while (re && re->id != commonParent) re = re->next;
-            if (!re) {
-                fprintf(stderr, "Cannot find remote common parent in locally downloaded issue: %s\n", commonParent.c_str());
-                fprintf(stderr, "Abort.\n");
-                exit(1);
-            }
-            Issue remoteConflictingIssuePart;
-            re = re->next; // start with the first conflicting entry
-            while (re) {
-                remoteConflictingIssuePart.consolidateIssueWithSingleEntry(re, true);
-                re = re->next;
-            }
-            // at this point, remoteConflictingIssuePart contains the conflicting remote part of the issue
-
-            // for each local conflicting entry, do the merge
-            while (conflictingLocalEntry) {
-                mergeEntry(conflictingLocalEntry, remoteIssue, remoteConflictingIssuePart);
-                conflictingLocalEntry = conflictingLocalEntry->next;
-            }
-
-            // move the merge issue from tmp to official storage
-            p.officializeMerging(remoteIssue);
-            // no need to update the issue in memory, as it will not be re-accessed during the smit pulling
-        }
-
     }
 
     return 0; // ok
