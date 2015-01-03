@@ -94,10 +94,13 @@ int getProjects(const std::string &rooturl, const std::string &destdir, const st
     return 0;
 }
 
+// resolve strategies for pulling conflicts
+enum ResolveStrategy { RESOLVE_KEEP_LOCAL, RESOLVE_DROP_LOCAL, RESOLVE_INTERACTIVE};
 struct PullContext {
     std::string rooturl; // eg: http://example.com:8090/
     std::string localRepo; // path to local repository
     std::string sessid; // session identifier
+    ResolveStrategy resolveStrategy;
 };
 
 /** Download entries, starting at the given iterator
@@ -213,6 +216,9 @@ void mergeEntry(const Entry *localEntry, Issue &remoteIssue, const Issue &remote
             // there is a conflict: the remote side has changed this property,
             // but with a different value than the local entry
             isConflicting = true;
+
+            // TODO have a --force flag or similar, for automatic testing
+            // TODO --conflict-keep-local, --conflict-drop-local
 
             std::list<std::string> remoteValue = remoteProperty->second;
             printf("-- Conflict on issue %s: %s\n", remoteIssue.id.c_str(), remoteIssue.getSummary().c_str());
@@ -831,7 +837,13 @@ int helpPull()
            "\n"
            "Options:\n"
            "  --user <user> --passwd <password> \n"
-           "               Give the user name and the password.\n"
+           "      Specify the user name and the password.\n"
+           "\n"
+           "  --resolve-conflict <policy>\n"
+           "      Resolve conflictual pulling automatically (no interactive choice).\n"
+           "      Possible values for <policy>:\n"
+           "        keep-local : local modifications shall be kept as-is\n"
+           "        drop-local : local modifications shall be deleted\n"
            "\n"
            );
     return 1;
@@ -845,9 +857,13 @@ int cmdPull(int argc, char * const *argv)
 
     int c;
     int optionIndex = 0;
+    PullContext pullCtx;
+    pullCtx.resolveStrategy = RESOLVE_INTERACTIVE;
+
     struct option longOptions[] = {
         {"user", 1, 0, 0},
         {"passwd", 1, 0, 0},
+        {"resolve-conflict", 0, 0, 0},
         {NULL, 0, NULL, 0}
     };
     while ((c = getopt_long(argc, argv, "v", longOptions, &optionIndex)) != -1) {
@@ -857,6 +873,13 @@ int cmdPull(int argc, char * const *argv)
                 username = optarg;
             } else if (0 == strcmp(longOptions[optionIndex].name, "passwd")) {
                 passwd = optarg;
+            } else if (0 == strcmp(longOptions[optionIndex].name, "resolve-conflict")) {
+                if (0 == strcmp(optarg, "keep-local")) pullCtx.resolveStrategy = RESOLVE_KEEP_LOCAL;
+                else if (0 == strcmp(optarg, "drop-local")) pullCtx.resolveStrategy = RESOLVE_DROP_LOCAL;
+                else {
+                    printf("invalid value for --resolve-conflict\n");
+                    return helpPull();
+                }
             }
             break;
         case 'v':
@@ -927,7 +950,6 @@ int cmdPull(int argc, char * const *argv)
     }
 
     // pull new entries and new attached files of all projects
-    PullContext pullCtx;
     pullCtx.rooturl = url;
     pullCtx.localRepo = dir;
     pullCtx.sessid = sessid;
