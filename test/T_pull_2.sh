@@ -61,7 +61,7 @@ startServer
 $SMIT clone http://127.0.0.1:$PORT --user $USER1 --passwd $PASSWD1 clone1
 
 cd clone1
-../$SMIT pull
+../$SMIT pull --resolve-conflict keep-local
 cd -
 
 stopServer
@@ -82,7 +82,7 @@ echo "dummyProp dummyValueClient" >> $ENTRY
 
 startServer
 cd clone1
-../$SMIT pull --user $USER1 --passwd $PASSWD1
+../$SMIT pull --user $USER1 --passwd $PASSWD1 --resolve-conflict keep-local
 cd -
 stopServer
 

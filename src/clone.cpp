@@ -95,12 +95,12 @@ int getProjects(const std::string &rooturl, const std::string &destdir, const st
 }
 
 // resolve strategies for pulling conflicts
-enum ResolveStrategy { RESOLVE_KEEP_LOCAL, RESOLVE_DROP_LOCAL, RESOLVE_INTERACTIVE};
+enum MergeStrategy { MERGE_KEEP_LOCAL, MERGE_DROP_LOCAL, MERGE_INTERACTIVE};
 struct PullContext {
     std::string rooturl; // eg: http://example.com:8090/
     std::string localRepo; // path to local repository
     std::string sessid; // session identifier
-    ResolveStrategy resolveStrategy;
+    MergeStrategy mergeStrategy;
 };
 
 /** Download entries, starting at the given iterator
@@ -169,7 +169,7 @@ void downloadEntries(const PullContext &pullCtx, const Project &p, const std::st
   * @param remoteIssue
   *      in/out: The remote issue instance is updated by the merging
   */
-void mergeEntry(const Entry *localEntry, Issue &remoteIssue, const Issue &remoteConflictingIssuePart)
+void mergeEntry(const Entry *localEntry, Issue &remoteIssue, const Issue &remoteConflictingIssuePart, MergeStrategy ms)
 {
     PropertiesMap newProperties; // the resulting properties of the new entry
 
@@ -182,10 +182,15 @@ void mergeEntry(const Entry *localEntry, Issue &remoteIssue, const Issue &remote
     std::map<std::string, std::list<std::string> >::const_iterator localProperty;
     FOREACH(localProperty, localEntry->properties) {
         std::string propertyName = localProperty->first;
-        if (propertyName == K_MESSAGE) continue; // handled below
-        if (propertyName == K_FILE) continue; // handled below
-
         std::list<std::string> localValue = localProperty->second;
+
+        if (propertyName == K_MESSAGE) continue; // handled below
+        if (propertyName == K_FILE) {
+            // keep local file
+            newProperties[propertyName] = localValue;
+            continue;
+        }
+
         std::map<std::string, std::list<std::string> >::const_iterator remoteProperty;
 
         // look if the value in the local entry is the same as in the remote issue
@@ -213,39 +218,41 @@ void mergeEntry(const Entry *localEntry, Issue &remoteIssue, const Issue &remote
                 continue;
             }
 
+            LOGV("Merge conflict: %s", propertyName.c_str());
             // there is a conflict: the remote side has changed this property,
             // but with a different value than the local entry
             isConflicting = true;
 
-            // TODO have a --force flag or similar, for automatic testing
-            // TODO --conflict-keep-local, --conflict-drop-local
-
-            std::list<std::string> remoteValue = remoteProperty->second;
-            printf("-- Conflict on issue %s: %s\n", remoteIssue.id.c_str(), remoteIssue.getSummary().c_str());
-            printf("Remote: %s => %s\n", propertyName.c_str(), toString(remoteValue).c_str());
-            printf("Local : %s => %s\n", propertyName.c_str(), toString(localValue).c_str());
-            std::string response;
-            while (response != "l" && response != "L" && response != "r" && response != "R") {
-                printf("Select: (l)ocal, (r)emote: ");
-                std::cin >> response;
-            }
-            if (response == "l" || response == "L") {
+            if (ms == MERGE_INTERACTIVE) {
+                std::list<std::string> remoteValue = remoteProperty->second;
+                printf("-- Conflict on issue %s: %s\n", remoteIssue.id.c_str(), remoteIssue.getSummary().c_str());
+                printf("Remote: %s => %s\n", propertyName.c_str(), toString(remoteValue).c_str());
+                printf("Local : %s => %s\n", propertyName.c_str(), toString(localValue).c_str());
+                std::string response;
+                while (response != "l" && response != "L" && response != "r" && response != "R") {
+                    printf("Select: (l)ocal, (r)emote: ");
+                    std::cin >> response;
+                }
+                if (response == "l" || response == "L") {
+                    // keep the local property
+                    newProperties[propertyName] = localValue;
+                } else {
+                    // drop the local property
+                    LOGV("Local property dropped.");
+                }
+            } else if (ms == MERGE_KEEP_LOCAL) {
                 // keep the local property
                 newProperties[propertyName] = localValue;
-            } else {
-                // keep the remote property
-                newProperties[propertyName] = remoteValue;
+            } else { // MERGE_DROP_LOCAL
+                // drop the local property
             }
         }
     }
 
-    // merge the attached files
-    // TODO newProperties[K_FILE]
-
     // keep the message (ask for confirmation?)
     if (localEntry->getMessage().size() > 0) {
         // if a conflict was detected before, then ask the user to keep the message of not
-        if (isConflicting) {
+        if (isConflicting && ms == MERGE_INTERACTIVE) {
             printf("Local message:\n");
             printf("--------------------------------------------------\n");
             printf("%s\n", localEntry->getMessage().c_str());
@@ -259,6 +266,9 @@ void mergeEntry(const Entry *localEntry, Issue &remoteIssue, const Issue &remote
                 // keep the message
                 newProperties[K_MESSAGE].push_back(localEntry->getMessage());
             }
+        } else if (isConflicting && ms == MERGE_DROP_LOCAL) {
+            // drop the message
+            LOGV("Local message dropped.");
         } else {
             // no conflict on the properties. keep the message unchanged
             newProperties[K_MESSAGE].push_back(localEntry->getMessage());
@@ -341,7 +351,7 @@ void handleConflictOnEntries(const PullContext &pullCtx, Project &p,
 
     // for each local conflicting entry, do the merge
     while (conflictingLocalEntry) {
-        mergeEntry(conflictingLocalEntry, remoteIssue, remoteConflictingIssuePart);
+        mergeEntry(conflictingLocalEntry, remoteIssue, remoteConflictingIssuePart, pullCtx.mergeStrategy);
         conflictingLocalEntry = conflictingLocalEntry->next;
     }
 
@@ -858,12 +868,12 @@ int cmdPull(int argc, char * const *argv)
     int c;
     int optionIndex = 0;
     PullContext pullCtx;
-    pullCtx.resolveStrategy = RESOLVE_INTERACTIVE;
+    pullCtx.mergeStrategy = MERGE_INTERACTIVE;
 
     struct option longOptions[] = {
         {"user", 1, 0, 0},
         {"passwd", 1, 0, 0},
-        {"resolve-conflict", 0, 0, 0},
+        {"resolve-conflict", 1, 0, 0},
         {NULL, 0, NULL, 0}
     };
     while ((c = getopt_long(argc, argv, "v", longOptions, &optionIndex)) != -1) {
@@ -874,8 +884,8 @@ int cmdPull(int argc, char * const *argv)
             } else if (0 == strcmp(longOptions[optionIndex].name, "passwd")) {
                 passwd = optarg;
             } else if (0 == strcmp(longOptions[optionIndex].name, "resolve-conflict")) {
-                if (0 == strcmp(optarg, "keep-local")) pullCtx.resolveStrategy = RESOLVE_KEEP_LOCAL;
-                else if (0 == strcmp(optarg, "drop-local")) pullCtx.resolveStrategy = RESOLVE_DROP_LOCAL;
+                if (0 == strcmp(optarg, "keep-local")) pullCtx.mergeStrategy = MERGE_KEEP_LOCAL;
+                else if (0 == strcmp(optarg, "drop-local")) pullCtx.mergeStrategy = MERGE_DROP_LOCAL;
                 else {
                     printf("invalid value for --resolve-conflict\n");
                     return helpPull();
