@@ -3,7 +3,6 @@ EMAILS_TO = {
         'smit-user-2' : 'smit-user-2@example.com',
         'smit-user-3' : 'smit-user-3@example.com'
         }
-GNUPGHOME=
 GPG_KEYS = {
         'smit-user-1@example.com' : 'E89504B5'
         }

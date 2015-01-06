@@ -22,6 +22,7 @@ from email.header import Header
 import subprocess
 
 import MailConfig
+import WebConfig
 
 def getGpgKey(email):
     "return the GPG id of a user, if any"
@@ -115,6 +116,16 @@ def gpgEncrypt(text, addressees):
     #print "result=", result
     return result
 
+def escapeProjectName(pname):
+    'escape characters except alphanumerics and ._-'
+    result = ''
+    dontEscape = '._-'
+    mark = '='
+    for c in pname:
+        if c.isalnum(): result += c
+        elif c in dontEscape: result += c
+        else: c += mark + '%02x' % (ord(c))
+    return result
 
 def getMailBody(jsonMsg):
     "print a recap of the properties of the issue, and the message"
@@ -148,6 +159,10 @@ def getMailBody(jsonMsg):
                 body += "    %s\r\n" % (f)
     except:
         pass
+    # link to the web server
+    url = '%s/%s/issues/%s' % (WebConfig.rooturl,
+            escapeProjectName(jsonMsg['project']), jsonMsg['issue'] )
+    body += '\r\n' + url + '\r\n'
 
     return body
 
