@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# test smit pull with conflicts
+# test smit pull with merge conflicts
 
 SMIT=../smit
 
@@ -48,9 +48,20 @@ fail() {
     exit 1
 }
 checkFile() {
+    not=0
+    if [ "$1" = "-not" ]; then
+        not=1
+        shift
+    fi
     file="$1"
-    [ -f $file ] || fail "missing file '$file'"
-    echo "$file: ok"
+    if [ "$not" = "1" ]; then
+        [ -f $file ] && fail "missing file '$file'"
+        echo "$file: ok (does not exist)"
+    else
+        [ -f $file ] || fail "missing file '$file'"
+        echo "$file: ok"
+    fi
+
 }
 
 cleanup
@@ -72,13 +83,23 @@ echo +parent entry1x2 > $ENTRY
 echo "dummyProp dummyValueServer" >> $ENTRY
 # add an issue
 mkdir $REPO/$PROJECT1/issues/3
-echo +parent null > $REPO/$PROJECT1/issues/3/entry3x1
-echo +parent entry3x1 > $REPO/$PROJECT1/issues/3/entry3x2
+echo +parent null > $REPO/$PROJECT1/issues/3/entry3x1server
+echo +parent entry3x1server > $REPO/$PROJECT1/issues/3/entry3x2server
 
-# client side: add entries
-ENTRY=clone1/$PROJECT1/issues/1/entry1x3client
+# local side: add conflicting entries
+ENTRY=clone1/$PROJECT1/issues/1/entry1x3local
 echo +parent entry1x2 > $ENTRY
-echo "dummyProp dummyValueClient" >> $ENTRY
+echo "dummyProp dummyValueLocal" >> $ENTRY
+echo "otherProp otherValue" >> $ENTRY
+# another entry
+ENTRY=clone1/$PROJECT1/issues/1/entry1x4local
+echo +parent entry1x3local  > $ENTRY
+echo "dummyProp newValue" >> $ENTRY
+
+# local side: add conflicting issue
+mkdir clone1/$PROJECT1/issues/3
+echo +parent null > clone1/$PROJECT1/issues/3/entry3x1local
+echo +parent entry3x1local > clone1/$PROJECT1/issues/3/entry3x2local
 
 startServer
 cd clone1
@@ -86,9 +107,28 @@ cd clone1
 cd -
 stopServer
 
-# check that the new entry and the new issue are pulled
-cd clone1
-echo TODO
+# check that the new entry and the new issue are pulled correctly
+ISSUE=clone1/$PROJECT1/issues/1
+checkFile $ISSUE/entry1x1
+checkFile $ISSUE/entry1x2
+checkFile $ISSUE/entry1x3server
+checkFile -not $ISSUE/entry1x3local
+checkFile -not $ISSUE/entry1x4local
+n=`ls $ISSUE | wc -l`
+[ $n -eq 5 ] || fail "[$ISSUE] n=$n"
+
+ISSUE=clone1/$PROJECT1/issues/3
+checkFile $ISSUE/entry3x1server
+checkFile $ISSUE/entry3x2server
+n=`ls $ISSUE | wc -l`
+[ $n -eq 2 ] || fail "[clone1/$PROJECT1/issues/3] n=$n"
+
+ISSUE=clone1/$PROJECT1/issues/4
+checkFile $ISSUE/entry3x1local
+checkFile $ISSUE/entry3x2local
+n=`ls $ISSUE | wc -l`
+[ $n -eq 2 ] || fail "[$ISSUE] n=$n"
+
 #checkFile $PROJECT1/issues/1/entry1x3
 
 
