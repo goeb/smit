@@ -124,7 +124,7 @@ def escapeProjectName(pname):
     for c in pname:
         if c.isalnum(): result += c
         elif c in dontEscape: result += c
-        else: c += mark + '%02x' % (ord(c))
+        else: result += mark + '%02x' % (ord(c))
     return result
 
 def getMailBody(jsonMsg):
@@ -152,7 +152,7 @@ def getMailBody(jsonMsg):
     # attached files
     try:
         files = jsonMsg['files']
-        print("files=%s" % files)
+        #print("files=%s" % files)
         if len(files)>0:
             body += "---- attached files -------------\r\n"
             for f in files:
@@ -197,9 +197,9 @@ def parseCommandLine():
     parser.add_argument('--test', action='store_true', help='test with dummy data (useful for command line debugging)')
     args = parser.parse_args()
 
-    print "--if-property-modified", args.if_property_modified
-    print "--mailto-property", args.mailto_property
-    print "--test", args.test
+    #print "--if-property-modified", args.if_property_modified
+    #print "--mailto-property", args.mailto_property
+    #print "--test", args.test
     return args
 	
 
