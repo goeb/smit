@@ -697,6 +697,8 @@ int cmdClone(int argc, char * const *argv)
     if (passwd) password = passwd;
     else password = getString("Password: ", true);
 
+    setLoggingOption(LO_CLI);
+
     curl_global_init(CURL_GLOBAL_ALL);
 
     std::string sessid = signin(url, username, password);
@@ -911,6 +913,7 @@ int cmdPull(int argc, char * const *argv)
     }
 
     const char *dir = "."; // local dir
+    setLoggingOption(LO_CLI);
 
     // get the remote url from local configuration file
     std::string url = loadUrl(dir);

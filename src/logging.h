@@ -21,7 +21,13 @@ enum LogLevel {
 };
 
 extern LogLevel LoggingLevel;
+extern int LoggingOptions;
+// logging options
+#define LO_NO_OPTION    0x0000
+#define LO_CLI          0x0001 // command line, not server
+
 inline void setLoggingLevel(LogLevel level) { LoggingLevel = level; }
+inline void setLoggingOption(int opt) { LoggingOptions |= opt; }
 
 bool doPrint(enum LogLevel msgLevel);
 
@@ -33,7 +39,9 @@ bool doPrint(enum LogLevel msgLevel);
 
 #define LOG2(_level, _file, _line, ...) do { \
     long t = gettid(); \
-    fprintf(stderr, "%s [%ld] %s %s:%d ", getLocalTimestamp().c_str(), t, _level, _file, _line); \
+    if ((LoggingOptions & LO_CLI) == 0) fprintf(stderr, "%s [%ld] ", getLocalTimestamp().c_str(), t); \
+    fprintf(stderr, "%s ", _level); \
+    if ((LoggingOptions & LO_CLI) == 0) fprintf(stderr, "%s:%d ", _file, _line); \
     fprintf(stderr, __VA_ARGS__); \
     fprintf(stderr, "\n"); \
     } while (0)

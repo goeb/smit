@@ -565,6 +565,7 @@ int cmdUi(int argc, char **argv)
 {
     std::string listenPort = "8199";
     char *repo = 0;
+    setLoggingOption(LO_CLI);
 
     int c;
     int optionIndex = 0;
