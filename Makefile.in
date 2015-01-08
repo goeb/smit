@@ -79,7 +79,7 @@ am_smit_OBJECTS = src/smit-db.$(OBJEXT) src/smit-parseConfig.$(OBJEXT) \
 	src/smit-logging.$(OBJEXT) src/smit-Trigger.$(OBJEXT) \
 	src/smit-filesystem.$(OBJEXT) src/smit-clone.$(OBJEXT) \
 	src/smit-httpClient.$(OBJEXT) src/smit-console.$(OBJEXT) \
-	src/smit-HttpContext.$(OBJEXT) \
+	src/smit-HttpContext.$(OBJEXT) src/smit-localClient.$(OBJEXT) \
 	mongoose/smit-mongoose.$(OBJEXT)
 nodist_smit_OBJECTS = smit-embedcpio.$(OBJEXT)
 smit_OBJECTS = $(am_smit_OBJECTS) $(nodist_smit_OBJECTS)
@@ -343,6 +343,7 @@ smit_SOURCES = \
 			   src/httpClient.cpp \
 			   src/console.cpp \
 			   src/HttpContext.cpp \
+			   src/localClient.cpp \
 			   mongoose/mongoose.c 
 
 nodist_smit_SOURCES = embedcpio.c embedcpio.h 
@@ -498,6 +499,8 @@ src/smit-console.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/smit-HttpContext.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
+src/smit-localClient.$(OBJEXT): src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
 mongoose/$(am__dirstamp):
 	@$(MKDIR_P) mongoose
 	@: > mongoose/$(am__dirstamp)
@@ -524,6 +527,7 @@ mostlyclean-compile:
 	-rm -f src/smit-httpClient.$(OBJEXT)
 	-rm -f src/smit-httpdHandlers.$(OBJEXT)
 	-rm -f src/smit-identifiers.$(OBJEXT)
+	-rm -f src/smit-localClient.$(OBJEXT)
 	-rm -f src/smit-logging.$(OBJEXT)
 	-rm -f src/smit-main.$(OBJEXT)
 	-rm -f src/smit-mutexTools.$(OBJEXT)
@@ -550,6 +554,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-httpClient.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-httpdHandlers.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-identifiers.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-localClient.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-logging.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-main.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-mutexTools.Po@am__quote@
@@ -899,6 +904,20 @@ src/smit-HttpContext.obj: src/HttpContext.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/HttpContext.cpp' object='src/smit-HttpContext.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/smit-HttpContext.obj `if test -f 'src/HttpContext.cpp'; then $(CYGPATH_W) 'src/HttpContext.cpp'; else $(CYGPATH_W) '$(srcdir)/src/HttpContext.cpp'; fi`
+
+src/smit-localClient.o: src/localClient.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/smit-localClient.o -MD -MP -MF src/$(DEPDIR)/smit-localClient.Tpo -c -o src/smit-localClient.o `test -f 'src/localClient.cpp' || echo '$(srcdir)/'`src/localClient.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/smit-localClient.Tpo src/$(DEPDIR)/smit-localClient.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/localClient.cpp' object='src/smit-localClient.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/smit-localClient.o `test -f 'src/localClient.cpp' || echo '$(srcdir)/'`src/localClient.cpp
+
+src/smit-localClient.obj: src/localClient.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/smit-localClient.obj -MD -MP -MF src/$(DEPDIR)/smit-localClient.Tpo -c -o src/smit-localClient.obj `if test -f 'src/localClient.cpp'; then $(CYGPATH_W) 'src/localClient.cpp'; else $(CYGPATH_W) '$(srcdir)/src/localClient.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/smit-localClient.Tpo src/$(DEPDIR)/smit-localClient.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/localClient.cpp' object='src/smit-localClient.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/smit-localClient.obj `if test -f 'src/localClient.cpp'; then $(CYGPATH_W) 'src/localClient.cpp'; else $(CYGPATH_W) '$(srcdir)/src/localClient.cpp'; fi`
 install-dist_pkgdataDATA: $(dist_pkgdata_DATA)
 	@$(NORMAL_INSTALL)
 	test -z "$(pkgdatadir)" || $(MKDIR_P) "$(DESTDIR)$(pkgdatadir)"

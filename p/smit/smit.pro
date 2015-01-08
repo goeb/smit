@@ -25,7 +25,8 @@ SOURCES += \
     ../../src/clone.cpp \
     ../../src/console.cpp \
     ../../src/HttpContext.cpp \
-    ../../src/httpClient.cpp
+    ../../src/httpClient.cpp \
+    ../../src/localClient.cpp
 
 HEADERS += \
     ../../mongoose/mongoose.h \
@@ -50,5 +51,6 @@ HEADERS += \
     ../../src/clone.h \
     ../../src/console.h \
     ../../src/HttpContext.h \
-    ../../src/httpClient.h
+    ../../src/httpClient.h \
+    ../../src/localClient.h
 

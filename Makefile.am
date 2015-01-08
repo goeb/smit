@@ -50,6 +50,7 @@ smit_SOURCES = \
 			   src/httpClient.cpp \
 			   src/console.cpp \
 			   src/HttpContext.cpp \
+			   src/localClient.cpp \
 			   mongoose/mongoose.c 
 
 nodist_smit_SOURCES = embedcpio.c embedcpio.h 

@@ -39,6 +39,7 @@
 #include "identifiers.h"
 #include "filesystem.h"
 #include "clone.h"
+#include "localClient.h"
 
 
 void usage()
@@ -49,6 +50,7 @@ void usage()
            "\n"
            "  clone       Clone a smit repository\n"
            "  init        Initialise a smit repository\n"
+           "  issue       Print or modify an issue in a local project\n"
            "  project     List, create, or update a smit project\n"
            "  pull        Fetch from a remote repository\n"
            "  serve       Start a smit web server\n"
@@ -755,6 +757,9 @@ int main(int argc, char **argv)
         } else if (0 == strcmp(command, "user")) {
             return cmdUser(argc-1, argv+1);
 
+        } else if (0 == strcmp(command, "issue")) {
+            return cmdIssue(argc-1, argv+1);
+
         } else if (0 == strcmp(command, "clone")) {
             return cmdClone(argc-1, argv+1);
 
@@ -771,6 +776,7 @@ int main(int argc, char **argv)
             if (i < argc) {
                 const char *help = argv[i];
                 if      (0 == strcmp(help, "init")) return helpInit();
+                else if (0 == strcmp(help, "issue")) return helpIssue();
                 else if (0 == strcmp(help, "project")) return helpProject();
                 else if (0 == strcmp(help, "user")) return helpUser();
                 else if (0 == strcmp(help, "serve")) return helpServe();

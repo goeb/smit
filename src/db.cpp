@@ -526,6 +526,7 @@ int Issue::load(const std::string &issueId, const std::string &issuePath)
         if (0 == strcmp(entryFile->d_name, ".")) continue;
         if (0 == strcmp(entryFile->d_name, "..")) continue;
         if (0 == strcmp(entryFile->d_name, DIR_DELETED)) continue;
+        if (0 == strcmp(entryFile->d_name, DIR_DELETED_OLD)) continue;
         if (0 == strcmp(entryFile->d_name, "_HEAD")) {
             // obsolete.
             LOG_INFO("Found obsolete _HEAD");
