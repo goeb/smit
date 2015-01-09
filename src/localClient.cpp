@@ -50,7 +50,6 @@ bool Verbose_localClient = false;
 
 #define INDENT "  "
 
-
 void printSeparation()
 {
     printf("----------------------------------------"); // 40 hyphens
@@ -129,6 +128,18 @@ void printIssue(const Issue &i, int printMode)
 
     if ( (printMode & PRINT_MESSAGES) || (printMode & PRINT_FULL_HISTORY) ) {
         printMessages(i, printMode);
+    }
+}
+
+void printAllIssues(const Project &p)
+{
+    const std::map<std::string, std::list<std::string> > filterIn;
+    const std::map<std::string, std::list<std::string> > filterOut;
+
+    std::vector<const Issue*> issueList = p.search("", filterIn, filterOut, "id");
+    std::vector<const Issue*>::const_iterator i;
+    FOREACH(i, issueList) {
+        printIssue(*(*i), PRINT_SUMMARY);
     }
 }
 
@@ -219,10 +230,6 @@ int cmdIssue(int argc, char * const *argv)
         return helpIssue();
     }
 
-    if (!add && !issueId) {
-        printf("You must specify an issue identifier.\n\n");
-        return helpIssue();
-    }
 
     setLoggingOption(LO_CLI);
     setLoggingLevel(LL_ERROR);
@@ -235,7 +242,10 @@ int cmdIssue(int argc, char * const *argv)
         exit(1);
     }
 
-    if (!add) {
+    if (!add && !issueId) {
+        printAllIssues(*p);
+
+    } else if (!add) {
         // get the issue
         Issue issue;
         int r = p->get(issueId, issue);
