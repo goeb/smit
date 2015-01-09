@@ -48,7 +48,7 @@ bool Verbose_localClient = false;
 #define PRINT_PROPERTIES   0x0002
 #define PRINT_FULL_HISTORY 0x0004
 
-#define INDENT "  "
+#define INDENT "    "
 
 void printSeparation()
 {
@@ -89,21 +89,32 @@ void printMessages(const Issue &i, int printMode)
 
         if (doPrint) {
 
+            printSeparation();
             // print the header
             std::string header = "Date: " + epochToString(e->ctime) + ", Author: " + e->author + " (" + e->id +")";
-            printHeader(header.c_str());
+            printf("%s\n", header.c_str());
 
             // TODO print tags ?
 
             if (msg.size()) {
                 // print the message
-                printf("%s\n", msg.c_str());
+                printf("Message:\n");
+                size_t size = msg.size();
+                size_t i;
+                for (i = 0; i < size; i++) {
+                    // indent lines of message
+                    if (msg[i] == '\r') continue; // skip this
+                    if (i==0) printf(INDENT); // indent first line of message
+                    printf("%c", msg[i]);
+                    if (msg[i] == '\n') printf(INDENT); // indent each new line
+                }
+                printf("\n");
             }
 
             // TODO print names of attached files
 
             if (printMode & PRINT_FULL_HISTORY) {
-                printHeader("Modified Properties");
+                printf("Modified Properties:\n");
                 // print the properties changes
                 // process summary first as it is not part of orderedFields
                 PropertiesIt p;
@@ -166,6 +177,9 @@ int helpIssue()
            "      If <id> is specified, then the entry shall be added to this issue.\n"
            "      Otherwise, a new issue shall be created.\n"
            "\n"
+           "  -v, --verbose"
+           "      Be verbose.\n"
+           "\n"
            );
     return 1;
 }
@@ -184,9 +198,10 @@ int cmdIssue(int argc, char * const *argv)
         {"history",     no_argument,    0,  'h' },
         {"properties",  no_argument,    0,  'p' },
         {"messages",    no_argument,    0,  'm' },
+        {"verbose",    no_argument,    0,   'v' },
         {NULL, 0, NULL, 0}
     };
-    while ((c = getopt_long(argc, argv, "ahpm", longOptions, &optionIndex)) != -1) {
+    while ((c = getopt_long(argc, argv, "ahpmv", longOptions, &optionIndex)) != -1) {
         switch (c) {
         case 'v':
             Verbose_localClient = true;
@@ -220,7 +235,7 @@ int cmdIssue(int argc, char * const *argv)
         issueId = argv[optind];
         optind++;
     }
-    if (optind < argc) {
+    if (optind < argc && !add) {
         printf("Too many arguments.\n\n");
         return helpIssue();
     }
@@ -232,8 +247,8 @@ int cmdIssue(int argc, char * const *argv)
 
 
     setLoggingOption(LO_CLI);
-    setLoggingLevel(LL_ERROR);
-
+    if (Verbose_localClient) setLoggingLevel(LL_INFO);
+    else setLoggingLevel(LL_ERROR);
 
     // load the project
     Project *p = Project::init(projectPath);
@@ -255,8 +270,36 @@ int cmdIssue(int argc, char * const *argv)
         }
 
         printIssue(issue, printMode);
+
     } else {
-        printf("--add not implemented\n");
+        // add a new issue, or an entry to an existing issue
+        // parse the remaining argument
+        // they must be of the form key=value
+        PropertiesMap properties;
+        while (optind < argc) {
+            std::string arg = argv[optind];
+            std::string key = popToken(arg, '=');
+            std::string value = arg;
+            trimBlanks(key);
+            trimBlanks(value);
+            properties[key].push_back(arg);
+            optind++;
+        }
+        std::string username = "toto"; //TODO
+        std::string entryId;
+        std::string iid = issueId;
+        if (iid == "-") iid = "";
+        int r = p->addEntry(properties, iid, entryId, username);
+        if (r == 0) {
+            if (entryId.empty()) {
+                printf("Issue %s: no change\n", iid.c_str());
+            } else {
+                printf("Issue %s: Entry %s\n", iid.c_str(), entryId.c_str());
+            }
+        } else {
+            printf("Error: cannot add entry\n");
+            return 1;
+        }
     }
     return 0;
 }

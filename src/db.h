@@ -83,8 +83,6 @@ struct Issue {
 
     int load(const std::string &issueId, const std::string &issuePath);
     Entry *addEntry(const PropertiesMap &properties, const std::string &username);
-
-
 };
 
 
