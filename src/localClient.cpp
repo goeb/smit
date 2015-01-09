@@ -74,6 +74,7 @@ void printProperties(const Issue &i)
     PropertiesIt p;
     printHeader("Properties");
     FOREACH(p, i.properties) {
+        if (p->first == K_SUMMARY) continue;
         printf(INDENT "%-25s : %s\n", p->first.c_str(), toString(p->second).c_str());
     }
 }
@@ -187,7 +188,7 @@ int helpIssue()
 int cmdIssue(int argc, char * const *argv)
 {
     const char *projectPath = 0;
-    const char *issueId = 0;
+    std::string issueId = "";
     int printMode = PRINT_SUMMARY;
     bool add = false;
 
@@ -257,21 +258,10 @@ int cmdIssue(int argc, char * const *argv)
         exit(1);
     }
 
-    if (!add && !issueId) {
+    if (!add && issueId.empty()) {
         printAllIssues(*p);
 
-    } else if (!add) {
-        // get the issue
-        Issue issue;
-        int r = p->get(issueId, issue);
-        if (r != 0) {
-            fprintf(stderr, "Cannot get issue '%s'\n", issueId);
-            exit(1);
-        }
-
-        printIssue(issue, printMode);
-
-    } else {
+    } else if (add) {
         // add a new issue, or an entry to an existing issue
         // parse the remaining argument
         // they must be of the form key=value
@@ -287,19 +277,30 @@ int cmdIssue(int argc, char * const *argv)
         }
         std::string username = "toto"; //TODO
         std::string entryId;
-        std::string iid = issueId;
-        if (iid == "-") iid = "";
-        int r = p->addEntry(properties, iid, entryId, username);
+        if (issueId == "-") issueId = "";
+        int r = p->addEntry(properties, issueId, entryId, username);
         if (r == 0) {
             if (entryId.empty()) {
-                printf("Issue %s: no change\n", iid.c_str());
+                printf("Issue %s: no change\n", issueId.c_str());
             } else {
-                printf("Issue %s: Entry %s\n", iid.c_str(), entryId.c_str());
+                printf("Issue %s: Entry %s\n", issueId.c_str(), entryId.c_str());
             }
         } else {
             printf("Error: cannot add entry\n");
             return 1;
         }
+
+    } else {
+        // get the issue
+        Issue issue;
+        int r = p->get(issueId, issue);
+        if (r != 0) {
+            fprintf(stderr, "Cannot get issue '%s'\n", issueId.c_str());
+            exit(1);
+        }
+
+        printIssue(issue, printMode);
+
     }
     return 0;
 }
