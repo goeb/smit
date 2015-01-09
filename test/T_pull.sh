@@ -1,7 +1,9 @@
 #!/bin/sh
 
 # test smit pull
-
+TEST_NAME=`basename $0`
+# remove suffix .sh
+TEST_NAME=`echo $TEST_NAME | sed -e "s/\.sh//"`
 SMIT=../smit
 
 set -e 
@@ -17,19 +19,23 @@ init() {
     $SMIT init $REPO
     $SMIT project -c $PROJECT1 -d $REPO
     $SMIT user $USER1 --passwd $PASSWD1 --project $PROJECT1:rw -d $REPO
+    # add custom property
+    chmod u+w $REPO/$PROJECT1/project
+    echo "addProperty color select blue green yellow" >> $REPO/$PROJECT1/project
+    echo "addProperty freeText text" >> $REPO/$PROJECT1/project
 
     # create some entries
-    mkdir $REPO/$PROJECT1/issues/1
-    echo +parent null > $REPO/$PROJECT1/issues/1/entry1x1
-    echo +parent entry1x1 > $REPO/$PROJECT1/issues/1/entry1x2
-    mkdir $REPO/$PROJECT1/issues/2
-    echo +parent null > $REPO/$PROJECT1/issues/2/entry2x1
+    # create issue 1
+    $SMIT issue $REPO/$PROJECT1 -a - "summary=first issue" color=blue
+    $SMIT issue $REPO/$PROJECT1 -a 1 status=open color=green
+    # create issue 2
+    $SMIT issue $REPO/$PROJECT1 -a - "summary=second issue" color=yellow
     echo file1 > $REPO/$PROJECT1/files/file1
 }
 cleanup() {
     REPO=trepo # just to be sure before the rm -rf
     rm -rf $REPO
-    rm -rf clone1 clone2
+    rm -rf clone1
 }
 
 startServer() {
@@ -66,12 +72,11 @@ cd -
 
 stopServer
 
-# add an entry
-echo +parent entry1x2 > $REPO/$PROJECT1/issues/1/entry1x3
+# add an entry server-side
+$SMIT issue $REPO/$PROJECT1 -a 1 color=yellow freeText="hello world"
 # add an issue
-mkdir $REPO/$PROJECT1/issues/3
-echo +parent null > $REPO/$PROJECT1/issues/3/entry3x1
-echo +parent entry3x1 > $REPO/$PROJECT1/issues/3/entry3x2
+$SMIT issue $REPO/$PROJECT1 -a - summary="t---d issue" freeText="this is xyz"
+$SMIT issue $REPO/$PROJECT1 -a 3 summary="third issue" freeText="this is xyz"
 
 
 startServer
@@ -81,10 +86,10 @@ cd -
 stopServer
 
 # check that the new entry and the new issue are pulled
-cd clone1
-checkFile $PROJECT1/issues/3/entry3x1
-checkFile $PROJECT1/issues/3/entry3x2
-checkFile $PROJECT1/issues/1/entry1x3
+$SMIT issue clone1/$PROJECT1 1 -pm > $TEST_NAME.out
+$SMIT issue clone1/$PROJECT1 2 -pm >> $TEST_NAME.out
+$SMIT issue clone1/$PROJECT1 3 -pm >> $TEST_NAME.out
 
+diff -u $srcdir/$TEST_NAME.ref $TEST_NAME.out 
 
 
