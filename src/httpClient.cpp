@@ -61,6 +61,17 @@ int HttpRequest::downloadFile(const std::string localPath)
     filename = localPath;
     performRequest();
     if (fd) closeFile();
+    else {
+        // if fd was not open, it is because:
+        // - either there was an error (remote file does not exist)
+        // - or the file is empty (the callback for storing received data was never called)
+        if (httpStatusCode == 200) {
+            // case of an empty file
+            // create the empty file locally
+            openFile();
+            closeFile();
+        }
+    }
 }
 
 /** Get files recursively through sub-directories

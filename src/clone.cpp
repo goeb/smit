@@ -464,6 +464,50 @@ int pullIssue(const PullContext &pullCtx, Project &p, const Issue &i)
     return 0; // ok
 }
 
+void pullAttachedFiles(const PullContext &pullCtx, Project &p)
+{
+    // get the remote files
+    HttpRequest hr(pullCtx.sessid);
+    std::string resourceFilesDir = "/" + p.getUrlName() + "/" K_UPLOADED_FILES_DIR "/";
+    hr.setUrl(pullCtx.rooturl, resourceFilesDir);
+    hr.getRequestLines();
+    hr.closeCurl(); // free the resource
+
+    std::string localFilesDir = pullCtx.localRepo + "/" + p.getUrlName() + "/" K_UPLOADED_FILES_DIR "/";
+
+    std::list<std::string>::iterator fileIt;
+    FOREACH(fileIt, hr.lines) {
+        std::string filename = *fileIt;
+        if (filename.empty()) continue;
+        LOGV("Remote: %s/%s\n", resourceFilesDir.c_str(), filename.c_str());
+
+        std::string localPath = localFilesDir + filename;
+        if (fileExists(localPath)) {
+            LOGV("File already exists locally: %s", localPath.c_str());
+            continue;
+        }
+
+        // download the file
+        printf("%s\n", filename.c_str());
+        std::string resource = resourceFilesDir + filename;
+        HttpRequest hr(pullCtx.sessid);
+        hr.setUrl(pullCtx.rooturl, resource);
+        std::string localTmpFile = p.getTmpDir() + "/" + filename;
+        mode_t mode = S_IRUSR | S_IWUSR | S_IXUSR;
+        mg_mkdir(p.getTmpDir().c_str(), mode);
+        hr.downloadFile(localTmpFile);
+        hr.closeCurl(); // free the resource
+
+        // move the file at the right place
+        int r = rename(localTmpFile.c_str(), localPath.c_str());
+        if (r != 0) {
+            LOG_ERROR("Cannot mv file '%s' -> '%s': %s", localTmpFile.c_str(), localPath.c_str(), strerror(errno));
+            exit(1);
+        }
+    }
+}
+
+
 int pullProject(const PullContext &pullCtx, Project &p)
 {
     // get the remote issues
@@ -491,12 +535,15 @@ int pullProject(const PullContext &pullCtx, Project &p)
             hr.setUrl(pullCtx.rooturl, resource);
             hr.setRepository(pullCtx.localRepo);
             hr.doCloning(true, 0);
-            // TODO pull attached files
         } else {
             LOGV("Pulling issue: %s/issues/%s\n", p.getName().c_str(), id.c_str());
             pullIssue(pullCtx, p, i);
         }
     }
+
+    // pull attached files
+    pullAttachedFiles(pullCtx, p);
+
     return 0; // ok
 }
 
