@@ -38,11 +38,6 @@ bool Verbose = false;
 
 #define LOGV(...) do { if (Verbose) { printf(__VA_ARGS__); fflush(stdout);} } while (0)
 
-#define SMIT_DIR ".smit"
-#define PATH_SESSID SMIT_DIR "/sessid"
-#define PATH_URL SMIT_DIR "/remote"
-
-
 int helpClone()
 {
     printf("Usage: smit clone [options] <url> <directory>\n"
@@ -579,6 +574,28 @@ void storeSessid(const std::string &dir, const std::string &sessid)
     }
 }
 
+void storeUsername(const std::string &dir, const std::string &username)
+{
+    LOGV("storeUsername(%s, %s)...\n", dir.c_str(), username.c_str());
+    std::string path = dir + "/" PATH_USERNAME;
+    int r = writeToFile(path.c_str(), username + "\n");
+    if (r < 0) {
+        fprintf(stderr, "Abort.\n");
+        exit(1);
+    }
+}
+std::string loadUsername(const std::string &clonedRepo)
+{
+    std::string path = clonedRepo + "/" PATH_USERNAME;
+    std::string username;
+    int r = loadFile(path.c_str(), username);
+    if (r < 0) {
+        username = "Anonymous";
+        fprintf(stderr, "Cannot load username. Set '%s'\n", username.c_str());
+    }
+    return username;
+}
+
 std::string loadSessid(const std::string &dir)
 {
     std::string path = dir + "/" PATH_SESSID;
@@ -714,6 +731,7 @@ int cmdClone(int argc, char * const *argv)
     // ceate persistent configuration of the local clone
     createSmitDir(dir);
     storeSessid(dir, sessid);
+    storeUsername(dir, username);
     storeUrl(dir, url);
 
     curl_global_cleanup();

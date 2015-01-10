@@ -32,15 +32,11 @@
 #include "filesystem.h"
 #include "db.h"
 #include "logging.h"
+#include "clone.h"
 
 bool Verbose_localClient = false;
 
 #define LOGV(...) do { if (Verbose_localClient) { printf(__VA_ARGS__); fflush(stdout);} } while (0)
-
-#define SMIT_DIR ".smit"
-#define PATH_SESSID SMIT_DIR "/sessid"
-#define PATH_URL SMIT_DIR "/remote"
-
 
 // print mode mask
 #define PRINT_SUMMARY      0x0000
@@ -275,7 +271,11 @@ int cmdIssue(int argc, char * const *argv)
             properties[key].push_back(arg);
             optind++;
         }
-        std::string username = "toto"; //TODO
+        // get the username of the repository
+        std::string repo = projectPath;
+        repo += "/..";
+        std::string username = loadUsername(repo);
+
         std::string entryId;
         if (issueId == "-") issueId = "";
         int r = p->addEntry(properties, issueId, entryId, username);
