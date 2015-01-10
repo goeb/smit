@@ -536,10 +536,18 @@ int pullProjects(const PullContext &pullCtx)
         std::string unmangledName = Project::urlNameDecode(*projectName);
         Project *p = Database::Db.getProject(unmangledName);
         if (!p) {
-            fprintf(stderr, "remote project not existing locally. TODO. Exiting...\n");
-            exit(1);
+            // the remote project was not locally cloned
+            // do cloning now
+            printf("Cloning project: %s\n", unmangledName.c_str());
+            HttpRequest hr(pullCtx.sessid);
+            std::string resource = *projectName;
+            resource = "/" + resource;
+            hr.setUrl(pullCtx.rooturl, resource);
+            hr.setRepository(pullCtx.localRepo);
+            hr.doCloning(true, 0);
+        } else {
+            pullProject(pullCtx, *p);
         }
-        pullProject(pullCtx, *p);
     }
     return 0; //ok
 }
@@ -861,7 +869,7 @@ int cmdGet(int argc, char * const *argv)
 
 int helpPull()
 {
-    printf("Usage: smit pull\n"
+    printf("Usage: smit pull [<local-repository>]\n"
            "\n"
            "  Incorporates changes from a remote repository into the local copy.\n"
            "\n"
@@ -884,6 +892,7 @@ int cmdPull(int argc, char * const *argv)
 {
     std::string username;
     const char *passwd = 0;
+    const char *dir = "."; // default value is current directory
 
     int c;
     int optionIndex = 0;
@@ -926,11 +935,14 @@ int cmdPull(int argc, char * const *argv)
     }
     // manage non-option ARGV elements
     if (optind < argc) {
+        dir = argv[optind];
+        optind++;
+    }
+    if (optind < argc) {
         printf("Too many arguments.\n\n");
         return helpPull();
     }
 
-    const char *dir = "."; // local dir
     setLoggingOption(LO_CLI);
 
     // get the remote url from local configuration file

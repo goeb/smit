@@ -1,4 +1,4 @@
-+smv 2.0.1
++smv 2.1.0
 addUser "John Smith"     sha1 e61a3587b3f7a142b8c7b9263c82f8119398ecb7 \
     project myproject ro \
     project things_to_do rw \
@@ -17,6 +17,7 @@ addUser alexia     project myproject ro \
 
 
 addUser alice     sha1 522b276a356bdf39013dfabea2cd43e141ecc9e8 \
+    project a:b:c ro \
     project myproject ro \
     project things_to_do ro \
 
