@@ -1584,9 +1584,19 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
         }
 
         // link to raw entry
-        ctx.req->printf("(<a href=\"/%s/issues/%s/%s\" class=\"sm_entry_raw\">%s</a>)\n",
+        ctx.req->printf("(<a href=\"/%s/issues/%s/%s\" class=\"sm_entry_raw\">%s</a>\n",
                         ctx.getProject().getUrlName().c_str(),
                         urlEncode(issue.id).c_str(), urlEncode(ee.id).c_str(), _("raw"));
+        // link to possible amendments
+        int i = 1;
+        std::list<std::string>::const_iterator a;
+        FOREACH(a, ee.amendments) {
+            ctx.req->printf(", <a href=\"/%s/issues/%s/%s\" class=\"sm_entry_raw\">amend%d</a>\n",
+                            ctx.getProject().getUrlName().c_str(),
+                            urlEncode(issue.id).c_str(), urlEncode(*a).c_str(), i);
+            i++;
+        }
+        ctx.req->printf(")");
 
         // display the tags of the entry
         if (!pconfig.tags.empty()) {

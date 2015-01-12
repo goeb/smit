@@ -159,6 +159,18 @@ Entry *Issue::addEntry(const PropertiesMap &properties, const std::string &usern
     return e;
 }
 
+/** Amend the given Entry with a new message
+  *
+  * The former message will be replaced by the new one
+  * in the consolidation of the issue.
+  */
+void Issue::amendEntry(const std::string &entryId, const std::string &newMsg, const std::string &username)
+{
+    PropertiesMap properties;
+    properties[K_MESSAGE].push_back(newMsg);
+    properties[K_AMEND].push_back(entryId);
+    addEntry(properties, username);
+}
 
 /** Get the specification of a given property
   *
@@ -415,6 +427,8 @@ void Issue::consolidateAmendment(Entry *e)
     Entry *amendedEntry = eit->second;
     amendedEntry->properties[K_MESSAGE].clear();
     amendedEntry->properties[K_MESSAGE].push_back(msg);
+    amendedEntry->amendments.push_back(e->id);
+
 }
 
 /** Consolidate an issue by accumulating all its entries
@@ -2052,10 +2066,7 @@ int Project::deleteEntry(const std::string &issueId, const std::string &entryId,
 
     // ok, we can proceed
 
-    PropertiesMap properties;
-    properties[K_MESSAGE].push_back("message deleted");
-    properties[K_AMEND].push_back(entryId);
-    i->addEntry(properties, username);
+    i->amendEntry(entryId, "message deleted", username);
     i->consolidate();
 
     return 0;

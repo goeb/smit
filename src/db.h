@@ -53,6 +53,7 @@ struct Entry {
     std::set<std::string> tags;
     Entry() : ctime(0), next(0), prev(0) {}
     static Entry *loadEntry(std::string dir, const char* basename);
+    std::list<std::string> amendments; // id of the entries that amend this entry
 };
 
 // Issue
@@ -86,6 +87,8 @@ struct Issue {
 
     int load(const std::string &issueId, const std::string &issuePath);
     Entry *addEntry(const PropertiesMap &properties, const std::string &username);
+    void amendEntry(const std::string &entryId, const std::string &newMsg, const std::string &username);
+
 };
 
 
