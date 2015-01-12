@@ -385,6 +385,38 @@ void Issue::consolidateIssueWithSingleEntry(Entry *e, bool overwrite) {
     if (mtime == 0 || overwrite) mtime = e->ctime;
 }
 
+/** Consolidate a possible amended entry
+  */
+void Issue::consolidateAmendment(Entry *e)
+{
+    PropertiesIt p = e->properties.find(K_AMEND);
+    if (p == e->properties.end()) return; // no amendment
+    if (p->second.empty()) {
+        LOG_ERROR("cannot consolidateAmendment with missing entry id");
+        return;
+    }
+    std::string amendedEntryId = p->second.front();
+
+    p = e->properties.find(K_MESSAGE);
+    std::string msg;
+    if (p == e->properties.end()) return; // no amending message
+    if (p->second.empty()) {
+        LOG_ERROR("cannot consolidateAmendment with missing message");
+        // consider the message as empty
+
+    } else msg = p->second.front();
+
+    // find this entry and modify its message
+    std::map<std::string, Entry*>::iterator eit = entries.find(amendedEntryId);
+    if (eit == entries.end()) {
+        LOG_ERROR("cannot consolidateAmendment for unfound entry '%s'", amendedEntryId.c_str());
+        return;
+    }
+    Entry *amendedEntry = eit->second;
+    amendedEntry->properties[K_MESSAGE].clear();
+    amendedEntry->properties[K_MESSAGE].push_back(msg);
+}
+
 /** Consolidate an issue by accumulating all its entries
   *
   * This method must be called from a mutex-protected scope (no mutex is managed in here).
@@ -407,6 +439,7 @@ void Issue::consolidate()
         // (in order to have only most recent properties)
 
         consolidateIssueWithSingleEntry(e, false); // do not overwrite as we move from most recent to oldest
+        consolidateAmendment(e);
         ctime = e->ctime; // the oldest entry will take precedence for ctime
         e = e->prev;
     }
@@ -1993,6 +2026,8 @@ ProjectConfig Project::getConfig() const
   *     <0 in case of error
   *
   * Uploaded files are not deleted.
+  * Temporarliy, deleting an entry is the same as amending it with an empty message.
+  * TODO: remove deleteEntry() and replace by amendEntry()
   *
   */
 
@@ -2013,36 +2048,15 @@ int Project::deleteEntry(const std::string &issueId, const std::string &entryId,
     else if (e->parent == K_PARENT_NULL) return -3;
     else if (e->author != username) return -4;
     else if (i->latest != e) return -7;
+    else if (e->isAmending()) return -8; // one cannot amend an amending message
 
-    // ok, we can delete this entry
-    // modify pointers
-    i->latest = e->prev;
-    i->latest->next = 0;
-    e->prev = 0;
-    e->next = 0;
+    // ok, we can proceed
 
+    PropertiesMap properties;
+    properties[K_MESSAGE].push_back("message deleted");
+    properties[K_AMEND].push_back(entryId);
+    i->addEntry(properties, username);
     i->consolidate();
-
-    // remove from internal tables
-    i->entries.erase(ite);
-    // do not really delete the entry, because we do not
-    // have any mutex for this (a HTML page may be wanting to
-    // display an erased entry at the same time)
-    // this is a small memory leak, but acceptable I suppose
-    //delete e;
-
-    // move the file to _del
-    std::string issuePath = getPath() + "/" + ISSUES + "/" + issueId;
-    std::string deletePath = issuePath + "/" + DIR_DELETED;
-    mg_mkdir(deletePath.c_str(), S_IRUSR | S_IWUSR | S_IXUSR); // create it if not already done
-    deletePath += "/" + entryId;
-    std::string entryPath = issuePath + "/" + entryId;
-    int r = rename(entryPath.c_str(), deletePath.c_str());
-    if (r != 0) {
-        LOG_ERROR("Cannot rename '%s' -> '%s': (%d) %s", entryPath.c_str(), deletePath.c_str(),
-                  errno, strerror(errno));
-        return -1;
-    }
 
     return 0;
 }
@@ -2050,6 +2064,12 @@ int Project::deleteEntry(const std::string &issueId, const std::string &entryId,
 std::string Entry::getMessage() const
 {
     return getProperty(properties, K_MESSAGE);
+}
+
+bool Entry::isAmending() const
+{
+    std::string a = getProperty(properties, K_AMEND);
+    return (!a.empty());
 }
 
 int Entry::getCtime() const

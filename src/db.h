@@ -18,6 +18,7 @@
 #define K_MESSAGE "+message" // keyword used for the message
 #define K_FILE "+file" // keyword used for uploaded files
 #define K_SUMMARY "summary"
+#define K_AMEND "+amend"
 
 #define K_UPLOADED_FILES_DIR "files"
 #define K_PROJECT_TMP "tmp"
@@ -45,6 +46,7 @@ struct Entry {
     std::string serialize() const;
     int getCtime() const;
     std::string getMessage() const;
+    bool isAmending() const;
     // chainlist pointers
     struct Entry *next; // child
     struct Entry *prev; // parent
@@ -77,6 +79,7 @@ struct Issue {
     int computeLatestEntry();
     void consolidate();
     void consolidateIssueWithSingleEntry(Entry *e, bool overwrite);
+    void consolidateAmendment(Entry *e);
     bool searchFullText(const char *text) const;
     int getNumberOfTaggedIEntries(const std::string &tagId) const;
     Entry *getEntry(const std::string id);

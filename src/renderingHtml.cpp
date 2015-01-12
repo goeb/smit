@@ -1541,7 +1541,7 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
         // look if class sm_no_contents is applicable
         // an entry has no contents if no message and no file
         const char* classNoContents = "";
-        if (ee.getMessage().empty()) {
+        if (ee.getMessage().empty() || ee.isAmending()) {
             std::map<std::string, std::list<std::string> >::iterator files = ee.properties.find(K_FILE);
             if (files == ee.properties.end() || files->second.empty()) {
                 classNoContents = "sm_entry_no_contents";
@@ -1631,7 +1631,7 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
         ctx.req->printf("</div>\n"); // end header
 
         std::string m = ee.getMessage();
-        if (! m.empty()) {
+        if (! m.empty() && !ee.isAmending()) {
             ctx.req->printf("<div class=\"sm_entry_message\">");
             ctx.req->printf("%s\n", convertToRichText(htmlEscape(m)).c_str());
             ctx.req->printf("</div>\n"); // end message
