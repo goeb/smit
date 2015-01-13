@@ -164,12 +164,12 @@ Entry *Issue::addEntry(const PropertiesMap &properties, const std::string &usern
   * The former message will be replaced by the new one
   * in the consolidation of the issue.
   */
-void Issue::amendEntry(const std::string &entryId, const std::string &newMsg, const std::string &username)
+Entry *Issue::amendEntry(const std::string &entryId, const std::string &newMsg, const std::string &username)
 {
     PropertiesMap properties;
     properties[K_MESSAGE].push_back(newMsg);
     properties[K_AMEND].push_back(entryId);
-    addEntry(properties, username);
+    return addEntry(properties, username);
 }
 
 /** Get the specification of a given property
@@ -2061,14 +2061,17 @@ int Project::deleteEntry(const std::string &issueId, const std::string &entryId,
     if (time(0) - e->ctime > DELETE_DELAY_S) return -2;
     else if (e->parent == K_PARENT_NULL) return -3;
     else if (e->author != username) return -4;
-    else if (i->latest != e) return -7;
+    //else if (i->latest != e) return -7;
     else if (e->isAmending()) return -8; // one cannot amend an amending message
 
     // ok, we can proceed
 
-    i->amendEntry(entryId, "message deleted", username);
-    i->consolidate();
-
+    Entry *amendingEntry = i->amendEntry(entryId, "message deleted", username);
+	if (!amendingEntry) {
+		LOG_ERROR("Cannot create amending entry");
+	} else {
+		i->consolidateAmendment(amendingEntry);
+	}
     return 0;
 }
 

@@ -1572,8 +1572,7 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
 
         // delete button
         time_t delta = time(0) - ee.ctime;
-        if ( (delta < DELETE_DELAY_S) && (ee.author == ctx.user.username) &&
-             (e == issue.latest) && e->prev &&
+        if ( (delta < DELETE_DELAY_S) && (ee.author == ctx.user.username) && e->prev &&
              (ctx.userRole == ROLE_ADMIN || ctx.userRole == ROLE_RW) ) {
             // entry was created less than 10 minutes ago, and by same user, and is latest in the issue
             ctx.req->printf("<a href=\"#\" class=\"sm_entry_delete\" title=\"Delete this entry (at most %d minutes after posting)\" ", (DELETE_DELAY_S/60));
@@ -1584,16 +1583,16 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
         }
 
         // link to raw entry
-        ctx.req->printf("(<a href=\"/%s/issues/%s/%s\" class=\"sm_entry_raw\">%s</a>\n",
+        ctx.req->printf("(<a href=\"/%s/issues/%s/%s\" class=\"sm_entry_raw\">%s</a>",
                         ctx.getProject().getUrlName().c_str(),
                         urlEncode(issue.id).c_str(), urlEncode(ee.id).c_str(), _("raw"));
         // link to possible amendments
         int i = 1;
         std::list<std::string>::const_iterator a;
         FOREACH(a, ee.amendments) {
-            ctx.req->printf(", <a href=\"/%s/issues/%s/%s\" class=\"sm_entry_raw\">amend%d</a>\n",
+            ctx.req->printf(", <a href=\"/%s/issues/%s/%s\" class=\"sm_entry_raw\">%s%d</a>",
                             ctx.getProject().getUrlName().c_str(),
-                            urlEncode(issue.id).c_str(), urlEncode(*a).c_str(), i);
+                            urlEncode(issue.id).c_str(), urlEncode(*a).c_str(), _("amend"), i);
             i++;
         }
         ctx.req->printf(")");

@@ -87,7 +87,7 @@ struct Issue {
 
     int load(const std::string &issueId, const std::string &issuePath);
     Entry *addEntry(const PropertiesMap &properties, const std::string &username);
-    void amendEntry(const std::string &entryId, const std::string &newMsg, const std::string &username);
+    Entry *amendEntry(const std::string &entryId, const std::string &newMsg, const std::string &username);
 
 };
 
