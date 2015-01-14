@@ -2066,7 +2066,7 @@ int Project::deleteEntry(const std::string &issueId, const std::string &entryId,
 
     // ok, we can proceed
 
-    Entry *amendingEntry = i->amendEntry(entryId, "message deleted", username);
+    Entry *amendingEntry = i->amendEntry(entryId, "", username);
 	if (!amendingEntry) {
 		LOG_ERROR("Cannot create amending entry");
 	} else {

@@ -10,8 +10,8 @@ function ajaxPost(url) {
     request.open('POST', url, false); // synchronous
     request.send(null);
     var status = request.status;
-    if (status == 200) return true;
-    else return false;
+    if (status == 200) return 'ok';
+    else return request.responseText;
 }
 function previewMessage() {
     var divPreview = document.getElementById('sm_entry_preview');
@@ -32,16 +32,15 @@ function deleteEntry(urlPrefix, entryId) {
     var r = confirm("Confirm delete?");
     if (r==true) {
         r = ajaxPost(urlPrefix + '/' + entryId + '/delete');
-        if (r) { // ok, remove entry from current HTML page
-            var e = document.getElementById(entryId);
-            e.parentNode.removeChild(e);
-        } else alert('error');
+        if (r == 'ok') { // ok, remove entry from current HTML page
+            location.reload();
+        } else alert(r);
     }
 }
 
 function tagEntry(urlPrefix, entryId, tagId) {
     var r = ajaxPost(urlPrefix + '/' + entryId + '/' + tagId);
-    if (r) {
+    if (r == 'ok') {
         var etag = document.getElementById('sm_tag_' + entryId + "_" + tagId);
         var doTag = false;
         taggedStyle = 'sm_entry_tag_' + tagId;
