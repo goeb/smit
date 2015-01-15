@@ -1,8 +1,9 @@
-v2.2.0
+v2.2.0, 15 Jan 2015
 
     - support for root-URL rewriting (for using behind a reverse proxy)
     - fix trigger notification on creation of new issue
     - fix lost password (salt part) when modifying user's permissions
+    - fix loading of tags (were no longer loaded)
 
 v2.1.0, 20 Nov 2014
 
