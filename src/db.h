@@ -12,7 +12,6 @@
 #include "mutexTools.h"
 #include "stringTools.h"
 
-#define DIR_DELETED ".deleted"
 #define DIR_DELETED_OLD "_del"
 
 #define K_MESSAGE "+message" // keyword used for the message

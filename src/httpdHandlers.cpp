@@ -1522,32 +1522,10 @@ void httpReloadProject(const RequestContext *req, Project &p, User u)
     }
 }
 
-int httpGetDeletedEntries(const RequestContext *req, Project &p, const std::string &issueId, const std::string &rest)
-{
-    // we have 2 cases here:
-    // GET /123/.deleted in order to get the list of deleted entries, useful for pulling
-    // GET /123/.deleted/18636b842d926b7e5ab8f56b03b8098739fb52c8, not useful, and forbidden
-    // (we do not let users dowload contents of deleted files)
-
-    std::string delSubdir = "/" DIR_DELETED;
-    if (rest == delSubdir) return httpGetFile(req);
-    else {
-        return sendHttpHeader400(req, "");
-    }
-
-}
-
 int httpGetIssue(const RequestContext *req, Project &p, const std::string &issueId, User u)
 {
     LOG_DEBUG("httpGetIssue: project=%s, issue=%s", p.getName().c_str(), issueId.c_str());
     enum RenderingFormat format = getFormat(req);
-
-    // if the issueId is of the form "123/.deleted", then return the list of deleted entries.
-    std::string delSubdir = "/" DIR_DELETED;
-    size_t npos = issueId.find(delSubdir);
-    if (npos != std::string::npos) {
-        return httpGetDeletedEntries(req, p, issueId.substr(0, npos), issueId.substr(npos));
-    }
 
     Issue issue;
     int r = p.get(issueId, issue);

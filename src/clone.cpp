@@ -356,19 +356,6 @@ void handleConflictOnEntries(const PullContext &pullCtx, Project &p,
     // no need to update the issue in memory, as it will not be re-accessed during the smit pulling
 }
 
-std::list<std::string> retrieveDeletedEntries(const PullContext &pullCtx, Project &p, const Issue &i)
-{
-    // get the remote deleted entries
-    HttpRequest hr(pullCtx.sessid);
-    std::string resource = "/" + p.getUrlName() + "/issues/" + i.id + "/" + DIR_DELETED;
-    hr.setUrl(pullCtx.rooturl, resource);
-    hr.getRequestLines();
-    hr.closeCurl(); // free the resource
-
-    return hr.lines;
-}
-
-
 /** Pull an issue
   *
   * If the remote issue conflicts with a local issue:
@@ -430,10 +417,6 @@ int pullIssue(const PullContext &pullCtx, Project &p, const Issue &i)
     } else {
         // same issue. Walk through the entries and pull...
 
-        std::list<std::string> deletedEntries = retrieveDeletedEntries(pullCtx, p, i);
-
-        std::string tmpPath;
-
         std::list<std::string>::const_iterator reid;
         FOREACH(reid, hr.lines) {
             std::string remoteEid = *reid;
@@ -451,17 +434,6 @@ int pullIssue(const PullContext &pullCtx, Project &p, const Issue &i)
                 // remote: a--b--c--d
                 // local:  a--b--e
 
-                // TODO manage deleted remote entries
-                std::list<std::string>::iterator findIter = std::find(deletedEntries.begin(), deletedEntries.end(), localEntry->id);
-                if (findIter == deletedEntries.end()) {
-                    // not a deleted entry
-                } else {
-                    // this entry has been deleted remotely
-                    // then also delete locally
-                    // TODO
-                    LOG_ERROR("remotely deleted entry not supported yet");
-                }
-
                 std::string tmpPath = downloadRemoteIssue(pullCtx, p, i.id, hr.lines);
                 // load this remote issue in memory
                 Issue remoteIssue;
@@ -478,9 +450,7 @@ int pullIssue(const PullContext &pullCtx, Project &p, const Issue &i)
                 break; // leave the loop.
 
 
-            } else { // else nothing to do: local and remote still aligned
-                // TODO if remote entry was deleted, then delete it also locally
-            }
+            } // else nothing to do: local and remote still aligned
 
             // move the local entry pointer forward, except if already at the end
             if (localEntry) localEntry = localEntry->next;

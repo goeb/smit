@@ -572,7 +572,6 @@ int Issue::load(const std::string &issueId, const std::string &issuePath)
     while ((entryFile = readdir(issueDirHandle)) != NULL) {
         if (0 == strcmp(entryFile->d_name, ".")) continue;
         if (0 == strcmp(entryFile->d_name, "..")) continue;
-        if (0 == strcmp(entryFile->d_name, DIR_DELETED)) continue;
         if (0 == strcmp(entryFile->d_name, DIR_DELETED_OLD)) continue;
         if (0 == strcmp(entryFile->d_name, "_HEAD")) {
             // obsolete.
