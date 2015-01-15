@@ -526,7 +526,7 @@ int Project::loadEntries()
 
     closedir(entriesDirHandle);
 
-    LOG_INFO("Issues and entries loaded. localMaxId=%d, numbering=%s, globalMaxId=%d", localMaxId,
+    LOG_DEBUG("Issues and entries loaded. localMaxId=%d, numbering=%s, globalMaxId=%d", localMaxId,
              config.numberIssueAcrossProjects?"global":"local", Database::getMaxIssueId());
     LOG_DEBUG("Max issue id: %d", maxIssueId);
     return 0;
@@ -1294,6 +1294,8 @@ void Project::loadPredefinedViews()
 
 /** Look for tags: files <project>/tags/<issue>/<entry>
   *
+  * Tags are formed like this:
+  *   <entry-id> '.' <tag-id>
   */
 void Project::loadTags()
 {
@@ -1317,7 +1319,7 @@ void Project::loadTags()
             continue;
         }
 
-        std::string issuePath = path + "/" + issueId;
+        std::string issuePath = tagsPath + "/" + issueId;
         // open this subdir and look for all files of this subdir
         DIR *issueDirHandle;
         if ((issueDirHandle = opendir(issuePath.c_str())) == NULL) continue; // not a directory
@@ -1332,7 +1334,7 @@ void Project::loadTags()
                 std::map<std::string, Entry*>::iterator eit;
                 eit = i->entries.find(entryId);
                 if (eit == i->entries.end()) {
-                    LOG_DEBUG("Tags for unknown entry: %s/%s", issueId.c_str(), entryId.c_str());
+                    LOG_ERROR("Tags for unknown entry: %s/%s", issueId.c_str(), entryId.c_str());
                     continue;
                 }
                 Entry *e = eit->second;
