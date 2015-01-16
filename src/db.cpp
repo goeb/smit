@@ -1882,15 +1882,17 @@ int Project::addEntry(PropertiesMap properties, std::string &issueId, std::strin
     p = properties.begin();
     while (p != properties.end()) {
         bool doErase = false;
+        std::string propertyName = p->first;
 
-        if ( (p->first == K_MESSAGE) || (p->first == K_FILE) )  {
+        if ( (propertyName == K_MESSAGE) ||
+             (propertyName == K_FILE)    || (propertyName == K_AMEND) )  {
             if (p->second.size() && p->second.front().empty()) {
                 // erase if message or file is emtpy
                 doErase = true;
             }
         } else {
-            const PropertySpec *pspec = config.getPropertySpec(p->first);
-            if (!pspec && (p->first != K_SUMMARY)) {
+            const PropertySpec *pspec = config.getPropertySpec(propertyName);
+            if (!pspec && (propertyName != K_SUMMARY)) {
                 // erase property because it is not part of the user properties of the project
                 doErase = true;
             } // else do not erase and parse the association

@@ -82,7 +82,9 @@ void printMessages(const Issue &i, int printMode)
     while (e) {
         bool doPrint = false; // used to know ifn the header must be printed
         std::string msg = e->getMessage();
-        if (msg.size() || (printMode & PRINT_FULL_HISTORY) ) doPrint = true;
+
+        if (e->isAmending()) doPrint = false;
+        else if (msg.size() || (printMode & PRINT_FULL_HISTORY) ) doPrint = true;
 
         if (doPrint) {
 
@@ -110,13 +112,18 @@ void printMessages(const Issue &i, int printMode)
 
             // TODO print names of attached files
 
+            bool noModifiedPropertiesSoFar = true;
             if (printMode & PRINT_FULL_HISTORY) {
-                printf("Modified Properties:\n");
                 // print the properties changes
                 // process summary first as it is not part of orderedFields
                 PropertiesIt p;
                 FOREACH(p, e->properties) {
                     if (p->first == K_MESSAGE) continue;
+                    if (noModifiedPropertiesSoFar) {
+                        // do print this header only if there is at least one modified property
+                        printf("Modified Properties:\n");
+                        noModifiedPropertiesSoFar = false;
+                    }
                     std::string value = toString(p->second);
                     printf(INDENT "%s: %s\n", p->first.c_str(), value.c_str()); // TODO print label instead of logical name
                 }

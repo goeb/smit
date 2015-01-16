@@ -21,7 +21,7 @@ init() {
 start() {
     $SMIT serve $REPO --listen-port $PORT &
     pid=$!
-    sleep 2 # wait for the server to start
+    sleep 0.25 # wait for the server to start
     $SMITC signin http://127.0.0.1:$PORT $USER $PASSWD
 }
 

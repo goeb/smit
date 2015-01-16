@@ -40,7 +40,7 @@ cleanup() {
 startServer() {
     $SMIT serve $REPO --listen-port $PORT &
     pid=$!
-    sleep 1 # wait for the server to start
+    sleep 0.25 # wait for the server to start
 }
 stopServer() {
     echo killing pid=$pid
