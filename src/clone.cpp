@@ -54,9 +54,6 @@ int helpClone()
            "      Give the user name and the password.\n"
            "\n"
            "TLS Options:\n"
-           "  --cacert <pem>\n"
-           "      CA certificate, when the server runs TLS.\n"
-           "\n"
            "  --cacert <CA-certificate>\n"
            "      CA certificate, in PEM format, relevant only when the server runs TLS.\n"
            "\n"
@@ -722,8 +719,6 @@ int cmdClone(int argc, char * const *argv)
     const char *url = 0;
     const char *dir = 0;
     HttpClientContext ctx;
-    ctx.tlsCacert = 0;
-    ctx.tlsInsecure = false;
 
     int c;
     int optionIndex = 0;
@@ -947,6 +942,13 @@ int helpPull()
            "        keep-local : local modifications shall be kept as-is\n"
            "        drop-local : local modifications shall be deleted\n"
            "\n"
+           "TLS Options:\n"
+           "  --cacert <CA-certificate>\n"
+           "      CA certificate, in PEM format, relevant only when the server runs TLS.\n"
+           "\n"
+           "  --insecure\n"
+           "      Do not verify the server certificate against the local CA certificates."
+           "\n"
            );
     return 1;
 }
@@ -962,12 +964,13 @@ int cmdPull(int argc, char * const *argv)
     int optionIndex = 0;
     PullContext pullCtx;
     pullCtx.mergeStrategy = MERGE_INTERACTIVE;
-    HttpClientContext ctx;
 
     struct option longOptions[] = {
         {"user", 1, 0, 0},
         {"passwd", 1, 0, 0},
         {"resolve-conflict", 1, 0, 0},
+        {"insecure", 0, 0, 0},
+        {"cacert", 1, 0, 0},
         {NULL, 0, NULL, 0}
     };
     while ((c = getopt_long(argc, argv, "v", longOptions, &optionIndex)) != -1) {
@@ -984,6 +987,10 @@ int cmdPull(int argc, char * const *argv)
                     printf("invalid value for --resolve-conflict\n");
                     return helpPull();
                 }
+            } else if (0 == strcmp(longOptions[optionIndex].name, "insecure")) {
+                pullCtx.httpCtx.tlsInsecure = true;
+            } else if (0 == strcmp(longOptions[optionIndex].name, "cacert")) {
+                pullCtx.httpCtx.tlsCacert = optarg;
             }
             break;
         case 'v':
@@ -1018,14 +1025,13 @@ int cmdPull(int argc, char * const *argv)
     }
 
     curl_global_init(CURL_GLOBAL_ALL);
-    std::string sessid;
     std::string password;
     bool redoSigin = false;
 
     if (username.empty()) {
         // check if the sessid is valid
-        ctx.sessid = loadSessid(dir);
-        int r = testSessid(url, ctx);
+        pullCtx.httpCtx.sessid = loadSessid(dir);
+        int r = testSessid(url, pullCtx.httpCtx);
 
         if (r < 0) {
             // failed (session may have expired), then prompt for user name/password
@@ -1043,16 +1049,16 @@ int cmdPull(int argc, char * const *argv)
     }
 
     if (redoSigin) {
-        ctx.sessid = signin(url, username, password, ctx);
-        if (!sessid.empty()) {
-            storeSessid(dir, ctx.sessid);
+        pullCtx.httpCtx.sessid = signin(url, username, password, pullCtx.httpCtx);
+        if (!pullCtx.httpCtx.sessid.empty()) {
+            storeSessid(dir, pullCtx.httpCtx.sessid);
             storeUrl(dir, url);
         }
     }
 
-    LOGV("%s=%s\n", SESSID, ctx.sessid.c_str());
+    LOGV("%s=%s\n", SESSID, pullCtx.httpCtx.sessid.c_str());
 
-    if (sessid.empty()) {
+    if (pullCtx.httpCtx.sessid.empty()) {
         fprintf(stderr, "Authentication failed\n");
         return 1; // authentication failed
     }
@@ -1060,7 +1066,6 @@ int cmdPull(int argc, char * const *argv)
     // pull new entries and new attached files of all projects
     pullCtx.rooturl = url;
     pullCtx.localRepo = dir;
-    pullCtx.httpCtx = ctx;
     int r = pullProjects(pullCtx);
 
     curl_global_cleanup();
