@@ -33,6 +33,12 @@ bool HttpRequest::Verbose = false;
 
 #define LOGV(...) do { if (HttpRequest::Verbose) { printf(__VA_ARGS__); fflush(stdout);} } while (0)
 
+HttpClientContext::HttpClientContext()
+{
+    tlsCacert = 0;
+    tlsInsecure = false;
+}
+
 void HttpRequest::setUrl(const std::string &root, const std::string &path)
 {
     if (path.empty() || path[0] != '/') {
@@ -46,14 +52,15 @@ void HttpRequest::setUrl(const std::string &root, const std::string &path)
     curl_easy_setopt(curlHandle, CURLOPT_URL, url.c_str());
 }
 
-int HttpRequest::getFileStdout()
+void HttpRequest::getFileStdout()
 {
     curl_easy_setopt(curlHandle, CURLOPT_WRITEDATA, (void *)this);
     curl_easy_setopt(curlHandle, CURLOPT_WRITEFUNCTION, getStdoutCallback);
     performRequest();
+
 }
 
-int HttpRequest::downloadFile(const std::string localPath)
+void HttpRequest::downloadFile(const std::string localPath)
 {
     LOGV("downloadFile: resourcePath=%s\n", resourcePath.c_str());
     curl_easy_setopt(curlHandle, CURLOPT_WRITEDATA, (void *)this);
@@ -119,7 +126,7 @@ void HttpRequest::doCloning(bool recursive, int recursionLevel)
             if (resourcePath != "/")  subpath += '/';
             subpath += (*file);
 
-            HttpRequest hr(sessionId);
+            HttpRequest hr(httpCtx);
             hr.setUrl(rooturl, subpath);
             hr.setRepository(repository);
             hr.doCloning(true, recursionLevel+1);
@@ -370,10 +377,9 @@ void HttpRequest::handleReceivedLines(const char *data, size_t size)
     if (notConsumedOffset < size) currentLine.append(data, notConsumedOffset, size-notConsumedOffset);
 }
 
-
-HttpRequest::HttpRequest(const std::string &sessid)
+HttpRequest::HttpRequest(const HttpClientContext &ctx)
 {
-    sessionId = sessid;
+    httpCtx = ctx;
     isDirectory = false;
     fd = 0;
     httpStatusCode = -1; // not set
@@ -382,11 +388,14 @@ HttpRequest::HttpRequest(const std::string &sessid)
     curl_easy_setopt(curlHandle, CURLOPT_HEADERFUNCTION, headerCallback);
     curl_easy_setopt(curlHandle, CURLOPT_HEADERDATA, (void *)this);
 
+    if (httpCtx.tlsCacert) curl_easy_setopt(curlHandle, CURLOPT_CAINFO, httpCtx.tlsCacert);
+    else if (httpCtx.tlsInsecure) curl_easy_setopt(curlHandle, CURLOPT_SSL_VERIFYPEER, 0);
+
 
     slist = 0;
     slist = curl_slist_append(slist, "Accept: " APP_X_SMIT);
-    if (!sessionId.empty()) {
-        std::string cookie = "Cookie: " SESSID "=" + sessionId;
+    if (!httpCtx.sessid.empty()) {
+        std::string cookie = "Cookie: " SESSID "=" + httpCtx.sessid;
         slist = curl_slist_append(slist, cookie.c_str());
     }
 

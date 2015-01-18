@@ -17,9 +17,17 @@ public:
     int parse(std::string cookieLine);
 };
 
+struct HttpClientContext {
+    HttpClientContext();
+    std::string sessid; // session identifier
+    bool tlsInsecure;
+    const char *tlsCacert; // certificate file to verify the peer, in PEM format
+};
+
+
 class HttpRequest {
 public:
-    HttpRequest(const std::string &sessid);
+    HttpRequest(const HttpClientContext &ctx);
     ~HttpRequest();
     void closeCurl(); // close libcurl resources
     void handleReceivedLines(const char *contents, size_t size);
@@ -31,8 +39,8 @@ public:
     std::map<std::string, Cookie> cookies;
     std::list<std::string> lines; // fulfilled after calling getRequestLines()
     void doCloning(bool recursive, int recursionLevel);
-    int getFileStdout();
-    int downloadFile(const std::string localPath);
+    void getFileStdout();
+    void downloadFile(const std::string localPath);
 
     int test();
     void handleReceiveFileOrDirectory(void *data, size_t size);
@@ -66,6 +74,7 @@ private:
     std::string resourcePath;
     std::string response;
     std::string sessionId;
+    HttpClientContext httpCtx;
     std::string currentLine;
     CURL *curlHandle;
     struct curl_slist *slist;

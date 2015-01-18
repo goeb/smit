@@ -51,7 +51,17 @@ int helpClone()
            "               existing directory is only allowed if the directory is empty.\n"
            "\n"
            "  --user <user> --passwd <password> \n"
-           "               Give the user name and the password.\n"
+           "      Give the user name and the password.\n"
+           "\n"
+           "TLS Options:\n"
+           "  --cacert <pem>\n"
+           "      CA certificate, when the server runs TLS.\n"
+           "\n"
+           "  --cacert <CA-certificate>\n"
+           "      CA certificate, in PEM format, relevant only when the server runs TLS.\n"
+           "\n"
+           "  --insecure\n"
+           "      Do not verify the server certificate against the local CA certificates."
            "\n"
            "Example:\n"
            "  smit clone http://example.com:8090 localDir\n"
@@ -62,11 +72,11 @@ int helpClone()
 
 
 
-int testSessid(const std::string url, const std::string &sessid)
+int testSessid(const std::string url, const HttpClientContext &ctx)
 {
-    LOGV("testSessid(%s, %s)\n", url.c_str(), sessid.c_str());
+    LOGV("testSessid(%s, %s)\n", url.c_str(), ctx.sessid.c_str());
 
-    HttpRequest hr(sessid);
+    HttpRequest hr(ctx);
     hr.setUrl(url, "/");
     int status = hr.test();
     LOGV("status = %d\n", status);
@@ -78,11 +88,11 @@ int testSessid(const std::string url, const std::string &sessid)
 
 /** Get all the projects that we have read-access to.
   */
-int getProjects(const std::string &rooturl, const std::string &destdir, const std::string &sessid)
+int getProjects(const std::string &rooturl, const std::string &destdir, const HttpClientContext &ctx)
 {
-    LOGV("getProjects(%s, %s, %s)\n", rooturl.c_str(), destdir.c_str(), sessid.c_str());
+    LOGV("getProjects(%s, %s, %s)\n", rooturl.c_str(), destdir.c_str(), ctx.sessid.c_str());
 
-    HttpRequest hr(sessid);
+    HttpRequest hr(ctx);
     hr.setUrl(rooturl, "/");
     hr.setRepository(destdir);
     hr.doCloning(true, 0);
@@ -95,8 +105,8 @@ enum MergeStrategy { MERGE_KEEP_LOCAL, MERGE_DROP_LOCAL, MERGE_INTERACTIVE};
 struct PullContext {
     std::string rooturl; // eg: http://example.com:8090/
     std::string localRepo; // path to local repository
-    std::string sessid; // session identifier
-    MergeStrategy mergeStrategy;
+    HttpClientContext httpCtx; // session identifier
+    MergeStrategy mergeStrategy; // for pulling only, not cloning
 };
 
 /** Download entries, starting at the given iterator
@@ -117,7 +127,7 @@ void downloadEntries(const PullContext &pullCtx, const Project &p, const std::st
         std::string resourceDir = "/" + p.getUrlName() + "/issues/" + issueId;
         std::string resource = resourceDir + "/" + remoteEid;
 
-        HttpRequest hr(pullCtx.sessid);
+        HttpRequest hr(pullCtx.httpCtx);
         hr.setUrl(pullCtx.rooturl, resource);
 
         std::string downloadDir = localDir;
@@ -141,7 +151,7 @@ void downloadEntries(const PullContext &pullCtx, const Project &p, const std::st
             // download each file
             FOREACH(f, files->second) {
                 std::string fResource = "/" + p.getUrlName() + "/" K_UPLOADED_FILES_DIR "/" + *f;
-                HttpRequest hr(pullCtx.sessid);
+                HttpRequest hr(pullCtx.httpCtx);
                 hr.setUrl(pullCtx.rooturl, fResource);
                 std::string localFile = p.getTmpDir() + "/" + *f;
                 hr.downloadFile(localFile);
@@ -368,7 +378,7 @@ int pullIssue(const PullContext &pullCtx, Project &p, const Issue &i)
     // get the first entry of the issue
     // check conflict on issue id*
     std::string resource = "/" + p.getUrlName() + "/issues/" + i.id;
-    HttpRequest hr(pullCtx.sessid);
+    HttpRequest hr(pullCtx.httpCtx);
     hr.setUrl(pullCtx.rooturl, resource);
     hr.getRequestLines();
     hr.closeCurl(); // free the curl resource
@@ -409,7 +419,7 @@ int pullIssue(const PullContext &pullCtx, Project &p, const Issue &i)
 
         // clone the remote issue
         resource = "/" + p.getUrlName() + "/issues/" + i.id;
-        HttpRequest hr(pullCtx.sessid);
+        HttpRequest hr(pullCtx.httpCtx);
         hr.setUrl(pullCtx.rooturl, resource);
         hr.setRepository(pullCtx.localRepo);
         hr.doCloning(true, 0);
@@ -463,7 +473,7 @@ int pullIssue(const PullContext &pullCtx, Project &p, const Issue &i)
 void pullAttachedFiles(const PullContext &pullCtx, Project &p)
 {
     // get the remote files
-    HttpRequest hr(pullCtx.sessid);
+    HttpRequest hr(pullCtx.httpCtx);
     std::string resourceFilesDir = "/" + p.getUrlName() + "/" K_UPLOADED_FILES_DIR "/";
     hr.setUrl(pullCtx.rooturl, resourceFilesDir);
     hr.getRequestLines();
@@ -486,7 +496,7 @@ void pullAttachedFiles(const PullContext &pullCtx, Project &p)
         // download the file
         printf("%s\n", filename.c_str());
         std::string resource = resourceFilesDir + filename;
-        HttpRequest hr(pullCtx.sessid);
+        HttpRequest hr(pullCtx.httpCtx);
         hr.setUrl(pullCtx.rooturl, resource);
         std::string localTmpFile = p.getTmpDir() + "/" + filename;
         mode_t mode = S_IRUSR | S_IWUSR | S_IXUSR;
@@ -507,7 +517,7 @@ void pullAttachedFiles(const PullContext &pullCtx, Project &p)
 int pullProject(const PullContext &pullCtx, Project &p)
 {
     // get the remote issues
-    HttpRequest hr(pullCtx.sessid);
+    HttpRequest hr(pullCtx.httpCtx);
     std::string resource = "/" + p.getUrlName() + "/issues/";
     hr.setUrl(pullCtx.rooturl, resource);
     hr.getRequestLines();
@@ -527,7 +537,7 @@ int pullProject(const PullContext &pullCtx, Project &p)
             // simply clone the remote issue
             LOGV("Cloning issue: %s/issues/%s\n", p.getName().c_str(), id.c_str());
             resource = "/" + p.getUrlName() + "/issues/" + id;
-            HttpRequest hr(pullCtx.sessid);
+            HttpRequest hr(pullCtx.httpCtx);
             hr.setUrl(pullCtx.rooturl, resource);
             hr.setRepository(pullCtx.localRepo);
             hr.doCloning(true, 0);
@@ -564,7 +574,7 @@ int pullProjects(const PullContext &pullCtx)
     }
 
     // get the list of remote projects
-    HttpRequest hr(pullCtx.sessid);
+    HttpRequest hr(pullCtx.httpCtx);
     hr.setUrl(pullCtx.rooturl, "/");
     hr.getRequestLines();
 
@@ -582,7 +592,7 @@ int pullProjects(const PullContext &pullCtx)
             // the remote project was not locally cloned
             // do cloning now
             printf("Cloning project: %s\n", unmangledName.c_str());
-            HttpRequest hr(pullCtx.sessid);
+            HttpRequest hr(pullCtx.httpCtx);
             std::string resource = *projectName;
             resource = "/" + resource;
             hr.setUrl(pullCtx.rooturl, resource);
@@ -681,10 +691,10 @@ std::string loadUrl(const std::string &dir)
 }
 
 
-
-std::string signin(const std::string &rooturl, const std::string &user, const std::string &passwd)
+std::string signin(const std::string &rooturl, const std::string &user,
+                   const std::string &passwd, const HttpClientContext &ctx)
 {
-    HttpRequest hr("");
+    HttpRequest hr(ctx);
 
     hr.setUrl(rooturl, "/signin");
 
@@ -711,12 +721,17 @@ int cmdClone(int argc, char * const *argv)
     const char *passwd = 0;
     const char *url = 0;
     const char *dir = 0;
+    HttpClientContext ctx;
+    ctx.tlsCacert = 0;
+    ctx.tlsInsecure = false;
 
     int c;
     int optionIndex = 0;
     struct option longOptions[] = {
         {"user", 1, 0, 0},
         {"passwd", 1, 0, 0},
+        {"insecure", 0, 0, 0},
+        {"cacert", 1, 0, 0},
         {NULL, 0, NULL, 0}
     };
     while ((c = getopt_long(argc, argv, "v", longOptions, &optionIndex)) != -1) {
@@ -726,6 +741,10 @@ int cmdClone(int argc, char * const *argv)
                 username = optarg;
             } else if (0 == strcmp(longOptions[optionIndex].name, "passwd")) {
                 passwd = optarg;
+            } else if (0 == strcmp(longOptions[optionIndex].name, "insecure")) {
+                ctx.tlsInsecure = true;
+            } else if (0 == strcmp(longOptions[optionIndex].name, "cacert")) {
+                ctx.tlsCacert = optarg;
             }
             break;
         case 'v':
@@ -769,19 +788,20 @@ int cmdClone(int argc, char * const *argv)
 
     curl_global_init(CURL_GLOBAL_ALL);
 
-    std::string sessid = signin(url, username, password);
+    std::string sessid = signin(url, username, password, ctx);
     LOGV("%s=%s\n", SESSID, sessid.c_str());
 
     if (sessid.empty()) {
         fprintf(stderr, "Authentication failed\n");
         return 1; // authentication failed
     }
+    ctx.sessid = sessid;
 
-    getProjects(url, dir, sessid);
+    getProjects(url, dir, ctx);
 
     // ceate persistent configuration of the local clone
     createSmitDir(dir);
-    storeSessid(dir, sessid);
+    storeSessid(dir, ctx.sessid);
     storeUsername(dir, username);
     storeUrl(dir, url);
 
@@ -813,6 +833,7 @@ int cmdGet(int argc, char * const *argv)
     std::string username;
     const char *passwd = 0;
     bool useSigninCookie = false;
+    HttpClientContext ctx;
 
     int c;
     int optionIndex = 0;
@@ -872,8 +893,8 @@ int cmdGet(int argc, char * const *argv)
 
     if (useSigninCookie) {
         // check if the sessid is valid
-        sessid = loadSessid(".");
-        int r = testSessid(rooturl, sessid);
+        ctx.sessid = loadSessid(".");
+        int r = testSessid(rooturl, ctx);
 
         if (r < 0) {
             // failed (session may have expired), then prompt for user name/password
@@ -891,17 +912,17 @@ int cmdGet(int argc, char * const *argv)
     }
 
     if (redoSigin) {
-        sessid = signin(rooturl, username, password);
+        ctx.sessid = signin(rooturl, username, password, ctx);
         if (sessid.empty()) {
             fprintf(stderr, "Authentication failed\n");
             return 1; // authentication failed
         }
     }
 
-    LOGV("%s=%s\n", SESSID, sessid.c_str());
+    LOGV("%s=%s\n", SESSID, ctx.sessid.c_str());
 
     // pull new entries and new attached files of all projects
-    HttpRequest hr(sessid);
+    HttpRequest hr(ctx);
     hr.setUrl(rooturl, resource);
     hr.getFileStdout();
 
@@ -941,6 +962,7 @@ int cmdPull(int argc, char * const *argv)
     int optionIndex = 0;
     PullContext pullCtx;
     pullCtx.mergeStrategy = MERGE_INTERACTIVE;
+    HttpClientContext ctx;
 
     struct option longOptions[] = {
         {"user", 1, 0, 0},
@@ -1002,8 +1024,8 @@ int cmdPull(int argc, char * const *argv)
 
     if (username.empty()) {
         // check if the sessid is valid
-        sessid = loadSessid(dir);
-        int r = testSessid(url, sessid);
+        ctx.sessid = loadSessid(dir);
+        int r = testSessid(url, ctx);
 
         if (r < 0) {
             // failed (session may have expired), then prompt for user name/password
@@ -1021,14 +1043,14 @@ int cmdPull(int argc, char * const *argv)
     }
 
     if (redoSigin) {
-        sessid = signin(url, username, password);
+        ctx.sessid = signin(url, username, password, ctx);
         if (!sessid.empty()) {
-            storeSessid(dir, sessid);
+            storeSessid(dir, ctx.sessid);
             storeUrl(dir, url);
         }
     }
 
-    LOGV("%s=%s\n", SESSID, sessid.c_str());
+    LOGV("%s=%s\n", SESSID, ctx.sessid.c_str());
 
     if (sessid.empty()) {
         fprintf(stderr, "Authentication failed\n");
@@ -1038,7 +1060,7 @@ int cmdPull(int argc, char * const *argv)
     // pull new entries and new attached files of all projects
     pullCtx.rooturl = url;
     pullCtx.localRepo = dir;
-    pullCtx.sessid = sessid;
+    pullCtx.httpCtx = ctx;
     int r = pullProjects(pullCtx);
 
     curl_global_cleanup();
