@@ -30,7 +30,7 @@ init() {
     $SMIT issue $REPO/$PROJECT1 -a 1 status=open color=green
     # create issue 2
     $SMIT issue $REPO/$PROJECT1 -a - "summary=second issue" color=yellow
-    echo file1 > $REPO/$PROJECT1/files/file1
+    echo "-- file1" > $REPO/$PROJECT1/files/file1
 }
 cleanup() {
     REPO=trepo # just to be sure before the rm -rf
@@ -78,6 +78,8 @@ $SMIT issue $REPO/$PROJECT1 -a 1 color=yellow freeText="hello world"
 $SMIT issue $REPO/$PROJECT1 -a - summary="t---d issue" freeText="this is xyz"
 $SMIT issue $REPO/$PROJECT1 -a 3 summary="third issue" freeText="this is xyz"
 
+echo "-- file2" > $REPO/$PROJECT1/files/file2
+echo "-- contents of file2" >> $REPO/$PROJECT1/files/file2
 
 startServer
 cd clone1
@@ -89,6 +91,8 @@ stopServer
 $SMIT issue clone1/$PROJECT1 1 -pm > $TEST_NAME.out
 $SMIT issue clone1/$PROJECT1 2 -pm >> $TEST_NAME.out
 $SMIT issue clone1/$PROJECT1 3 -pm >> $TEST_NAME.out
+cat clone1/$PROJECT1/files/file1 >> $TEST_NAME.out
+cat clone1/$PROJECT1/files/file2 >> $TEST_NAME.out
 
 diff -u $srcdir/$TEST_NAME.ref $TEST_NAME.out 
 
