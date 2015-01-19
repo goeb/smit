@@ -36,6 +36,7 @@ public:
     void getRequestLines();
     void getRequestRaw();
     void post(const std::string &params);
+    int postFile(const std::string &srcFile, const std::string &destUrl);
     std::map<std::string, Cookie> cookies;
     std::list<std::string> lines; // fulfilled after calling getRequestLines()
     void doCloning(bool recursive, int recursionLevel);
@@ -77,7 +78,7 @@ private:
     HttpClientContext httpCtx;
     std::string currentLine;
     CURL *curlHandle;
-    struct curl_slist *slist;
+    struct curl_slist *headerList;
     std::string filename; // name of the file to write into
     FILE *fd; // file descriptor of the file
     bool isDirectory;

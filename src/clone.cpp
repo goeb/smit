@@ -558,7 +558,6 @@ int pullProject(const PullContext &pullCtx, Project &p)
   * Things not pulled: tags, views, project config, files in html, public, etc.
   */
 int pullProjects(const PullContext &pullCtx)
-
 {
     // set log level to hide INFO logs
     setLoggingLevel(LL_ERROR);
@@ -1076,3 +1075,147 @@ int cmdPull(int argc, char * const *argv)
 
 }
 
+
+int pushProjects(const PullContext &pushCtx)
+{
+    // TODO
+    // test post of a file
+    HttpRequest hr(pushCtx.httpCtx);
+    int r = hr.postFile("toto.txt", "http://127.0.0.1:8090/myproject/issues/10/hello");
+    return r;
+}
+
+int helpPush()
+{
+    printf("Usage: smit push [<local-repository>]\n"
+           "\n"
+           "  Push local changes to  remote repository.\n"
+           "\n"
+           "Options:\n"
+           "  --user <user> --passwd <password> \n"
+           "      Specify the user name and the password.\n"
+           "\n"
+           "TLS Options:\n"
+           "  --cacert <CA-certificate>\n"
+           "      CA certificate, in PEM format, relevant only when the server runs TLS.\n"
+           "\n"
+           "  --insecure\n"
+           "      Do not verify the server certificate against the local CA certificates."
+           "\n"
+           );
+    return 1;
+}
+
+
+int cmdPush(int argc, char * const *argv)
+{
+    std::string username;
+    const char *passwd = 0;
+    const char *dir = "."; // default value is current directory
+
+    int c;
+    int optionIndex = 0;
+    PullContext pushCtx;
+
+    struct option longOptions[] = {
+        {"user", 1, 0, 0},
+        {"passwd", 1, 0, 0},
+        {"insecure", 0, 0, 0},
+        {"cacert", 1, 0, 0},
+        {NULL, 0, NULL, 0}
+    };
+    while ((c = getopt_long(argc, argv, "v", longOptions, &optionIndex)) != -1) {
+        switch (c) {
+        case 0: // manage long options
+            if (0 == strcmp(longOptions[optionIndex].name, "user")) {
+                username = optarg;
+            } else if (0 == strcmp(longOptions[optionIndex].name, "passwd")) {
+                passwd = optarg;
+            } else if (0 == strcmp(longOptions[optionIndex].name, "insecure")) {
+                pushCtx.httpCtx.tlsInsecure = true;
+            } else if (0 == strcmp(longOptions[optionIndex].name, "cacert")) {
+                pushCtx.httpCtx.tlsCacert = optarg;
+            }
+            break;
+        case 'v':
+            Verbose = true;
+            HttpRequest::setVerbose(true);
+            break;
+        case '?': // incorrect syntax, a message is printed by getopt_long
+            return helpPush();
+            break;
+        default:
+            printf("?? getopt returned character code 0x%x ??\n", c);
+            return helpPush();
+        }
+    }
+    // manage non-option ARGV elements
+    if (optind < argc) {
+        dir = argv[optind];
+        optind++;
+    }
+    if (optind < argc) {
+        printf("Too many arguments.\n\n");
+        return helpPull();
+    }
+
+    setLoggingOption(LO_CLI);
+
+    // get the remote url from local configuration file
+    std::string url = loadUrl(dir);
+    if (url.empty()) {
+        printf("Cannot get remote url.\n");
+        exit(1);
+    }
+
+    curl_global_init(CURL_GLOBAL_ALL);
+    std::string password;
+    bool redoSigin = false;
+
+    if (username.empty()) {
+        // check if the sessid is valid
+        pushCtx.httpCtx.sessid = loadSessid(dir);
+        int r = testSessid(url, pushCtx.httpCtx);
+
+        if (r < 0) {
+            // failed (session may have expired), then prompt for user name/password
+            username = getString("Username: ", false);
+            password = getString("Password: ", true);
+
+            // and redo the signing-in
+            redoSigin = true;
+        }
+
+    } else {
+        // do the signing-in with the given username / password
+        password = passwd;
+        redoSigin = true;
+    }
+
+    if (redoSigin) {
+        pushCtx.httpCtx.sessid = signin(url, username, password, pushCtx.httpCtx);
+        if (!pushCtx.httpCtx.sessid.empty()) {
+            storeSessid(dir, pushCtx.httpCtx.sessid);
+            storeUrl(dir, url);
+        }
+    }
+
+    LOGV("%s=%s\n", SESSID, pushCtx.httpCtx.sessid.c_str());
+
+    if (pushCtx.httpCtx.sessid.empty()) {
+        fprintf(stderr, "Authentication failed\n");
+        return 1; // authentication failed
+    }
+
+    // pull new entries and new attached files of all projects
+    pushCtx.rooturl = url;
+    pushCtx.localRepo = dir;
+    int r = pushProjects(pushCtx);
+
+    curl_global_cleanup();
+
+    if (r < 0) return 1;
+    else return 0;
+
+
+}

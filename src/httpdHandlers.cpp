@@ -1579,6 +1579,51 @@ int httpGetIssue(const RequestContext *req, Project &p, const std::string &issue
     return REQUEST_COMPLETED;
 }
 
+
+void httpPushEntry(const RequestContext *req, Project &p, const std::string &issueId,
+                   const std::string &entryId, User u)
+{
+    printf("httpPushEntry: %s/%s\n", issueId.c_str(), entryId.c_str()); // TODO remove this debug
+
+    enum Role r = u.getRole(p.getName());
+    if (r != ROLE_RW && r != ROLE_ADMIN) {
+        sendHttpHeader403(req);
+        return;
+    }
+    const char *multipart = "multipart/form-data";
+    std::map<std::string, std::list<std::string> > vars;
+    const char *contentType = req->getHeader("Content-Type");
+    if (0 == strncmp(multipart, contentType, strlen(multipart))) {
+        // extract the boundary
+        const char *b = "boundary=";
+        const char *ptr = mg_strcasestr(contentType, b);
+        if (!ptr) {
+            LOG_ERROR("Missing boundary in multipart form data");
+            return;
+        }
+        ptr += strlen(b);
+        std::string boundary = ptr;
+        LOG_DEBUG("Boundary: %s", boundary.c_str());
+
+        std::string postData;
+        int rc = readMgreq(req, postData, MAX_SIZE_UPLOAD);
+        if (rc < 0) {
+            sendHttpHeader413(req, "You tried to upload too much data. Max is 10 MB.");
+            return;
+        }
+
+
+        printf("pushed-data: %s\n", postData.c_str());
+        //std::string tmpDir = pro.getTmpDir();
+
+        //parseMultipartAndStoreUploadedFiles(postData, boundary, vars, tmpDir);
+
+    } else {
+        // multipart/form-data
+        LOG_ERROR("Content-Type '%s' not supported", contentType);
+    }
+}
+
 /** Used for deleting an entry
   * @param details
   *     should be of the form: iid/eid/delete
@@ -1588,16 +1633,10 @@ int httpGetIssue(const RequestContext *req, Project &p, const std::string &issue
   *     1, do not.
   */
 void httpDeleteEntry(const RequestContext *req, Project &p, const std::string &issueId,
-                    std::string details, User u)
+                     const std::string &entryId, User u)
 {
-    LOG_DEBUG("httpDeleteEntry: project=%s, issueId=%s, details=%s", p.getName().c_str(),
-              issueId.c_str(), details.c_str());
-
-    std::string entryId = popToken(details, '/');
-    if (details != "delete") {
-        sendHttpHeader404(req);
-        return;
-    }
+    LOG_DEBUG("httpDeleteEntry: project=%s, issueId=%s, entryId=%s", p.getName().c_str(),
+              issueId.c_str(), entryId.c_str());
 
     enum Role role = u.getRole(p.getName());
     if (role != ROLE_RW && role != ROLE_ADMIN) {
@@ -1926,6 +1965,7 @@ void httpPostEntry(const RequestContext *req, Project &pro, const std::string & 
   * /myp/issues/new         GET        user              page with a form for submitting new issue
   * /myp/issues/123         GET/POST   user              a particular issue: get all entries or add a new entry
   * /myp/issues/x/y/delete  POST       user              delete an entry y of issue x
+  * /myp/issues/x/y         POST       user              push an entry
   * /myp/tags/x/y           POST       user              tag / untag an entry
   * /myp/reload             POST       admin             reload project from disk storage
   * / * /issues             GET        user              issues of all projects
@@ -2010,8 +2050,11 @@ int begin_request_handler(const RequestContext *req)
         else if ( (resource == "issues") && (method == "GET") && uri.empty() ) httpGetListOfIssues(req, *p, user);
         else if ( (resource == "issues") && (method == "POST") ) {
             std::string issueId = popToken(uri, '/');
-            if (uri.empty()) httpPostEntry(req, *p, issueId, user);
-            else httpDeleteEntry(req, *p, issueId, uri, user);
+            std::string entryId = popToken(uri, '/');
+            if (entryId.empty()) httpPostEntry(req, *p, issueId, user);
+            else if (uri == "delete") httpDeleteEntry(req, *p, issueId, entryId, user);
+            else if (uri.empty()) httpPushEntry(req, *p, issueId, entryId, user);
+            else return sendHttpHeader400(req, "");
 
         } else if ( (resource == "issues") && (uri == "new") && (method == "GET") ) httpGetNewIssueForm(req, *p, user);
         else if ( (resource == "issues") && (method == "GET") ) return httpGetIssue(req, *p, uri, user);

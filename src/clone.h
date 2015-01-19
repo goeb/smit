@@ -19,4 +19,7 @@ int helpPull();
 int cmdGet(int argc, char *const*argv);
 int helpGet();
 
+int cmdPush(int argc, char *const*argv);
+int helpPush();
+
 #endif

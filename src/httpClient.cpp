@@ -149,6 +149,34 @@ void HttpRequest::post(const std::string &params)
     performRequest();
 }
 
+/** Post a file (file upload)
+  *
+  * @param destUrl
+  *     Must be a complete URI. Eg: http://example.com/x/y
+  */
+
+int HttpRequest::postFile(const std::string &srcFile, const std::string &destUrl)
+{
+    struct curl_httppost *formpost=NULL;
+    struct curl_httppost *lastptr=NULL;
+    curl_formadd(&formpost,
+                 &lastptr,
+                 CURLFORM_COPYNAME, "sendfile",
+                 CURLFORM_FILE, srcFile.c_str(),
+                 CURLFORM_END);
+    curl_easy_setopt(curlHandle, CURLOPT_URL, destUrl.c_str());
+    CURLcode res;
+    curl_easy_setopt(curlHandle, CURLOPT_HTTPPOST, formpost);
+    res = curl_easy_perform(curlHandle);
+    if (res != CURLE_OK) {
+        // error, could not post the file
+        fprintf(stderr, "curl_easy_perform() failed: %s\n",
+                curl_easy_strerror(res));
+        exit(1);
+    }
+    curl_formfree(formpost);
+    return 0; // ok
+}
 
 
 int HttpRequest::test()
@@ -391,29 +419,30 @@ HttpRequest::HttpRequest(const HttpClientContext &ctx)
     if (httpCtx.tlsCacert) curl_easy_setopt(curlHandle, CURLOPT_CAINFO, httpCtx.tlsCacert);
     else if (httpCtx.tlsInsecure) curl_easy_setopt(curlHandle, CURLOPT_SSL_VERIFYPEER, 0);
 
-
-    slist = 0;
-    slist = curl_slist_append(slist, "Accept: " APP_X_SMIT);
+    headerList = 0;
+    headerList = curl_slist_append(headerList, "Accept: " APP_X_SMIT);
     if (!httpCtx.sessid.empty()) {
         std::string cookie = "Cookie: " SESSID "=" + httpCtx.sessid;
-        slist = curl_slist_append(slist, cookie.c_str());
+        headerList = curl_slist_append(headerList, cookie.c_str());
     }
 
-    curl_easy_setopt(curlHandle, CURLOPT_HTTPHEADER, slist);
+    headerList = curl_slist_append(headerList, "Expect:"); // mongoose does not support Expect
+
+    curl_easy_setopt(curlHandle, CURLOPT_HTTPHEADER, headerList);
 
     curl_easy_setopt(curlHandle, CURLOPT_COOKIEFILE, ""); /* just to start the cookie engine */
 }
 
 HttpRequest::~HttpRequest()
 {
-    if (slist) curl_slist_free_all(slist);
+    if (headerList) curl_slist_free_all(headerList);
     if (curlHandle) curl_easy_cleanup(curlHandle);
 }
 
 void HttpRequest::closeCurl()
 {
-    curl_slist_free_all(slist);
-    slist = 0;
+    curl_slist_free_all(headerList);
+    headerList = 0;
     curl_easy_cleanup(curlHandle);
     curlHandle = 0;
 }
