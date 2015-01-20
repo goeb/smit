@@ -339,7 +339,12 @@ int Project::load()
     return 0;
 }
 
-Entry *Entry::loadEntry(std::string dir, const char* basename)
+/** Load an entry from a file
+  *
+  * By default the entry id is the basename of the file, but
+  * if id is given, then it specifies the id of the new entry.
+  */
+Entry *Entry::loadEntry(const std::string &dir, const char* basename, const char *id)
 {
     // load a given entry
     std::string path = dir + '/' + basename;
@@ -349,7 +354,8 @@ Entry *Entry::loadEntry(std::string dir, const char* basename)
     if (n <= 0) return 0; // error or empty file
 
     Entry *e = new Entry;
-    e->id = basename;
+    if (id) e->id = id;
+    else e->id = basename;
 
     std::list<std::list<std::string> > lines = parseConfigTokens(buf, n);
     free((void*)buf);
@@ -2025,6 +2031,43 @@ int Project::addEntry(PropertiesMap properties, std::string &issueId, std::strin
 
     return 0; // success
 }
+
+/** Push an uploaded entry in the database
+  *
+  * An error is raised in any of the following cases:
+  * - the author of the entry is not the same as the username
+  * - the non-null parent of the entry does not match the latest entry of an existing issue
+  *
+  * A new issue is created if the parent of the pushed entry is 'null'
+  * In this case, if the given issueId already exists, then
+  * it is renamed and returned (IN/OUT parameter)
+  */
+int Project::pushEntry(std::string issueId, const std::string &entryId,
+                       const std::string &username, const std::string &tmpDir,
+                       const std::string &filename)
+{
+    // load the file as an entry
+    Entry *e = Entry::loadEntry(tmpDir.c_str(), filename.c_str(), entryId.c_str());
+    if (!e) return -1;
+
+    //
+    // check that the username is the same as the author of the entry
+    if (e->author != username) {
+        LOG_ERROR("pushEntry error: usernames do not match (%s / %s)",
+                  username.c_str(), e->author.c_str());
+        return -2;
+    }
+
+    // TODO
+
+    // check that :
+    // - either its parent is the same as the latest of the given issue
+    // - or the issue id does not exist
+    // officialize the new entry (and possibliy the new isssue)
+
+    return 0;
+}
+
 
 ProjectConfig Project::getConfig() const
 {

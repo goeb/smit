@@ -103,6 +103,13 @@ void sendHttpHeader200(const RequestContext *request)
     addHttpStat(H_2XX);
 }
 
+void sendHttpHeader201(const RequestContext *request)
+{
+    LOG_FUNC();
+    request->printf("HTTP/1.0 200 Created\r\n\r\n");
+    addHttpStat(H_2XX);
+}
+
 void sendHttpHeader204(const RequestContext *request)
 {
     LOG_FUNC();
@@ -1579,102 +1586,6 @@ int httpGetIssue(const RequestContext *req, Project &p, const std::string &issue
     return REQUEST_COMPLETED;
 }
 
-
-void httpPushEntry(const RequestContext *req, Project &p, const std::string &issueId,
-                   const std::string &entryId, User u)
-{
-    printf("httpPushEntry: %s/%s\n", issueId.c_str(), entryId.c_str()); // TODO remove this debug
-
-    enum Role r = u.getRole(p.getName());
-    if (r != ROLE_RW && r != ROLE_ADMIN) {
-        sendHttpHeader403(req);
-        return;
-    }
-    const char *multipart = "multipart/form-data";
-    std::map<std::string, std::list<std::string> > vars;
-    const char *contentType = req->getHeader("Content-Type");
-    if (0 == strncmp(multipart, contentType, strlen(multipart))) {
-        // extract the boundary
-        const char *b = "boundary=";
-        const char *ptr = mg_strcasestr(contentType, b);
-        if (!ptr) {
-            LOG_ERROR("Missing boundary in multipart form data");
-            return;
-        }
-        ptr += strlen(b);
-        std::string boundary = ptr;
-        LOG_DEBUG("Boundary: %s", boundary.c_str());
-
-        std::string postData;
-        int rc = readMgreq(req, postData, MAX_SIZE_UPLOAD);
-        if (rc < 0) {
-            sendHttpHeader413(req, "You tried to upload too much data. Max is 10 MB.");
-            return;
-        }
-
-
-        printf("pushed-data: %s\n", postData.c_str());
-        //std::string tmpDir = pro.getTmpDir();
-
-        //parseMultipartAndStoreUploadedFiles(postData, boundary, vars, tmpDir);
-
-    } else {
-        // multipart/form-data
-        LOG_ERROR("Content-Type '%s' not supported", contentType);
-    }
-}
-
-/** Used for deleting an entry
-  * @param details
-  *     should be of the form: iid/eid/delete
-  *
-  * @return
-  *     0, let Mongoose handle static file
-  *     1, do not.
-  */
-void httpDeleteEntry(const RequestContext *req, Project &p, const std::string &issueId,
-                     const std::string &entryId, User u)
-{
-    LOG_DEBUG("httpDeleteEntry: project=%s, issueId=%s, entryId=%s", p.getName().c_str(),
-              issueId.c_str(), entryId.c_str());
-
-    enum Role role = u.getRole(p.getName());
-    if (role != ROLE_RW && role != ROLE_ADMIN) {
-        sendHttpHeader403(req);
-        return;
-    }
-
-    int r = p.deleteEntry(issueId, entryId, u.username);
-    if (r < 0) {
-        // failure
-        LOG_INFO("deleteEntry returned %d", r);
-        sendHttpHeader403(req);
-
-    } else {
-        sendHttpHeader200(req);
-        req->printf("\r\n"); // no contents
-    }
-
-    return;
-}
-
-
-
-
-void parseQueryStringVar(const std::string &var, std::string &key, std::string &value) {
-    size_t x = var.find('=');
-    if (x != std::string::npos) {
-        key = var.substr(0, x);
-        value = "";
-        if (x+1 < var.size()) {
-            value = var.substr(x+1);
-        }
-    }
-
-    key = urlDecode(key);
-    value = urlDecode(value);
-}
-
 void parseMultipartAndStoreUploadedFiles(const std::string &data, std::string boundary,
                                          std::map<std::string, std::list<std::string> > &vars,
                                          const std::string &tmpDirectory)
@@ -1822,6 +1733,126 @@ void parseMultipartAndStoreUploadedFiles(const std::string &data, std::string bo
         }
     }
 }
+
+
+void httpPushEntry(const RequestContext *req, Project &p, const std::string &issueId,
+                   const std::string &entryId, User u)
+{
+    printf("httpPushEntry: %s/%s\n", issueId.c_str(), entryId.c_str()); // TODO remove this debug
+
+    enum Role r = u.getRole(p.getName());
+    if (r != ROLE_RW && r != ROLE_ADMIN) {
+        sendHttpHeader403(req);
+        return;
+    }
+    const char *multipart = "multipart/form-data";
+    PropertiesMap vars;
+    const char *contentType = req->getHeader("Content-Type");
+    if (0 == strncmp(multipart, contentType, strlen(multipart))) {
+        // extract the boundary
+        const char *b = "boundary=";
+        const char *ptr = mg_strcasestr(contentType, b);
+        if (!ptr) {
+            LOG_ERROR("Missing boundary in multipart form data");
+            return;
+        }
+        ptr += strlen(b);
+        std::string boundary = ptr;
+        LOG_DEBUG("Boundary: %s", boundary.c_str());
+
+        std::string postData;
+        int rc = readMgreq(req, postData, MAX_SIZE_UPLOAD);
+        if (rc < 0) {
+            sendHttpHeader413(req, "You tried to upload too much data. Max is 10 MB.");
+            return;
+        }
+
+        printf("pushed-data: %s\n", postData.c_str());
+        std::string tmpDir = p.getTmpDir();
+
+        // store the entry in a tmp directory
+        parseMultipartAndStoreUploadedFiles(postData, boundary, vars, tmpDir);
+        // uploaded file(s) must be with the key K_PUSH_FILE
+        PropertiesIt files = vars.find(K_PUSH_FILE);
+        if (files == vars.end()) {
+            sendHttpHeader400(req, "Missing pushed file");
+            return;
+        }
+        if (files->second.size() != 1) {
+            sendHttpHeader400(req, "Invalid number of pushed files");
+            return;
+        }
+
+        // insert the entry into the database
+        int r = p.pushEntry(issueId, entryId, u.username, tmpDir, files->second.front());
+        if (r < 0) {
+            std::string msg = "Cannot push the entry";
+            sendHttpHeader400(req, msg.c_str());
+        } else {
+            // ok, no problem
+            sendHttpHeader201(req);
+            // give the issueId, as it may be necessary to inform
+            // the client that it has been renamed (renumbered)
+            req->printf("%s/%s\r\n", issueId.c_str(), entryId.c_str());
+        }
+
+    } else {
+        // multipart/form-data
+        LOG_ERROR("Content-Type '%s' not supported", contentType);
+    }
+}
+
+/** Used for deleting an entry
+  * @param details
+  *     should be of the form: iid/eid/delete
+  *
+  * @return
+  *     0, let Mongoose handle static file
+  *     1, do not.
+  */
+void httpDeleteEntry(const RequestContext *req, Project &p, const std::string &issueId,
+                     const std::string &entryId, User u)
+{
+    LOG_DEBUG("httpDeleteEntry: project=%s, issueId=%s, entryId=%s", p.getName().c_str(),
+              issueId.c_str(), entryId.c_str());
+
+    enum Role role = u.getRole(p.getName());
+    if (role != ROLE_RW && role != ROLE_ADMIN) {
+        sendHttpHeader403(req);
+        return;
+    }
+
+    int r = p.deleteEntry(issueId, entryId, u.username);
+    if (r < 0) {
+        // failure
+        LOG_INFO("deleteEntry returned %d", r);
+        sendHttpHeader403(req);
+
+    } else {
+        sendHttpHeader200(req);
+        req->printf("\r\n"); // no contents
+    }
+
+    return;
+}
+
+
+
+
+void parseQueryStringVar(const std::string &var, std::string &key, std::string &value) {
+    size_t x = var.find('=');
+    if (x != std::string::npos) {
+        key = var.substr(0, x);
+        value = "";
+        if (x+1 < var.size()) {
+            value = var.substr(x+1);
+        }
+    }
+
+    key = urlDecode(key);
+    value = urlDecode(value);
+}
+
 
 void parseQueryString(const std::string &queryString, std::map<std::string, std::list<std::string> > &vars)
 {

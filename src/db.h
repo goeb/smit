@@ -51,7 +51,7 @@ struct Entry {
     struct Entry *prev; // parent
     std::set<std::string> tags;
     Entry() : ctime(0), next(0), prev(0) {}
-    static Entry *loadEntry(std::string dir, const char* basename);
+    static Entry *loadEntry(const std::string &dir, const char* basename, const char *id=0);
     std::list<std::string> amendments; // id of the entries that amend this entry
 };
 
@@ -168,6 +168,9 @@ public:
                                const char *sortingSpec) const;
     int get(const std::string &issueId, Issue &issue) const;
     int addEntry(PropertiesMap properties, std::string &iid, std::string &eid, std::string username);
+    int pushEntry(std::string issueId, const std::string &entryId,
+                  const std::string &user, const std::string &tmpDir, const std::string &filename);
+
     Entry *getEntry(const std::string &id) const;
 
     inline std::string getName() const { return name; }
