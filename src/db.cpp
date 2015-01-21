@@ -99,6 +99,25 @@ std::string Issue::getSummary() const
     return getProperty(properties, "summary");
 }
 
+
+void Issue::addEntryInTable(Entry *e)
+{
+    // modification time of the issue it the creation time of the latest entry
+    mtime = e->ctime;
+
+    // if the issue had no entries then set the creation time
+    if (!latest) ctime = e->ctime;
+
+    // update the chain list of entries
+    e->prev = latest;
+    if (latest) {
+        latest->next = e;
+    }
+    latest = e;
+
+    entries[e->id] = e;
+}
+
 /** Add an entry
   *
   * This does:
@@ -115,19 +134,6 @@ Entry *Issue::addEntry(const PropertiesMap &properties, const std::string &usern
     //e->id
     e->author = username;
     e->properties = properties;
-
-    // modification time of the issue it the creation time of the latest entry
-    mtime = e->ctime;
-
-    // if the issue had no entries then set the creation time
-    if (!latest) ctime = e->ctime;
-
-    // update the chain list of entries
-    e->prev = latest;
-    if (latest) {
-        latest->next = e;
-    }
-    latest = e;
 
     // serialize the entry
     std::string data = e->serialize();
@@ -152,7 +158,8 @@ Entry *Issue::addEntry(const PropertiesMap &properties, const std::string &usern
 
     // add this entry in Issue::entries
     e->id = newEntryId;
-    entries[newEntryId] = e;
+
+    addEntryInTable(e);
 
     // consolidate the issue
     consolidateIssueWithSingleEntry(e, true);
@@ -1867,6 +1874,33 @@ void Project::cleanupMultiselect(std::list<std::string> &values, const std::list
     }
 }
 
+/** Create a new issue
+  *
+  * - Allocate a new issue id
+  * - Create the directory for this issue
+  * - Insert the new issue object in the table of the project
+  */
+Issue *Project::createNewIssue()
+{
+    // create new directory for this issue
+    std::string issueId = allocateNewIssueId();
+
+    std::string pathOfIssue = path + '/' + ISSUES + '/' + issueId;
+
+    int r = mg_mkdir(pathOfIssue.c_str(), S_IRUSR | S_IXUSR | S_IWUSR);
+    if (r != 0) {
+        LOG_ERROR("Could not create dir '%s': %s", pathOfIssue.c_str(), strerror(errno));
+        return 0;
+    }
+    Issue *i = new Issue();
+    i->id = issueId;
+    i->path = path + '/' + ISSUES + '/' + issueId;
+
+    // add it to the internal memory
+    issues[issueId] = i;
+    return i;
+}
+
 /** If issueId is empty:
   *     - a new issue is created
   *     - its ID is returned within parameter 'issueId'
@@ -1962,30 +1996,10 @@ int Project::addEntry(PropertiesMap properties, std::string &issueId, std::strin
         LOG_DEBUG("properties: %s => %s", p->first.c_str(), join(p->second, ", ").c_str());
     }
 
-    std::string pathOfNewEntry;
-    std::string pathOfIssue;
-
     // write this entry to disk
     // if issueId is empty, create a new issue
-    if (issueId.empty()) {
-        // create new directory for this issue
-        issueId = allocateNewIssueId();
-
-        pathOfIssue = path + '/' + ISSUES + '/' + issueId;
-
-        int r = mg_mkdir(pathOfIssue.c_str(), S_IRUSR | S_IXUSR | S_IWUSR);
-        if (r != 0) {
-            LOG_ERROR("Could not create dir '%s': %s", pathOfIssue.c_str(), strerror(errno));
-
-            return -1;
-        }
-        i = new Issue();
-        i->id = issueId;
-        i->path = path + '/' + ISSUES + '/' + issueId;
-
-        // add it to the internal memory
-        issues[issueId] = i;
-    }
+    if (!i) i = createNewIssue();
+    if (!i) return -1;
 
     Entry *e = i->addEntry(properties, username);
 
@@ -2036,21 +2050,23 @@ int Project::addEntry(PropertiesMap properties, std::string &issueId, std::strin
   *
   * An error is raised in any of the following cases:
   * - the author of the entry is not the same as the username
-  * - the non-null parent of the entry does not match the latest entry of an existing issue
+  * - the parent is not null and issueId does not already exist
+  * - the parent is not null and does not match the latest entry of the existing issueId
   *
   * A new issue is created if the parent of the pushed entry is 'null'
-  * In this case, if the given issueId already exists, then
-  * it is renamed and returned (IN/OUT parameter)
+  * In this case, a new issueId is assigned, then it is returned (IN/OUT parameter).
   */
 int Project::pushEntry(std::string issueId, const std::string &entryId,
                        const std::string &username, const std::string &tmpDir,
                        const std::string &filename)
 {
+
+    // TODO check that entry id matches the sha1 of the file
+
     // load the file as an entry
     Entry *e = Entry::loadEntry(tmpDir.c_str(), filename.c_str(), entryId.c_str());
     if (!e) return -1;
 
-    //
     // check that the username is the same as the author of the entry
     if (e->author != username) {
         LOG_ERROR("pushEntry error: usernames do not match (%s / %s)",
@@ -2058,12 +2074,48 @@ int Project::pushEntry(std::string issueId, const std::string &entryId,
         return -2;
     }
 
-    // TODO
+    Issue *i = 0;
+    ScopeLocker scopeLocker(locker, LOCK_READ_WRITE);
 
-    // check that :
-    // - either its parent is the same as the latest of the given issue
-    // - or the issue id does not exist
-    // officialize the new entry (and possibliy the new isssue)
+    if (e->parent == K_PARENT_NULL) {
+        // assign a new issue id
+        i = createNewIssue();
+        if (i) return -3;
+
+    } else {
+        int r = get(issueId, *i);
+        if (r < 0) {
+            LOG_ERROR("pushEntry error: parent is not null and issueId does not exist (%s / %s)",
+                      issueId.c_str(), entryId.c_str());
+
+            return -4; // the parent is not null and issueId does not exist
+        }
+        if (i->latest->id != e->parent) {
+            LOG_ERROR("pushEntry error: parent does not match latest entry (%s / %s)",
+                      issueId.c_str(), entryId.c_str());
+            return -5;
+        }
+    }
+
+    // move the entry to the official place
+    std::string oldpath = tmpDir + "/" + filename;
+    std::string newpath = i->path + "/" + filename;
+
+    // verify that newpath does not exist
+    if (fileExists(newpath)) {
+        LOG_ERROR("cannot push entry %s: already exists", entryId.c_str());
+        return -6;
+    }
+
+    int r = rename(oldpath.c_str(), newpath.c_str());
+    if (r != 0) {
+        LOG_ERROR("pushEntry error: could not officiliaze pushed entry %s/%s: %s",
+                  issueId.c_str(), entryId.c_str(), strerror(errno));
+        return -7;
+    }
+
+    // insert the new entry in the database
+    i->addEntryInTable(e);
 
     return 0;
 }

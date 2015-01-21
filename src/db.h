@@ -85,6 +85,7 @@ struct Issue {
     Entry *getEntry(const std::string id);
 
     int load(const std::string &issueId, const std::string &issuePath);
+    void addEntryInTable(Entry *e);
     Entry *addEntry(const PropertiesMap &properties, const std::string &username);
     Entry *amendEntry(const std::string &entryId, const std::string &newMsg, const std::string &username);
 
@@ -167,6 +168,7 @@ public:
                                const std::map<std::string, std::list<std::string> > &filterOut,
                                const char *sortingSpec) const;
     int get(const std::string &issueId, Issue &issue) const;
+    Issue *createNewIssue();
     int addEntry(PropertiesMap properties, std::string &iid, std::string &eid, std::string username);
     int pushEntry(std::string issueId, const std::string &entryId,
                   const std::string &user, const std::string &tmpDir, const std::string &filename);
