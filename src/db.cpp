@@ -48,7 +48,7 @@
 #define K_CTIME "+ctime"
 #define K_ISSUE_ID "id"
 #define K_PARENT_NULL "null"
-
+#define K_MERGE_PENDING ".merge-pending";
 
 /**
   * Directory layout within a project directory
@@ -349,23 +349,33 @@ int Project::load()
 /** Load an entry from a file
   *
   * By default the entry id is the basename of the file, but
-  * if id is given, then it specifies the id of the new entry.
+  * If id is given, then :
+  * - it specifies the id of the new entry (and the basename is not taken as id)
+  * - the sha1 of the file is checked
   */
 Entry *Entry::loadEntry(const std::string &dir, const char* basename, const char *id)
 {
     // load a given entry
     std::string path = dir + '/' + basename;
-    const char *buf = 0;
-    int n = loadFile(path.c_str(), &buf);
+    std::string buf;
+    int n = loadFile(path.c_str(), buf);
 
     if (n <= 0) return 0; // error or empty file
+
+    // check the sha1, if id is given
+    if (id) {
+        std::string hash = getSha1(buf);
+        if (0 != hash.compare(id)) {
+            LOG_ERROR("Hash does not match: %s / %s", path.c_str(), id);
+            return 0;
+        }
+    }
 
     Entry *e = new Entry;
     if (id) e->id = id;
     else e->id = basename;
 
-    std::list<std::list<std::string> > lines = parseConfigTokens(buf, n);
-    free((void*)buf);
+    std::list<std::list<std::string> > lines = parseConfigTokens(buf.c_str(), n);
 
     std::list<std::list<std::string> >::iterator line;
     int lineNum = 0;
@@ -1737,23 +1747,29 @@ std::string Project::renameIssue(const std::string &id)
     return newId;
 }
 
-/** Officialize the merging of an issue
+/** Officialize the merging of an issue during a pulling
   *
   * move away the local issue : $PROJECT/issues/$ID -> $PROJECT/issues/$ID.merge-pending
   * move the merged issue : $PROJECT/tmp/$ID -> $PROJECT/issues/$ID
   * remove the obsolete local issue : $PROJECT/issues/$ID.merge-pending
   *
+  * This must be called from a single-thread smit-pull command. No need for mutex.
   */
 int Project::officializeMerging(const Issue &i)
 {
     std::string officialIssuePath = getPath() + "/" ISSUES "/" + i.id;
-    std::string pathMergePending = officialIssuePath + ".merge-pending";
+    std::string pathMergePending = officialIssuePath + K_MERGE_PENDING;
+    if (fileExists(pathMergePending)) {
+        // the cause of this error might be the interruption of a previous merging
+        // TODO in order to repair this, the db.load should fix this (at startup)
+        LOG_ERROR("Cannot officialize pulling, impeding file: %s", pathMergePending.c_str());
+        return -1;
+    }
     // move away the local issue : $PROJECT/issues/$ID -> $PROJECT/issues/$ID.merge-pending
     int r = rename(officialIssuePath.c_str(), pathMergePending.c_str());
     if (r != 0) {
-        // TODO the cause of this error is the interruption of a previous merging
-        // TODO then we should continue and not raise an error
-        LOG_ERROR("Cannot move directory of issue %s to %s", officialIssuePath.c_str(), pathMergePending.c_str());
+        LOG_ERROR("Cannot move directory of issue %s to %s: %s",
+                  officialIssuePath.c_str(), pathMergePending.c_str(), strerror(errno));
         return -1;
     }
 
@@ -1761,7 +1777,8 @@ int Project::officializeMerging(const Issue &i)
     std::string oldpath = i.path;
     r = rename(oldpath.c_str(), officialIssuePath.c_str());
     if (r != 0) {
-        LOG_ERROR("Cannot move directory of issue %s to %s", oldpath.c_str(), officialIssuePath.c_str());
+        LOG_ERROR("Cannot move directory of issue %s to %s", oldpath.c_str(),
+                  officialIssuePath.c_str());
         return -1;
     }
 
@@ -2060,9 +2077,6 @@ int Project::pushEntry(std::string issueId, const std::string &entryId,
                        const std::string &username, const std::string &tmpDir,
                        const std::string &filename)
 {
-
-    // TODO check that entry id matches the sha1 of the file
-
     // load the file as an entry
     Entry *e = Entry::loadEntry(tmpDir.c_str(), filename.c_str(), entryId.c_str());
     if (!e) return -1;
@@ -2071,16 +2085,22 @@ int Project::pushEntry(std::string issueId, const std::string &entryId,
     if (e->author != username) {
         LOG_ERROR("pushEntry error: usernames do not match (%s / %s)",
                   username.c_str(), e->author.c_str());
+        delete e;
         return -2;
     }
 
     Issue *i = 0;
+    Issue *newI = 0;
     ScopeLocker scopeLocker(locker, LOCK_READ_WRITE);
 
     if (e->parent == K_PARENT_NULL) {
         // assign a new issue id
-        i = createNewIssue();
-        if (i) return -3;
+        newI = createNewIssue();
+        if (!newI) {
+            delete e;
+            return -3;
+        }
+        i = newI;
 
     } else {
         int r = get(issueId, *i);
@@ -2104,6 +2124,8 @@ int Project::pushEntry(std::string issueId, const std::string &entryId,
     // verify that newpath does not exist
     if (fileExists(newpath)) {
         LOG_ERROR("cannot push entry %s: already exists", entryId.c_str());
+        delete e;
+        if (newI) delete newI;
         return -6;
     }
 
@@ -2111,6 +2133,8 @@ int Project::pushEntry(std::string issueId, const std::string &entryId,
     if (r != 0) {
         LOG_ERROR("pushEntry error: could not officiliaze pushed entry %s/%s: %s",
                   issueId.c_str(), entryId.c_str(), strerror(errno));
+        if (newI) delete newI;
+        delete e;
         return -7;
     }
 
