@@ -2015,8 +2015,12 @@ int Project::addEntry(PropertiesMap properties, std::string &issueId, std::strin
 
     // write this entry to disk
     // if issueId is empty, create a new issue
-    if (!i) i = createNewIssue();
-    if (!i) return -1;
+    if (!i) {
+        i = createNewIssue();
+        if (!i) return -1;
+        issueId = i->id; // in/out parameter
+    }
+
 
     Entry *e = i->addEntry(properties, username);
 
