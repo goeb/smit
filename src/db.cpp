@@ -360,7 +360,7 @@ Entry *Entry::loadEntry(const std::string &dir, const char* basename, const char
     std::string buf;
     int n = loadFile(path.c_str(), buf);
 
-    if (n <= 0) return 0; // error or empty file
+    if (n < 0) return 0; // error loading the file
 
     // check the sha1, if id is given
     if (id) {
@@ -375,7 +375,7 @@ Entry *Entry::loadEntry(const std::string &dir, const char* basename, const char
     if (id) e->id = id;
     else e->id = basename;
 
-    std::list<std::list<std::string> > lines = parseConfigTokens(buf.c_str(), n);
+    std::list<std::list<std::string> > lines = parseConfigTokens(buf.c_str(), buf.size());
 
     std::list<std::list<std::string> >::iterator line;
     int lineNum = 0;
