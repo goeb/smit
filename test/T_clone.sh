@@ -2,6 +2,11 @@
 
 # Verify that a clone only contains the allowed projects
 
+TEST_NAME=`basename $0`
+# remove suffix .sh
+TEST_NAME=`echo $TEST_NAME | sed -e "s/\.sh//"`
+exec > $TEST_NAME.log 2>&1
+
 SMIT=../smit
 
 set -e 

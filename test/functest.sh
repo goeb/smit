@@ -1,3 +1,8 @@
+#!/bin/sh
+
+TEST_NAME=`basename $0`
+TEST_NAME=`echo $TEST_NAME | sed -e "s/\.sh//"`
+exec > $TEST_NAME.log 2>&1
 
 SMIT=../smit
 SMITC=$srcdir/../bin/smitc
@@ -87,15 +92,15 @@ sleep 2
 
 start
 
-$SMITC get "http://127.0.0.1:$PORT/$PROJECT/issues?colspec=id+summary\&sort=id" > functest.log
+$SMITC get "http://127.0.0.1:$PORT/$PROJECT/issues?colspec=id+summary\&sort=id" > $TEST_NAME.out
 
 echo killing pid=$pid
 kill $pid
 
-cmp $srcdir/functest.ref functest.log
+cmp $srcdir/$TEST_NAME.ref $TEST_NAME.out
 r=$?
 echo -n "$0 ... "
 if [ $r -eq 0 ]; then echo OK 1>&2
-else echo "ERROR (check diff $srcdir/functest.ref functest.log, repo=$REPO)" 1>&2
+else echo "ERROR (check diff $srcdir/$TEST_NAME.ref $TEST_NAME.out, repo=$REPO)" 1>&2
 fi
 
