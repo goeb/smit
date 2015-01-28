@@ -1085,6 +1085,12 @@ int pushProjects(const PullContext &pushCtx)
     return r;
 }
 
+#define OPT_TLS_CACERT_HELP \
+    "  --cacert <CA-certificate>\n" \
+    "      CA certificate, in PEM format, relevant only when the server runs TLS.\n"
+#define OPT_TLS_CACERT {"cacert", 1, 0, 0}
+
+
 int helpPush()
 {
     printf("Usage: smit push [<local-repository>]\n"
@@ -1096,8 +1102,9 @@ int helpPush()
            "      Specify the user name and the password.\n"
            "\n"
            "TLS Options:\n"
-           "  --cacert <CA-certificate>\n"
-           "      CA certificate, in PEM format, relevant only when the server runs TLS.\n"
+
+           OPT_TLS_CACERT_HELP
+
            "\n"
            "  --insecure\n"
            "      Do not verify the server certificate against the local CA certificates."
@@ -1121,22 +1128,20 @@ int cmdPush(int argc, char * const *argv)
         {"user", 1, 0, 0},
         {"passwd", 1, 0, 0},
         {"insecure", 0, 0, 0},
-        {"cacert", 1, 0, 0},
+        OPT_TLS_CACERT,
         {NULL, 0, NULL, 0}
     };
     while ((c = getopt_long(argc, argv, "v", longOptions, &optionIndex)) != -1) {
         switch (c) {
         case 0: // manage long options
-            if (0 == strcmp(longOptions[optionIndex].name, "user")) {
-                username = optarg;
-            } else if (0 == strcmp(longOptions[optionIndex].name, "passwd")) {
-                passwd = optarg;
-            } else if (0 == strcmp(longOptions[optionIndex].name, "insecure")) {
-                pushCtx.httpCtx.tlsInsecure = true;
-            } else if (0 == strcmp(longOptions[optionIndex].name, "cacert")) {
-                pushCtx.httpCtx.tlsCacert = optarg;
-            }
+        {
+            std::string optName = longOptions[optionIndex].name;
+            if (optName == "user") username = optarg;
+            else if (optName == "passwd") passwd = optarg;
+            else if (optName == "insecure") pushCtx.httpCtx.tlsInsecure = true;
+            else if (optName == "cacert") pushCtx.httpCtx.tlsCacert = optarg;
             break;
+        }
         case 'v':
             Verbose = true;
             HttpRequest::setVerbose(true);

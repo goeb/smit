@@ -26,7 +26,8 @@ SOURCES += \
     ../../src/console.cpp \
     ../../src/HttpContext.cpp \
     ../../src/httpClient.cpp \
-    ../../src/localClient.cpp
+    ../../src/localClient.cpp \
+    ../../src/Args.cpp
 
 HEADERS += \
     ../../mongoose/mongoose.h \
@@ -52,5 +53,6 @@ HEADERS += \
     ../../src/console.h \
     ../../src/HttpContext.h \
     ../../src/httpClient.h \
-    ../../src/localClient.h
+    ../../src/localClient.h \
+    ../../src/Args.h
 

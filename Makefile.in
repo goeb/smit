@@ -80,7 +80,7 @@ am_smit_OBJECTS = src/smit-db.$(OBJEXT) src/smit-parseConfig.$(OBJEXT) \
 	src/smit-filesystem.$(OBJEXT) src/smit-clone.$(OBJEXT) \
 	src/smit-httpClient.$(OBJEXT) src/smit-console.$(OBJEXT) \
 	src/smit-HttpContext.$(OBJEXT) src/smit-localClient.$(OBJEXT) \
-	mongoose/smit-mongoose.$(OBJEXT)
+	src/smit-Args.$(OBJEXT) mongoose/smit-mongoose.$(OBJEXT)
 nodist_smit_OBJECTS = smit-embedcpio.$(OBJEXT)
 smit_OBJECTS = $(am_smit_OBJECTS) $(nodist_smit_OBJECTS)
 am__DEPENDENCIES_1 =
@@ -344,6 +344,7 @@ smit_SOURCES = \
 			   src/console.cpp \
 			   src/HttpContext.cpp \
 			   src/localClient.cpp \
+			   src/Args.cpp \
 			   mongoose/mongoose.c 
 
 nodist_smit_SOURCES = embedcpio.c embedcpio.h 
@@ -501,6 +502,8 @@ src/smit-HttpContext.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/smit-localClient.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
+src/smit-Args.$(OBJEXT): src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
 mongoose/$(am__dirstamp):
 	@$(MKDIR_P) mongoose
 	@: > mongoose/$(am__dirstamp)
@@ -516,6 +519,7 @@ smit$(EXEEXT): $(smit_OBJECTS) $(smit_DEPENDENCIES) $(EXTRA_smit_DEPENDENCIES)
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
 	-rm -f mongoose/smit-mongoose.$(OBJEXT)
+	-rm -f src/smit-Args.$(OBJEXT)
 	-rm -f src/smit-HttpContext.$(OBJEXT)
 	-rm -f src/smit-Trigger.$(OBJEXT)
 	-rm -f src/smit-clone.$(OBJEXT)
@@ -543,6 +547,7 @@ distclean-compile:
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/smit-embedcpio.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@mongoose/$(DEPDIR)/smit-mongoose.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-Args.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-HttpContext.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-Trigger.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-clone.Po@am__quote@
@@ -918,6 +923,20 @@ src/smit-localClient.obj: src/localClient.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/localClient.cpp' object='src/smit-localClient.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/smit-localClient.obj `if test -f 'src/localClient.cpp'; then $(CYGPATH_W) 'src/localClient.cpp'; else $(CYGPATH_W) '$(srcdir)/src/localClient.cpp'; fi`
+
+src/smit-Args.o: src/Args.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/smit-Args.o -MD -MP -MF src/$(DEPDIR)/smit-Args.Tpo -c -o src/smit-Args.o `test -f 'src/Args.cpp' || echo '$(srcdir)/'`src/Args.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/smit-Args.Tpo src/$(DEPDIR)/smit-Args.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/Args.cpp' object='src/smit-Args.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/smit-Args.o `test -f 'src/Args.cpp' || echo '$(srcdir)/'`src/Args.cpp
+
+src/smit-Args.obj: src/Args.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/smit-Args.obj -MD -MP -MF src/$(DEPDIR)/smit-Args.Tpo -c -o src/smit-Args.obj `if test -f 'src/Args.cpp'; then $(CYGPATH_W) 'src/Args.cpp'; else $(CYGPATH_W) '$(srcdir)/src/Args.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/smit-Args.Tpo src/$(DEPDIR)/smit-Args.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/Args.cpp' object='src/smit-Args.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/smit-Args.obj `if test -f 'src/Args.cpp'; then $(CYGPATH_W) 'src/Args.cpp'; else $(CYGPATH_W) '$(srcdir)/src/Args.cpp'; fi`
 install-dist_pkgdataDATA: $(dist_pkgdata_DATA)
 	@$(NORMAL_INSTALL)
 	test -z "$(pkgdatadir)" || $(MKDIR_P) "$(DESTDIR)$(pkgdatadir)"
