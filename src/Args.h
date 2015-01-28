@@ -40,6 +40,7 @@ private:
     int nonOptionLimit;
     const ArgOptionSpec *getOptSpec(const char c);
     const ArgOptionSpec *getOptSpec(const char *s);
+    int grabOption(int argc, char **argv, const ArgOptionSpec *aos, int pos, const char *optName);
 };
 
 

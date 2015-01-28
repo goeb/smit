@@ -54,44 +54,80 @@ const ArgOptionSpec *Args::getOptSpec(const char *s)
     return 0;
 }
 
+std::string getKey(const ArgOptionSpec *aos)
+{
+    std::string key = "-";
+    if (aos->shortname) key += aos->shortname;
+    key += "-";
+    if (aos->longname) key += aos->longname;
+    return key;
+}
+
+
+/** Grab the options starting at position 'pos'
+  *
+  * @return
+  *     number of arguments consumed
+  */
+int Args::grabOption(int argc, char **argv, const ArgOptionSpec *aos, int pos, const char *optName)
+{
+    if (!aos) {
+        fprintf(stderr, "Invalid option '%s'. See '--help'.\n", optName);
+        exit(1);
+    }
+
+    int n = aos->argnum;
+    if (argc < pos + n) {
+        fprintf(stderr, "Missing arguments for option '%s'. See '--help'.\n", optName);
+        exit(1);
+    }
+
+    int i = 0; // number of arguments consumed
+    while (i < n) {
+        // generate a key, used for
+        std::string key = getKey(aos);
+        optionValues[key] = argv[pos+i];
+        i++;
+    }
+    return i;
+}
 
 void Args::parse(int argc, char **argv)
 {
     int i = 0;
+    bool stopOpt = false; // activated when "--" is encountered
     while (i < argc) {
         std::string arg = argv[i];
-        if ( (arg.size() > 0) && (arg[0] == '-')) {
-            // look if it is a known option
-            if (arg.size() == 2) {
-                // look if theer is a related option specification
-                const ArgOptionSpec *aos = getOptSpec(arg[1]);
-                if (aos) {
-                    int n = aos->argnum;
-                    if (argc < i + n + 1) {
-                        fprintf(stderr, "Missing argument(s) for option '%s'. See '--help'.\n", arg.c_str());
-                        exit(1);
-                    }
 
-                    // grab the option
-                    // TODO
+        if (!stopOpt && (arg == "--") ) stopOpt = true;
 
-                } else nonOptionvalues.push_back(arg);
+        else if (!stopOpt && (arg.size() >= 2) && (arg[0] == '-') ) {
+            // option
+            if (arg[1] == '-') {
+                // long named option
+                const ArgOptionSpec *aos = getOptSpec(arg.substr(2).c_str());
+                int skip = grabOption(argc, argv, aos, i+1, arg.c_str());
 
-            } else if (arg.size() > 2) {
-                if (arg.substr(0, 2) == "--") {
-                    const ArgOptionSpec *aos = getOptSpec(arg.substr(2).c_str());
-                    if (aos) {
+                i+= skip;
+                continue;
 
-                    } else nonOptionvalues.push_back(arg);
+            } else {
+                // short named option (1 or several)
+                int n = arg.size();
+                int o = 1;
+                while (o < n) {
+                    const ArgOptionSpec *aos = getOptSpec(arg.substr(o, 1).c_str());
+                    int skip = grabOption(argc, argv, aos, i+1, arg.c_str());
+                    i+= skip;
+                    o++;
+                }
+            }
+        } else nonOptionvalues.push_back(arg);
 
-                } else nonOptionvalues.push_back(arg);
-
-            } else nonOptionvalues.push_back(arg);
-        }
-
-        i++;
+            i++;
     }
-    if (nonOptionLimit > 0 && nonOptionvalues.size() > nonOptionLimit) {
+
+    if ( (nonOptionLimit > 0) && (nonOptionvalues.size() > nonOptionLimit) ) {
         fprintf(stderr, "Too many arguments. See '--help'.\n");
         exit(1);
     }
