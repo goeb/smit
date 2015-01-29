@@ -1,6 +1,8 @@
 #ifndef _clone_h
 #define _clone_h
 
+#include "Args.h"
+
 // local .smit database (in a local cloned repository)
 #define SMIT_DIR ".smit"
 #define PATH_USERNAME   SMIT_DIR "/username"
@@ -19,7 +21,7 @@ int helpPull();
 int cmdGet(int argc, char *const*argv);
 int helpGet();
 
-int cmdPush(int argc, char *const*argv);
-int helpPush();
+int cmdPush(int argc, char **argv);
+int helpPush(const Args *args);
 
 #endif

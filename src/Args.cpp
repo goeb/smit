@@ -8,7 +8,8 @@
 #include "global.h"
 
 
-Args::Args(int argc, char **argv)
+
+Args::Args()
 {
     nonOptionLimit = -1; // by default, no limit
 }
@@ -24,7 +25,7 @@ void Args::setOpt(const char *longname, char shortname, const char *help, int ar
     as.help = help;
     as.argnum = argnum;
 
-    if (longname && shortname) optionSpecs.push_back(as);
+    if (longname || shortname) optionSpecs.push_back(as);
 }
 
 void Args::setNonOptionLimit(int n)
@@ -132,11 +133,31 @@ void Args::parse(int argc, char **argv)
         exit(1);
     }
 }
-
-std::string Args::getHelp()
+#define INDENT "  "
+void Args::printHelp() const
 {
-    return "todo";
+    std::list<ArgOptionSpec>::const_iterator os;
+    FOREACH(os, optionSpecs) {
+        if (!os->shortname) printf(INDENT "--%s", os->longname);
+        else if (!os->longname) printf(INDENT "-%c", os->shortname);
+        else printf(INDENT "-%c, --%s", os->shortname, os->longname);
+
+        if (os->argnum >= 1) printf(" ...");
+        printf("\n");
+        if (os->help) printf(INDENT INDENT INDENT "%s\n\n", os->help);
+    }
 }
 
+/** Look for a specific option in the arguments
+  */
+const char *Args::get(const char *optName)
+{
+    const ArgOptionSpec *aos = getOptSpec(optName);
+    if (aos) return 0;
+    std::string key = getKey(aos);
+    std::map<std::string, std::string>::const_iterator i = optionValues.find(key);
+    if (i == optionValues.end()) return 0;
+    return i->second.c_str();
+}
 
 

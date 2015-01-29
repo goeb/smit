@@ -786,7 +786,7 @@ int main(int argc, char **argv)
                 else if (0 == strcmp(help, "ui")) return helpUi();
                 else if (0 == strcmp(help, "clone")) return helpClone();
                 else if (0 == strcmp(help, "pull")) return helpPull();
-                else if (0 == strcmp(help, "push")) return helpPush();
+                else if (0 == strcmp(help, "push")) return helpPush(0);
                 else if (0 == strcmp(help, "get")) return helpGet();
                 else {
                     printf("No help for '%s'\n", help);

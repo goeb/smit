@@ -28,15 +28,17 @@ struct ArgOptionSpec {
 
 class Args {
 public:
-    Args(int argc, char **argv);
+    Args();
     void setOpt(const char *longname, char shortname, const char *help, int argnum);
     void setNonOptionLimit(int n);
     void parse(int argc, char **argv);
-    std::string getHelp();
+    void printHelp() const;
+    const char *get(const char *optName);
+    std::list<std::string> nonOptionvalues;
+
 private:
     std::list<ArgOptionSpec> optionSpecs; // specification of options
     std::map<std::string, std::string> optionValues;
-    std::list<std::string> nonOptionvalues;
     int nonOptionLimit;
     const ArgOptionSpec *getOptSpec(const char c);
     const ArgOptionSpec *getOptSpec(const char *s);

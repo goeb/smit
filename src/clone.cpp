@@ -34,6 +34,7 @@
 #include "db.h"
 #include "logging.h"
 #include "httpClient.h"
+#include "Args.h"
 
 bool Verbose = false;
 
@@ -1091,77 +1092,59 @@ int pushProjects(const PullContext &pushCtx)
 #define OPT_TLS_CACERT {"cacert", 1, 0, 0}
 
 
-int helpPush()
+Args *setupPushOptions()
 {
+    Args *args = new Args();
+    args->setOpt("user", 0, "specify user name", 1);
+    args->setOpt("passwd", 0, "specify password", 1);
+    args->setOpt("insecure", 0, "do not verify the server certificate", 0);
+    args->setOpt("cacert", 0, "specify the CA certificate, in PEM format, for authenticating the server\n"
+                 "      (HTTPS only)", 1);
+    return args;
+}
+
+int helpPush(const Args *args)
+{
+    if (!args) args = setupPushOptions();
+
     printf("Usage: smit push [<local-repository>]\n"
            "\n"
            "  Push local changes to  remote repository.\n"
            "\n"
            "Options:\n"
-           "  --user <user> --passwd <password> \n"
-           "      Specify the user name and the password.\n"
-           "\n"
-           "TLS Options:\n"
-
-           OPT_TLS_CACERT_HELP
-
-           "\n"
-           "  --insecure\n"
-           "      Do not verify the server certificate against the local CA certificates."
-           "\n"
            );
+    args->printHelp();
     return 1;
 }
 
 
-int cmdPush(int argc, char * const *argv)
+int cmdPush(int argc, char **argv)
 {
     std::string username;
     const char *passwd = 0;
-    const char *dir = "."; // default value is current directory
+    std::string dir = "."; // default value is current directory
 
-    int c;
-    int optionIndex = 0;
     PullContext pushCtx;
 
-    struct option longOptions[] = {
-        {"user", 1, 0, 0},
-        {"passwd", 1, 0, 0},
-        {"insecure", 0, 0, 0},
-        OPT_TLS_CACERT,
-        {NULL, 0, NULL, 0}
-    };
-    while ((c = getopt_long(argc, argv, "v", longOptions, &optionIndex)) != -1) {
-        switch (c) {
-        case 0: // manage long options
-        {
-            std::string optName = longOptions[optionIndex].name;
-            if (optName == "user") username = optarg;
-            else if (optName == "passwd") passwd = optarg;
-            else if (optName == "insecure") pushCtx.httpCtx.tlsInsecure = true;
-            else if (optName == "cacert") pushCtx.httpCtx.tlsCacert = optarg;
-            break;
-        }
-        case 'v':
-            Verbose = true;
-            HttpRequest::setVerbose(true);
-            break;
-        case '?': // incorrect syntax, a message is printed by getopt_long
-            return helpPush();
-            break;
-        default:
-            printf("?? getopt returned character code 0x%x ??\n", c);
-            return helpPush();
-        }
+    Args *args = setupPushOptions();
+    args->parse(argc, argv);
+
+    if (args->get("user")) username = args->get("user");
+    if (args->get("passwd")) passwd = args->get("passwd");
+    if (args->get("insecure")) pushCtx.httpCtx.tlsInsecure = true;
+    if (args->get("cacert")) pushCtx.httpCtx.tlsCacert = args->get("cacert");
+    if (args->get("v")) {
+        Verbose = true;
+        HttpRequest::setVerbose(true);
     }
     // manage non-option ARGV elements
-    if (optind < argc) {
-        dir = argv[optind];
-        optind++;
+    if (args->nonOptionvalues.size() > 0) {
+        dir = args->nonOptionvalues.front();
+        args->nonOptionvalues.pop_front();
     }
-    if (optind < argc) {
+    if (args->nonOptionvalues.size() > 0) {
         printf("Too many arguments.\n\n");
-        return helpPull();
+        return helpPush(args);
     }
 
     setLoggingOption(LO_CLI);
