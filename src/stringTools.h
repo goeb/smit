@@ -39,4 +39,6 @@ std::list<std::string> getParamListFromQueryString(const std::string & queryStri
 inline unsigned long int L(size_t x) { return (unsigned long int)x; }
 inline long int L(ssize_t x) { return (long int)x; }
 
+void printfIndent(const char *text, const char *indent);
+
 #endif

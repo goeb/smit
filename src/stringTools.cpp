@@ -367,3 +367,17 @@ std::list<std::string> getParamListFromQueryString(const std::string & queryStri
     }
     return result;
 }
+
+/** Indent lines of a text
+  */
+void printfIndent(const char *text, const char *indent)
+{
+    size_t n = strlen(text);
+    size_t i;
+    for (i = 0; i < n; i++) {
+        if (text[i] == '\r') continue; // skip this
+        if (i==0) printf("%s", indent); // indent first line of message
+        printf("%c", text[i]);
+        if (text[i] == '\n') printf("%s", indent); // indent each new line
+    }
+}

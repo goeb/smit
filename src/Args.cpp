@@ -6,13 +6,16 @@
 #include <stdio.h>
 #include "Args.h"
 #include "global.h"
+#include "stringTools.h"
 
 
 
 Args::Args()
 {
     nonOptionLimit = -1; // by default, no limit
+    consumedNonOptionArgOffset = 0;
 }
+
 
 /** Specify an allowed argument pattern
   *
@@ -73,14 +76,14 @@ std::string getKey(const ArgOptionSpec *aos)
 int Args::grabOption(int argc, char **argv, const ArgOptionSpec *aos, int pos, const char *optName)
 {
     if (!aos) {
-        fprintf(stderr, "Invalid option '%s'. See '--help'.\n", optName);
-        exit(1);
+        fprintf(stderr, "Invalid option '%s'.\n\n", optName);
+        usage();
     }
 
     int n = aos->argnum;
     if (argc < pos + n) {
-        fprintf(stderr, "Missing arguments for option '%s'. See '--help'.\n", optName);
-        exit(1);
+        fprintf(stderr, "Missing arguments for option '%s'.\n\n", optName);
+        usage();
     }
 
     int i = 0; // number of arguments consumed
@@ -100,6 +103,8 @@ void Args::parse(int argc, char **argv)
     while (i < argc) {
         std::string arg = argv[i];
 
+        if (arg == "-h" || arg == "--help") usage();
+
         if (!stopOpt && (arg == "--") ) stopOpt = true;
 
         else if (!stopOpt && (arg.size() >= 2) && (arg[0] == '-') ) {
@@ -109,8 +114,7 @@ void Args::parse(int argc, char **argv)
                 const ArgOptionSpec *aos = getOptSpec(arg.substr(2).c_str());
                 int skip = grabOption(argc, argv, aos, i+1, arg.c_str());
 
-                i+= skip;
-                continue;
+                i += skip;
 
             } else {
                 // short named option (1 or several)
@@ -125,17 +129,26 @@ void Args::parse(int argc, char **argv)
             }
         } else nonOptionvalues.push_back(arg);
 
-            i++;
+        i++;
     }
 
-    if ( (nonOptionLimit > 0) && (nonOptionvalues.size() > nonOptionLimit) ) {
-        fprintf(stderr, "Too many arguments. See '--help'.\n");
-        exit(1);
+    if ( (nonOptionLimit >= 0) && (nonOptionvalues.size() > nonOptionLimit) ) {
+        fprintf(stderr, "Too many arguments.\n\n");
+        usage();
     }
 }
+
 #define INDENT "  "
-void Args::printHelp() const
+void Args::usage(bool withDescription) const
 {
+    printf("usage: %s\n", usageString.c_str());
+    if (withDescription) {
+        printf("\n");
+        printfIndent(description.c_str(), INDENT);
+        printf("\n");
+    }
+    printf("\n");
+    printf("Options:\n");
     std::list<ArgOptionSpec>::const_iterator os;
     FOREACH(os, optionSpecs) {
         if (!os->shortname) printf(INDENT "--%s", os->longname);
@@ -144,8 +157,14 @@ void Args::printHelp() const
 
         if (os->argnum >= 1) printf(" ...");
         printf("\n");
-        if (os->help) printf(INDENT INDENT INDENT "%s\n\n", os->help);
+        if (os->help) {
+
+            // indent the help message
+            printfIndent(os->help, INDENT INDENT INDENT);
+            printf("\n\n");
+        }
     }
+    exit(1);
 }
 
 /** Look for a specific option in the arguments
@@ -153,11 +172,19 @@ void Args::printHelp() const
 const char *Args::get(const char *optName)
 {
     const ArgOptionSpec *aos = getOptSpec(optName);
-    if (aos) return 0;
+    if (!aos) return 0;
     std::string key = getKey(aos);
     std::map<std::string, std::string>::const_iterator i = optionValues.find(key);
     if (i == optionValues.end()) return 0;
     return i->second.c_str();
+}
+
+const char *Args::pop()
+{
+    if (consumedNonOptionArgOffset >= nonOptionvalues.size()) return 0;
+    const char *result = nonOptionvalues[consumedNonOptionArgOffset].c_str();
+    consumedNonOptionArgOffset++;
+    return result;
 }
 
 

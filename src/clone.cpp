@@ -1095,25 +1095,22 @@ int pushProjects(const PullContext &pushCtx)
 Args *setupPushOptions()
 {
     Args *args = new Args();
+    args->setDescription("Push local changes to a remote repository.");
+    args->setUsage("smit push [options] [<local-repository>]");
     args->setOpt("user", 0, "specify user name", 1);
     args->setOpt("passwd", 0, "specify password", 1);
     args->setOpt("insecure", 0, "do not verify the server certificate", 0);
-    args->setOpt("cacert", 0, "specify the CA certificate, in PEM format, for authenticating the server\n"
-                 "      (HTTPS only)", 1);
+    args->setOpt("cacert", 0,
+                 "specify the CA certificate, in PEM format, for authenticating the server\n"
+                 "(HTTPS only)", 1);
+    args->setNonOptionLimit(1);
     return args;
 }
 
 int helpPush(const Args *args)
 {
     if (!args) args = setupPushOptions();
-
-    printf("Usage: smit push [<local-repository>]\n"
-           "\n"
-           "  Push local changes to  remote repository.\n"
-           "\n"
-           "Options:\n"
-           );
-    args->printHelp();
+    args->usage(true);
     return 1;
 }
 
@@ -1122,12 +1119,11 @@ int cmdPush(int argc, char **argv)
 {
     std::string username;
     const char *passwd = 0;
-    std::string dir = "."; // default value is current directory
 
     PullContext pushCtx;
 
     Args *args = setupPushOptions();
-    args->parse(argc, argv);
+    args->parse(argc-1, argv+1);
 
     if (args->get("user")) username = args->get("user");
     if (args->get("passwd")) passwd = args->get("passwd");
@@ -1138,11 +1134,11 @@ int cmdPush(int argc, char **argv)
         HttpRequest::setVerbose(true);
     }
     // manage non-option ARGV elements
-    if (args->nonOptionvalues.size() > 0) {
-        dir = args->nonOptionvalues.front();
-        args->nonOptionvalues.pop_front();
-    }
-    if (args->nonOptionvalues.size() > 0) {
+    const char *dir = args->pop();
+    if (!dir) dir = "."; // default value is current directory
+
+    const char *unexpected = args->pop();
+    if (unexpected) {
         printf("Too many arguments.\n\n");
         return helpPush(args);
     }

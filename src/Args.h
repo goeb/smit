@@ -2,6 +2,7 @@
 #define _Args_h
 
 #include <map>
+#include <vector>
 #include <list>
 #include <string>
 
@@ -29,20 +30,26 @@ struct ArgOptionSpec {
 class Args {
 public:
     Args();
+    inline void setUsage(const char *u) { usageString = u; }
+    inline void setDescription(const char *d) { description = d; }
     void setOpt(const char *longname, char shortname, const char *help, int argnum);
     void setNonOptionLimit(int n);
     void parse(int argc, char **argv);
-    void printHelp() const;
+    void usage(bool withDescription = false) const;
     const char *get(const char *optName);
-    std::list<std::string> nonOptionvalues;
+    const char *pop();
 
 private:
+    std::string usageString;
+    std::string description;
     std::list<ArgOptionSpec> optionSpecs; // specification of options
     std::map<std::string, std::string> optionValues;
     int nonOptionLimit;
     const ArgOptionSpec *getOptSpec(const char c);
     const ArgOptionSpec *getOptSpec(const char *s);
     int grabOption(int argc, char **argv, const ArgOptionSpec *aos, int pos, const char *optName);
+    std::vector<std::string> nonOptionvalues;
+    int consumedNonOptionArgOffset;
 };
 
 
