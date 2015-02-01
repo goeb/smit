@@ -1347,6 +1347,16 @@ void httpGetView(const RequestContext *req, Project &p, const std::string &view,
     }
 }
 
+/** Handle the pushing of a file
+  *
+  * If the file already exists, then do not overwrite it.
+  */
+void httpPushAttachedFile(const RequestContext *req, Project &p, const std::string &filename, User u)
+{
+
+    LOG_ERROR("TODO httpPushAttachedFile not implemented");
+}
+
 /** Handle the POST of a view
   *
   * All user can post these as an advanced search (with no name).
@@ -2001,6 +2011,7 @@ void httpPostEntry(const RequestContext *req, Project &pro, const std::string & 
   * /myp/reload             POST       admin             reload project from disk storage
   * / * /issues             GET        user              issues of all projects
   * /any/other/file         GET        user              any existing file (in the repository)
+  * /myp/files/123          POST       user              push a file
   */
 
 int begin_request_handler(const RequestContext *req)
@@ -2097,6 +2108,7 @@ int begin_request_handler(const RequestContext *req)
         else if ( (resource == "tags") && (method == "GET") ) return httpGetFile(req);
         else if ( (resource == "tags") && (method == "POST") ) httpPostTag(req, *p, uri, user);
         else if ( (resource == "reload") && (method == "POST") ) httpReloadProject(req, *p, user);
+        else if ( (resource == "files") && (method == "POST") ) httpPushAttachedFile(req, *p, uri, user);
         else handled = false;
 
     }
