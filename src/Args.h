@@ -49,7 +49,7 @@ private:
     const ArgOptionSpec *getOptSpec(const char *s);
     int grabOption(int argc, char **argv, const ArgOptionSpec *aos, int pos, const char *optName);
     std::vector<std::string> nonOptionvalues;
-    int consumedNonOptionArgOffset;
+    size_t consumedNonOptionArgOffset;
 };
 
 

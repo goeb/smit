@@ -204,6 +204,29 @@ std::string getFileSize(const std::string &path)
     }
     return result.str();
 }
+
+
+DIR *openDir(const char *path)
+{
+    return opendir(path);
+}
+
+std::string getNextFile(DIR *d)
+{
+    struct dirent *f;
+    while ((f = readdir(d)) != NULL) {
+        if (0 == strcmp(f->d_name, ".")) continue;
+        if (0 == strcmp(f->d_name, "..")) continue;
+        return f->d_name;
+    }
+    return "";
+}
+void closeDir(DIR *d)
+{
+    closedir(d);
+}
+
+
 /** Remove a directory and its contents
   *
   * Not fully recursive. Only the regular files of
@@ -237,10 +260,12 @@ int removeDir(const std::string &path)
                 LOG_DEBUG("Cannot unlink non-existing file '%s' (%s)", path.c_str(), strerror(errno));
             } else {
                 LOG_ERROR("Cannot unlink '%s': %s", filepath.c_str(), strerror(errno));
+                closedir(d);
                 return -1;
             }
         }
     }
+    closedir(d);
 
     // remove the directory, that should be empty now
     int r = rmdir(path.c_str());

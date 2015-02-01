@@ -134,37 +134,6 @@ void downloadEntries(const PullContext &pullCtx, const Project &p, const std::st
         // TODO download to tmp storage, then move (in order to have an atomic dowload)
         std::string localEntryFile = downloadDir + "/" + remoteEid;
         hr.downloadFile(localEntryFile);
-
-        // download attached files as well
-        Entry *e = Entry::loadEntry(downloadDir, remoteEid.c_str());
-        if (!e) {
-            // should not happen
-            fprintf(stderr, "Cannot load locally downloaded entry: %s/%s", downloadDir.c_str(), remoteEid.c_str());
-            fprintf(stderr, "Abort.");
-            exit(1);
-        }
-        PropertiesIt files = e->properties.find(K_FILE);
-        if (files != e->properties.end()) {
-            std::list<std::string>::const_iterator f;
-            // download each file
-            FOREACH(f, files->second) {
-                std::string fResource = "/" + p.getUrlName() + "/" K_UPLOADED_FILES_DIR "/" + *f;
-                HttpRequest hr(pullCtx.httpCtx);
-                hr.setUrl(pullCtx.rooturl, fResource);
-                std::string localFile = p.getTmpDir() + "/" + *f;
-                hr.downloadFile(localFile);
-
-                // move the tmp file to official 'files'
-                std::string officialPath = p.getPathUploadedFiles() + "/" + *f;
-                int r = rename(localFile.c_str(), officialPath.c_str());
-                if (r != 0) {
-                    fprintf(stderr, "Canno move '%s' -> '%s': %s\n", localFile.c_str(), officialPath.c_str(), strerror(errno));
-                    fprintf(stderr, "Abort.\n");
-                    exit(1);
-                }
-            }
-        }
-
     }
 }
 
@@ -1076,21 +1045,86 @@ int cmdPull(int argc, char * const *argv)
 
 }
 
-
-int pushProjects(const PullContext &pushCtx)
+int pushFile(const PullContext &pushCtx, const std::string localFile, const std::string url)
 {
-    // TODO
     // test post of a file
+    // TODO remove this
     HttpRequest hr(pushCtx.httpCtx);
-    int r = hr.postFile("toto.txt", "http://127.0.0.1:8090/myproject/issues/10/hello");
+    int r = hr.postFile(localFile, url);
     return r;
 }
 
-#define OPT_TLS_CACERT_HELP \
-    "  --cacert <CA-certificate>\n" \
-    "      CA certificate, in PEM format, relevant only when the server runs TLS.\n"
-#define OPT_TLS_CACERT {"cacert", 1, 0, 0}
+int pushAttachedFiles(const PullContext &pushCtx, const Project &p)
+{
+    // get the remote files
+    HttpRequest hr(pushCtx.httpCtx);
+    std::string resourceFilesDir = "/" + p.getUrlName() + "/" K_UPLOADED_FILES_DIR "/";
+    hr.setUrl(pushCtx.rooturl, resourceFilesDir);
+    hr.getRequestLines();
+    hr.closeCurl(); // free the resource
 
+    // for each local file, if not existing remotely, the upload it
+    std::string localFilesDir = pushCtx.localRepo + "/" + p.getUrlName() + "/" K_UPLOADED_FILES_DIR;
+
+    DIR *d = openDir(localFilesDir.c_str());
+    if (!d) {
+        LOG_ERROR("Cannot open directory %s: %s", localFilesDir.c_str(), strerror(errno));
+        return -1;
+    }
+
+    while (1) {
+        std::string filename = getNextFile(d);
+        if (filename.empty()) break;
+        std::list<std::string>::const_iterator i;
+        i = std::find(hr.lines.begin(), hr.lines.end(), filename);
+        if (i == hr.lines.end()) {
+            printf("pushing attached file: %s\n", filename.c_str());
+            // TODO
+        }
+    }
+
+    closeDir(d);
+    return 0;
+}
+
+int pushProject(const PullContext &pushCtx, const Project &project)
+{
+    // TODO
+    // algo:
+    // pushFiles:
+    // - get list of remote files
+    // - upload local files missing on the remote side
+    int r = pushAttachedFiles(pushCtx, project);
+    if (r != 0) return r;
+
+    // push entries
+    // - for each local issue, get list of entries of the same remote issue
+    //    + if no such remote issue, push
+    //    + if discrepancy, abort and ask the user to pull first
+    //    + else, push the local entries missing on the remote side
+
+    printf("TODO: push project %s\n", project.getName().c_str());
+    return 0;
+}
+
+int pushProjects(const PullContext &pushCtx)
+{
+    // Load all local projects
+    int r = dbLoad(pushCtx.localRepo.c_str());
+    if (r < 0) {
+        fprintf(stderr, "Cannot load repository '%s'. Aborting.", pushCtx.localRepo.c_str());
+        exit(1);
+    }
+
+    // for each local project, push it
+
+    const Project *p = Database::Db.getNext(0);
+    while (p) {
+        pushProject(pushCtx, *p);
+        p = Database::Db.getNext(p);
+    }
+    return 0;
+}
 
 Args *setupPushOptions()
 {
@@ -1114,21 +1148,80 @@ int helpPush(const Args *args)
     return 1;
 }
 
+/**
+  */
+int establishSession(const char *dir, const char *username, const char *password, PullContext &ctx)
+{
+    curl_global_init(CURL_GLOBAL_ALL);
+
+    // get the remote url from local configuration file
+    std::string url = loadUrl(dir);
+    if (url.empty()) {
+        printf("Cannot get remote url.\n");
+        return -1;
+    }
+
+    ctx.rooturl = url;
+
+    bool redoSigin = false;
+
+    std::string user;
+    std::string pass;
+    if (!username) {
+        // check if the sessid is valid
+        ctx.httpCtx.sessid = loadSessid(dir);
+        int r = testSessid(url, ctx.httpCtx);
+
+        if (r < 0) {
+            // failed (session may have expired), then prompt for user name/password
+            printf("Session not valid. You must sign-in again.\n");
+            user = getString("Username: ", false);
+
+            // and redo the signing-in
+            redoSigin = true;
+        }
+
+    } else {
+        // do the signing-in with the given username / password
+        redoSigin = true;
+        user = username;
+    }
+
+    if (redoSigin && !password) pass = getString("Password: ", true);
+
+    if (redoSigin) {
+        ctx.httpCtx.sessid = signin(url, user, pass, ctx.httpCtx);
+        if (!ctx.httpCtx.sessid.empty()) {
+            storeSessid(dir, ctx.httpCtx.sessid);
+            storeUrl(dir, url);
+        }
+    }
+
+    LOGV("%s=%s\n", SESSID, ctx.httpCtx.sessid.c_str());
+
+    if (ctx.httpCtx.sessid.empty()) {
+        fprintf(stderr, "Authentication failed\n");
+        return -1; // authentication failed
+    }
+    return 0;
+}
+
+void terminateSession()
+{
+    curl_global_cleanup();
+}
 
 int cmdPush(int argc, char **argv)
 {
-    std::string username;
-    const char *passwd = 0;
-
     PullContext pushCtx;
 
     Args *args = setupPushOptions();
     args->parse(argc-1, argv+1);
 
-    if (args->get("user")) username = args->get("user");
-    if (args->get("passwd")) passwd = args->get("passwd");
+    const char *username = args->get("user");
+    const char *password = args->get("passwd");
     if (args->get("insecure")) pushCtx.httpCtx.tlsInsecure = true;
-    if (args->get("cacert")) pushCtx.httpCtx.tlsCacert = args->get("cacert");
+    pushCtx.httpCtx.tlsCacert = args->get("cacert");
     if (args->get("v")) {
         Verbose = true;
         HttpRequest::setVerbose(true);
@@ -1139,64 +1232,23 @@ int cmdPush(int argc, char **argv)
 
     const char *unexpected = args->pop();
     if (unexpected) {
+        // normally already managed by the Args class
         printf("Too many arguments.\n\n");
         return helpPush(args);
     }
 
     setLoggingOption(LO_CLI);
+    // set log level to hide INFO logs
+    setLoggingLevel(LL_ERROR);
 
-    // get the remote url from local configuration file
-    std::string url = loadUrl(dir);
-    if (url.empty()) {
-        printf("Cannot get remote url.\n");
-        exit(1);
-    }
-
-    curl_global_init(CURL_GLOBAL_ALL);
-    std::string password;
-    bool redoSigin = false;
-
-    if (username.empty()) {
-        // check if the sessid is valid
-        pushCtx.httpCtx.sessid = loadSessid(dir);
-        int r = testSessid(url, pushCtx.httpCtx);
-
-        if (r < 0) {
-            // failed (session may have expired), then prompt for user name/password
-            username = getString("Username: ", false);
-            password = getString("Password: ", true);
-
-            // and redo the signing-in
-            redoSigin = true;
-        }
-
-    } else {
-        // do the signing-in with the given username / password
-        password = passwd;
-        redoSigin = true;
-    }
-
-    if (redoSigin) {
-        pushCtx.httpCtx.sessid = signin(url, username, password, pushCtx.httpCtx);
-        if (!pushCtx.httpCtx.sessid.empty()) {
-            storeSessid(dir, pushCtx.httpCtx.sessid);
-            storeUrl(dir, url);
-        }
-    }
-
-    LOGV("%s=%s\n", SESSID, pushCtx.httpCtx.sessid.c_str());
-
-    if (pushCtx.httpCtx.sessid.empty()) {
-        fprintf(stderr, "Authentication failed\n");
-        return 1; // authentication failed
-    }
+    int r = establishSession(dir, username, password, pushCtx);
+    if (r != 0) return 1;
 
     // pull new entries and new attached files of all projects
-    pushCtx.rooturl = url;
     pushCtx.localRepo = dir;
-    int r = pushProjects(pushCtx);
+    r = pushProjects(pushCtx);
 
-    curl_global_cleanup();
+    terminateSession();
 
     if (r < 0) return 1;
     else return 0;
