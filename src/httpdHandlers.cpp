@@ -1376,7 +1376,10 @@ void httpPostView(const RequestContext *req, Project &p, const std::string &name
             sendHttpHeader413(req, "You tried to upload too much data. Max is 10 MB.");
             return;
         }
-
+    } else {
+        // bad request
+        sendHttpHeader400(req, "");
+        return;
     }
     //LOG_DEBUG("postData=%s\n<br>", postData.c_str());
 
@@ -1451,7 +1454,7 @@ void httpPostView(const RequestContext *req, Project &p, const std::string &name
     }
 
     if (pv.name.empty()) {
-        // unnamed view
+        // unnamed view. This is an advanced search
         if (role != ROLE_ADMIN && role != ROLE_RO && role != ROLE_RW && !u.superadmin) {
             sendHttpHeader403(req);
             return;
