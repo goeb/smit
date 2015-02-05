@@ -184,6 +184,10 @@ int HttpRequest::postFile(const std::string &srcFile, const std::string &destUrl
     /* tell it to "upload" to the URL */
     curl_easy_setopt(curlHandle, CURLOPT_UPLOAD, 1L);
 
+    curl_easy_setopt(curlHandle, CURLOPT_CUSTOMREQUEST, "POST");
+    headerList = curl_slist_append(headerList, "Content-type: application/octet-stream");
+    curl_easy_setopt(curlHandle, CURLOPT_HTTPHEADER, headerList);
+
     /* set where to read from (on Windows you need to use READFUNCTION too) */
     curl_easy_setopt(curlHandle, CURLOPT_READDATA, fd);
 
