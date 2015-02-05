@@ -120,7 +120,7 @@ void HttpRequest::doCloning(bool recursive, int recursionLevel)
         FOREACH(file, lines) {
 
             if (file->empty()) continue;
-			if ((*file)[0] == '.') continue; // do not clone hidden files
+            if ((*file)[0] == '.') continue; // do not clone hidden files
 
             std::string subpath = resourcePath;
             if (resourcePath != "/")  subpath += '/';
@@ -157,24 +157,62 @@ void HttpRequest::post(const std::string &params)
 
 int HttpRequest::postFile(const std::string &srcFile, const std::string &destUrl)
 {
-    struct curl_httppost *formpost=NULL;
-    struct curl_httppost *lastptr=NULL;
-    curl_formadd(&formpost,
-                 &lastptr,
-                 CURLFORM_COPYNAME, "sendfile",
-                 CURLFORM_FILE, srcFile.c_str(),
-                 CURLFORM_END);
-    curl_easy_setopt(curlHandle, CURLOPT_URL, destUrl.c_str());
     CURLcode res;
-    curl_easy_setopt(curlHandle, CURLOPT_HTTPPOST, formpost);
+    struct stat file_info;
+    FILE *fd;
+
+    fd = fopen(srcFile.c_str(), "rb");
+
+    if (!fd) {
+        fprintf(stderr, "Cannot open file '%s': %s\n", srcFile.c_str(), strerror(errno));
+        return -1;
+    }
+    /* to get the file size */
+    if (fstat(fileno(fd), &file_info) != 0) {
+        fprintf(stderr, "Cannot open file '%s': %s\n", srcFile.c_str(), strerror(errno));
+        fclose(fd);
+        return -1;
+    }
+
+    if (Verbose) {
+        printf("file '%s': size %ldo\n", srcFile.c_str(), file_info.st_size);
+    }
+
+    /* upload to this place */
+    curl_easy_setopt(curlHandle, CURLOPT_URL, destUrl.c_str());
+
+    /* tell it to "upload" to the URL */
+    curl_easy_setopt(curlHandle, CURLOPT_UPLOAD, 1L);
+
+    /* set where to read from (on Windows you need to use READFUNCTION too) */
+    curl_easy_setopt(curlHandle, CURLOPT_READDATA, fd);
+
+    /* and give the size of the upload (optional) */
+    curl_easy_setopt(curlHandle, CURLOPT_INFILESIZE, (curl_off_t)file_info.st_size);
+
+    /* enable verbose for easier tracing */
+    if (Verbose) curl_easy_setopt(curlHandle, CURLOPT_VERBOSE, 1L);
+
     res = curl_easy_perform(curlHandle);
+    fclose(fd);
+
+    /* Check for errors */
     if (res != CURLE_OK) {
-        // error, could not post the file
         fprintf(stderr, "curl_easy_perform() failed: %s\n",
                 curl_easy_strerror(res));
         exit(1);
+
+    } else {
+        /* now extract transfer info */
+        double speed_upload, total_time;
+        curl_easy_getinfo(curlHandle, CURLINFO_SPEED_UPLOAD, &speed_upload);
+        curl_easy_getinfo(curlHandle, CURLINFO_TOTAL_TIME, &total_time);
+
+        fprintf(stderr, "Speed: %.3f bytes/sec during %.3f seconds\n",
+                speed_upload, total_time);
+
     }
-    curl_formfree(formpost);
+
     return 0; // ok
 }
 

@@ -87,7 +87,11 @@ int Args::grabOption(int argc, char **argv, const ArgOptionSpec *aos, int pos, c
     }
 
     int i = 0; // number of arguments consumed
-    while (i < n) {
+    if (n == 0) {
+        std::string key = getKey(aos);
+        optionValues[key] = "yes";
+
+    } else while (i < n) {
         // generate a key, used for
         std::string key = getKey(aos);
         optionValues[key] = argv[pos+i];
@@ -121,7 +125,7 @@ void Args::parse(int argc, char **argv)
                 int n = arg.size();
                 int o = 1;
                 while (o < n) {
-                    const ArgOptionSpec *aos = getOptSpec(arg.substr(o, 1).c_str());
+                    const ArgOptionSpec *aos = getOptSpec(arg[o]);
                     int skip = grabOption(argc, argv, aos, i+1, arg.c_str());
                     i+= skip;
                     o++;

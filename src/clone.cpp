@@ -1079,7 +1079,10 @@ int pushAttachedFiles(const PullContext &pushCtx, const Project &p)
         i = std::find(hr.lines.begin(), hr.lines.end(), filename);
         if (i == hr.lines.end()) {
             printf("pushing attached file: %s\n", filename.c_str());
-            // TODO
+            std::string localFile = localFilesDir + '/' + filename;
+            std::string url = pushCtx.rooturl + resourceFilesDir + '/' + filename;
+            int r = pushFile(pushCtx, localFile, url);
+            if (r != 0) exit(1);
         }
     }
 
@@ -1131,6 +1134,7 @@ Args *setupPushOptions()
     Args *args = new Args();
     args->setDescription("Push local changes to a remote repository.");
     args->setUsage("smit push [options] [<local-repository>]");
+    args->setOpt("verbose", 'v', "be verbose", 0);
     args->setOpt("user", 0, "specify user name", 1);
     args->setOpt("passwd", 0, "specify password", 1);
     args->setOpt("insecure", 0, "do not verify the server certificate", 0);
@@ -1222,7 +1226,7 @@ int cmdPush(int argc, char **argv)
     const char *password = args->get("passwd");
     if (args->get("insecure")) pushCtx.httpCtx.tlsInsecure = true;
     pushCtx.httpCtx.tlsCacert = args->get("cacert");
-    if (args->get("v")) {
+    if (args->get("verbose")) {
         Verbose = true;
         HttpRequest::setVerbose(true);
     }
