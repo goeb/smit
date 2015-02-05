@@ -37,6 +37,8 @@ public:
     void getRequestRaw();
     void post(const std::string &params);
     int postFile(const std::string &srcFile, const std::string &destUrl);
+    int putFile(const std::string &srcFile, const std::string &destUrl);
+
     std::map<std::string, Cookie> cookies;
     std::list<std::string> lines; // fulfilled after calling getRequestLines()
     void doCloning(bool recursive, int recursionLevel);

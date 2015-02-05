@@ -178,6 +178,52 @@ int HttpRequest::postFile(const std::string &srcFile, const std::string &destUrl
     return 0; // ok
 }
 
+/** TODO not used
+  * TODO remove putFile
+  */
+int HttpRequest::putFile(const std::string &srcFile, const std::string &destUrl)
+{
+    CURLcode res;
+    FILE *fd ;
+    struct stat file_info;
+
+    /* get the file size of the local file */
+    stat(srcFile.c_str(), &file_info);
+
+    /* get a FILE * of the same file, could also be made with
+       fdopen() from the previous descriptor, but hey this is just
+       an example! */
+    fd = fopen(srcFile.c_str(), "rb");
+
+    /* enable uploading */
+    curl_easy_setopt(curlHandle, CURLOPT_UPLOAD, 1L);
+
+    /* HTTP PUT please */
+    curl_easy_setopt(curlHandle, CURLOPT_PUT, 1L);
+
+    /* specify target URL, and note that this URL should include a file
+         name, not only a directory */
+    curl_easy_setopt(curlHandle, CURLOPT_URL, destUrl.c_str());
+
+    /* now specify which file to upload */
+    curl_easy_setopt(curlHandle, CURLOPT_READDATA, fd);
+
+    /* provide the size of the upload, we specicially typecast the value
+         to curl_off_t since we must be sure to use the correct data size */
+    curl_easy_setopt(curlHandle, CURLOPT_INFILESIZE_LARGE,
+                     (curl_off_t)file_info.st_size);
+
+    /* Now run off and do what you've been told! */
+    res = curl_easy_perform(curlHandle);
+    /* Check for errors */
+    if(res != CURLE_OK)
+        fprintf(stderr, "curl_easy_perform() failed: %s\n",
+                curl_easy_strerror(res));
+
+    fclose(fd); /* close the local file */
+    return 0;
+}
+
 
 int HttpRequest::test()
 {

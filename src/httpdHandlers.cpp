@@ -1353,6 +1353,11 @@ void httpGetView(const RequestContext *req, Project &p, const std::string &view,
   */
 void httpPushAttachedFile(const RequestContext *req, Project &p, const std::string &filename, User u)
 {
+    enum Role role = u.getRole(p.getName());
+    if (role != ROLE_ADMIN && role != ROLE_RW) {
+        sendHttpHeader403(req);
+        return;
+    }
 
     LOG_ERROR("TODO httpPushAttachedFile not implemented");
 }
@@ -1780,7 +1785,7 @@ void httpPushEntry(const RequestContext *req, Project &p, const std::string &iss
             return;
         }
 
-        printf("pushed-data: %s\n", postData.c_str());
+        printf("pushed-data: %s\n", postData.c_str()); // TODO remove this printf
         std::string tmpDir = p.getTmpDir();
 
         // store the entry in a tmp directory
@@ -1812,6 +1817,8 @@ void httpPushEntry(const RequestContext *req, Project &p, const std::string &iss
     } else {
         // multipart/form-data
         LOG_ERROR("Content-Type '%s' not supported", contentType);
+        sendHttpHeader400(req, "bad content-type");
+        return;
     }
 }
 
