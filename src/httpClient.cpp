@@ -212,7 +212,7 @@ int HttpRequest::postFile(const std::string &srcFile, const std::string &destUrl
         curl_easy_getinfo(curlHandle, CURLINFO_SPEED_UPLOAD, &speed_upload);
         curl_easy_getinfo(curlHandle, CURLINFO_TOTAL_TIME, &total_time);
 
-        fprintf(stderr, "Speed: %.3f bytes/sec during %.3f seconds\n",
+        if (Verbose) fprintf(stderr, "Speed: %.3f bytes/sec during %.3f seconds\n",
                 speed_upload, total_time);
 
     }

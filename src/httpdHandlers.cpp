@@ -21,6 +21,7 @@
 #include <sys/types.h>
 #include <dirent.h>
 #include <time.h>
+#include <openssl/sha.h>
 
 #include <string>
 #include <sstream>
@@ -1373,12 +1374,16 @@ void httpPushAttachedFile(const RequestContext *req, Project &p, const std::stri
     // get the data
     const int SIZ = 4096;
     char postFragment[SIZ+1];
-    int n; // number of bytes read
+    size_t n; // number of bytes read
     int totalBytes = 0;
 
+    SHA_CTX sha1Ctx;
+    SHA1_Init(&sha1Ctx);
     while ( (n = req->read(postFragment, SIZ)) > 0) {
         LOG_DEBUG("postFragment size=%d", n);
         tmp.write(postFragment, n);
+        int r = SHA1_Update(&sha1Ctx, postFragment, n);
+
         totalBytes += n;
         if (totalBytes > MAX_SIZE_UPLOAD) {
             LOG_ERROR("Pushed file too big: %s\n", filename.c_str());
@@ -1387,6 +1392,16 @@ void httpPushAttachedFile(const RequestContext *req, Project &p, const std::stri
         }
     }
     tmp.close();
+    unsigned char md[20];
+    SHA1_Final(md, &sha1Ctx);
+    std::string sha1 = bin2hex(ustring(md, sizeof(md)));
+    // check the SHA1
+    if (sha1 != filename.substr(0, 40)) {
+        LOG_ERROR("SHA1 does not match: %s (%s)", filename.c_str(), sha1.c_str());
+        sendHttpHeader400(req, "Bad file name (hash)");
+        return;
+    }
+
 
     // rename to final location
     int r = rename(tmpPath.c_str(), destPath.c_str());
