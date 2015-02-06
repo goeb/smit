@@ -204,7 +204,11 @@ int HttpRequest::postFile(const std::string &srcFile, const std::string &destUrl
     if (res != CURLE_OK) {
         fprintf(stderr, "curl_easy_perform() failed: %s\n",
                 curl_easy_strerror(res));
-        exit(1);
+        return -1;
+
+    } else if (httpStatusCode < 200 || httpStatusCode >= 300) {
+        fprintf(stderr, "Got HTTP status %d\n", httpStatusCode);
+        return -1;
 
     } else {
         /* now extract transfer info */

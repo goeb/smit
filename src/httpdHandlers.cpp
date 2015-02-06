@@ -1398,6 +1398,8 @@ void httpPushAttachedFile(const RequestContext *req, Project &p, const std::stri
     // check the SHA1
     if (sha1 != filename.substr(0, 40)) {
         LOG_ERROR("SHA1 does not match: %s (%s)", filename.c_str(), sha1.c_str());
+        // remove tmp file
+        unlink(tmpPath.c_str());
         sendHttpHeader400(req, "Bad file name (hash)");
         return;
     }
@@ -1407,6 +1409,8 @@ void httpPushAttachedFile(const RequestContext *req, Project &p, const std::stri
     int r = rename(tmpPath.c_str(), destPath.c_str());
     if (r != 0) {
         LOG_ERROR("cannot rename %s -> %s: %s", tmpPath.c_str(), destPath.c_str(), strerror(errno));
+        // remove tmp file
+        unlink(tmpPath.c_str());
         return sendHttpHeader500(req, "cannot rename pushed file");
     }
 
