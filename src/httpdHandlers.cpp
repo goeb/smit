@@ -24,6 +24,8 @@
 
 #include <string>
 #include <sstream>
+#include <fstream>
+
 #include "httpdHandlers.h"
 
 #include "db.h"
@@ -1359,7 +1361,42 @@ void httpPushAttachedFile(const RequestContext *req, Project &p, const std::stri
         return;
     }
 
-    LOG_ERROR("TODO httpPushAttachedFile not implemented");
+    std::string destPath = p.getPathUploadedFiles() + '/' + filename;
+    if (fileExists(destPath)) return sendHttpHeader403(req);
+
+    // store the file in a temporary location
+    std::string tmpPath = p.getTmpDir() + '/' + filename;
+
+    std::ofstream tmp(tmpPath.c_str(), std::ios_base::binary);
+
+
+    // get the data
+    const int SIZ = 4096;
+    char postFragment[SIZ+1];
+    int n; // number of bytes read
+    int totalBytes = 0;
+
+    while ( (n = req->read(postFragment, SIZ)) > 0) {
+        LOG_DEBUG("postFragment size=%d", n);
+        tmp.write(postFragment, n);
+        totalBytes += n;
+        if (totalBytes > MAX_SIZE_UPLOAD) {
+            LOG_ERROR("Pushed file too big: %s\n", filename.c_str());
+            sendHttpHeader400(req, "Pushed file too big");
+            return;
+        }
+    }
+    tmp.close();
+
+    // rename to final location
+    int r = rename(tmpPath.c_str(), destPath.c_str());
+    if (r != 0) {
+        LOG_ERROR("cannot rename %s -> %s: %s", tmpPath.c_str(), destPath.c_str(), strerror(errno));
+        return sendHttpHeader500(req, "cannot rename pushed file");
+    }
+
+    LOG_INFO("File pushed: (%s) %s", p.getName().c_str(), filename.c_str());
+    sendHttpHeader201(req);
 }
 
 /** Handle the POST of a view
