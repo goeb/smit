@@ -333,6 +333,23 @@ void handleConflictOnEntries(const PullContext &pullCtx, Project &p,
     // no need to update the issue in memory, as it will not be re-accessed during the smit pulling
 }
 
+int getEntriesOfIssue(const PullContext &pullCtx, const Project &p, const Issue &i,
+                      std::list<std::string> &entries)
+{
+    std::string resource = "/" + p.getUrlName() + "/issues/" + i.id;
+    HttpRequest hr(pullCtx.httpCtx);
+    hr.setUrl(pullCtx.rooturl, resource);
+    hr.getRequestLines();
+    hr.closeCurl(); // free the curl resource
+
+    if (hr.lines.empty() || hr.lines.front().empty()) {
+        // should not happen
+        fprintf(stderr, "Got remote issue with no entry: %s", i.id.c_str());
+        return -1;
+    }
+    return 0;
+}
+
 /** Pull an issue
   *
   * If the remote issue conflicts with a local issue:
@@ -344,15 +361,10 @@ int pullIssue(const PullContext &pullCtx, Project &p, const Issue &i)
     // compare the remote and local issue
     // get the first entry of the issue
     // check conflict on issue id*
-    std::string resource = "/" + p.getUrlName() + "/issues/" + i.id;
-    HttpRequest hr(pullCtx.httpCtx);
-    hr.setUrl(pullCtx.rooturl, resource);
-    hr.getRequestLines();
-    hr.closeCurl(); // free the curl resource
-
-    if (hr.lines.empty() || hr.lines.front().empty()) {
-        // should not happen
-        fprintf(stderr, "Got remote issue with no entry: %s", i.id.c_str());
+    std::list<std::string> remoteEntries;
+    int r = getEntriesOfIssue(pullCtx, p, i, remoteEntries);
+    if (r != 0) {
+        fprintf(stderr, "Cannot get entries of remote issue %s", i.id.c_str());
         exit(1);
     }
 
@@ -367,11 +379,11 @@ int pullIssue(const PullContext &pullCtx, Project &p, const Issue &i)
 
     const Entry *localEntry = e;
 
-    if (localEntry->id != hr.lines.front())  {
+    if (localEntry->id != remoteEntries.front())  {
         // the remote issue and the local issue are not the same
         // the local issue has to be renamed
         LOGV("Issue %s: local (%s) and remote (%s) diverge", i.id.c_str(),
-             localEntry->id.c_str(), hr.lines.front().c_str());
+             localEntry->id.c_str(), remoteEntries.front().c_str());
         // propose to the user a new id for the issue
 
         printf("Issue conflicting with remote: %s %s\n", i.id.c_str(), i.getSummary().c_str());
@@ -385,7 +397,7 @@ int pullIssue(const PullContext &pullCtx, Project &p, const Issue &i)
         printf("Local issue %s renamed %s (%s)\n", i.id.c_str(), newId.c_str(), i.getSummary().c_str());
 
         // clone the remote issue
-        resource = "/" + p.getUrlName() + "/issues/" + i.id;
+        std::string resource = "/" + p.getUrlName() + "/issues/" + i.id;
         HttpRequest hr(pullCtx.httpCtx);
         hr.setUrl(pullCtx.rooturl, resource);
         hr.setRepository(pullCtx.localRepo);
@@ -395,14 +407,14 @@ int pullIssue(const PullContext &pullCtx, Project &p, const Issue &i)
         // same issue. Walk through the entries and pull...
 
         std::list<std::string>::const_iterator reid;
-        FOREACH(reid, hr.lines) {
+        FOREACH(reid, remoteEntries) {
             std::string remoteEid = *reid;
             if (remoteEid.empty()) continue; // ignore (usually last item in the directory listing)
 
             if (!localEntry) {
                 // remote issue has more entries. download them locally
 
-                downloadEntries(pullCtx, p, i.id, hr.lines, reid, "");
+                downloadEntries(pullCtx, p, i.id, remoteEntries, reid, "");
 
                 break; // leave the loop as all the remaining remotes have been managed by downloadEntries
 
@@ -411,7 +423,7 @@ int pullIssue(const PullContext &pullCtx, Project &p, const Issue &i)
                 // remote: a--b--c--d
                 // local:  a--b--e
 
-                std::string tmpPath = downloadRemoteIssue(pullCtx, p, i.id, hr.lines);
+                std::string tmpPath = downloadRemoteIssue(pullCtx, p, i.id, remoteEntries);
                 // load this remote issue in memory
                 Issue remoteIssue;
                 int r = remoteIssue.load(i.id, tmpPath);
@@ -1090,23 +1102,39 @@ int pushAttachedFiles(const PullContext &pushCtx, const Project &p)
     return 0;
 }
 
+int pushIssue(const PullContext &pushCtx, const Project &project, const Issue &i)
+{
+    // - get list of entries of the same remote issue
+    //    + if no such remote issue, push
+    //    + if discrepancy, abort and ask the user to pull first
+    //    + else, push the local entries missing on the remote side
+
+// TODO
+
+}
+
 int pushProject(const PullContext &pushCtx, const Project &project)
 {
-    // TODO
-    // algo:
+    printf("pushing project %s...\n", project.getName().c_str());
+
     // pushFiles:
     // - get list of remote files
     // - upload local files missing on the remote side
     int r = pushAttachedFiles(pushCtx, project);
     if (r != 0) return r;
 
-    // push entries
-    // - for each local issue, get list of entries of the same remote issue
-    //    + if no such remote issue, push
-    //    + if discrepancy, abort and ask the user to pull first
-    //    + else, push the local entries missing on the remote side
+    // push issues
+    std::map<std::string, std::list<std::string> > filterIn;
+    std::map<std::string, std::list<std::string> > filterOut;
 
-    printf("TODO: push project %s\n", project.getName().c_str());
+    std::vector<const Issue*> issues = project.search(0, filterIn, filterOut, "id");
+
+    std::vector<const Issue*>::const_iterator it;
+    FOREACH(it, issues) {
+        const Issue* i = *it;
+        r = pushIssue(pushCtx, project, *i);
+        if (r != 0) return r;
+    }
     return 0;
 }
 
