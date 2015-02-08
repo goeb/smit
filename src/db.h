@@ -163,43 +163,54 @@ struct ProjectConfig {
 class Project {
 public:
     static Project *init(const char *path); // init and load a project
+
+    // methods for handling issues
     std::vector<const Issue*> search(const char *fulltextSearch,
                                const std::map<std::string, std::list<std::string> > &filterIn,
                                const std::map<std::string, std::list<std::string> > &filterOut,
                                const char *sortingSpec) const;
     int get(const std::string &issueId, Issue &issue) const;
     Issue *createNewIssue();
+    std::string allocateNewIssueId();
+    void updateMaxIssueId(uint32_t i);
+    std::map<std::string, std::set<std::string> > getReverseAssociations(const std::string &issue) const;
+    std::string renameIssue(const std::string &id);
+    int officializeMerging(const Issue &i);
+
+    // methods for handling entries
     int addEntry(PropertiesMap properties, std::string &iid, std::string &eid, std::string username);
     int pushEntry(std::string issueId, const std::string &entryId,
                   const std::string &user, const std::string &tmpDir, const std::string &filename);
 
     Entry *getEntry(const std::string &id) const;
+    int deleteEntry(const std::string &issueId, const std::string &entryId, const std::string &username);
+    int getNumIssues() const;
 
+    // methods for handling project
     inline std::string getName() const { return name; }
     inline std::string getUrlName() const { return urlNameEncode(name); }
     inline static std::string urlNameEncode(const std::string &name) { return urlEncode(name, '=', "._-"); }
     inline static std::string urlNameDecode(const std::string &name) { return urlDecode(name, false, '='); }
     inline std::string getPath() const { return path; }
     inline std::string getTmpDir() const { return path + "/" K_PROJECT_TMP; }
-    inline std::string getPathUploadedFiles() const { return path + "/" + K_UPLOADED_FILES_DIR; }
     ProjectConfig getConfig() const;
     inline void setConfig(ProjectConfig pconfig) { config = pconfig; }
-    int deleteEntry(const std::string &issueId, const std::string &entryId, const std::string &username);
     int modifyConfig(std::list<std::list<std::string> > &tokens);
     int createProject(std::string name, std::list<std::list<std::string> > &tokens);
+    static int createProjectFiles(const char *repositoryPath, const char *projectName, std::string &resultingPath);
+    int reload(); // reload a project from disk storage
+
+    // methods for handling attached files
+    inline std::string getPathUploadedFiles() const { return path + "/" + K_UPLOADED_FILES_DIR; }
+
+    // methods for handling views
     PredefinedView getPredefinedView(const std::string &name);
     int setPredefinedView(const std::string &name, const PredefinedView &pv);
     int deletePredefinedView(const std::string &name);
     PredefinedView getDefaultView() const;
-    static int createProjectFiles(const char *repositoryPath, const char *projectName, std::string &resultingPath);
+
+    // methods for handling tags
     int toggleTag(const std::string &issueId, const std::string &entryId, const std::string &tagid);
-    std::string allocateNewIssueId();
-    void updateMaxIssueId(uint32_t i);
-    int reload(); // reload a project from disk storage
-    int getNumIssues() const;
-    std::map<std::string, std::set<std::string> > getReverseAssociations(const std::string &issue) const;
-    std::string renameIssue(const std::string &id);
-    int officializeMerging(const Issue &i);
 
 private:
     int load(); // load a project: config, views, entries, tags
