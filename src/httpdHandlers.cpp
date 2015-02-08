@@ -1362,14 +1362,10 @@ void httpPushAttachedFile(const RequestContext *req, Project &p, const std::stri
         return;
     }
 
-    std::string destPath = p.getPathUploadedFiles() + '/' + filename;
-    if (fileExists(destPath)) return sendHttpHeader403(req);
-
     // store the file in a temporary location
     std::string tmpPath = p.getTmpDir() + '/' + filename;
 
     std::ofstream tmp(tmpPath.c_str(), std::ios_base::binary);
-
 
     // get the data
     const int SIZ = 4096;
@@ -1377,12 +1373,9 @@ void httpPushAttachedFile(const RequestContext *req, Project &p, const std::stri
     size_t n; // number of bytes read
     int totalBytes = 0;
 
-    SHA_CTX sha1Ctx;
-    SHA1_Init(&sha1Ctx);
     while ( (n = req->read(postFragment, SIZ)) > 0) {
         LOG_DEBUG("postFragment size=%d", n);
         tmp.write(postFragment, n);
-        int r = SHA1_Update(&sha1Ctx, postFragment, n);
 
         totalBytes += n;
         if (totalBytes > MAX_SIZE_UPLOAD) {
@@ -1392,26 +1385,19 @@ void httpPushAttachedFile(const RequestContext *req, Project &p, const std::stri
         }
     }
     tmp.close();
-    unsigned char md[20];
-    SHA1_Final(md, &sha1Ctx);
-    std::string sha1 = bin2hex(ustring(md, sizeof(md)));
-    // check the SHA1
-    if (sha1 != filename.substr(0, 40)) {
-        LOG_ERROR("SHA1 does not match: %s (%s)", filename.c_str(), sha1.c_str());
-        // remove tmp file
-        unlink(tmpPath.c_str());
-        sendHttpHeader400(req, "Bad file name (hash)");
-        return;
-    }
 
-
-    // rename to final location
-    int r = rename(tmpPath.c_str(), destPath.c_str());
+    int r = p.addFile(filename);
     if (r != 0) {
-        LOG_ERROR("cannot rename %s -> %s: %s", tmpPath.c_str(), destPath.c_str(), strerror(errno));
-        // remove tmp file
+        // error, file not added in database
         unlink(tmpPath.c_str());
-        return sendHttpHeader500(req, "cannot rename pushed file");
+
+        if (r == -1) {
+            sendHttpHeader400(req, "Bad file name (hash)");
+            return;
+
+        } else if (r == -2) return sendHttpHeader403(req);
+
+        else return sendHttpHeader500(req, "cannot rename pushed file");
     }
 
     LOG_INFO("File pushed: (%s) %s", p.getName().c_str(), filename.c_str());

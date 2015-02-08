@@ -14,7 +14,7 @@
 
 #include <openssl/sha.h>
 #include <string.h>
-
+#include <fstream>
 
 #include "identifiers.h"
 #include "logging.h"
@@ -49,6 +49,31 @@ std::string getSha1(const char *data, size_t len)
 std::string getSha1(const std::string &data)
 {
     return getSha1(data.data(), data.size());
+}
+
+/** Read a file, and return its sha1 in ascii-hexadecimal
+  *
+  */
+std::string getSha1OfFile(const std::string &path)
+{
+    std::ifstream f(path.c_str(), std::ios_base::binary);
+    if (!f) return "";
+    const size_t BUZ_SIZE = 4096;
+    char buffer[BUZ_SIZE];
+    SHA_CTX sha1Ctx;
+    SHA1_Init(&sha1Ctx);
+
+    do {
+        f.read(buffer, BUZ_SIZE);
+        SHA1_Update(&sha1Ctx, buffer, f.gcount());
+        if (f.eof()) break;
+        if (!f.good()) return "";
+    } while (1);
+
+    unsigned char md[20];
+    SHA1_Final(md, &sha1Ctx);
+    std::string sha1 = bin2hex(ustring(md, sizeof(md)));
+    return sha1;
 }
 
 /** not really base64, as _- are used instead of +/

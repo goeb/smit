@@ -1287,6 +1287,47 @@ int Project::reload()
     return r;
 }
 
+/** Insert a file in the directory of attached files
+  *
+  * @param basename
+  *     The file must be alredy present in the tmp directory of the project.
+  *
+  * @return
+  *     0 : ok
+  *     -1: file already exists
+  *     -2: file name does not match hash of the file contents
+  *     -3: internal error: cannot rename
+  */
+int Project::addFile(const std::string &basename)
+{
+    ScopeLocker L1(locker, LOCK_READ_WRITE);
+
+    std::string destPath = getPathUploadedFiles() + '/' + basename;
+    if (fileExists(destPath)) return -1;
+
+    std::string srcPath = getTmpDir() + '/' + basename;
+
+    // check that the hash of the file contents matches the file name (the 40 first characters)
+    std::string sha1 = getSha1OfFile(srcPath);
+    // check the SHA1
+    if (sha1 != basename.substr(0, 40)) {
+        LOG_ERROR("SHA1 does not match: %s (%s)", basename.c_str(), sha1.c_str());
+        // remove tmp file
+        return -2;
+    }
+
+    // rename to final location
+    int r = rename(srcPath.c_str(), destPath.c_str());
+    if (r != 0) {
+        LOG_ERROR("cannot rename %s -> %s: %s", srcPath.c_str(), destPath.c_str(), strerror(errno));
+        // remove tmp file
+        return -3;
+    }
+
+    return 0;
+}
+
+
 int Project::getNumIssues() const
 {
     ScopeLocker scopeLocker(locker, LOCK_READ_ONLY);

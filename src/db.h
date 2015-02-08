@@ -202,6 +202,7 @@ public:
 
     // methods for handling attached files
     inline std::string getPathUploadedFiles() const { return path + "/" + K_UPLOADED_FILES_DIR; }
+    int addFile(const std::string &basename);
 
     // methods for handling views
     PredefinedView getPredefinedView(const std::string &name);
