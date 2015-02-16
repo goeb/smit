@@ -1,3 +1,8 @@
+
+v2.3.0
+
+    - textarea2 in rich text
+
 v2.2.0, 15 Jan 2015
 
     - support for root-URL rewriting (for using behind a reverse proxy)
