@@ -343,8 +343,7 @@ int getEntriesOfIssue(const PullContext &pullCtx, const Project &p, const Issue 
     hr.closeCurl(); // free the curl resource
 
     if (hr.lines.empty() || hr.lines.front().empty()) {
-        // should not happen
-        fprintf(stderr, "Got remote issue with no entry: %s", i.id.c_str());
+        // may happen if remote issue does not exist
         return -1;
     }
     return 0;
@@ -1057,12 +1056,11 @@ int cmdPull(int argc, char * const *argv)
 
 }
 
-int pushFile(const PullContext &pushCtx, const std::string localFile, const std::string url)
+int pushFile(const PullContext &pushCtx, const std::string localFile, const std::string url, std::string &response)
 {
-    // test post of a file
-    // TODO remove this
     HttpRequest hr(pushCtx.httpCtx);
     int r = hr.postFile(localFile, url);
+    response = hr.lines;
     return r;
 }
 
@@ -1093,7 +1091,8 @@ int pushAttachedFiles(const PullContext &pushCtx, const Project &p)
             printf("pushing attached file: %s\n", filename.c_str());
             std::string localFile = localFilesDir + '/' + filename;
             std::string url = pushCtx.rooturl + resourceFilesDir + '/' + filename;
-            int r = pushFile(pushCtx, localFile, url);
+            std::string response; // not used in this context
+            int r = pushFile(pushCtx, localFile, url, response);
             if (r != 0) exit(1);
         }
     }
@@ -1102,14 +1101,81 @@ int pushAttachedFiles(const PullContext &pushCtx, const Project &p)
     return 0;
 }
 
+/** Push the first entry of an issue.
+  *
+  * @param i
+  *     The issue id may be modified, as the server allocates the issue identifiers.
+  */
+int pushFirstEntry(const PullContext &pushCtx, const Project &project, Issue &i, const Entry &e)
+{
+    // post the entry (which must be the first entry of an issue)
+    // the result of the POST indicates the issue number that has been allocated
+    std::string localFile = i.path + '/' + e.id;
+    std::string url = pushCtx.rooturl + '/' + project.getUrlName() + "/issues/" + i.id + '/' + e.id;
+    std::string response;
+    int r = pushFile(pushCtx, localFile, url, response);
+    if (r != 0) {
+        // error
+        LOG_ERROR("%s: Could not push entry %s\n", project.getName().c_str(), e.id.c_str());
+        exit(1);
+    }
+    // first line of response gives the new allocated issue id
+    // format is:
+    //     issue: 010203045666
+    popToken(response, ":");
+    trim(response);
+    if (i.id != response) {
+        printf("%s: Renaming local issue %s -> %s\n", project.getName().c_str(),
+               i.id.c_str(), response.c_str());
+        // TODO rename locally
+    } // else: no change
+}
+
+
 int pushIssue(const PullContext &pushCtx, const Project &project, const Issue &i)
 {
     // - get list of entries of the same remote issue
     //    + if no such remote issue, push
-    //    + if discrepancy, abort and ask the user to pull first
+    //    + if discrepancy (first entries do not match), abort and ask the user to pull first
     //    + else, push the local entries missing on the remote side
+    Entry *e = i.latest;
+    while (e && e->prev) e = e->prev; // rewind to first entry
+    if (!e) {
+        LOG_ERROR("%s: null first entry for issue %s", project.getName().c_str(),
+                  i.id.c_str());
+        exit(1);
+    }
+    const Entry &firstEntry = *e;
 
-// TODO
+    // TODO check if
+    std::list<std::string> entries;
+    int r = getEntriesOfIssue(pushCtx, project, i, entries);
+    if (r != 0) {
+        // no such remote issue
+        // push first entry
+        pushFirstEntry(pushCtx, project, i, firstEntry);
+
+        // TODO push remaining entries
+
+    } else if (entries.empty()) {
+        // internal error, should not happen
+        LOG_ERROR("%s: error, empty entries for remote issue %s\n", project.getName().c_str(),
+                i.id.c_str());
+        exit(1);
+
+    } else {
+        // check if first entries match
+        if (entries.front() != firstEntry) {
+            printf("%s: mismatch of first entries for issue %s\n", project.getName().c_str(),
+                   i.id.c_str());
+            printf("Try pulling first to resolve\n");
+            exit(1);
+        }
+
+        // walk through entries and push missing ones
+        // TODO
+    }
+
 
 }
 

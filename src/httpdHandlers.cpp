@@ -1853,7 +1853,7 @@ void httpPushEntry(const RequestContext *req, Project &p, const std::string &iss
             sendHttpHeader201(req);
             // give the issueId, as it may be necessary to inform
             // the client that it has been renamed (renumbered)
-            req->printf("%s/%s\r\n", issueId.c_str(), entryId.c_str());
+            req->printf("issue: %s\r\n", issueId.c_str());
         }
 
     } else {
