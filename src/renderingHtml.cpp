@@ -1323,11 +1323,12 @@ std::string convertToRichTextInline(const std::string &in, const char *begin, co
 
 /** Convert text to HTML rich text
   *
-  *    *a b c* => <span class="sm_bold">a b c</span>
-  *    _a b c_ => <span class="sm_underline">a b c</span>
-  *    /a b c/ => <span class="sm_highlight">a b c</span>
-  *    [a b c] => <a href="a b c" class="sm_hyperlink">a b c</a>
+  *    **a b c** => <span class="sm_bold">a b c</span>
+  *    __a b c__ => <span class="sm_underline">a b c</span>
+  *    ++a b c++ => <span class="sm_highlight">a b c</span>
+  *    [[a b c]] => <a href="a b c" class="sm_hyperlink">a b c</a>
   *    > a b c =>  <span class="sm_quote">a b c</span> (> must be at the beginning of the line)
+  *    etc.
   *
   * (optional) Characters before and after block must be [\t \n.;:]
   * A line break in the middle prevents the pattern from being recognized.
@@ -1490,8 +1491,13 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
             std::string value;
             if (p != issue.properties.end()) value = toString(p->second);
 
+            // convert to rich text in case of textarea2
+            if (type == F_TEXTAREA2) value = convertToRichText(htmlEscape(value));
+            else value = htmlEscape(value);
+
+
             ctx.req->printf("<td %s class=\"%s sm_issue_pvalue_%s\">%s</td>\n",
-                            colspan, pvalueStyle, urlEncode(pname).c_str(), htmlEscape(value).c_str());
+                            colspan, pvalueStyle, urlEncode(pname).c_str(), value.c_str());
             workingColumn += workingColumnIncrement;
         }
 
