@@ -36,6 +36,39 @@
 #include "httpClient.h"
 #include "Args.h"
 
+
+/** smit distributed functions
+  *     smit clone .... : download a local copy of a smit repository
+  *     smit pull ....  : download latest changes from a smit server
+  *     smit push ....  : upload local changes to a smit server
+  *
+  * 1. Conflicts on existing issues
+  *
+  * These conflicts occur typically when a user modifies an issue on the server and
+  * another user modifies the same issue on his/her local clone.
+  * These conflicts are detected during a pushing, but they can be resolved only
+  * during a pulling.
+  * These conflicts are resolved either automatically or interactively.
+  *
+  *
+  * 2. Conflicts on new issues
+  * These conflicts occur typically when a user creates a new issue on the server and
+  * another user creates a new issue on his/her local clone, and both new issues get
+  * the same issue id.
+  *
+  * These conflicts are resolved during a pulling. The local issue of the clone is
+  * renamed. For example issue 123 will be renamed issue 124.
+  *
+  * These conflicts are also resolved when pushing. New local issues may
+  * be renamed by the server. There may be 2 cases where a conflicting new issue on the server
+  * has already taken the id of the pushed issue :
+  *   - a new issue on the same project
+  *   - or a new issue on a different project (remember that with global numbering,
+  *     the issue ids are shared between several projects)
+  *
+  *
+  */
+
 bool Verbose = false;
 
 #define LOGV(...) do { if (Verbose) { printf(__VA_ARGS__); fflush(stdout);} } while (0)
