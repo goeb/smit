@@ -366,6 +366,8 @@ void handleConflictOnEntries(const PullContext &pullCtx, Project &p,
     // no need to update the issue in memory, as it will not be re-accessed during the smit pulling
 }
 
+/** Get a list of the entries of a remote issue
+  */
 int getEntriesOfIssue(const PullContext &pullCtx, const Project &p, const Issue &i,
                       std::list<std::string> &entries)
 {
@@ -392,7 +394,9 @@ int pullIssue(const PullContext &pullCtx, Project &p, const Issue &i)
 {
     // compare the remote and local issue
     // get the first entry of the issue
-    // check conflict on issue id*
+    // check conflict on issue id
+
+    // get the entries of the remote issue
     std::list<std::string> remoteEntries;
     int r = getEntriesOfIssue(pullCtx, p, i, remoteEntries);
     if (r != 0) {
@@ -543,6 +547,13 @@ int pullProject(const PullContext &pullCtx, Project &p)
         // get the issue with same id in local repository
         Issue i;
         int r = p.get(id, i);
+
+        // check if the pulled remote issue is not already
+        // locally under another issue id (this may happen
+        // if a previous push was interrupted)
+
+        // TODO
+
 
         if (r < 0) {
             // simply clone the remote issue
