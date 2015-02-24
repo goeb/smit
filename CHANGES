@@ -1,6 +1,6 @@
 
 v2.3.0
-
+    - fix in-memory residual property after deleted entry
     - textarea2 in rich text
 
 v2.2.0, 15 Jan 2015
