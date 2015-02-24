@@ -31,6 +31,11 @@ endif
 bin_PROGRAMS = smit
 smit_SOURCES = \
 			   src/db.cpp  \
+			   src/Entry.cpp  \
+			   src/Issue.cpp  \
+			   src/Project.cpp  \
+			   src/View.cpp  \
+			   src/Tag.cpp  \
 			   src/parseConfig.cpp \
 			   src/identifiers.cpp \
 			   src/main.cpp \

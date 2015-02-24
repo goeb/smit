@@ -27,7 +27,12 @@ SOURCES += \
     ../../src/HttpContext.cpp \
     ../../src/httpClient.cpp \
     ../../src/localClient.cpp \
-    ../../src/Args.cpp
+    ../../src/Args.cpp \
+    ../../src/Entry.cpp \
+    ../../src/Project.cpp \
+    ../../src/Issue.cpp \
+    ../../src/View.cpp \
+    ../../src/Tag.cpp
 
 HEADERS += \
     ../../mongoose/mongoose.h \
@@ -54,5 +59,9 @@ HEADERS += \
     ../../src/HttpContext.h \
     ../../src/httpClient.h \
     ../../src/localClient.h \
-    ../../src/Args.h
+    ../../src/Args.h \
+    ../../src/Entry.h \
+    ../../src/Project.h \
+    ../../src/Issue.h \
+    ../../src/View.h
 
