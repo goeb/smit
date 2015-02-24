@@ -331,6 +331,10 @@ void Issue::consolidate()
     // starting from the head, walk through all entries
     // following the _parent properties.
 
+    // clear properties before consolidating
+    // this is especially necessary when consolidating after a deleted entry
+    properties.clear();
+
     Entry *e = latest;
     // the entries are walked through backwards (from most recent to oldest)
     while (e) {
