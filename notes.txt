@@ -1,0 +1,33 @@
+
+
+Redesign of database:
+
+    .../<p>/refs/issues/1
+    .../<p>/objects/73/97ca1fb539d0ecff232eadb8a9e26f16049da2
+
+
+Issues:
+    - rest api: unchanged (except for cloning/pulling/pushing)
+    - database: directory replaced by refs/issues/1, that contains the sha1 of the 
+                lastest entry
+
+
+Entries:
+    - rest api: modified to /<p>/objects/7397ca1fb539d0ecff232eadb8a9e26f16049da2
+    - database:
+        format changed:
+        + attached file: +file <sha1> <filename>
+        path: .../<p>/objects/73/97ca1fb539d0ecff232eadb8a9e26f16049da2 
+
+Files:
+    - rest api changed: /<p>/objects/7397ca1fb539d0ecff232eadb8a9e26f16049da2/file_x.pdf
+    - database: filename
+        + format unchanged
+        + path: .../<p>/objects/73/97ca1fb539d0ecff232eadb8a9e26f16049da2
+
+Tags:
+    - rest api:
+    - database: 
+        empty file: .../<p>/refs/tags/73/97ca1fb539d0ecff232eadb8a9e26f16049da2.tagname
+
+
