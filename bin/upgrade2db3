@@ -1,0 +1,89 @@
+#!/bin/sh
+#set -e
+usage() {
+    echo "Usage: upgrade2db3 <src-repo> <dst-repo>"
+    echo ""
+    echo "Upgrade a v2 smit repository to a v3 format."
+    exit 1
+}
+
+srcDir=$1
+dstDir=$2
+
+[ -z "$srcDir" ] && usage
+[ -z "$dstDir" ] && usage
+
+# check that destination dir does not exist
+if [ -e "$dstDir" ]; then
+    echo "Error: Destination repository must not exist"
+    exit 1
+fi
+
+# first copy everything
+cp -a "$srcDir" "$dstDir"
+
+# then upgrade each project
+find "$dstDir" -name project | while read p; do
+
+    pDir=$(dirname "$p")
+    echo "project: $pDir..."
+    mkdir "$pDir/objects"
+    mkdir -p "$pDir/refs/issues"
+    mkdir -p "$pDir/refs/tags"
+
+    # change issues to .../<p>/refs/issues/1
+    (cd "$pDir/issues" && grep -l "^+parent.*null" */*) | while read entry; do
+        issueId=$(dirname $entry)
+        entryId=$(basename $entry)
+
+        echo $entryId > "$pDir/refs/issues/$issueId"
+    done
+
+    # change entries to .../<p>/objects/73/97ca1fb539d0ecff232eadb8a9e26f16049da2
+    find "$pDir/issues" -type f -maxdepth 2 | while read entry; do
+        entryId=$(basename $entry)
+        # convert to new place
+        prefix=$(echo $entryId | sed -e "s/\(..\).*/\\1"/)
+        suffix=$(echo $entryId | sed -e "s/^..//")
+        if [ -z $suffix ]; then
+            echo "Error: entry $entry to short"
+            exit 1
+        fi
+        mkdir "$pDir/objects/$prefix"
+        mv "$entry" "$pDir/objects/$prefix/$suffix"
+    done
+
+    # change files references in the entries
+    # at this moment, the objects are only entries
+    find "$pDir/objects" -type f | while read entry; do
+       sed -i -e "/+file/ s/\./ /" $entry
+    done
+
+    # change files
+    find "$pDir/files" -type f | while read file; do
+        f=$(basename $file)
+        newId=$(echo $f | sed -e "s/\..*//")
+        prefix=$(echo $newId | sed -e "s/\(..\).*/\\1"/)
+        suffix=$(echo $newId | sed -e "s/^..//")
+
+        mkdir "$pDir/objects/$prefix"
+        mv $file "$pDir/objects/$prefix/$suffix"
+    done
+
+    # change tags
+    find "$pDir/tags" -type f | while read file; do
+        tag=$(basename $file)
+        prefix=$(echo $tag | sed -e "s/\(..\).*/\\1"/)
+        suffix=$(echo $tag | sed -e "s/^..//")
+        mkdir "$pDir/refs/tags/$prefix"
+        mv $file "$pDir/refs/tags/$prefix/$suffix"
+    done
+
+    # remove old directories files, issues, tags
+    rm -rf "$pDir/files"
+    rm -rf "$pDir/issues"
+    rm -rf "$pDir/tags"
+
+done
+
+
