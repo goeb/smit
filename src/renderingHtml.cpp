@@ -1448,7 +1448,8 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
         const char *colspan = "";
         int workingColumnIncrement = 1;
 
-        if (type == F_TEXTAREA || type == F_TEXTAREA2) pvalueStyle = "sm_issue_pvalue_ta";
+        if (type == F_TEXTAREA) pvalueStyle = "sm_issue_pvalue_ta";
+        else if (type == F_TEXTAREA2) pvalueStyle = "sm_issue_pvalue_ta2";
 
         const char *trStyle = "";
         if (type == F_ASSOCIATION) trStyle = "class=\"sm_issue_asso\"";
