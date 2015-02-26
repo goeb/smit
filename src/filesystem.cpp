@@ -38,6 +38,10 @@
 #endif
 
 
+int loadFile(const std::string &filepath, std::string &data)
+{
+    return loadFile(filepath.c_str(), data);
+}
 
 int loadFile(const char *filepath, std::string &data)
 {
@@ -99,6 +103,7 @@ int loadFile(const char *filepath, const char **data)
     fclose(f);
     return n;
 }
+
 
 /** Write a string to a file
   *
@@ -302,3 +307,4 @@ int copyFile(const std::string &srcPath, const std::string &destPath)
     dst.close();
     return 0;
 }
+

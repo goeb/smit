@@ -5,6 +5,12 @@
 #include <sys/types.h>
 #include <dirent.h>
 
+enum FileFlags {
+    NO_OVERWRITE
+};
+
+int loadFile(const std::string &filepath, std::string &data);
+
 int loadFile(const char *filepath, std::string &data);
 int loadFile(const char *filepath, const char **data);
 int writeToFile(const char *filepath, const std::string &data);

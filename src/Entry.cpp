@@ -53,27 +53,29 @@
   * - it specifies the id of the new entry (and the basename is not taken as id)
   * - the sha1 of the file is checked
   */
-Entry *Entry::loadEntry(const std::string &dir, const char* basename, const char *id)
+Entry *Entry::loadEntry(const std::string &path, const std::string &id, bool checkId)
 {
     // load a given entry
-    std::string path = dir + '/' + basename;
     std::string buf;
     int n = loadFile(path.c_str(), buf);
 
-    if (n < 0) return 0; // error loading the file
+    if (n < 0) {
+        // error loading the file
+        LOG_ERROR("Cannot load entry '%s': %s", path.c_str(), strerror(errno));
+        return 0;
+    }
 
     // check the sha1, if id is given
-    if (id) {
+    if (checkId) {
         std::string hash = getSha1(buf);
         if (0 != hash.compare(id)) {
-            LOG_ERROR("Hash does not match: %s / %s", path.c_str(), id);
+            LOG_ERROR("Hash does not match: %s / %s", path.c_str(), id.c_str());
             return 0;
         }
     }
 
     Entry *e = new Entry;
-    if (id) e->id = id;
-    else e->id = basename;
+    e->id = id;
 
     std::list<std::list<std::string> > lines = parseConfigTokens(buf.c_str(), buf.size());
 
@@ -121,6 +123,29 @@ int Entry::getCtime() const
     return ctime;
 }
 
+/** Compute self sha1 and store it
+  */
+void Entry::setId()
+{
+    std::string data = serialize();
+    id = getSha1(data);
+}
+
+
+Entry *Entry::createNewEntry(const PropertiesMap &props, const std::string &author, const Entry *eParent)
+{
+    Entry *e = new Entry();
+    e->properties = props;
+    e->author = author;
+    e->ctime = time(0);
+
+    if (eParent) e->parent = eParent->id;
+    else e->parent = K_PARENT_NULL;
+
+    e->setId();
+
+    return e;
+}
 
 std::string Entry::serialize() const
 {

@@ -89,9 +89,8 @@ public:
     int addEntry(PropertiesMap properties, std::string &iid, std::string &eid, std::string username);
     int pushEntry(std::string issueId, const std::string &entryId,
                   const std::string &user, const std::string &tmpDir, const std::string &filename);
-
     Entry *getEntry(const std::string &id) const;
-    int deleteEntry(const std::string &issueId, const std::string &entryId, const std::string &username);
+    int deleteEntry(const std::string &entryId, const std::string &username);
     int getNumIssues() const;
 
     // methods for handling project
@@ -124,10 +123,12 @@ public:
 private:
     int load(); // load a project: config, views, entries, tags
     int loadConfig();
-    int loadEntries();
+    int loadIssues();
     void loadPredefinedViews();
     void loadTags();
     void computeAssociations();
+
+    std::map<std::string, Entry*> entries;
 
     void cleanupMultiselect(std::list<std::string> &values, const std::list<std::string> &selectOptions);
 

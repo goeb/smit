@@ -5,11 +5,16 @@ Redesign of database:
     .../<p>/refs/issues/1
     .../<p>/objects/73/97ca1fb539d0ecff232eadb8a9e26f16049da2
 
+Projects:
+    - remove name mangling for project names
+    - projects can be in subdirectories. Eg: project-x/sw/component-y
+    - projects names cannot contain characters: /\<>:"|? (those forebidden on windows)
+    - projects names are the whole subpath: "project-x/sw/component-y"
 
 Issues:
     - rest api: unchanged (except for cloning/pulling/pushing)
-    - database: directory replaced by refs/issues/1, that contains the sha1 of the 
-                lastest entry
+    - database: directory replaced by refs/issues/1, that contains the sha1 of the lastest entry
+      for issues > 100, they are placed in xx/x. eg: 123 => 12/3.
 
 
 Entries:
@@ -29,5 +34,19 @@ Tags:
     - rest api:
     - database: 
         empty file: .../<p>/refs/tags/73/97ca1fb539d0ecff232eadb8a9e26f16049da2.tagname
+
+
+redesign of Permissions of users:
+--------------
+
+file user: unchanged
+pattern to identify a project: shell wildcard pattern
+
+Eg:
+    addUser "John Smith" \
+        project sw/* rw \
+        project myproject ro 
+        
+
 
 
