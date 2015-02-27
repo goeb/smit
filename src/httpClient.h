@@ -43,7 +43,7 @@ public:
     std::list<std::string> lines; // fulfilled after calling getRequestLines()
     void doCloning(bool recursive, int recursionLevel);
     void getFileStdout();
-    void downloadFile(const std::string localPath);
+    void downloadFile(const std::string &localPath);
 
     int test();
     void handleReceiveFileOrDirectory(void *data, size_t size);

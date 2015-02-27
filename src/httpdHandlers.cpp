@@ -1884,7 +1884,7 @@ void httpDeleteEntry(const RequestContext *req, Project &p, const std::string &i
         return;
     }
 
-    int r = p.deleteEntry(issueId, entryId, u.username);
+    int r = p.deleteEntry(entryId, u.username);
     if (r < 0) {
         // failure
         LOG_INFO("deleteEntry returned %d", r);

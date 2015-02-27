@@ -35,6 +35,8 @@
 #include "logging.h"
 #include "httpClient.h"
 #include "Args.h"
+#include "restApi.h"
+#include "Project.h"
 
 
 /** smit distributed functions
@@ -284,11 +286,8 @@ void mergeEntry(const Entry *localEntry, Issue &remoteIssue, const Issue &remote
     // check if this new entry must be kept
     if (newProperties.size() > 0) {
         // store the new entry
-        Entry *e = remoteIssue.addEntry(newProperties, localEntry->author);
-        if (!e) {
-            fprintf(stderr, "Abort.");
-            exit(1);
-        }
+        Entry *e = Entry::createNewEntry(newProperties, localEntry->author, remoteIssue.latest);
+        remoteIssue.addEntry(e);
         printf("New entry: %s\n", e->id.c_str());
     }
 }
@@ -350,7 +349,7 @@ void handleConflictOnEntries(const PullContext &pullCtx, Project &p,
     Issue remoteConflictingIssuePart;
     re = re->next; // start with the first conflicting entry
     while (re) {
-        remoteConflictingIssuePart.consolidateIssueWithSingleEntry(re, true);
+        remoteConflictingIssuePart.consolidateWithSingleEntry(re, true);
         re = re->next;
     }
     // at this point, remoteConflictingIssuePart contains the conflicting remote part of the issue
@@ -386,8 +385,8 @@ int getEntriesOfIssue(const PullContext &pullCtx, const Project &p, const Issue 
 
 /** Pull an issue
   *
-  * If the remote issue conflicts with a local issue:
-  * - rename the local issue (thus changing its id)
+  * If the remote issue conflicts with a local issue (ie: they have not the same first entry):
+  * - rename the local issue (thus changing its identifier)
   * - clone the remote issue
   */
 int pullIssue(const PullContext &pullCtx, Project &p, const Issue &i)
@@ -403,10 +402,27 @@ int pullIssue(const PullContext &pullCtx, Project &p, const Issue &i)
         fprintf(stderr, "Cannot get entries of remote issue %s", i.id.c_str());
         exit(1);
     }
+    if (remoteEntries.empty()) {
+        fprintf(stderr, "Cannot pull remote issue that has no entry: %s", i.id.c_str());
+        return -1;
+    }
+
+    // download all remote entries
+    std::list<std::string>::const_iterator remoteEntry;
+    FOREACH(remoteEntry, remoteEntries) {
+        std::string localfile = pullCtx.localRepo + '/' + p.getUrlName() + '/' + PATH_OBJECTS + '/';
+        localfile += Entry::getSubpath(*remoteEntry);
+        if (!fileExists(localfile)) {
+            // file not existing locally: do download
+            HttpRequest hr(pullCtx.httpCtx);
+            std::string resource = "/" + p.getUrlName() + RESOURCE_OBJECTS "/" + (*remoteEntry);
+            hr.setUrl(pullCtx.rooturl, resource);
+            hr.downloadFile(localfile);
+        }
+    }
 
     // get first entry of local issue
-    const Entry *e = i.latest;
-    while (e && e->prev) e = e->prev; // rewind to the first entry
+    const Entry *e = i.first;
     if (!e) {
         // should not happen
         fprintf(stderr, "Got local issue with no first entry: %s", i.id.c_str());
@@ -432,15 +448,16 @@ int pullIssue(const PullContext &pullCtx, Project &p, const Issue &i)
         // inform the user
         printf("Local issue %s renamed %s (%s)\n", i.id.c_str(), newId.c_str(), i.getSummary().c_str());
 
-        // clone the remote issue
-        std::string resource = "/" + p.getUrlName() + "/issues/" + i.id;
-        HttpRequest hr(pullCtx.httpCtx);
-        hr.setUrl(pullCtx.rooturl, resource);
-        hr.setRepository(pullCtx.localRepo);
-        hr.doCloning(true, 0);
+        // store the id of the remote issue
+        std::string localIssuePath = pullCtx.localRepo + '/' + p.getUrlName() + '/' + PATH_ISSUES + '/' + i.id;
+        int r = writeToFile(localIssuePath.c_str(), remoteEntries.back());
+        if (!r) {
+            LOG_ERROR("Cannot create issue: %s", localIssuePath.c_str());
+            exit(1);
+        }
 
     } else {
-        // same issue. Walk through the entries and pull...
+        // same issue. Walk through the entries...
 
         std::list<std::string>::const_iterator reid;
         FOREACH(reid, remoteEntries) {
@@ -448,22 +465,20 @@ int pullIssue(const PullContext &pullCtx, Project &p, const Issue &i)
             if (remoteEid.empty()) continue; // ignore (usually last item in the directory listing)
 
             if (!localEntry) {
-                // remote issue has more entries. download them locally
-
-                downloadEntries(pullCtx, p, i.id, remoteEntries, reid, "");
-
-                break; // leave the loop as all the remaining remotes have been managed by downloadEntries
+                // remote issue has more entries. they are already downloaded...
+                // pulling completed.
+                break;
 
             } else if (localEntry->id != remoteEid) {
 
                 // remote: a--b--c--d
                 // local:  a--b--e
 
-                std::string tmpPath = downloadRemoteIssue(pullCtx, p, i.id, remoteEntries);
                 // load this remote issue in memory
-                Issue remoteIssue;
-                int r = remoteIssue.load(i.id, tmpPath);
-                if (r != 0) {
+                Issue *remoteIssue = Issue::load(p.getObjectDir(), remoteEntries.back());
+;
+                if (r != remoteIssue) {
+                    // an error occurred. Maybe an entry of the remote issue is invalid
                     fprintf(stderr, "Cannot load downloaded issue: %s\n", tmpPath.c_str());
                     fprintf(stderr, "Abort.\n");
                     exit(1);

@@ -63,6 +63,7 @@ struct Issue {
 
     void addEntryInTable(Entry *e);
     void addEntry(Entry *e);
+    static Issue *load(const std::string &objectsDir, const std::string &latestEntryOfIssue);
     void insertEntry(Entry *e);
     void amendEntry(const std::string &entryId, const std::string &newMsg, const std::string &username);
 

@@ -60,7 +60,7 @@ void HttpRequest::getFileStdout()
 
 }
 
-void HttpRequest::downloadFile(const std::string localPath)
+void HttpRequest::downloadFile(const std::string &localPath)
 {
     LOGV("downloadFile: resourcePath=%s\n", resourcePath.c_str());
     curl_easy_setopt(curlHandle, CURLOPT_WRITEDATA, (void *)this);
@@ -80,6 +80,8 @@ void HttpRequest::downloadFile(const std::string localPath)
         }
     }
 }
+
+
 
 /** Get files recursively through sub-directories
   *

@@ -14,7 +14,11 @@
 #include "View.h"
 #include "Issue.h"
 
-#define DIR_DELETED_OLD "_del"
+#define PROJECT_FILE "project"
+#define PATH_ISSUES "refs/issues" // sub-directory of a project where the entries are stored
+#define VIEWS_FILE "views"
+#define PATH_TAGS "refs/tags"
+#define PATH_OBJECTS "objects"
 
 #define K_MESSAGE "+message" // keyword used for the message
 #define K_FILE "+file" // keyword used for uploaded files
@@ -90,6 +94,7 @@ public:
     int pushEntry(std::string issueId, const std::string &entryId,
                   const std::string &user, const std::string &tmpDir, const std::string &filename);
     Entry *getEntry(const std::string &id) const;
+
     int deleteEntry(const std::string &entryId, const std::string &username);
     int getNumIssues() const;
 

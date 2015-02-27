@@ -39,12 +39,6 @@
 #include "stringTools.h"
 #include "mg_win32.h"
 
-#define PROJECT_FILE "project"
-#define PATH_ISSUES "refs/issues" // sub-directory of a project where the entries are stored
-#define VIEWS_FILE "views"
-#define TAGS_DIR "refs/tags"
-#define PATH_OBJECTS "objects"
-
 #define K_PARENT "+parent"
 #define K_AUTHOR "+author"
 #define K_CTIME "+ctime"
@@ -256,6 +250,7 @@ int Project::loadIssues()
     // walk through all issues
     std::string pathToObjects = path + '/' + PATH_OBJECTS;
     std::string issueId;
+    int localMaxId = 0;
     while ((issueId = getNextFile(issuesDirHandle)) != "") {
         std::string latestEntryOfIssue;
         std::string path = pathToIssues + '/' + issueId;
@@ -266,53 +261,31 @@ int Project::loadIssues()
         }
         trim(latestEntryOfIssue);
 
-        Issue *issue = new Issue();
+        Issue *issue = Issue::load(pathToObjects, latestEntryOfIssue);
         if (!issue) {
             LOG_ERROR("Cannot load issue %s", issueId.c_str());
             continue;
         }
 
+
+        Entry *e = issue->latest;
+        while (e) {
+            std::map<std::string, Entry*>::const_iterator otherEntry = entries.find(e->id);
+            if (otherEntry != entries.end()) {
+                LOG_ERROR("duplate entry (merge not complete ?) TODO");
+                // TODO
+            }
+            entries[e->id] = e; // store in the global table
+            e = e->prev;
+        }
+
+        // update the maximum id
+        int intId = atoi(issueId.c_str());
+        if (intId > 0 && (uint32_t)intId > localMaxId) localMaxId = intId;
+
+        // store the issue in memory
         issue->id = issueId;
-        issue->latest = 0;
-
-        std::string entryid = latestEntryOfIssue;
-        int error = 0;
-        while (entryid.size() && entryid != K_PARENT_NULL) {
-            std::string entryPath = pathToObjects + '/' + Entry::getSubpath(entryid);
-            Entry *e = Entry::loadEntry(entryPath, entryid, false);
-            if (!e) {
-                LOG_ERROR("Cannot load entry '%s'", entryPath.c_str());
-                error = 1;
-                break; // abort the loading of this issue
-            }
-            entries[e->id] = e;
-            issue->insertEntry(e);
-
-            entryid = e->parent; // go to parent entry
-        }
-
-        if (!error) {
-
-            // update the maximum id
-            int intId = atoi(issueId.c_str());
-            if (intId > 0 && (uint32_t)intId > localMaxId) localMaxId = intId;
-
-            // store the issue in memory
-            issues[issue->id] = issue;
-
-            issue->consolidate();
-
-        } else {
-            // delete the entries of the issues
-            Entry *e = issue->first;
-            while (e) {
-
-                delete
-            }
-            delete issue;
-            // TODO possibly some entries of the erroneous issue
-            // have been created and should also be deleted
-        }
+        issues[issue->id] = issue;
     }
 
     closeDir(issuesDirHandle);
@@ -743,8 +716,8 @@ int Project::createProjectFiles(const char *repositoryPath, const char *projectN
         return r;
     }
 
-    // create directory 'issues'
-    subpath = path + "/" + ISSUES;
+    // create directory 'objects'
+    subpath = path + "/" + PATH_OBJECTS;
     r = mg_mkdir(subpath.c_str(), S_IRUSR | S_IXUSR | S_IWUSR);
     if (r != 0) {
         LOG_ERROR("Could not create directory '%s': %s", subpath.c_str(), strerror(errno));
@@ -767,13 +740,30 @@ int Project::createProjectFiles(const char *repositoryPath, const char *projectN
         return -1;
     }
 
-    // create directory 'files'
-    subpath = path + "/files";
+    // create directory 'refs'
+    subpath = path + "/refs";
     r = mg_mkdir(subpath.c_str(), S_IRUSR | S_IXUSR | S_IWUSR);
     if (r != 0) {
         LOG_ERROR("Could not create directory '%s': %s", subpath.c_str(), strerror(errno));
         return -1;
     }
+
+    // create directory 'issues'
+    subpath = path + PATH_ISSUES;
+    r = mg_mkdir(subpath.c_str(), S_IRUSR | S_IXUSR | S_IWUSR);
+    if (r != 0) {
+        LOG_ERROR("Could not create directory '%s': %s", subpath.c_str(), strerror(errno));
+        return -1;
+    }
+
+    // create directory 'tags'
+    subpath = path + PATH_TAGS;
+    r = mg_mkdir(subpath.c_str(), S_IRUSR | S_IXUSR | S_IWUSR);
+    if (r != 0) {
+        LOG_ERROR("Could not create directory '%s': %s", subpath.c_str(), strerror(errno));
+        return -1;
+    }
+
 
 
     return 0;
@@ -793,8 +783,8 @@ int Project::toggleTag(const std::string &issueId, const std::string &entryId, c
         return -1;
     } else {
         std::map<std::string, Entry*>::iterator eit;
-        eit = i->entries.find(entryId);
-        if (eit == i->entries.end()) {
+        eit = entries.find(entryId);
+        if (eit == entries.end()) {
             LOG_DEBUG("Entry not found: %s/%s", issueId.c_str(), entryId.c_str());
             return -1;
         }
@@ -808,7 +798,7 @@ int Project::toggleTag(const std::string &issueId, const std::string &entryId, c
         tag = e->tags.find(tagid); // update tag status after inversion
 
         // store to disk
-        std::string path = getPath() + "/" TAGS_DIR "/";
+        std::string path = getPath() + "/" PATH_TAGS "/";
 
         int r;
         if (tag != e->tags.end()) {
@@ -861,16 +851,19 @@ int Project::reload()
     ScopeLocker L1(locker, LOCK_READ_WRITE);
     ScopeLocker L2(lockerForConfig, LOCK_READ_WRITE);
 
-    // free all issues and entries
+    // delete all issues
     std::map<std::string, Issue*>::iterator issue;
     FOREACH(issue, issues) {
-        std::map<std::string, Entry*>::iterator entry;
-        FOREACH(entry, issue->second->entries) {
-            delete entry->second;
-        }
         delete issue->second;
     }
     issues.clear();
+
+    // delete all entries
+    std::map<std::string, Entry*>::iterator entry;
+    FOREACH(entry, entries) {
+        delete entry->second;
+    }
+    entries.clear();
 
     // delete all associations
     associations.clear();
@@ -957,7 +950,7 @@ void Project::loadPredefinedViews()
   */
 void Project::loadTags()
 {
-    std::string tagsPath = path + "/" TAGS_DIR "/";
+    std::string tagsPath = path + "/" PATH_TAGS "/";
     DIR *tagsDirHandle = openDir(tagsPath.c_str());
 
     if (!tagsDirHandle) {
@@ -965,7 +958,7 @@ void Project::loadTags()
         return;
     }
 
-    std:string filename;
+    std::string filename;
     while ((filename = getNextFile(tagsDirHandle)) != "") {
 
         std::string prefix = filename;
@@ -976,15 +969,15 @@ void Project::loadTags()
         DIR *suffixDirHandle = openDir(suffixPath.c_str());
         if (!suffixDirHandle) continue; // not a directory ?
 
-        std:string tag;
+        std::string tag;
         while ((tag = getNextFile(suffixDirHandle)) != "") {
 
             std::string entryId = popToken(tag, '.');
             // add the prefix
             entryId = prefix + entryId;
             std::map<std::string, Entry*>::iterator eit;
-            eit = i->entries.find(entryId);
-            if (eit == i->entries.end()) {
+            eit = entries.find(entryId);
+            if (eit == entries.end()) {
                 LOG_ERROR("Tags for unknown entry: %s", entryId.c_str());
                 continue;
             }
@@ -1137,8 +1130,8 @@ std::string Project::renameIssue(const std::string &id)
     issues.erase(id);
 
     // move the directory on persistent storage
-    std::string oldpath = getPath() + "/" ISSUES "/" + id;
-    std::string newpath = getPath() + "/" ISSUES "/" + newId;
+    std::string oldpath = getPath() + "/" PATH_ISSUES "/" + id;
+    std::string newpath = getPath() + "/" PATH_ISSUES "/" + newId;
     int r = rename(oldpath.c_str(), newpath.c_str());
     if (r != 0) {
         LOG_ERROR("Cannot move directory of entry %s to %s", oldpath.c_str(), newpath.c_str());
@@ -1157,7 +1150,7 @@ std::string Project::renameIssue(const std::string &id)
   */
 int Project::officializeMerging(const Issue &i)
 {
-    std::string officialIssuePath = getPath() + "/" ISSUES "/" + i.id;
+    std::string officialIssuePath = getPath() + "/" PATH_ISSUES "/" + i.id;
     std::string pathMergePending = officialIssuePath + K_MERGE_PENDING;
     if (fileExists(pathMergePending)) {
         // the cause of this error might be the interruption of a previous merging
@@ -1302,7 +1295,7 @@ Issue *Project::createNewIssue()
     // create new directory for this issue
     std::string issueId = allocateNewIssueId();
 
-    std::string pathOfIssue = path + '/' + ISSUES + '/' + issueId;
+    std::string pathOfIssue = path + '/' + PATH_ISSUES + '/' + issueId;
 
     int r = mg_mkdir(pathOfIssue.c_str(), S_IRUSR | S_IXUSR | S_IWUSR);
     if (r != 0) {
@@ -1311,7 +1304,7 @@ Issue *Project::createNewIssue()
     }
     Issue *i = new Issue();
     i->id = issueId;
-    i->path = path + '/' + ISSUES + '/' + issueId;
+    i->path = path + '/' + PATH_ISSUES + '/' + issueId;
 
     // add it to the internal memory
     issues[issueId] = i;
@@ -1572,7 +1565,7 @@ int Project::pushEntry(std::string issueId, const std::string &entryId,
     return 0;
 }
 
-Entry *Project::getEntry(const std::string id) const
+Entry *Project::getEntry(const std::string &id) const
 {
     std::map<std::string, Entry*>::const_iterator e = entries.find(id);
     if (e == entries.end()) return 0;
@@ -1597,7 +1590,7 @@ ProjectConfig Project::getConfig() const
   *     <0 in case of error
   *
   * Uploaded files are not deleted.
-  * Temporarliy, deleting an entry is the same as amending it with an empty message.
+  * Temporarily, deleting an entry is the same as amending it with an empty message.
   * TODO: remove deleteEntry() and replace by amendEntry()
   *
   */
@@ -1608,7 +1601,7 @@ int Project::deleteEntry(const std::string &entryId, const std::string &username
 
     std::map<std::string, Entry*>::iterator ite;
     ite = entries.find(entryId);
-    if (ite == i->entries.end()) return -1;
+    if (ite == entries.end()) return -1;
 
     Entry *e = ite->second;
 
@@ -1619,11 +1612,7 @@ int Project::deleteEntry(const std::string &entryId, const std::string &username
     else if (e->isAmending()) return -8; // one cannot amend an amending message
 
     // ok, we can proceed
-    int r = e->issue->amendEntry(entryId, "", username);
-    if (r != 0) {
-		LOG_ERROR("Cannot create amending entry");
-        return r;
-    }
+    e->issue->amendEntry(entryId, "", username);
     return 0;
 }
 

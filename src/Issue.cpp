@@ -104,6 +104,43 @@ void Issue::insertEntry(Entry* e)
     e->issue = this;
 }
 
+Issue *Issue::load(const std::string &objectsDir, const std::string &latestEntryOfIssue)
+{
+    Issue *issue = new Issue();
+
+    std::string entryid = latestEntryOfIssue;
+    int error = 0;
+    while (entryid.size() && entryid != K_PARENT_NULL) {
+        std::string entryPath = objectsDir + '/' + Entry::getSubpath(entryid);
+        Entry *e = Entry::loadEntry(entryPath, entryid, false);
+        if (!e) {
+            LOG_ERROR("Cannot load entry '%s'", entryPath.c_str());
+            error = 1;
+            break; // abort the loading of this issue
+        }
+
+        issue->insertEntry(e); // store the entry in the chain list
+
+        entryid = e->parent; // go to parent entry
+    }
+
+    if (error) {
+        // delete all enties and the issue
+        Entry *e = issue->first;
+        while (e) {
+            Entry *tobeDeleted = e;
+            e = e->next;
+            delete tobeDeleted;
+        }
+        delete issue;
+        return 0;
+
+    }
+
+    issue->consolidate();
+    return issue;
+}
+
 /** Amend the given Entry with a new message
   *
   * The former message will be replaced by the new one
