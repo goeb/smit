@@ -475,17 +475,17 @@ int pullIssue(const PullContext &pullCtx, Project &p, const Issue &i)
                 // local:  a--b--e
 
                 // load this remote issue in memory
-                Issue *remoteIssue = Issue::load(p.getObjectDir(), remoteEntries.back());
+                Issue *remoteIssue = Issue::load(p.getObjectsDir(), remoteEntries.back());
 ;
-                if (r != remoteIssue) {
-                    // an error occurred. Maybe an entry of the remote issue is invalid
-                    fprintf(stderr, "Cannot load downloaded issue: %s\n", tmpPath.c_str());
+                if (!remoteIssue) {
+                    // an error occurred. Maybe an entry of the remote issue is invalid or missing
+                    fprintf(stderr, "Cannot load downloaded issue from entry %s\n", remoteEntries.back().c_str());
                     fprintf(stderr, "Abort.\n");
                     exit(1);
 
                 }
 
-                handleConflictOnEntries(pullCtx, p, i, localEntry, remoteIssue);
+                handleConflictOnEntries(pullCtx, p, i, localEntry, *remoteIssue);
 
                 break; // leave the loop.
 

@@ -237,8 +237,7 @@ void Project::computeAssociations()
 
 int Project::loadIssues()
 {
-    std::string pathToIssues = path;
-    pathToIssues += '/' + PATH_ISSUES;
+    std::string pathToIssues = getIssuesDir();
     LOG_DEBUG("Loading issues: %s", pathToIssues.c_str());
 
     DIR *issuesDirHandle;

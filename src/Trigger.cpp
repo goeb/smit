@@ -171,7 +171,7 @@ void Trigger::notifyEntry(const Project &project, const std::string issueId, con
             return;
         }
 
-        Entry *e = i.getEntry(entryId);
+        Entry *e = project.getEntry(entryId);
         if (!e) {
             LOG_ERROR("notifyEntry: could not retrieved entry: project '%s', issue '%s', entry '%s'",
                       project.getName().c_str(), issueId.c_str(), entryId.c_str());
