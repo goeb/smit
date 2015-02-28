@@ -32,11 +32,35 @@ find "$dstDir" -name project | while read p; do
     mkdir -p "$pDir/refs/tags"
 
     # change issues to .../<p>/refs/issues/1
-    (cd "$pDir/issues" && grep -l "^+parent.*null" */*) | while read entry; do
-        issueId=$(dirname $entry)
-        entryId=$(basename $entry)
-
-        echo $entryId > "$pDir/refs/issues/$issueId"
+    for issue in "$pDir/issues"/*; do
+        # get the latest entry: ie the one that is not referenced as a parent
+        latest=""
+        echo "examining issue: $issue..."
+        for e in "$issue"/*; do
+            ref=$(basename $e)
+            grep "+parent *$ref" "$issue"/*
+            if [ $? -ne 0 ]; then
+                # pattern, not found, thus we found an entry unreferenced
+                if [ -n "$latest" ]; then
+                    echo "ERROR: found 2 possible latest in $issue"
+                    echo "    $latest"
+                    echo "    $ref"
+                    echo "Continue ? (ctrl-C to abort)"
+                    read a
+                fi
+                latest=$ref
+                break
+            fi
+        done
+        if [ -z "$latest" ]; then
+            echo "ERROR: no latest found in $issue"
+            echo "Continue ? (ctrl-C to abort)"
+            read a
+        else
+            # draw the link
+            issueId=$(basename "$issue")
+            echo $latest > "$pDir/refs/issues/$issueId"
+        fi
     done
 
     # change entries to .../<p>/objects/73/97ca1fb539d0ecff232eadb8a9e26f16049da2
