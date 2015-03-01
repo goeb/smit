@@ -748,7 +748,7 @@ int Project::createProjectFiles(const char *repositoryPath, const char *projectN
     }
 
     // create directory 'issues'
-    subpath = path + PATH_ISSUES;
+    subpath = getIssuesDir();
     r = mg_mkdir(subpath.c_str(), S_IRUSR | S_IXUSR | S_IWUSR);
     if (r != 0) {
         LOG_ERROR("Could not create directory '%s': %s", subpath.c_str(), strerror(errno));

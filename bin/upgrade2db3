@@ -32,13 +32,13 @@ find "$dstDir" -name project | while read p; do
     mkdir -p "$pDir/refs/tags"
 
     # change issues to .../<p>/refs/issues/1
-    for issue in "$pDir/issues"/*; do
+    find "$pDir/issues" -type d -maxdepth 1 | while read issue; do
         # get the latest entry: ie the one that is not referenced as a parent
         latest=""
         echo "examining issue: $issue..."
-        for e in "$issue"/*; do
-            ref=$(basename $e)
-            grep "+parent *$ref" "$issue"/*
+        for e in $(ls -- "$issue"); do
+            ref=$(basename -- $e)
+            grep -- "+parent *$ref" "$issue"/* > /dev/null 2>&1
             if [ $? -ne 0 ]; then
                 # pattern, not found, thus we found an entry unreferenced
                 if [ -n "$latest" ]; then
@@ -58,14 +58,14 @@ find "$dstDir" -name project | while read p; do
             read a
         else
             # draw the link
-            issueId=$(basename "$issue")
+            issueId=$(basename -- "$issue")
             echo $latest > "$pDir/refs/issues/$issueId"
         fi
     done
 
     # change entries to .../<p>/objects/73/97ca1fb539d0ecff232eadb8a9e26f16049da2
     find "$pDir/issues" -type f -maxdepth 2 | while read entry; do
-        entryId=$(basename $entry)
+        entryId=$(basename -- $entry)
         # convert to new place
         prefix=$(echo $entryId | sed -e "s/\(..\).*/\\1"/)
         suffix=$(echo $entryId | sed -e "s/^..//")
@@ -73,7 +73,7 @@ find "$dstDir" -name project | while read p; do
             echo "Error: entry $entry to short"
             exit 1
         fi
-        mkdir "$pDir/objects/$prefix"
+        mkdir -p "$pDir/objects/$prefix"
         mv "$entry" "$pDir/objects/$prefix/$suffix"
     done
 
@@ -85,21 +85,21 @@ find "$dstDir" -name project | while read p; do
 
     # change files
     find "$pDir/files" -type f | while read file; do
-        f=$(basename $file)
+        f=$(basename -- $file)
         newId=$(echo $f | sed -e "s/\..*//")
         prefix=$(echo $newId | sed -e "s/\(..\).*/\\1"/)
         suffix=$(echo $newId | sed -e "s/^..//")
 
-        mkdir "$pDir/objects/$prefix"
+        mkdir -p "$pDir/objects/$prefix"
         mv $file "$pDir/objects/$prefix/$suffix"
     done
 
     # change tags
     find "$pDir/tags" -type f | while read file; do
-        tag=$(basename $file)
+        tag=$(basename -- $file)
         prefix=$(echo $tag | sed -e "s/\(..\).*/\\1"/)
         suffix=$(echo $tag | sed -e "s/^..//")
-        mkdir "$pDir/refs/tags/$prefix"
+        mkdir -p "$pDir/refs/tags/$prefix"
         mv $file "$pDir/refs/tags/$prefix/$suffix"
     done
 

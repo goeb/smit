@@ -16,7 +16,9 @@ int loadFile(const char *filepath, const char **data);
 int writeToFile(const char *filepath, const std::string &data);
 int writeToFile(const char *filepath, const char *data, size_t len);
 
-bool fileExists(std::string &path);
+bool fileExists(const std::string &path);
+bool isDir(const std::string &path);
+int mkdirs(const std::string &path);
 
 std::string getExePath();
 std::string getFileSize(const std::string &path);
