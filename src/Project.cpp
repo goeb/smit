@@ -748,7 +748,7 @@ int Project::createProjectFiles(const char *repositoryPath, const char *projectN
     }
 
     // create directory 'issues'
-    subpath = getIssuesDir();
+    subpath = path + '/' + PATH_ISSUES;
     r = mg_mkdir(subpath.c_str(), S_IRUSR | S_IXUSR | S_IWUSR);
     if (r != 0) {
         LOG_ERROR("Could not create directory '%s': %s", subpath.c_str(), strerror(errno));
@@ -756,7 +756,7 @@ int Project::createProjectFiles(const char *repositoryPath, const char *projectN
     }
 
     // create directory 'tags'
-    subpath = path + PATH_TAGS;
+    subpath = path + '/' + PATH_TAGS;
     r = mg_mkdir(subpath.c_str(), S_IRUSR | S_IXUSR | S_IWUSR);
     if (r != 0) {
         LOG_ERROR("Could not create directory '%s': %s", subpath.c_str(), strerror(errno));
@@ -1417,7 +1417,7 @@ int Project::addEntry(PropertiesMap properties, std::string &issueId, std::strin
     // create the new entry object
     Entry *e = Entry::createNewEntry(properties, username, i->latest);
 
-    std::string pathOfNewEntry = path + "/" PATH_OBJECTS "/" + e->getSubpath();
+    std::string pathOfNewEntry = getObjectsDir() + "/" + e->getSubpath();
     if (fileExists(pathOfNewEntry)) {
         LOG_ERROR("Cannot create new entry as object already exists: %s", pathOfNewEntry.c_str());
         return -1;
@@ -1429,7 +1429,8 @@ int Project::addEntry(PropertiesMap properties, std::string &issueId, std::strin
     }
 
     // store on disk
-    mg_mkdir(e->getSubdir().c_str(), S_IRUSR | S_IWUSR | S_IXUSR); // create dir if needed
+    std::string subdir = getObjectsDir() + "/" + e->getSubdir();
+    mg_mkdir(subdir.c_str(), 0777); // create dir if needed
 
     int r = writeToFile(pathOfNewEntry.c_str(), e->serialize());
     if (r != 0) {

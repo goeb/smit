@@ -200,7 +200,6 @@ int mkdirs(const std::string &path)
 {
     if (path.empty()) return -1;
 
-    int i = 0;
     size_t offset = 0;
     size_t pos = 0;
     while (pos != std::string::npos) {
