@@ -45,8 +45,7 @@ find "$dstDir" -name project | while read p; do
                     echo "ERROR: found 2 possible latest in $issue"
                     echo "    $latest"
                     echo "    $ref"
-                    echo "Continue ? (ctrl-C to abort)"
-                    read a
+                    echo "Choosing $ref..."
                 fi
                 latest=$ref
                 break
@@ -54,8 +53,6 @@ find "$dstDir" -name project | while read p; do
         done
         if [ -z "$latest" ]; then
             echo "ERROR: no latest found in $issue"
-            echo "Continue ? (ctrl-C to abort)"
-            read a
         else
             # draw the link
             issueId=$(basename -- "$issue")
@@ -78,9 +75,10 @@ find "$dstDir" -name project | while read p; do
     done
 
     # change files references in the entries
-    # at this moment, the objects are only entries
+    # at this moment, the objects are all the entries
+    # <sha1>.file.pdf => <sha1>/file.pdf
     find "$pDir/objects" -type f | while read entry; do
-       sed -i -e "/+file/ s/\./ /" $entry
+       sed -i -e "/+file/ s;\.;/;" $entry
     done
 
     # change files
