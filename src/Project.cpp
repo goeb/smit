@@ -1296,17 +1296,9 @@ Issue *Project::createNewIssue()
 
     std::string pathOfIssue = path + '/' + PATH_ISSUES + '/' + issueId;
 
-    int r = mg_mkdir(pathOfIssue.c_str(), S_IRUSR | S_IXUSR | S_IWUSR);
-    if (r != 0) {
-        LOG_ERROR("Could not create dir '%s': %s", pathOfIssue.c_str(), strerror(errno));
-        return 0;
-    }
     Issue *i = new Issue();
     i->id = issueId;
-    i->path = path + '/' + PATH_ISSUES + '/' + issueId;
 
-    // add it to the internal memory
-    issues[issueId] = i;
     return i;
 }
 
@@ -1428,7 +1420,7 @@ int Project::addEntry(PropertiesMap properties, std::string &issueId, std::strin
         return -1;
     }
 
-    // store on disk
+    // store entry on disk
     std::string subdir = getObjectsDir() + "/" + e->getSubdir();
     mg_mkdir(subdir.c_str(), 0777); // create dir if needed
 
@@ -1439,9 +1431,21 @@ int Project::addEntry(PropertiesMap properties, std::string &issueId, std::strin
         return -1;
     }
 
+	// update latest entry of issue on disk
+	std::string issuePath = getIssuesDir() + '/' + issueId;
+	r = writeToFile(issuePath.c_str(), e->id);
+	if (r != 0) {
+		// error
+		LOG_ERROR("Could not update latest entry of issue: %s", issuePath.c_str());
+		return -1;
+	}
+
     // add this entry in entries
     entries[e->id] = e;
     i->addEntry(e);
+
+    // add it to the internal memory
+    issues[issueId] = i;
 
     // if some association has been updated, then update the associations tables
     FOREACH(p, properties) {
@@ -1516,7 +1520,7 @@ int Project::pushEntry(std::string issueId, const std::string &entryId,
 
     if (e->parent == K_PARENT_NULL) {
         // assign a new issue id
-        newI = createNewIssue();
+        newI = createNewIssue(); // TODO createNewIssue modified dbv3
         if (!newI) {
             delete e;
             return -3;
