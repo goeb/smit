@@ -1859,7 +1859,7 @@ void RHtml::printIssueForm(const ContextParameters &ctx, const Issue *issue, boo
             // same as above : keep the old value even if no longer in official values
             std::list<std::string>::const_iterator v;
             FOREACH(v, propertyValues) {
-                if (!v->empty() && !inList(opts, value)) opts.push_back(*v);
+                if (!v->empty() && !inList(opts, *v)) opts.push_back(*v);
             }
 
             for (so = opts.begin(); so != opts.end(); so++) {
