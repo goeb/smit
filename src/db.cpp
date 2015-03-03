@@ -1655,25 +1655,26 @@ void parseAssociation(std::list<std::string> &values)
     values.sort();
 }
 
-/** Remove "" values from list of multiselect values if "" is not in the allowed range
+/** Add a property for multiselect properties that have all values deselected
   *
-  * This is because the HTML form adds a hidden input with empty value.
+  * If all values of a multiselect have been deselected, then they are not in the properties, but
+  * should nevertheless be taken into account.
+  *
   */
-void Project::cleanupMultiselect(std::list<std::string> &values, const std::list<std::string> &selectOptions)
+void Project::handleDeselectedMultiselect(std::map<std::string, std::list<std::string> > &properties)
 {
-    // convert to a set
-    std::set<std::string> allowed(selectOptions.begin(), selectOptions.end());
-    std::list<std::string>::iterator v = values.begin();
-    bool gotEmpty = false;
-    while (v != values.end()) {
-        if ( (allowed.find(*v) == allowed.end()) || (gotEmpty && v->empty()) ) {
-            // erase currect item
-            std::list<std::string>::iterator v0 = v;
-            v++;
-            values.erase(v0);
-        } else {
-            if (v->empty()) gotEmpty = true; // empty is allowed. but we don't w<ant a second one
-            v++;
+    std::list<PropertySpec>::const_iterator pspec;
+    FOREACH(pspec, config.properties) {
+        if (pspec->type == F_MULTISELECT) {
+            std::map<std::string, std::list<std::string> >::iterator p;
+            p = properties.find(pspec->name);
+            if (p == properties.end()) {
+                // Case a a multiselect property that is not in the
+                // property list.
+                // It means that all values have been deselected.
+                // Add a property with no value.
+                properties[pspec->name] = std::list<std::string>();
+            }
         }
     }
 }
@@ -1692,41 +1693,16 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
 
     entryId.clear();
 
-    // check that all properties are in the project config
-    // else, remove them
-    // and parse the associations, if any
-    std::map<std::string, std::list<std::string> >::iterator p;
-    p = properties.begin();
-    while (p != properties.end()) {
-        bool doErase = false;
+    // handle all-deselected multiselect properties
+    handleDeselectedMultiselect(properties);
 
-        if ( (p->first == K_MESSAGE) || (p->first == K_FILE) )  {
-            if (p->second.size() && p->second.front().empty()) {
-                // erase if message or file is emtpy
-                doErase = true;
-            }
-        } else {
-            const PropertySpec *pspec = config.getPropertySpec(p->first);
-            if (!pspec && (p->first != K_SUMMARY)) {
-                // erase property because it is not part of the user properties of the project
-                doErase = true;
-            } // else do not erase and parse the association
-            else if (pspec && pspec->type == F_ASSOCIATION) parseAssociation(p->second);
-            else if (pspec && pspec->type == F_MULTISELECT) cleanupMultiselect(p->second, pspec->selectOptions);
-        }
-
-        if (doErase) {
-            // here we remove an item from the list that we are walking through
-            // be careful...
-            std::map<std::string, std::list<std::string> >::iterator itemToErase = p;
-            p++;
-            properties.erase(itemToErase);
-        } else p++;
-
+    if (properties.size() == 0) {
+        LOG_INFO("addEntry: no change. return without adding entry.");
+        return -1; // no change
     }
 
     Issue *i = 0;
-    if (issueId.size()>0) {
+    if (issueId.size() > 0) {
         // adding an entry to an existing issue
 
         i = getIssue(issueId);
@@ -1735,8 +1711,12 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
             return -1;
         }
 
-        // simplify the entry by removing properties that have the same value
+        // Simplify the entry by removing properties that have the same value
         // in the issue (only the modified fields are stored)
+
+        // Note that keep-old values are pruned here : values that are no longer
+        // in the official values (select, multiselect, selectUser), but
+        // that might still be used in some old issues.
         std::map<std::string, std::list<std::string> >::iterator entryProperty;
         entryProperty = properties.begin();
         while (entryProperty != properties.end()) {
@@ -1759,12 +1739,42 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
                 properties.erase(itemToErase);
             } else entryProperty++;
         }
-
-        if (properties.size() == 0) {
-            LOG_INFO("addEntry: no change. return without adding entry.");
-            return 0; // no change
-        }
     }
+
+    // Check that all properties are in the project config, else remove them.
+    // Also parse the associations, if any.
+    //
+    // Note that the values of properties that have a type select, multiselect and selectUser
+    // are not verified (this is a known issue) TODO.
+    std::map<std::string, std::list<std::string> >::iterator p;
+    p = properties.begin();
+    while (p != properties.end()) {
+        bool doErase = false;
+
+        if ( (p->first == K_MESSAGE) || (p->first == K_FILE) )  {
+            if (p->second.size() && p->second.front().empty()) {
+                // erase if message or file is emtpy
+                doErase = true;
+            }
+        } else {
+            const PropertySpec *pspec = config.getPropertySpec(p->first);
+            if (!pspec && (p->first != K_SUMMARY)) {
+                // erase property because it is not part of the user properties of the project
+                doErase = true;
+            } // else do not erase and parse the association
+            else if (pspec && pspec->type == F_ASSOCIATION) parseAssociation(p->second);
+        }
+
+        if (doErase) {
+            // here we remove an item from the list that we are walking through
+            // be careful...
+            std::map<std::string, std::list<std::string> >::iterator itemToErase = p;
+            p++;
+            properties.erase(itemToErase);
+        } else p++;
+
+    }
+
     // at this point properties have been cleaned up
 
     FOREACH(p, properties) {

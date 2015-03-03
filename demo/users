@@ -60,10 +60,6 @@ addUser toto     sha1 308392258c55acae06b3a1afffe2a78e690f743e -salt b8cc575242c
 
 addUser tyty 
 
-addUser x     sha1 79f4a2e185629597fe49f18fc8db9f236eece01c -salt 769c186f5fc6cc7c \
-    project myproject rw \
-    project myproject/yoyo admin \
-
 
 addUser xxxt     sha1 0b9c2625dc21ef05f6ad4ddf47c5f203837aa32c \
     project myproject rw \

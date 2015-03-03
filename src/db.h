@@ -178,7 +178,6 @@ private:
     void computeAssociations();
 
     void consolidateIssue(Issue *i);
-    void cleanupMultiselect(std::list<std::string> &values, const std::list<std::string> &selectOptions);
 
     int storeViewsToFile();
     Issue *getIssue(const std::string &id) const;
@@ -199,6 +198,7 @@ private:
     //
     std::map<std::string, std::map<std::string, std::set<std::string> > > reverseAssociations;
     void updateAssociations(const Issue *i, const std::string &associationName, const std::list<std::string> &issues);
+    void handleDeselectedMultiselect(std::map<std::string, std::list<std::string> > &properties);
 
 };
 

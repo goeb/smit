@@ -1,5 +1,7 @@
 
 v2.3.0
+    - keep old values of select, multiselect, selectUser until deliberately
+      changed by the user
     - fix in-memory residual property after deleted entry
     - textarea2 in rich text
 

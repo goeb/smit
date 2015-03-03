@@ -1847,7 +1847,7 @@ void RHtml::printIssueForm(const ContextParameters &ctx, const Issue *issue, boo
                 input << ">" << htmlEscape(*so) << "</option>\n";
             }
 
-            input << "</select>";
+            input << "</select>\n";
 
         } else if (pspec->type == F_MULTISELECT) {
             std::list<std::string>::const_iterator so;
@@ -1865,15 +1865,10 @@ void RHtml::printIssueForm(const ContextParameters &ctx, const Issue *issue, boo
             for (so = opts.begin(); so != opts.end(); so++) {
                 input << "<option" ;
                 if (inList(propertyValues, *so)) input << " selected=\"selected\"";
-                input << ">" << htmlEscape(*so) << "</option>";
+                input << ">" << htmlEscape(*so) << "</option>\n";
             }
 
-            input << "</select>";
-
-            // add a hidden field to tell the server that this property was present, even if
-            // no value selected
-            input << "\n";
-            input << "<input type=\"hidden\" name=\"" << pname << "\" value=\"\">";
+            input << "</select>\n";
 
         } else if (pspec->type == F_SELECT_USER) {
             if (propertyValues.size()>0) value = propertyValues.front();
@@ -1891,10 +1886,10 @@ void RHtml::printIssueForm(const ContextParameters &ctx, const Issue *issue, boo
             for (u = users.begin(); u != users.end(); u++) {
                 input << "<option" ;
                 if (value == *u) input << " selected=\"selected\"";
-                input << ">" << htmlEscape(*u) << "</option>";
+                input << ">" << htmlEscape(*u) << "</option>\n";
             }
 
-            input << "</select>";
+            input << "</select>\n";
 
         } else if (pspec->type == F_TEXTAREA) {
             if (propertyValues.size()>0) value = propertyValues.front();
