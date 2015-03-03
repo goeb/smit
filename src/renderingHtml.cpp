@@ -1831,10 +1831,20 @@ void RHtml::printIssueForm(const ContextParameters &ctx, const Issue *issue, boo
             std::list<std::string>::const_iterator so;
             input << "<select class=\"sm_issue_pinput_" << pname << "\" name=\"" << pname << "\">";
 
-            for (so = pspec->selectOptions.begin(); so != pspec->selectOptions.end(); so++) {
+            std::list<std::string> opts = pspec->selectOptions;    
+            // if the present value is not empty and not in the list of official values
+            // then it means that probably this value has been removed lately from 
+            // the official values
+            // but we want to allow the user keep the old value
+            // then add it in the list
+            if (!value.empty()) {
+                if (!inList(opts, value)) opts.push_back(value); // add it in the list
+            }
+
+            for (so = opts.begin(); so != opts.end(); so++) {
                 input << "<option" ;
                 if (value == *so) input << " selected=\"selected\"";
-                input << ">" << htmlEscape(*so) << "</option>";
+                input << ">" << htmlEscape(*so) << "</option>\n";
             }
 
             input << "</select>";
@@ -1845,7 +1855,14 @@ void RHtml::printIssueForm(const ContextParameters &ctx, const Issue *issue, boo
             if (pspec->type == F_MULTISELECT) input << " multiple=\"multiple\"";
             input << ">";
 
-            for (so = pspec->selectOptions.begin(); so != pspec->selectOptions.end(); so++) {
+            std::list<std::string> opts = pspec->selectOptions;    
+            // same as above : keep the old value even if no longer in official values
+            std::list<std::string>::const_iterator v;
+            FOREACH(v, propertyValues) {
+                if (!v->empty() && !inList(opts, value)) opts.push_back(*v);
+            }
+
+            for (so = opts.begin(); so != opts.end(); so++) {
                 input << "<option" ;
                 if (inList(propertyValues, *so)) input << " selected=\"selected\"";
                 input << ">" << htmlEscape(*so) << "</option>";
@@ -1867,6 +1884,9 @@ void RHtml::printIssueForm(const ContextParameters &ctx, const Issue *issue, boo
             input << "<select class=\"sm_issue_pinput_" << pname << "\" name=\"" << pname << "\">";
 
             std::set<std::string> users = UserBase::getUsersOfProject(ctx.getProject().getName());
+            // same a as above : keep old value even if not in official list
+            if (!value.empty()) users.insert(value);
+
             std::set<std::string>::iterator u;
             for (u = users.begin(); u != users.end(); u++) {
                 input << "<option" ;
