@@ -1816,24 +1816,7 @@ void httpPostEntry(const RequestContext *req, Project &pro, const std::string & 
     std::map<std::string, std::list<std::string> > vars;
 
     const char *contentType = req->getHeader("Content-Type");
-    if (0 == strcmp("application/x-www-form-urlencoded", contentType)) {
-
-        // this branch is obsolete. It was the old code without file-upload capability
-
-        // application/x-www-form-urlencoded
-        // post_data is "var1=val1&var2=val2...".
-        // multiselect is like: "tags=v4.1&tags=v5.0" (same var repeated)
-
-        std::string postData;
-        int rc = readMgreq(req, postData, MAX_SIZE_UPLOAD);
-        if (rc < 0) {
-            sendHttpHeader413(req, "You tried to upload too much data. Max is 10 MB.");
-            return;
-        }
-
-        parseQueryString(postData, vars);
-
-    } else if (0 == strncmp(multipart, contentType, strlen(multipart))) {
+    if (0 == strncmp(multipart, contentType, strlen(multipart))) {
 
         // extract the boundary
         const char *b = "boundary=";
