@@ -1455,7 +1455,7 @@ int Project::addEntry(PropertiesMap properties, std::string &issueId, std::strin
         }
     }
 
-    // move the uploaded files (if any)
+    // move the attached files (if any)
     std::map<std::string, std::list<std::string> >::iterator files = e->properties.find(K_FILE);
     if (files != e->properties.end()) {
         std::string dir = getPathUploadedFiles();
@@ -1463,7 +1463,8 @@ int Project::addEntry(PropertiesMap properties, std::string &issueId, std::strin
 
         std::list<std::string>::iterator f;
         FOREACH(f, files->second) {
-            std::string oldpath = getTmpDir() + "/" + *f;
+            std::string objectId = popToken(*f, '/');
+            std::string oldpath = getTmpDir() + "/" + objectId;
             std::string newpath = dir + "/" + *f;
 
             if (access(newpath.c_str(), F_OK ) != -1 ) {

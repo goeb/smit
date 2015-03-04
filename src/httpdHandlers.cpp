@@ -1779,7 +1779,7 @@ void parseMultipartAndStoreUploadedFiles(const std::string &data, std::string bo
                 if (lastSlash != std::string::npos) filename = filename.substr(lastSlash+1);
 
                 std::string id = getSha1(p, size);
-                std::string basename = id + "." + filename;
+                std::string basename = id + "/" + filename;
 
                 LOG_DEBUG("New filename: %s", basename.c_str());
 
@@ -1787,7 +1787,7 @@ void parseMultipartAndStoreUploadedFiles(const std::string &data, std::string bo
                 std::string path = tmpDirectory;
                 mg_mkdir(tmpDirectory.c_str(), S_IRUSR | S_IWUSR | S_IXUSR); // create dir if needed
                 path += "/";
-                path += basename;
+                path += id;
                 int r = writeToFile(path.c_str(), p, size);
                 if (r < 0) {
                     LOG_ERROR("Could not store uploaded file.");

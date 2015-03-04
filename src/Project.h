@@ -113,8 +113,8 @@ public:
     int reload(); // reload a project from disk storage
 
     // methods for database access
-    inline std::string getObjectsDir() { return path + '/' + PATH_OBJECTS; }
-    inline std::string getIssuesDir() { return path + '/' + PATH_ISSUES; }
+    inline std::string getObjectsDir() const { return path + '/' + PATH_OBJECTS; }
+    inline std::string getIssuesDir() const { return path + '/' + PATH_ISSUES; }
 
     // methods for handling attached files
     inline std::string getPathUploadedFiles() const { return path + "/" + K_UPLOADED_FILES_DIR; }
