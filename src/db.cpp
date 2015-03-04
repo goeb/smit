@@ -630,9 +630,15 @@ PropertySpec parsePropertySpec(std::list<std::string> & tokens)
     if (F_SELECT == pspec.type || F_MULTISELECT == pspec.type) {
         // populate the allowed values
         while (tokens.size() > 0) {
+
             std::string value = tokens.front();
             tokens.pop_front();
-            pspec.selectOptions.push_back(value);
+
+            if (F_MULTISELECT == pspec.type && value.empty()) {
+                // for multiselect, an empty value has no sense and are removed
+
+            } else pspec.selectOptions.push_back(value);
+
         }
     } else if (F_ASSOCIATION == pspec.type) {
         if (tokens.size() > 1) {
