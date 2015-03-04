@@ -1655,29 +1655,6 @@ void parseAssociation(std::list<std::string> &values)
     values.sort();
 }
 
-/** Add a property for multiselect properties that have all values deselected
-  *
-  * If all values of a multiselect have been deselected, then they are not in the properties, but
-  * should nevertheless be taken into account.
-  *
-  */
-void Project::handleDeselectedMultiselect(std::map<std::string, std::list<std::string> > &properties)
-{
-    std::list<PropertySpec>::const_iterator pspec;
-    FOREACH(pspec, config.properties) {
-        if (pspec->type == F_MULTISELECT) {
-            std::map<std::string, std::list<std::string> >::iterator p;
-            p = properties.find(pspec->name);
-            if (p == properties.end()) {
-                // Case a a multiselect property that is not in the
-                // property list.
-                // It means that all values have been deselected.
-                // Add a property with no value.
-                properties[pspec->name] = std::list<std::string>();
-            }
-        }
-    }
-}
 
 /** If issueId is empty:
   *     - a new issue is created
@@ -1692,9 +1669,6 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
     ScopeLocker scopeLockerConfig(lockerForConfig, LOCK_READ_ONLY);
 
     entryId.clear();
-
-    // handle all-deselected multiselect properties
-    handleDeselectedMultiselect(properties);
 
     if (properties.size() == 0) {
         LOG_INFO("addEntry: no change. return without adding entry.");

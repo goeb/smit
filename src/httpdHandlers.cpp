@@ -1802,6 +1802,36 @@ void parseQueryString(const std::string &queryString, std::map<std::string, std:
     // append the latest parameter (if any)
 }
 
+
+/** Remove empty values for multiselect properties
+  *
+  * empty values are not relevant
+  * and the HTML form forces the use of an empty value.
+  */
+
+void cleanMultiselectProperties(const ProjectConfig &config, std::map<std::string, std::list<std::string> > &properties)
+{
+    std::map<std::string, std::list<std::string> >::iterator p;
+    FOREACH(p, properties) {
+        // if multiselect
+        const PropertySpec *pspec = config.getPropertySpec(p->first);
+        if (pspec && pspec->type == F_MULTISELECT) {
+            // erase empty values from p->second
+            std::list<std::string>::iterator v;
+            v = p->second.begin();
+            while (v != p->second.end()) {
+                if (v->empty()) {
+                    // delete the current value
+                    std::list<std::string>::iterator itemToErase = v;
+                    v++;
+                    p->second.erase(itemToErase);
+
+                } else v++;
+            }
+        }
+    }
+}
+
 /** Handle the posting of an entry
   * If issueId is empty, then a new issue is created.
   */
@@ -1842,7 +1872,11 @@ void httpPostEntry(const RequestContext *req, Project &pro, const std::string & 
     } else {
         // multipart/form-data
         LOG_ERROR("Content-Type '%s' not supported", contentType);
+        sendHttpHeader400(req, "bad Content-Type");
+        return;
     }
+
+   cleanMultiselectProperties(pro.getConfig(), vars);
 
     std::string id = issueId;
     bool isNewIssue = false;

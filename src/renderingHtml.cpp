@@ -1831,9 +1831,9 @@ void RHtml::printIssueForm(const ContextParameters &ctx, const Issue *issue, boo
             std::list<std::string>::const_iterator so;
             input << "<select class=\"sm_issue_pinput_" << pname << "\" name=\"" << pname << "\">";
 
-            std::list<std::string> opts = pspec->selectOptions;    
+            std::list<std::string> opts = pspec->selectOptions;
             // if the present value is not empty and not in the list of official values
-            // then it means that probably this value has been removed lately from 
+            // then it means that probably this value has been removed lately from
             // the official values
             // but we want to allow the user keep the old value
             // then add it in the list
@@ -1855,7 +1855,7 @@ void RHtml::printIssueForm(const ContextParameters &ctx, const Issue *issue, boo
             if (pspec->type == F_MULTISELECT) input << " multiple=\"multiple\"";
             input << ">";
 
-            std::list<std::string> opts = pspec->selectOptions;    
+            std::list<std::string> opts = pspec->selectOptions;
             // same as above : keep the old value even if no longer in official values
             std::list<std::string>::const_iterator v;
             FOREACH(v, propertyValues) {
@@ -1869,6 +1869,12 @@ void RHtml::printIssueForm(const ContextParameters &ctx, const Issue *issue, boo
             }
 
             input << "</select>\n";
+
+            // add a hidden field to tell the server that this property was present, even if
+            // no value selected
+            input << "\n";
+            input << "<input type=\"hidden\" name=\"" << pname << "\" value=\"\">";
+
 
         } else if (pspec->type == F_SELECT_USER) {
             if (propertyValues.size()>0) value = propertyValues.front();
