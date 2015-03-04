@@ -1684,7 +1684,8 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
                 ctx.req->printf("<a href=\"../%s/%s\" class=\"sm_entry_file\">", K_UPLOADED_FILES_DIR,
                                 urlEncode(*f).c_str());
                 if (isImage(*f)) {
-                    ctx.req->printf("<img src=\"../files/%s\" class=\"sm_entry_file\"><br>", urlEncode(*f).c_str());
+                    // do not escape slashes
+                    ctx.req->printf("<img src=\"../files/%s\" class=\"sm_entry_file\"><br>", urlEncode(*f, '%', "/._-$,;~()").c_str());
                 }
                 ctx.req->printf("%s", htmlEscape(shortName).c_str());
                 // size of the file

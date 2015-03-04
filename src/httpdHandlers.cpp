@@ -43,6 +43,7 @@
 #include "cpio.h"
 #include "Trigger.h"
 #include "filesystem.h"
+#include "restApi.h"
 
 #define K_ME "me"
 #define MAX_SIZE_UPLOAD (10*1024*1024)
@@ -1350,6 +1351,24 @@ void httpGetView(const RequestContext *req, Project &p, const std::string &view,
     }
 }
 
+/** Get an object
+  *
+  * Read access is supposed to have already been granted.
+  *
+  * @param object
+  *    Must be <id>/<filename>, where:
+  *    - <id> is the identifier of the object
+  *    - <filename> is the name of the file. The extension is used to determine the type.
+  */
+void httpGetObject(const RequestContext *req, Project &p, std::string object)
+{
+    std::string id = popToken(object, '/');
+    std::string basemane = object;
+    std::string realpath = p.getObjectsDir() + "/" + Object::getSubpath(id);
+    LOG_DEBUG("httpGetObject: basename=%s, realpath=%s", basemane.c_str(), realpath.c_str());
+    req->sendObject(basemane, realpath);
+}
+
 /** Handle the pushing of a file
   *
   * If the file already exists, then do not overwrite it.
@@ -2039,6 +2058,8 @@ void httpPostEntry(const RequestContext *req, Project &pro, const std::string & 
 }
 
 
+
+
 /** begin_request_handler is the main entry point of an incoming HTTP request
   *
   * Resources               Methods    Acces Granted     Description
@@ -2049,18 +2070,19 @@ void httpPostEntry(const RequestContext *req, Project &pro, const std::string & 
   * /users                             superadmin        management of users for all projects
   * /_                      GET/POST   superadmin        new project
   * /users/<user>           GET/POST   user, superadmin  management of a single user
-  * /myp/config             GET/POST   admin             configuration of the project
-  * /myp/views              GET/POST   admin             list predefined views / create new view
-  * /myp/views/_            GET        admin             form for advanced search / new predefined view
-  * /myp/views/xyz          GET/POST   admin             display / update / rename predefined view
-  * /myp/views/xyz?delete=1 POST       admin             delete predefined view
-  * /myp/issues             GET/POST   user              issues of the project / add new issue
-  * /myp/issues/new         GET        user              page with a form for submitting new issue
-  * /myp/issues/123         GET/POST   user              a particular issue: get all entries or add a new entry
-  * /myp/issues/x/y/delete  POST       user              delete an entry y of issue x
-  * /myp/issues/x/y         POST       user              push an entry
-  * /myp/tags/x/y           POST       user              tag / untag an entry
-  * /myp/reload             POST       admin             reload project from disk storage
+  * /<p>/config             GET/POST   admin             configuration of the project
+  * /<p>/views              GET/POST   admin             list predefined views / create new view
+  * /<p>/views/_            GET        admin             form for advanced search / new predefined view
+  * /<p>/views/xyz          GET/POST   admin             display / update / rename predefined view
+  * /<p>/views/xyz?delete=1 POST       admin             delete predefined view
+  * /<p>/issues             GET/POST   user              issues of the project / add new issue
+  * /<p>/issues/new         GET        user              page with a form for submitting new issue
+  * /<p>/issues/123         GET/POST   user              a particular issue: get all entries or add a new entry
+  * /<p>/issues/x/y/delete  POST       user              delete an entry y of issue x
+  * /<p>/issues/x/y         POST       user              push an entry
+  * /<p>/tags/x/y           POST       user              tag / untag an entry
+  * /<p>/reload             POST       admin             reload project from disk storage
+  * /<p>/files/0102/t.pdf   GET        user              get an attached file
   * / * /issues             GET        user              issues of all projects
   * /any/other/file         GET        user              any existing file (in the repository)
   * /myp/files/123          POST       user              push a file
@@ -2160,7 +2182,8 @@ int begin_request_handler(const RequestContext *req)
         else if ( (resource == "tags") && (method == "GET") ) return httpGetFile(req);
         else if ( (resource == "tags") && (method == "POST") ) httpPostTag(req, *p, uri, user);
         else if ( (resource == "reload") && (method == "POST") ) httpReloadProject(req, *p, user);
-        else if ( (resource == "files") && (method == "POST") ) httpPushAttachedFile(req, *p, uri, user);
+        else if ( (resource == RESOURCE_FILES) && (method == "POST") ) httpPushAttachedFile(req, *p, uri, user);
+        else if ( (resource == RESOURCE_FILES) && (method == "GET") ) httpGetObject(req, *p, uri);
         else handled = false;
 
     }

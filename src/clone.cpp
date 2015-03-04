@@ -415,7 +415,7 @@ int pullIssue(const PullContext &pullCtx, Project &p, const Issue &i)
         if (!fileExists(localfile)) {
             // file not existing locally: do download
             HttpRequest hr(pullCtx.httpCtx);
-            std::string resource = "/" + p.getUrlName() + RESOURCE_OBJECTS "/" + (*remoteEntry);
+            std::string resource = "/" + p.getUrlName() + "/" RESOURCE_OBJECTS "/" + (*remoteEntry);
             hr.setUrl(pullCtx.rooturl, resource);
             hr.downloadFile(localfile);
         }

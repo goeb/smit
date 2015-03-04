@@ -2,7 +2,10 @@
 #define _restApi_h
 
 
-#define RESOURCE_ISSUES "/issues"
-#define RESOURCE_OBJECTS "/objects"
+// resources under the project
+// <p>/...
+#define RESOURCE_ISSUES "issues"
+#define RESOURCE_OBJECTS "objects"
+#define RESOURCE_FILES "files"
 
 #endif
