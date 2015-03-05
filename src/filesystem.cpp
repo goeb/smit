@@ -26,6 +26,7 @@
 #include "filesystem.h"
 #include "logging.h"
 #include "global.h"
+#include "stringTools.h"
 
 #if defined(_WIN32)
 
@@ -129,8 +130,10 @@ int writeToFile(const char *filepath, const char *data, size_t len)
     flags |= S_IRGRP | S_IROTH;
 #endif
 
-    std::string tmp = filepath;
-    tmp += ".tmp";
+    std::string dir = getDirname(filepath);
+    std::string base = getBasename(filepath);
+    std::string tmp = dir + "/." + base + ".tmp";
+
     int f = open(tmp.c_str(), mode, flags);
     if (-1 == f) {
         LOG_ERROR("Could not create file '%s', (%d) %s", tmp.c_str(), errno, strerror(errno));

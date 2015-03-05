@@ -1455,35 +1455,6 @@ int Project::addEntry(PropertiesMap properties, std::string &issueId, std::strin
         }
     }
 
-    // move the attached files (if any)
-    std::map<std::string, std::list<std::string> >::iterator files = e->properties.find(K_FILE);
-    if (files != e->properties.end()) {
-        std::string dir = getPathUploadedFiles();
-        mg_mkdir(dir.c_str(), S_IRUSR | S_IWUSR | S_IXUSR); // create dir if needed
-
-        std::list<std::string>::iterator f;
-        FOREACH(f, files->second) {
-            std::string objectId = popToken(*f, '/');
-            std::string oldpath = getTmpDir() + "/" + objectId;
-            std::string newpath = dir + "/" + *f;
-
-            if (access(newpath.c_str(), F_OK ) != -1 ) {
-                // destination file already exists
-                // file already uploaded (or collision)
-                // do nothing, and erase temporary file
-                LOG_INFO("File '%s' already uploaded. Ignore new upload of this file.", f->c_str());
-                unlink(oldpath.c_str());
-
-            } else {
-                // move the file from tmp to persistent directory
-                int r = rename(oldpath.c_str(), newpath.c_str());
-                if (r != 0) {
-                    LOG_ERROR("Cannot move file '%s' -> '%s': %s", oldpath.c_str(), newpath.c_str(), strerror(errno));
-                }
-            }
-        }
-    } // end of processing of uploaded files
-
     entryId = e->id;
 
     return 0; // success

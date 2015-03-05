@@ -29,6 +29,7 @@ std::list<std::string> splitLinesAndTrimBlanks(const std::string &s);
 
 std::string join(const std::list<std::string> &items, const char *separator);
 std::string getBasename(const std::string &path);
+std::string getDirname(const std::string &path);
 std::string getFirstParamFromQueryString(const std::string & queryString, const char *param);
 std::list<std::string> getParamListFromQueryString(const std::string & queryString, const char *param);
 

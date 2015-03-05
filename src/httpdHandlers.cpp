@@ -1667,7 +1667,7 @@ int httpGetIssue(const RequestContext *req, Project &p, const std::string &issue
 
 void parseMultipartAndStoreUploadedFiles(const std::string &data, std::string boundary,
                                          std::map<std::string, std::list<std::string> > &vars,
-                                         const std::string &tmpDirectory)
+                                         const Project &project)
 {
     const char *p = data.data();
     size_t len = data.size();
@@ -1774,28 +1774,35 @@ void parseMultipartAndStoreUploadedFiles(const std::string &data, std::string bo
 
             size_t size = endOfPart-p; // size of the file
             if (size) {
-                // get the file extension
+                // keep only the basename
                 size_t lastSlash = filename.find_last_of("\\/");
                 if (lastSlash != std::string::npos) filename = filename.substr(lastSlash+1);
 
                 std::string id = getSha1(p, size);
-                std::string basename = id + "/" + filename;
-
-                LOG_DEBUG("New filename: %s", basename.c_str());
+                std::string base = id + "/" + filename;
 
                 // store to tmpDirectory
-                std::string path = tmpDirectory;
-                mg_mkdir(tmpDirectory.c_str(), S_IRUSR | S_IWUSR | S_IXUSR); // create dir if needed
-                path += "/";
-                path += id;
-                int r = writeToFile(path.c_str(), p, size);
-                if (r < 0) {
-                    LOG_ERROR("Could not store uploaded file.");
-                    return;
+                std::string destDir = project.getObjectsDir() + "/" + Object::getSubdir(id);
+                std::string destFile = project.getObjectsDir() + "/" + Object::getSubpath(id);
+
+                LOG_DEBUG("New file: %s => %s (size %lu)", filename.c_str(), id.c_str(), L(size));
+
+                if (fileExists(destFile)) {
+                    LOG_INFO("File already existing: %s", destFile.c_str());
+                    // no problem. It has been uploaded previously...
+
+                } else {
+
+                    mkdirs(destDir);
+
+                    int r = writeToFile(destFile.c_str(), p, size);
+                    if (r < 0) {
+                        LOG_ERROR("Could not store uploaded file: %s", destFile.c_str());
+                        return;
+                    }
                 }
 
-                vars[name].push_back(basename);
-                LOG_DEBUG("name=%s, basename=%s, size=%lu", name.c_str(), basename.c_str(), L(size));
+                vars[name].push_back(base);
 
             } // else: empty file, ignore.
         }
@@ -1850,7 +1857,7 @@ void httpPushEntry(const RequestContext *req, Project &p, const std::string &iss
         std::string tmpDir = p.getTmpDir();
 
         // store the entry in a tmp directory
-        parseMultipartAndStoreUploadedFiles(postData, boundary, vars, tmpDir);
+        parseMultipartAndStoreUploadedFiles(postData, boundary, vars, p);
         // uploaded file(s) must be with the key K_PUSH_FILE
         PropertiesIt files = vars.find(K_PUSH_FILE);
         if (files == vars.end()) {
@@ -1980,24 +1987,7 @@ void httpPostEntry(const RequestContext *req, Project &pro, const std::string & 
     std::map<std::string, std::list<std::string> > vars;
 
     const char *contentType = req->getHeader("Content-Type");
-    if (0 == strcmp("application/x-www-form-urlencoded", contentType)) {
-
-        // this branch is obsolete. It was the old code without file-upload capability
-
-        // application/x-www-form-urlencoded
-        // post_data is "var1=val1&var2=val2...".
-        // multiselect is like: "tags=v4.1&tags=v5.0" (same var repeated)
-
-        std::string postData;
-        int rc = readMgreq(req, postData, MAX_SIZE_UPLOAD);
-        if (rc < 0) {
-            sendHttpHeader413(req, "You tried to upload too much data. Max is 10 MB.");
-            return;
-        }
-
-        parseQueryString(postData, vars);
-
-    } else if (0 == strncmp(multipart, contentType, strlen(multipart))) {
+    if (0 == strncmp(multipart, contentType, strlen(multipart))) {
         //std::string x = request2string(req);
         //mg_printf(req, "%s", x.c_str());
 
@@ -2020,11 +2010,13 @@ void httpPostEntry(const RequestContext *req, Project &pro, const std::string & 
         }
 
         std::string tmpDir = pro.getTmpDir();
-        parseMultipartAndStoreUploadedFiles(postData, boundary, vars, tmpDir);
+        parseMultipartAndStoreUploadedFiles(postData, boundary, vars, pro);
 
     } else {
-        // multipart/form-data
+        // other Content-Type
         LOG_ERROR("Content-Type '%s' not supported", contentType);
+        sendHttpHeader400(req, "Bad Content-Type");
+        return;
     }
 
     std::string id = issueId;

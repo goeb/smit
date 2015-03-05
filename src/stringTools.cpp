@@ -16,6 +16,8 @@
 #include <string.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <libgen.h>
 
 #include "stringTools.h"
 #include "global.h"
@@ -318,6 +320,18 @@ std::string getBasename(const std::string &path)
     else return path.substr(i+1);
 }
 
+std::string getDirname(const std::string &path)
+{
+    char *buf = (char*)malloc(path.size()+1);
+    memcpy(buf, path.data(), path.size());
+    buf[path.size()] = 0;
+
+    char *dir = dirname(buf);
+    std::string result = dir;
+
+    free(buf);
+    return result;
+}
 
 
 /** If uri is "x=y&a=bc+d" and param is "a"
