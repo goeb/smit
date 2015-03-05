@@ -1886,9 +1886,15 @@ void httpPostEntry(const RequestContext *req, Project &pro, const std::string & 
     }
     std::string entryId;
     int status = pro.addEntry(vars, id, entryId, u.username);
-    if (status != 0) {
+    if (status < 0) {
         // error
         sendHttpHeader500(req, "Cannot add entry");
+
+    } else if (status > 0) {
+        // entry not added (beacuse it brings no change, etc.)
+        // HTTP redirect
+        std::string redirectUrl = "/" + pro.getUrlName() + "/issues/" + id;
+        sendHttpRedirect(req, redirectUrl.c_str(), 0);
 
     } else {
         // entry correctly added

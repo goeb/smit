@@ -1676,9 +1676,38 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
 
     entryId.clear();
 
-    if (properties.size() == 0) {
-        LOG_INFO("addEntry: no change. return without adding entry.");
-        return -1; // no change
+    // Check that all properties are in the project config, else remove them.
+    // Also parse the associations, if any.
+    //
+    // Note that the values of properties that have a type select, multiselect and selectUser
+    // are not verified (this is a known issue) TODO.
+    std::map<std::string, std::list<std::string> >::iterator p;
+    p = properties.begin();
+    while (p != properties.end()) {
+        bool doErase = false;
+
+        if ( (p->first == K_MESSAGE) || (p->first == K_FILE) )  {
+            if (p->second.size() && p->second.front().empty()) {
+                // erase if message or file is emtpy
+                doErase = true;
+            }
+        } else {
+            const PropertySpec *pspec = config.getPropertySpec(p->first);
+            if (!pspec && (p->first != K_SUMMARY)) {
+                // erase property because it is not part of the user properties of the project
+                doErase = true;
+            } // else do not erase and parse the association
+            else if (pspec && pspec->type == F_ASSOCIATION) parseAssociation(p->second);
+        }
+
+        if (doErase) {
+            // here we remove an item from the list that we are walking through
+            // be careful...
+            std::map<std::string, std::list<std::string> >::iterator itemToErase = p;
+            p++;
+            properties.erase(itemToErase);
+        } else p++;
+
     }
 
     Issue *i = 0;
@@ -1721,41 +1750,13 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
         }
     }
 
-    // Check that all properties are in the project config, else remove them.
-    // Also parse the associations, if any.
-    //
-    // Note that the values of properties that have a type select, multiselect and selectUser
-    // are not verified (this is a known issue) TODO.
-    std::map<std::string, std::list<std::string> >::iterator p;
-    p = properties.begin();
-    while (p != properties.end()) {
-        bool doErase = false;
+    // at this point properties have been cleaned up
 
-        if ( (p->first == K_MESSAGE) || (p->first == K_FILE) )  {
-            if (p->second.size() && p->second.front().empty()) {
-                // erase if message or file is emtpy
-                doErase = true;
-            }
-        } else {
-            const PropertySpec *pspec = config.getPropertySpec(p->first);
-            if (!pspec && (p->first != K_SUMMARY)) {
-                // erase property because it is not part of the user properties of the project
-                doErase = true;
-            } // else do not erase and parse the association
-            else if (pspec && pspec->type == F_ASSOCIATION) parseAssociation(p->second);
-        }
-
-        if (doErase) {
-            // here we remove an item from the list that we are walking through
-            // be careful...
-            std::map<std::string, std::list<std::string> >::iterator itemToErase = p;
-            p++;
-            properties.erase(itemToErase);
-        } else p++;
-
+    if (properties.size() == 0) {
+        LOG_INFO("addEntry: no change. return without adding entry.");
+        return 1; // no change
     }
 
-    // at this point properties have been cleaned up
 
     FOREACH(p, properties) {
         LOG_DEBUG("properties: %s => %s", p->first.c_str(), join(p->second, ", ").c_str());
