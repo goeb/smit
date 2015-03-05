@@ -122,7 +122,8 @@ void HttpRequest::doCloning(bool recursive, int recursionLevel)
         FOREACH(file, lines) {
 
             if (file->empty()) continue;
-            if ((*file)[0] == '.') continue; // do not clone hidden files
+            if ((*file) == ".") continue;
+            if ((*file) == "..") continue;
 
             std::string subpath = resourcePath;
             if (resourcePath != "/")  subpath += '/';

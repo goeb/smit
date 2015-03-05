@@ -706,7 +706,7 @@ int httpGetFile(const RequestContext *request)
     std::string uri = request->getUri();
     std::string dir = Database::Db.pathToRepository + uri; // uri contains a leading /
 
-    DIR *d = openDir(p.getPath().c_str());
+    DIR *d = openDir(dir.c_str());
     if (!d) return REQUEST_NOT_PROCESSED; // not a directory: let Mongoose handle it
 
     // send the directory contents
@@ -715,7 +715,7 @@ int httpGetFile(const RequestContext *request)
     request->printf("Content-Type: text/directory\r\n\r\n");
 
     std::string f;
-    while ((f = getNextFile(d)) != "") req->printf("%s\n", f.c_str());
+    while ((f = getNextFile(d)) != "") request->printf("%s\n", f.c_str());
 
     closeDir(d);
 
