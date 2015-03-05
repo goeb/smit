@@ -21,7 +21,7 @@ Entries:
     - rest api: modified to /<p>/objects/7397ca1fb539d0ecff232eadb8a9e26f16049da2
     - database:
         format changed:
-        + attached file: +file <sha1> <filename>
+        + attached file: +file <sha1>/<filename>
         path: .../<p>/objects/73/97ca1fb539d0ecff232eadb8a9e26f16049da2 
 
 Files:
@@ -49,4 +49,6 @@ Eg:
         
 
 
-
+redesign of issue numbering
+    global
+        => named groups, or grouped by project directories ?

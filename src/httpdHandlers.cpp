@@ -706,23 +706,18 @@ int httpGetFile(const RequestContext *request)
     std::string uri = request->getUri();
     std::string dir = Database::Db.pathToRepository + uri; // uri contains a leading /
 
-    struct dirent *dp;
-    DIR *dirp;
-    if ((dirp = opendir(dir.c_str())) == NULL) return REQUEST_NOT_PROCESSED; // not a directory: let Mongoose handle it
+    DIR *d = openDir(p.getPath().c_str());
+    if (!d) return REQUEST_NOT_PROCESSED; // not a directory: let Mongoose handle it
 
     // send the directory contents
     // walk through the directory and print the entries
     sendHttpHeader200(request);
     request->printf("Content-Type: text/directory\r\n\r\n");
 
-    while ((dp = readdir(dirp)) != NULL) {
-        // Do not show . and ..
-        if (0 == strcmp(dp->d_name, ".")) continue;
-        if (0 == strcmp(dp->d_name, "..")) continue;
+    std::string f;
+    while ((f = getNextFile(d)) != "") req->printf("%s\n", f.c_str());
 
-       request->printf("%s\n", dp->d_name);
-    }
-    closedir(dirp);
+    closeDir(d);
 
     return REQUEST_COMPLETED; // the request is completely handled
 }
@@ -1285,14 +1280,11 @@ void httpGetProject(const RequestContext *req, const Project &p, User u)
         sendHttpHeader200(req);
         req->printf("Content-Type: text/directory\r\n\r\n");
 
-        req->printf("files\n");
-        std::string path = p.getPath()+"/html";
-        if (fileExists(path)) req->printf("html\n");
-        req->printf("issues\n");
-        req->printf("project\n");
-        path = p.getPath()+"/tags";
-        if (fileExists(path)) req->printf("tags\n");
-        req->printf("views\n");
+        DIR *d = openDir(p.getPath().c_str());
+        std::string f;
+        while ((f = getNextFile(d)) != "") req->printf("%s\n", f.c_str());
+
+        closedir(d);
         return;
     }
 
