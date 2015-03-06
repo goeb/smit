@@ -65,7 +65,10 @@ void HttpRequest::downloadFile(const std::string &localPath)
     LOGV("downloadFile: resourcePath=%s\n", resourcePath.c_str());
     curl_easy_setopt(curlHandle, CURLOPT_WRITEDATA, (void *)this);
     curl_easy_setopt(curlHandle, CURLOPT_WRITEFUNCTION, downloadCallback);
-    filename = localPath;
+
+    // download to tmp file, then rename at the end.
+    std::string tmp = getTmpPath(localPath);
+    filename = tmp;
     performRequest();
     if (fd) closeFile();
     else {
@@ -79,6 +82,13 @@ void HttpRequest::downloadFile(const std::string &localPath)
             closeFile();
         }
     }
+    int r = rename(tmp.c_str(), localPath.c_str());
+    if (r != 0) {
+        fprintf(stderr, "Cannot rename after download '%s' -> '%s': %s",
+                  tmp.c_str(), localPath.c_str(), strerror(errno));
+        exit(1);
+    }
+
 }
 
 

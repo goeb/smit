@@ -130,9 +130,7 @@ int writeToFile(const char *filepath, const char *data, size_t len)
     flags |= S_IRGRP | S_IROTH;
 #endif
 
-    std::string dir = getDirname(filepath);
-    std::string base = getBasename(filepath);
-    std::string tmp = dir + "/." + base + ".tmp";
+    std::string tmp = getTmpPath(filepath);
 
     int f = open(tmp.c_str(), mode, flags);
     if (-1 == f) {
@@ -348,3 +346,10 @@ int copyFile(const std::string &srcPath, const std::string &destPath)
     return 0;
 }
 
+
+std::string getTmpPath(const std::string &path)
+{
+    std::string dir = getDirname(path);
+    std::string base = getBasename(path);
+    return dir + "/." + base + ".tmp";
+}
