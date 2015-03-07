@@ -1290,6 +1290,27 @@ Issue *Project::createNewIssue()
 
     return i;
 }
+/** store entry on disk
+  */
+int Project::storeEntry(const Entry *e)
+{
+    std::string pathOfNewEntry = getObjectsDir() + "/" + e->getSubpath();
+    if (fileExists(pathOfNewEntry)) {
+        LOG_ERROR("Cannot create new entry as object already exists: %s", pathOfNewEntry.c_str());
+        return -1;
+    }
+
+    std::string subdir = getObjectsDir() + "/" + e->getSubdir();
+    mkdirs(subdir); // create dir if needed
+
+    int r = writeToFile(pathOfNewEntry.c_str(), e->serialize());
+    if (r != 0) {
+        // error.
+        LOG_ERROR("Could not write new entry to disk");
+        return -2;
+    }
+    return 0;
+}
 
 /** If issueId is empty:
   *     - a new issue is created
@@ -1398,42 +1419,22 @@ int Project::addEntry(PropertiesMap properties, std::string &issueId, std::strin
     // create the new entry object
     Entry *e = Entry::createNewEntry(properties, username, i->latest);
 
-    std::string pathOfNewEntry = getObjectsDir() + "/" + e->getSubpath();
-    if (fileExists(pathOfNewEntry)) {
-        LOG_ERROR("Cannot create new entry as object already exists: %s", pathOfNewEntry.c_str());
-        return -1;
-    }
-    // check also that this entry ID does not already exist in memory
+    // check that this entry ID does not already exist in memory
     if (entries.find(e->id) != entries.end()) {
         LOG_ERROR("Entry with same id already exists: %s", e->id.c_str());
         return -1;
     }
 
-    // store entry on disk
-    std::string subdir = getObjectsDir() + "/" + e->getSubdir();
-    mg_mkdir(subdir.c_str(), 0777); // create dir if needed
-
-    int r = writeToFile(pathOfNewEntry.c_str(), e->serialize());
-    if (r != 0) {
-        // error.
-        LOG_ERROR("Could not write new entry to disk");
-        return -1;
-    }
+    int r = storeEntry(e);
+    if (r<0) return r;
 
 	// update latest entry of issue on disk
-	std::string issuePath = getIssuesDir() + '/' + issueId;
-	r = writeToFile(issuePath.c_str(), e->id);
-	if (r != 0) {
-		// error
-		LOG_ERROR("Could not update latest entry of issue: %s", issuePath.c_str());
-		return -1;
-	}
+    r = storeRefIssue(issueId, e->id);
+    if (r<0) return r;
 
-    // add this entry in entries
+    // add this entry in internal in-memory tables
     entries[e->id] = e;
     i->addEntry(e);
-
-    // add it to the internal memory
     issues[issueId] = i;
 
     // if some association has been updated, then update the associations tables

@@ -51,8 +51,8 @@ public:
     static Entry *loadEntry(const std::string &path, const std::string &id, bool checkId=false);
     void setId();
     std::list<std::string> amendments; // id of the entries that amend this entry
-    inline std::string getSubpath() { return Object::getSubpath(id); }
-    inline std::string getSubdir() { return Object::getSubdir(id); }
+    inline std::string getSubpath() const { return Object::getSubpath(id); }
+    inline std::string getSubdir() const { return Object::getSubdir(id); }
     static inline std::string getSubpath(const std::string identifier) { return Object::getSubpath(identifier); }
     static Entry *createNewEntry(const PropertiesMap &props, const std::string &author, const Entry *eParent);
 

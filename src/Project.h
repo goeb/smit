@@ -91,6 +91,7 @@ public:
     std::string renameIssue(const std::string &oldId);
 
     // methods for handling entries
+    int storeEntry(const Entry *e);
     int addEntry(PropertiesMap properties, std::string &iid, std::string &eid, std::string username);
     int pushEntry(std::string issueId, const std::string &entryId,
                   const std::string &user, const std::string &tmpDir, const std::string &filename);

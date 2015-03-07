@@ -142,8 +142,12 @@ struct PullContext {
   *
   * @param remoteIssue
   *      in/out: The remote issue instance is updated by the merging
+  * @return
+  *      Pointer to the newly created merging entry
+  *      NULL if no merging entry was created
+  *
   */
-void mergeEntry(const Entry *localEntry, Issue &remoteIssue, const Issue &remoteConflictingIssuePart, MergeStrategy ms)
+Entry *mergeEntry(const Entry *localEntry, Issue &remoteIssue, const Issue &remoteConflictingIssuePart, MergeStrategy ms)
 {
     PropertiesMap newProperties; // the resulting properties of the new entry
 
@@ -255,6 +259,9 @@ void mergeEntry(const Entry *localEntry, Issue &remoteIssue, const Issue &remote
         Entry *e = Entry::createNewEntry(newProperties, localEntry->author, remoteIssue.latest);
         remoteIssue.addEntry(e);
         printf("New entry: %s\n", e->id.c_str());
+        return e;
+    } else {
+        return 0;
     }
 }
 
@@ -288,10 +295,24 @@ void handleConflictOnEntries(const PullContext &pullCtx, Project &p,
     // at this point, remoteConflictingIssuePart contains the conflicting remote part of the issue
 
     // for each local conflicting entry, do the merge
+    std::list<Entry *> mergingEntries;
     while (conflictingLocalEntry) {
-        mergeEntry(conflictingLocalEntry, remoteIssue, remoteConflictingIssuePart, pullCtx.mergeStrategy);
+        Entry *e = mergeEntry(conflictingLocalEntry, remoteIssue, remoteConflictingIssuePart, pullCtx.mergeStrategy);
+        if (e) mergingEntries.push_back(e);
         conflictingLocalEntry = conflictingLocalEntry->next;
     }
+    // store to disk
+    // TODO check if entry already exists in memory
+
+    // The storage is done after all merging is complete
+    // because if the user interrupts the inetractive merging, then we don't
+    // want a mess.
+    std::list<Entry *>::const_iterator e;
+    FOREACH(e, mergingEntries) {
+        int r = p.storeEntry(*e);
+        if (r<0) exit(1);
+    }
+
 }
 
 /** Get a list of the entries of a remote issue
