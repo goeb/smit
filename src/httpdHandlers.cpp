@@ -1614,7 +1614,7 @@ int httpGetIssue(const RequestContext *req, Project &p, const std::string &issue
 
     } else if (format == X_SMIT) {
         // for cloning, print the entries in the right order
-        const Entry *e = issue.latest;
+        const Entry *e = issue.first;
 
         if (!e) {
             std::string msg = "null entry for issue: ";
@@ -1622,9 +1622,6 @@ int httpGetIssue(const RequestContext *req, Project &p, const std::string &issue
             sendHttpHeader500(req, msg.c_str());
             return REQUEST_COMPLETED;
         }
-
-        // rewind to oldest entry
-        while (e->prev) e = e->prev;
 
         // print the entries in the rigth order
         sendHttpHeader200(req);

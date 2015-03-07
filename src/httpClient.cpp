@@ -28,10 +28,7 @@
 #include "mg_win32.h"
 #include "console.h"
 #include "filesystem.h"
-
-bool HttpRequest::Verbose = false;
-
-#define LOGV(...) do { if (HttpRequest::Verbose) { printf(__VA_ARGS__); fflush(stdout);} } while (0)
+#include "logging.h"
 
 HttpClientContext::HttpClientContext()
 {
@@ -62,7 +59,7 @@ void HttpRequest::getFileStdout()
 
 void HttpRequest::downloadFile(const std::string &localPath)
 {
-    LOGV("downloadFile: resourcePath=%s\n", resourcePath.c_str());
+    LOG_DEBUG("downloadFile: resourcePath=%s", resourcePath.c_str());
     curl_easy_setopt(curlHandle, CURLOPT_WRITEDATA, (void *)this);
     curl_easy_setopt(curlHandle, CURLOPT_WRITEFUNCTION, downloadCallback);
 
@@ -84,7 +81,7 @@ void HttpRequest::downloadFile(const std::string &localPath)
     }
     int r = rename(tmp.c_str(), localPath.c_str());
     if (r != 0) {
-        fprintf(stderr, "Cannot rename after download '%s' -> '%s': %s",
+        LOG_ERROR("Cannot rename after download '%s' -> '%s': %s",
                   tmp.c_str(), localPath.c_str(), strerror(errno));
         exit(1);
     }
@@ -100,7 +97,7 @@ void HttpRequest::downloadFile(const std::string &localPath)
   */
 void HttpRequest::doCloning(bool recursive, int recursionLevel)
 {
-    LOGV("Entering doCloning: resourcePath=%s\n", resourcePath.c_str());
+    LOG_DEBUG("Entering doCloning: resourcePath=%s", resourcePath.c_str());
     curl_easy_setopt(curlHandle, CURLOPT_WRITEDATA, (void *)this);
     curl_easy_setopt(curlHandle, CURLOPT_WRITEFUNCTION, writeToFileOrDirCallback);
 
@@ -120,7 +117,7 @@ void HttpRequest::doCloning(bool recursive, int recursionLevel)
 
         // make current directory locally
         mode_t mode = S_IRUSR | S_IWUSR | S_IXUSR;
-        LOGV("mkdir %s...\n", localPath.c_str());
+        LOG_DEBUG("mkdir %s...", localPath.c_str());
         int r = mg_mkdir(localPath.c_str(), mode);
         if (r != 0) {
             fprintf(stderr, "Cannot create directory '%s': %s\n", localPath.c_str(), strerror(errno));
@@ -187,9 +184,8 @@ int HttpRequest::postFile(const std::string &srcFile, const std::string &destUrl
         return -1;
     }
 
-    if (Verbose) {
-        printf("file '%s': size %ldo\n", srcFile.c_str(), file_info.st_size);
-    }
+
+    LOG_DEBUG("file '%s': size %ldo", srcFile.c_str(), file_info.st_size);
 
     /* upload to this place */
     curl_easy_setopt(curlHandle, CURLOPT_URL, destUrl.c_str());
@@ -211,7 +207,7 @@ int HttpRequest::postFile(const std::string &srcFile, const std::string &destUrl
     curl_easy_setopt(curlHandle, CURLOPT_WRITEFUNCTION, receiveLinesCallback);
 
     /* enable verbose for easier tracing */
-    if (Verbose) curl_easy_setopt(curlHandle, CURLOPT_VERBOSE, 1L);
+    if (getLoggingLevel() > LL_INFO) curl_easy_setopt(curlHandle, CURLOPT_VERBOSE, 1L);
 
     res = curl_easy_perform(curlHandle);
     fclose(fd);
@@ -232,12 +228,11 @@ int HttpRequest::postFile(const std::string &srcFile, const std::string &destUrl
         handleReceivedLines(0, 0); // finalize the last line of the response
 
         /* now extract transfer info */
-        double speed_upload, total_time;
-        curl_easy_getinfo(curlHandle, CURLINFO_SPEED_UPLOAD, &speed_upload);
-        curl_easy_getinfo(curlHandle, CURLINFO_TOTAL_TIME, &total_time);
+        double speedUpload, totalTime;
+        curl_easy_getinfo(curlHandle, CURLINFO_SPEED_UPLOAD, &speedUpload);
+        curl_easy_getinfo(curlHandle, CURLINFO_TOTAL_TIME, &totalTime);
 
-        if (Verbose) fprintf(stderr, "Speed: %.3f bytes/sec during %.3f seconds\n",
-                             speed_upload, total_time);
+        LOG_DEBUG("Speed: %.3f bytes/sec during %.3f seconds", speedUpload, totalTime);
 
     }
 
@@ -322,7 +317,7 @@ int Cookie::parse(std::string cookieLine)
     expiration = popToken(cookieLine, '\t');
     name = popToken(cookieLine, '\t');
     value = cookieLine;
-    LOGV("cookie: %s = %s\n", name.c_str(), value.c_str());
+    LOG_DEBUG("cookie: %s = %s", name.c_str(), value.c_str());
     return 0;
 }
 
@@ -330,7 +325,7 @@ void HttpRequest::performRequest()
 {
     CURLcode res;
 
-    LOGV("resource: %s%s\n", rooturl.c_str(), resourcePath.c_str());
+    LOG_DEBUG("resource: %s%s", rooturl.c_str(), resourcePath.c_str());
     res = curl_easy_perform(curlHandle);
 
     if(res != CURLE_OK) {
@@ -365,7 +360,7 @@ size_t HttpRequest::headerCallback(void *contents, size_t size, size_t nmemb, vo
     HttpRequest *hr = (HttpRequest*)userp;
     size_t realsize = size * nmemb;
 
-    LOGV("HDR: %s", (char*)contents);
+    LOG_DEBUG("HDR: %s", (char*)contents);
 
     if (hr->httpStatusCode == -1) {
         // this header should be the HTTP response code
@@ -425,8 +420,8 @@ void HttpRequest::openFile()
             exit(1);
         }
     }
-    LOGV("Opening file: %s\n", filename.c_str());
-    fd = fopen(filename.c_str(), "wbx");
+    LOG_DEBUG("Opening file: %s", filename.c_str());
+    fd = fopen(filename.c_str(), "wb");
     if (!fd) {
         fprintf(stderr, "Cannot create file '%s': %s\n", filename.c_str(), strerror(errno));
         exit(1);

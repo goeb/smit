@@ -71,10 +71,6 @@
   *
   */
 
-bool Verbose = false;
-
-#define LOGV(...) do { if (Verbose) { printf(__VA_ARGS__); fflush(stdout);} } while (0)
-
 int helpClone()
 {
     printf("Usage: smit clone [options] <url> <directory>\n"
@@ -107,12 +103,12 @@ int helpClone()
 
 int testSessid(const std::string url, const HttpClientContext &ctx)
 {
-    LOGV("testSessid(%s, %s)\n", url.c_str(), ctx.sessid.c_str());
+    LOG_DEBUG("testSessid(%s, %s)", url.c_str(), ctx.sessid.c_str());
 
     HttpRequest hr(ctx);
     hr.setUrl(url, "/");
     int status = hr.test();
-    LOGV("status = %d\n", status);
+    LOG_DEBUG("status = %d", status);
 
     if (status == 200) return 0;
     return -1;
@@ -123,7 +119,7 @@ int testSessid(const std::string url, const HttpClientContext &ctx)
   */
 int getProjects(const std::string &rooturl, const std::string &destdir, const HttpClientContext &ctx)
 {
-    LOGV("getProjects(%s, %s, %s)\n", rooturl.c_str(), destdir.c_str(), ctx.sessid.c_str());
+    LOG_DEBUG("getProjects(%s, %s, %s)", rooturl.c_str(), destdir.c_str(), ctx.sessid.c_str());
 
     HttpRequest hr(ctx);
     hr.setUrl(rooturl, "/");
@@ -141,36 +137,6 @@ struct PullContext {
     HttpClientContext httpCtx; // session identifier
     MergeStrategy mergeStrategy; // for pulling only, not cloning
 };
-
-/** Download entries, starting at the given iterator
-  *
-  * @param localDir
-  *    Specifies the location where the entries should be downloaded.
-  *    If empty, then the default location is used inside the local repository.
-  *
-  */
-void downloadEntries(const PullContext &pullCtx, const Project &p, const std::string &issueId,
-                     const std::list<std::string> &remoteEntries, std::list<std::string>::const_iterator reid,
-                     const std::string &localDir)
-{
-    LOGV("downloadEntries: %s ...\n", reid->c_str());
-    for ( ; reid != remoteEntries.end(); reid++) {
-        if (reid->empty()) continue; // directory listing may end by an empty line
-        std::string remoteEid = *reid;
-        std::string resourceDir = "/" + p.getUrlName() + "/issues/" + issueId;
-        std::string resource = resourceDir + "/" + remoteEid;
-
-        HttpRequest hr(pullCtx.httpCtx);
-        hr.setUrl(pullCtx.rooturl, resource);
-
-        std::string downloadDir = localDir;
-        if (downloadDir.empty()) downloadDir = pullCtx.localRepo + resourceDir;
-
-        // TODO download to tmp storage, then move (in order to have an atomic dowload)
-        std::string localEntryFile = downloadDir + "/" + remoteEid;
-        hr.downloadFile(localEntryFile);
-    }
-}
 
 /** Merge a local entry into a remote branch (downloaded locally)
   *
@@ -226,7 +192,7 @@ void mergeEntry(const Entry *localEntry, Issue &remoteIssue, const Issue &remote
                 continue;
             }
 
-            LOGV("Merge conflict: %s", propertyName.c_str());
+            LOG_DEBUG("Merge conflict: %s", propertyName.c_str());
             // there is a conflict: the remote side has changed this property,
             // but with a different value than the local entry
             isConflicting = true;
@@ -246,7 +212,7 @@ void mergeEntry(const Entry *localEntry, Issue &remoteIssue, const Issue &remote
                     newProperties[propertyName] = localValue;
                 } else {
                     // drop the local property
-                    LOGV("Local property dropped.");
+                    LOG_DEBUG("Local property dropped.");
                 }
             } else if (ms == MERGE_KEEP_LOCAL) {
                 // keep the local property
@@ -276,7 +242,7 @@ void mergeEntry(const Entry *localEntry, Issue &remoteIssue, const Issue &remote
             }
         } else if (isConflicting && ms == MERGE_DROP_LOCAL) {
             // drop the message
-            LOGV("Local message dropped.");
+            LOG_DEBUG("Local message dropped.");
         } else {
             // no conflict on the properties. keep the message unchanged
             newProperties[K_MESSAGE].push_back(localEntry->getMessage());
@@ -290,38 +256,6 @@ void mergeEntry(const Entry *localEntry, Issue &remoteIssue, const Issue &remote
         remoteIssue.addEntry(e);
         printf("New entry: %s\n", e->id.c_str());
     }
-}
-
-/** Download the entries of remote issue
-  */
-std::string downloadRemoteIssue(const PullContext &pullCtx, Project &p, const std::string &issueId,
-                                const std::list<std::string> &remoteEntries)
-{
-    // clone the issue to a temporary directory and download the remote entries
-
-    // clean up if previous aborted merging left a such temporary dir
-    std::string tmpPath = p.getTmpDir() + "/" + issueId;
-    LOGV("Removing directory: %s\n", tmpPath.c_str());
-    int r = removeDir(tmpPath);
-    if (r<0) exit(1);
-
-    // create the tmp dir
-    mode_t mode = S_IRUSR | S_IWUSR | S_IXUSR;
-    r = mg_mkdir(p.getTmpDir().c_str(), mode);
-    // if it could not be created because it already exists, ok, not an error
-    // if it could not be created for another reason, the following mkdir will fail
-    // if no error, ok, continue.
-
-    r = mg_mkdir(tmpPath.c_str(), mode);
-    if (r != 0) {
-        fprintf(stderr, "Cannot create tmp directory '%s': %s\n", tmpPath.c_str(), strerror(errno));
-        fprintf(stderr, "Abort.\n");
-        exit(1);
-    }
-
-    // download all the remaining remote entries
-    downloadEntries(pullCtx, p, issueId, remoteEntries, remoteEntries.begin(), tmpPath);
-    return tmpPath;
 }
 
 /** Manage the merging of conflicting entries of an issue
@@ -341,8 +275,8 @@ void handleConflictOnEntries(const PullContext &pullCtx, Project &p,
     Entry *re = remoteIssue.first;
     while (re && re->id != commonParent) re = re->next;
     if (!re) {
-        fprintf(stderr, "Cannot find remote common parent in locally downloaded issue: %s\n", commonParent.c_str());
-        fprintf(stderr, "Abort.\n");
+        LOG_ERROR("Cannot find remote common parent in locally downloaded issue: %s", commonParent.c_str());
+        LOG_ERROR("Abort.");
         exit(1);
     }
     Issue remoteConflictingIssuePart;
@@ -366,10 +300,10 @@ void handleConflictOnEntries(const PullContext &pullCtx, Project &p,
 
 /** Get a list of the entries of a remote issue
   */
-int getEntriesOfIssue(const PullContext &pullCtx, const Project &p, const Issue &i,
+int getEntriesOfRemoteIssue(const PullContext &pullCtx, const Project &p, const Issue &i,
                       std::list<std::string> &entries)
 {
-    std::string resource = "/" + p.getUrlName() + "/issues/" + i.id;
+    std::string resource = "/" + p.getUrlName() + "/" RESOURCE_ISSUES "/" + i.id;
     HttpRequest hr(pullCtx.httpCtx);
     hr.setUrl(pullCtx.rooturl, resource);
     hr.getRequestLines();
@@ -379,6 +313,7 @@ int getEntriesOfIssue(const PullContext &pullCtx, const Project &p, const Issue 
         // may happen if remote issue does not exist
         return -1;
     }
+    entries = hr.lines;
     return 0;
 }
 
@@ -386,6 +321,7 @@ int getEntriesOfIssue(const PullContext &pullCtx, const Project &p, const Issue 
   */
 void pullAttachedFiles(const PullContext &pullCtx, const Project &p, const Issue &i)
 {
+    LOG_DEBUG("Pulling attached files: issue %s", i.id.c_str());
     // get the remote files attached to a issue
     Entry *e = i.first;
     while (e) {
@@ -405,7 +341,7 @@ void pullAttachedFiles(const PullContext &pullCtx, const Project &p, const Issue
                     hr.setUrl(pullCtx.rooturl, resource);
                     hr.downloadFile(localPath);
                 } else {
-                    LOGV("Remote file already exists locally: %s", f->c_str());
+                    LOG_DEBUG("Remote file already exists locally: %s", f->c_str());
 
                 }
             }
@@ -423,15 +359,17 @@ void pullAttachedFiles(const PullContext &pullCtx, const Project &p, const Issue
   */
 int pullIssue(const PullContext &pullCtx, Project &p, const Issue &localIssue)
 {
+    LOG_DEBUG("Pulling %s/issues/%s", p.getName().c_str(), localIssue.id.c_str());
+
     // compare the remote and local issue
     // get the first entry of the issue
     // check conflict on issue id
 
     // get the entries of the remote issue
     std::list<std::string> remoteEntries;
-    int r = getEntriesOfIssue(pullCtx, p, localIssue, remoteEntries);
+    int r = getEntriesOfRemoteIssue(pullCtx, p, localIssue, remoteEntries);
     if (r != 0) {
-        fprintf(stderr, "Cannot get entries of remote issue %s", localIssue.id.c_str());
+        fprintf(stderr, "Cannot get entries of remote issue %s\n", localIssue.id.c_str());
         exit(1);
     }
     if (remoteEntries.empty()) {
@@ -466,7 +404,7 @@ int pullIssue(const PullContext &pullCtx, Project &p, const Issue &localIssue)
         // The remote issue and the local issue have not the same first entry
         // and therefore are not the same.
         // The local issue must be renamed.
-        LOGV("Issue %s: local and remote diverge", localIssue.id.c_str());
+        LOG_DEBUG("Issue %s: local and remote diverge", localIssue.id.c_str());
 
         // propose to the user a new id for the issue?
 
@@ -540,7 +478,7 @@ int pullProject(const PullContext &pullCtx, Project &p)
     FOREACH(issueId, hr.lines) {
         std::string id = *issueId;
         if (id.empty()) continue;
-        LOGV("Remote: %s/issues/%s\n", p.getName().c_str(), id.c_str());
+        LOG_DEBUG("Remote: %s/issues/%s", p.getName().c_str(), id.c_str());
 
         // get the issue with same id in local repository
         Issue i;
@@ -555,14 +493,13 @@ int pullProject(const PullContext &pullCtx, Project &p)
 
         if (r < 0) {
             // simply clone the remote issue
-            LOGV("Cloning issue: %s/issues/%s\n", p.getName().c_str(), id.c_str());
+            LOG_DEBUG("Cloning issue: %s/issues/%s", p.getName().c_str(), id.c_str());
             resource = "/" + p.getUrlName() + "/issues/" + id;
             HttpRequest hr(pullCtx.httpCtx);
             hr.setUrl(pullCtx.rooturl, resource);
             hr.setRepository(pullCtx.localRepo);
             hr.doCloning(true, 0);
         } else {
-            LOGV("Pulling issue: %s/issues/%s\n", p.getName().c_str(), id.c_str());
             pullIssue(pullCtx, p, i);
         }
     }
@@ -579,9 +516,6 @@ int pullProject(const PullContext &pullCtx, Project &p)
   */
 int pullProjects(const PullContext &pullCtx)
 {
-    // set log level to hide INFO logs
-    setLoggingLevel(LL_ERROR);
-
     // Load all local projects
     int r = dbLoad(pullCtx.localRepo.c_str());
     if (r < 0) {
@@ -628,7 +562,7 @@ std::string getSmitDir(const std::string &dir)
 
 void createSmitDir(const std::string &dir)
 {
-    LOGV("createSmitDir(%s)...\n", dir.c_str());
+    LOG_DEBUG("createSmitDir(%s)...", dir.c_str());
 
     mode_t mode = S_IRUSR | S_IWUSR | S_IXUSR;
     int r = mg_mkdir(getSmitDir(dir).c_str(), mode);
@@ -642,7 +576,7 @@ void createSmitDir(const std::string &dir)
 // store sessid in .smit/sessid
 void storeSessid(const std::string &dir, const std::string &sessid)
 {
-    LOGV("storeSessid(%s, %s)...\n", dir.c_str(), sessid.c_str());
+    LOG_DEBUG("storeSessid(%s, %s)...", dir.c_str(), sessid.c_str());
     std::string path = dir + "/" PATH_SESSID;
     int r = writeToFile(path.c_str(), sessid + "\n");
     if (r < 0) {
@@ -653,7 +587,7 @@ void storeSessid(const std::string &dir, const std::string &sessid)
 
 void storeUsername(const std::string &dir, const std::string &username)
 {
-    LOGV("storeUsername(%s, %s)...\n", dir.c_str(), username.c_str());
+    LOG_DEBUG("storeUsername(%s, %s)...", dir.c_str(), username.c_str());
     std::string path = dir + "/" PATH_USERNAME;
     int r = writeToFile(path.c_str(), username + "\n");
     if (r < 0) {
@@ -686,7 +620,7 @@ std::string loadSessid(const std::string &dir)
 // store url in .smit/remote
 void storeUrl(const std::string &dir, const std::string &url)
 {
-    LOGV("storeUrl(%s, %s)...\n", dir.c_str(), url.c_str());
+    LOG_DEBUG("storeUrl(%s, %s)...", dir.c_str(), url.c_str());
     std::string path = dir + "/" PATH_URL;
 
     int r = writeToFile(path.c_str(), url + "\n");
@@ -762,7 +696,7 @@ int cmdClone(int argc, char * const *argv)
             }
             break;
         case 'v':
-            Verbose = true;
+            setLoggingLevel(LL_DEBUG);
             break;
         case '?': // incorrect syntax, a message is printed by getopt_long
             return helpClone();
@@ -803,7 +737,7 @@ int cmdClone(int argc, char * const *argv)
     curl_global_init(CURL_GLOBAL_ALL);
 
     std::string sessid = signin(url, username, password, ctx);
-    LOGV("%s=%s\n", SESSID, sessid.c_str());
+    LOG_DEBUG("%s=%s", SESSID, sessid.c_str());
 
     if (sessid.empty()) {
         fprintf(stderr, "Authentication failed\n");
@@ -869,8 +803,7 @@ int cmdGet(int argc, char * const *argv)
             }
             break;
         case 'v':
-            Verbose = true;
-            HttpRequest::setVerbose(true);
+            setLoggingLevel(LL_DEBUG);
             break;
         case '?': // incorrect syntax, a message is printed by getopt_long
             return helpGet();
@@ -933,7 +866,7 @@ int cmdGet(int argc, char * const *argv)
         }
     }
 
-    LOGV("%s=%s\n", SESSID, ctx.sessid.c_str());
+    LOG_DEBUG("%s=%s", SESSID, ctx.sessid.c_str());
 
     // pull new entries and new attached files of all projects
     HttpRequest hr(ctx);
@@ -1013,8 +946,7 @@ int cmdPull(int argc, char * const *argv)
             }
             break;
         case 'v':
-            Verbose = true;
-            HttpRequest::setVerbose(true);
+            setLoggingLevel(LL_DEBUG);
             break;
         case '?': // incorrect syntax, a message is printed by getopt_long
             return helpPull();
@@ -1075,7 +1007,7 @@ int cmdPull(int argc, char * const *argv)
         }
     }
 
-    LOGV("%s=%s\n", SESSID, pullCtx.httpCtx.sessid.c_str());
+    LOG_DEBUG("%s=%s", SESSID, pullCtx.httpCtx.sessid.c_str());
 
     if (pullCtx.httpCtx.sessid.empty()) {
         fprintf(stderr, "Authentication failed\n");
@@ -1156,7 +1088,7 @@ int pushFirstEntry(const PullContext &pushCtx, const Project &project, const Iss
     int r = pushFile(pushCtx, localFile, url, response);
     if (r != 0) {
         // error
-        LOG_ERROR("%s: Could not push entry %s\n", project.getName().c_str(), e.id.c_str());
+        LOG_ERROR("%s: Could not push entry %s", project.getName().c_str(), e.id.c_str());
         exit(1);
     }
     // first line of response gives the new allocated issue id
@@ -1191,7 +1123,7 @@ int pushIssue(const PullContext &pushCtx, const Project &project, const Issue &i
 
     // TODO check if
     std::list<std::string> entries;
-    int r = getEntriesOfIssue(pushCtx, project, i, entries);
+    int r = getEntriesOfRemoteIssue(pushCtx, project, i, entries);
     if (r != 0) {
         // no such remote issue
         // push first entry
@@ -1201,7 +1133,7 @@ int pushIssue(const PullContext &pushCtx, const Project &project, const Issue &i
 
     } else if (entries.empty()) {
         // internal error, should not happen
-        LOG_ERROR("%s: error, empty entries for remote issue %s\n", project.getName().c_str(),
+        LOG_ERROR("%s: error, empty entries for remote issue %s", project.getName().c_str(),
                 i.id.c_str());
         exit(1);
 
@@ -1337,7 +1269,7 @@ int establishSession(const char *dir, const char *username, const char *password
         }
     }
 
-    LOGV("%s=%s\n", SESSID, ctx.httpCtx.sessid.c_str());
+    LOG_DEBUG("%s=%s", SESSID, ctx.httpCtx.sessid.c_str());
 
     if (ctx.httpCtx.sessid.empty()) {
         fprintf(stderr, "Authentication failed\n");
@@ -1363,8 +1295,7 @@ int cmdPush(int argc, char **argv)
     if (args->get("insecure")) pushCtx.httpCtx.tlsInsecure = true;
     pushCtx.httpCtx.tlsCacert = args->get("cacert");
     if (args->get("verbose")) {
-        Verbose = true;
-        HttpRequest::setVerbose(true);
+        setLoggingLevel(LL_DEBUG);
     }
     // manage non-option ARGV elements
     const char *dir = args->pop();

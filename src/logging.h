@@ -29,6 +29,7 @@ extern int LoggingOptions;
 
 inline void setLoggingLevel(LogLevel level) { LoggingLevel = level; }
 inline void setLoggingOption(int opt) { LoggingOptions |= opt; }
+inline LogLevel getLoggingLevel() { return LoggingLevel; }
 
 bool doPrint(enum LogLevel msgLevel);
 
