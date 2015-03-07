@@ -382,6 +382,39 @@ int getEntriesOfIssue(const PullContext &pullCtx, const Project &p, const Issue 
     return 0;
 }
 
+/** Pull the attached files of an issue
+  */
+void pullAttachedFiles(const PullContext &pullCtx, const Project &p, const Issue &i)
+{
+    // get the remote files attached to a issue
+    Entry *e = i.first;
+    while (e) {
+        PropertiesIt files = e->properties.find(K_FILE);
+        if (files != e->properties.end()) {
+            std::list<std::string>::const_iterator f;
+            FOREACH(f, files->second) {
+                // file is like: <object-id>/<basename>
+                std::string fid = *f;
+                std::string id = popToken(fid, '/');
+                std::string localPath = p.getObjectsDir() + "/" + Object::getSubpath(id);
+                if (!fileExists(localPath)) {
+                    // download the file
+                    printf("Downloading file %s...\n", f->c_str());
+                    HttpRequest hr(pullCtx.httpCtx);
+                    std::string resource = "/" + p.getUrlName() + "/" RESOURCE_FILES "/" + *f;
+                    hr.setUrl(pullCtx.rooturl, resource);
+                    hr.downloadFile(localPath);
+                } else {
+                    LOGV("Remote file already exists locally: %s", f->c_str());
+
+                }
+            }
+        }
+        e = e->next;
+    }
+}
+
+
 /** Pull an issue
   *
   * If the remote issue conflicts with a local issue (ie: they have not the same first entry):
@@ -402,7 +435,7 @@ int pullIssue(const PullContext &pullCtx, Project &p, const Issue &localIssue)
         exit(1);
     }
     if (remoteEntries.empty()) {
-        fprintf(stderr, "Cannot pull remote issue that has no entry: %s", localIssue.id.c_str());
+        fprintf(stderr, "Cannot pull remote issue that has no entry: %s\n", localIssue.id.c_str());
         return -1;
     }
 
@@ -481,59 +514,17 @@ int pullIssue(const PullContext &pullCtx, Project &p, const Issue &localIssue)
 
                 break; // leave the loop.
 
-
-            } // else nothing to do: local and remote still aligned
+            }
 
             // move the local entry pointer forward, except if already at the end
-            if (localEntry) localEntry = localEntry->next;
+            localEntry = localEntry->next;
+            remoteEntry = remoteEntry->next;
         }
     }
-
+    pullAttachedFiles(pullCtx, p, *remoteIssue);
     return 0; // ok
 }
 
-void pullAttachedFiles(const PullContext &pullCtx, Project &p)
-{
-    // get the remote files
-    HttpRequest hr(pullCtx.httpCtx);
-    std::string resourceFilesDir = "/" + p.getUrlName() + "/" K_UPLOADED_FILES_DIR "/";
-    hr.setUrl(pullCtx.rooturl, resourceFilesDir);
-    hr.getRequestLines();
-    hr.closeCurl(); // free the resource
-
-    std::string localFilesDir = pullCtx.localRepo + "/" + p.getUrlName() + "/" K_UPLOADED_FILES_DIR "/";
-
-    std::list<std::string>::iterator fileIt;
-    FOREACH(fileIt, hr.lines) {
-        std::string filename = *fileIt;
-        if (filename.empty()) continue;
-        LOGV("Remote: %s/%s\n", resourceFilesDir.c_str(), filename.c_str());
-
-        std::string localPath = localFilesDir + filename;
-        if (fileExists(localPath)) {
-            LOGV("File already exists locally: %s", localPath.c_str());
-            continue;
-        }
-
-        // download the file
-        printf("%s\n", filename.c_str());
-        std::string resource = resourceFilesDir + filename;
-        HttpRequest hr(pullCtx.httpCtx);
-        hr.setUrl(pullCtx.rooturl, resource);
-        std::string localTmpFile = p.getTmpDir() + "/" + filename;
-        mode_t mode = S_IRUSR | S_IWUSR | S_IXUSR;
-        mg_mkdir(p.getTmpDir().c_str(), mode);
-        hr.downloadFile(localTmpFile);
-        hr.closeCurl(); // free the resource
-
-        // move the file at the right place
-        int r = rename(localTmpFile.c_str(), localPath.c_str());
-        if (r != 0) {
-            LOG_ERROR("Cannot mv file '%s' -> '%s': %s", localTmpFile.c_str(), localPath.c_str(), strerror(errno));
-            exit(1);
-        }
-    }
-}
 
 
 int pullProject(const PullContext &pullCtx, Project &p)
@@ -575,9 +566,6 @@ int pullProject(const PullContext &pullCtx, Project &p)
             pullIssue(pullCtx, p, i);
         }
     }
-
-    // pull attached files
-    pullAttachedFiles(pullCtx, p);
 
     return 0; // ok
 }
