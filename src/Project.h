@@ -87,6 +87,7 @@ public:
     void updateMaxIssueId(uint32_t i);
     std::map<std::string, std::set<std::string> > getReverseAssociations(const std::string &issue) const;
     int insertIssue(Issue *i);
+    int storeRefIssue(const std::string &issueId, const std::string &entryId);
     std::string renameIssue(const std::string &oldId);
     int officializeMerging(const Issue &i);
 

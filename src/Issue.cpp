@@ -95,11 +95,12 @@ void Issue::addEntry(Entry *e)
   */
 void Issue::insertEntry(Entry* e)
 {
-    if (first) {
-        e->next = first;
-        first->prev = e;
+    if (latest) {
+        latest->prev = e;
+        e->next = latest;
+    } else {
+        latest = e;
     }
-    if (!latest) latest = e;
     first = e;
     e->issue = this;
 }

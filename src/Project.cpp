@@ -1125,6 +1125,16 @@ int Project::insertIssue(Issue *i)
     return 0;
 }
 
+int Project::storeRefIssue(const std::string &issueId, const std::string &entryId)
+{
+    std::string issuePath = path + "/" PATH_ISSUES "/" + issueId;
+    int r = writeToFile(issuePath.c_str(), entryId);
+    if (r!=0) {
+        LOG_ERROR("Cannot store issue %s", issueId.c_str());
+    }
+    return r;
+}
+
 /** Rename an issue (take the next available id)
   */
 std::string Project::renameIssue(const std::string &oldId)
@@ -1148,10 +1158,8 @@ std::string Project::renameIssue(const std::string &oldId)
     issues.erase(oldId);
 
     // store the new id on disk
-    std::string newIssuePath = path + "/" PATH_ISSUES "/" + newId;
-    int r = writeToFile(newIssuePath.c_str(), i->second->latest->id);
+    int r = storeRefIssue(newId, i->second->latest->id);
     if (r!=0) {
-        LOG_ERROR("Cannot rename issue: %s", newIssuePath.c_str());
         return "";
     }
 

@@ -374,8 +374,10 @@ Issue *cloneIssue(const PullContext &pullCtx, Project &p, const std::string &iss
         std::string localfile = p.getObjectsDir() + "/" + Entry::getSubpath(*remoteEntry);
         if (!fileExists(localfile)) {
             // file not existing locally: do download
+            printf("Pulling entry: %s\n", remoteEntry->c_str());
+
             HttpRequest hr(pullCtx.httpCtx);
-            std::string resource = "/" + p.getUrlName() + "/" RESOURCE_OBJECTS "/" + (*remoteEntry);
+            std::string resource = "/" + p.getUrlName() + "/" RESOURCE_FILES "/" + (*remoteEntry);
             hr.setUrl(pullCtx.rooturl, resource);
             hr.downloadFile(localfile);
         }
@@ -417,12 +419,13 @@ int pullIssue(const PullContext &pullCtx, Project &p, const Issue &localIssue)
         // The remote issue and the local issue have not the same first entry
         // and therefore are not the same.
         // The local issue must be renamed.
-        LOG_DEBUG("Issue %s: local and remote diverge: %s <> %s", localIssue.id.c_str(),
-                  localIssue.first->id.c_str(), remoteIssue->first->id.c_str());
 
         // propose to the user a new id for the issue?
 
         printf("Issue conflicting with remote: %s %s\n", localIssue.id.c_str(), localIssue.getSummary().c_str());
+        printf("Issue %s: local and remote diverge: %s <> %s", localIssue.id.c_str(),
+                  localIssue.first->id.c_str(), remoteIssue->first->id.c_str());
+
         std::string newId = p.renameIssue(localIssue.id);
         if (newId.empty()) {
             fprintf(stderr, "Cannot rename issue %s. Aborting\n", localIssue.id.c_str());
@@ -431,6 +434,10 @@ int pullIssue(const PullContext &pullCtx, Project &p, const Issue &localIssue)
 
         // inform the user
         printf("Local issue %s renamed %s (%s)\n", localIssue.id.c_str(), newId.c_str(), localIssue.getSummary().c_str());
+
+        // store new issue id
+        int r = p.storeRefIssue(remoteIssue->first->id, remoteIssue->latest->id);
+
 
     } else {
         // same issue. Walk through the entries...
