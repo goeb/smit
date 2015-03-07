@@ -125,7 +125,7 @@ Issue *Issue::load(const std::string &objectsDir, const std::string &latestEntry
     }
 
     if (error) {
-        // delete all enties and the issue
+        // delete all entries and the issue
         Entry *e = issue->first;
         while (e) {
             Entry *tobeDeleted = e;

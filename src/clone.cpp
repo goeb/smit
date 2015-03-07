@@ -338,8 +338,7 @@ void handleConflictOnEntries(const PullContext &pullCtx, Project &p,
     // compute the remote part of the issue that is conflicting with local entries
     std::string commonParent = conflictingLocalEntry->parent;
     // look for this parent in the remote issue
-    Entry *re = remoteIssue.latest;
-    while (re && re->prev) re = re->prev; // rewind
+    Entry *re = remoteIssue.first;
     while (re && re->id != commonParent) re = re->next;
     if (!re) {
         fprintf(stderr, "Cannot find remote common parent in locally downloaded issue: %s\n", commonParent.c_str());
@@ -389,7 +388,7 @@ int getEntriesOfIssue(const PullContext &pullCtx, const Project &p, const Issue 
   * - rename the local issue (thus changing its identifier)
   * - clone the remote issue
   */
-int pullIssue(const PullContext &pullCtx, Project &p, const Issue &i)
+int pullIssue(const PullContext &pullCtx, Project &p, const Issue &localIssue)
 {
     // compare the remote and local issue
     // get the first entry of the issue
@@ -397,21 +396,21 @@ int pullIssue(const PullContext &pullCtx, Project &p, const Issue &i)
 
     // get the entries of the remote issue
     std::list<std::string> remoteEntries;
-    int r = getEntriesOfIssue(pullCtx, p, i, remoteEntries);
+    int r = getEntriesOfIssue(pullCtx, p, localIssue, remoteEntries);
     if (r != 0) {
-        fprintf(stderr, "Cannot get entries of remote issue %s", i.id.c_str());
+        fprintf(stderr, "Cannot get entries of remote issue %s", localIssue.id.c_str());
         exit(1);
     }
     if (remoteEntries.empty()) {
-        fprintf(stderr, "Cannot pull remote issue that has no entry: %s", i.id.c_str());
+        fprintf(stderr, "Cannot pull remote issue that has no entry: %s", localIssue.id.c_str());
         return -1;
     }
 
     // download all remote entries
     std::list<std::string>::const_iterator remoteEntry;
+    std::string latest;
     FOREACH(remoteEntry, remoteEntries) {
-        std::string localfile = pullCtx.localRepo + '/' + p.getUrlName() + '/' + PATH_OBJECTS + '/';
-        localfile += Entry::getSubpath(*remoteEntry);
+        std::string localfile = p.getObjectsDir() + "/" + Entry::getSubpath(*remoteEntry);
         if (!fileExists(localfile)) {
             // file not existing locally: do download
             HttpRequest hr(pullCtx.httpCtx);
@@ -419,37 +418,37 @@ int pullIssue(const PullContext &pullCtx, Project &p, const Issue &i)
             hr.setUrl(pullCtx.rooturl, resource);
             hr.downloadFile(localfile);
         }
+        latest = *remoteEntry;
     }
 
-    // get first entry of local issue
-    const Entry *e = i.first;
-    if (!e) {
-        // should not happen
-        fprintf(stderr, "Got local issue with no first entry: %s", i.id.c_str());
+    // Load the remote issue from its latest entry
+    Issue *remoteIssue = Issue::load(p.getObjectsDir(), latest);
+    if (!remoteIssue) {
+        fprintf(stderr, "Cannot load remote issue from latest %s", latest.c_str());
         exit(1);
     }
 
-    const Entry *localEntry = e;
+    if (localIssue.first->id != remoteIssue->first->id) {
 
-    if (localEntry->id != remoteEntries.front())  {
-        // the remote issue and the local issue are not the same
-        // the local issue has to be renamed
-        LOGV("Issue %s: local (%s) and remote (%s) diverge", i.id.c_str(),
-             localEntry->id.c_str(), remoteEntries.front().c_str());
-        // propose to the user a new id for the issue
+        // The remote issue and the local issue have not the same first entry
+        // and therefore are not the same.
+        // The local issue must be renamed.
+        LOGV("Issue %s: local and remote diverge", localIssue.id.c_str());
 
-        printf("Issue conflicting with remote: %s %s\n", i.id.c_str(), i.getSummary().c_str());
-        std::string newId = p.renameIssue(i.id);
+        // propose to the user a new id for the issue?
+
+        printf("Issue conflicting with remote: %s %s\n", localIssue.id.c_str(), localIssue.getSummary().c_str());
+        std::string newId = p.renameIssue(localIssue.id);
         if (newId.empty()) {
-            fprintf(stderr, "Cannot rename issue %s. Aborting", i.id.c_str());
+            fprintf(stderr, "Cannot rename issue %s. Aborting", localIssue.id.c_str());
             exit(1);
         }
 
         // inform the user
-        printf("Local issue %s renamed %s (%s)\n", i.id.c_str(), newId.c_str(), i.getSummary().c_str());
+        printf("Local issue %s renamed %s (%s)\n", localIssue.id.c_str(), newId.c_str(), localIssue.getSummary().c_str());
 
         // store the id of the remote issue
-        std::string localIssuePath = pullCtx.localRepo + '/' + p.getUrlName() + '/' + PATH_ISSUES + '/' + i.id;
+        std::string localIssuePath = pullCtx.localRepo + '/' + p.getUrlName() + '/' + PATH_ISSUES + '/' + localIssue.id;
         int r = writeToFile(localIssuePath.c_str(), remoteEntries.back());
         if (!r) {
             LOG_ERROR("Cannot create issue: %s", localIssuePath.c_str());
@@ -459,33 +458,26 @@ int pullIssue(const PullContext &pullCtx, Project &p, const Issue &i)
     } else {
         // same issue. Walk through the entries...
 
-        std::list<std::string>::const_iterator reid;
-        FOREACH(reid, remoteEntries) {
-            std::string remoteEid = *reid;
-            if (remoteEid.empty()) continue; // ignore (usually last item in the directory listing)
+        Entry *localEntry = localIssue.first;
+        Entry *remoteEntry = remoteIssue->first;
+        while (1) {
 
             if (!localEntry) {
                 // remote issue has more entries. they are already downloaded...
                 // pulling completed.
                 break;
 
-            } else if (localEntry->id != remoteEid) {
+            } else if (!remoteEntry) {
+                // local issue has more entries.
+                // pulling complete
+                break;
+
+            } else if (localEntry->id != remoteEntry->id) {
 
                 // remote: a--b--c--d
                 // local:  a--b--e
 
-                // load this remote issue in memory
-                Issue *remoteIssue = Issue::load(p.getObjectsDir(), remoteEntries.back());
-;
-                if (!remoteIssue) {
-                    // an error occurred. Maybe an entry of the remote issue is invalid or missing
-                    fprintf(stderr, "Cannot load downloaded issue from entry %s\n", remoteEntries.back().c_str());
-                    fprintf(stderr, "Abort.\n");
-                    exit(1);
-
-                }
-
-                handleConflictOnEntries(pullCtx, p, i, localEntry, *remoteIssue);
+                handleConflictOnEntries(pullCtx, p, localIssue, localEntry, *remoteIssue);
 
                 break; // leave the loop.
 
