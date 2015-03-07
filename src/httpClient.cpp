@@ -63,6 +63,8 @@ void HttpRequest::downloadFile(const std::string &localPath)
     curl_easy_setopt(curlHandle, CURLOPT_WRITEDATA, (void *)this);
     curl_easy_setopt(curlHandle, CURLOPT_WRITEFUNCTION, downloadCallback);
 
+    mkdirs(getDirname(localPath));
+
     // download to tmp file, then rename at the end.
     std::string tmp = getTmpPath(localPath);
     filename = tmp;
@@ -491,7 +493,8 @@ void HttpRequest::handleReceivedLines(const char *data, size_t size)
 {
     if (data == 0) {
         // finalize the currentLine and return
-        lines.push_back(currentLine);
+        // do not push empty lines if it is a diectory listing
+        if (!isDirectory || !currentLine.empty()) lines.push_back(currentLine);
         currentLine.clear();
     }
     size_t i = 0;
@@ -503,7 +506,8 @@ void HttpRequest::handleReceivedLines(const char *data, size_t size)
             if (i > 0 && data[i-1] == '\r') endl--;
 
             currentLine.append(data + notConsumedOffset, endl-notConsumedOffset);
-            lines.push_back(currentLine);
+            // do not push empty lines if it is a diectory listing
+            if (!isDirectory || !currentLine.empty()) lines.push_back(currentLine);
             currentLine.clear();
             notConsumedOffset = i+1;
         }

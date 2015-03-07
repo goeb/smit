@@ -271,7 +271,7 @@ int Project::loadIssues()
         while (e) {
             std::map<std::string, Entry*>::const_iterator otherEntry = entries.find(e->id);
             if (otherEntry != entries.end()) {
-                LOG_ERROR("duplate entry (merge not complete ?) TODO");
+                LOG_ERROR("duplicate entry (merge not complete ?) TODO");
                 // TODO
             }
             entries[e->id] = e; // store in the global table
@@ -1106,16 +1106,35 @@ std::map<std::string, std::set<std::string> > Project::getReverseAssociations(co
     else return raIssue->second;
 }
 
+int Project::insertIssue(Issue *i)
+{
+    if (!i) {
+        LOG_ERROR("Cannot insert null issue in project");
+        return -1;
+    }
+
+    std::map<std::string, Issue*>::const_iterator existingIssue;
+    existingIssue = issues.find(i->id);
+    if (existingIssue != issues.end()) {
+        LOG_ERROR("Cannot insert issue %s: already in database", i->id.c_str());
+        return -2;
+    }
+
+    // add the issue in the table
+    issues[i->id] = i;
+    return 0;
+}
+
 /** Rename an issue (take the next available id)
   */
-std::string Project::renameIssue(const std::string &id)
+std::string Project::renameIssue(const std::string &oldId)
 {
     ScopeLocker scopeLocker(locker, LOCK_READ_WRITE);
     //
     std::map<std::string, Issue*>::const_iterator i;
-    i = issues.find(id);
+    i = issues.find(oldId);
     if (i == issues.end()) {
-        LOG_ERROR("Cannot rename issue %s: not in database", id.c_str());
+        LOG_ERROR("Cannot rename issue %s: not in database", oldId.c_str());
         return "";
     }
 
@@ -1126,16 +1145,23 @@ std::string Project::renameIssue(const std::string &id)
     issues[newId] = i->second;
 
     // delete the old slot
-    issues.erase(id);
+    issues.erase(oldId);
 
-    // move the directory on persistent storage
-    std::string oldpath = getPath() + "/" PATH_ISSUES "/" + id;
-    std::string newpath = getPath() + "/" PATH_ISSUES "/" + newId;
-    int r = rename(oldpath.c_str(), newpath.c_str());
-    if (r != 0) {
-        LOG_ERROR("Cannot move directory of entry %s to %s", oldpath.c_str(), newpath.c_str());
+    // store the new id on disk
+    std::string newIssuePath = path + "/" PATH_ISSUES "/" + newId;
+    int r = writeToFile(newIssuePath.c_str(), i->second->latest->id);
+    if (r!=0) {
+        LOG_ERROR("Cannot rename issue: %s", newIssuePath.c_str());
         return "";
     }
+
+    // unlink the old issue
+    std::string oldIssuePath = path + "/" PATH_ISSUES "/" + oldId;
+    r = unlink(oldIssuePath.c_str());
+    if (r!=0) {
+        LOG_ERROR("Cannot unlink %s: %s", oldIssuePath.c_str(), strerror(errno));
+    }
+
     return newId;
 }
 
