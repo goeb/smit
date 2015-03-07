@@ -88,7 +88,7 @@ find "$dstDir" -name project | while read p; do
     # at this moment, the objects are all the entries
     # <sha1>.file.pdf => <sha1>/file.pdf
     find "$pDir/objects" -type f | while read entry; do
-       sed -i -e "/+file/ s;\.;/;" $entry
+    sed -i -e "/+file/ s; \([0-9a-zA-Z]*\)\.; \1/;g" $entry
     done
 
     # change files
