@@ -89,7 +89,6 @@ public:
     int insertIssue(Issue *i);
     int storeRefIssue(const std::string &issueId, const std::string &entryId);
     std::string renameIssue(const std::string &oldId);
-    int officializeMerging(const Issue &i);
 
     // methods for handling entries
     int addEntry(PropertiesMap properties, std::string &iid, std::string &eid, std::string username);

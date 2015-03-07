@@ -262,7 +262,7 @@ void mergeEntry(const Entry *localEntry, Issue &remoteIssue, const Issue &remote
   *
   */
 void handleConflictOnEntries(const PullContext &pullCtx, Project &p,
-                             const Issue &localIssue, const Entry *conflictingLocalEntry,
+                             const Entry *conflictingLocalEntry,
                              Issue &remoteIssue)
 {
     // remote: a--b--c--d
@@ -292,10 +292,6 @@ void handleConflictOnEntries(const PullContext &pullCtx, Project &p,
         mergeEntry(conflictingLocalEntry, remoteIssue, remoteConflictingIssuePart, pullCtx.mergeStrategy);
         conflictingLocalEntry = conflictingLocalEntry->next;
     }
-
-    // move the merge issue from tmp to official storage
-    p.officializeMerging(remoteIssue);
-    // no need to update the issue in memory, as it will not be re-accessed during the smit pulling
 }
 
 /** Get a list of the entries of a remote issue
@@ -436,7 +432,8 @@ int pullIssue(const PullContext &pullCtx, Project &p, const Issue &localIssue)
         printf("Local issue %s renamed %s (%s)\n", localIssue.id.c_str(), newId.c_str(), localIssue.getSummary().c_str());
 
         // store new issue id
-        int r = p.storeRefIssue(remoteIssue->first->id, remoteIssue->latest->id);
+        int r = p.storeRefIssue(remoteIssue->id, remoteIssue->latest->id);
+        if (r != 0) exit(1);
 
 
     } else {
@@ -448,12 +445,15 @@ int pullIssue(const PullContext &pullCtx, Project &p, const Issue &localIssue)
 
             if (!localEntry) {
                 // remote issue has more entries. they are already downloaded...
-                // pulling completed.
+                // entry-pulling completed.
+                int r = p.storeRefIssue(remoteIssue->id, remoteIssue->latest->id);
+                if (r != 0) exit(1);
+
                 break;
 
             } else if (!remoteEntry) {
                 // local issue has more entries.
-                // pulling complete
+                // entry-pulling complete
                 break;
 
             } else if (localEntry->id != remoteEntry->id) {
@@ -461,7 +461,11 @@ int pullIssue(const PullContext &pullCtx, Project &p, const Issue &localIssue)
                 // remote: a--b--c--d
                 // local:  a--b--e
 
-                handleConflictOnEntries(pullCtx, p, localIssue, localEntry, *remoteIssue);
+                handleConflictOnEntries(pullCtx, p, localEntry, *remoteIssue);
+
+                // TODO check if the issue must be inserted in memory or not
+                int r = p.storeRefIssue(remoteIssue->id, remoteIssue->latest->id);
+                if (r != 0) exit(1);
 
                 break; // leave the loop.
 

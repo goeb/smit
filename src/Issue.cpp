@@ -55,7 +55,10 @@ std::string Issue::getSummary() const
     return getProperty(properties, "summary");
 }
 
-
+/** Add an entry at the end
+  *
+  * This updates the latest entry.
+  */
 void Issue::addEntryInTable(Entry *e)
 {
     // modification time of the issue it the creation time of the latest entry
@@ -71,14 +74,12 @@ void Issue::addEntryInTable(Entry *e)
     }
     latest = e;
     e->issue = this;
-
 }
 
 /** Add an entry
   *
   * This does:
   * - update the issue in memory
-  * - store the on persistent storage
   */
 void Issue::addEntry(Entry *e)
 {
@@ -95,12 +96,14 @@ void Issue::addEntry(Entry *e)
   */
 void Issue::insertEntry(Entry* e)
 {
-    if (latest) {
-        latest->prev = e;
-        e->next = latest;
-    } else {
-        latest = e;
+    if (!latest) latest = e;
+
+    if (first) {
+        // insert before the first
+        first->prev = e;
+        e->next = first;
     }
+
     first = e;
     e->issue = this;
 }

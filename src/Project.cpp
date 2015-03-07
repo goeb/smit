@@ -1173,51 +1173,6 @@ std::string Project::renameIssue(const std::string &oldId)
     return newId;
 }
 
-/** Officialize the merging of an issue during a pulling
-  *
-  * move away the local issue : $PROJECT/issues/$ID -> $PROJECT/issues/$ID.merge-pending
-  * move the merged issue : $PROJECT/tmp/$ID -> $PROJECT/issues/$ID
-  * remove the obsolete local issue : $PROJECT/issues/$ID.merge-pending
-  *
-  * This must be called from a single-thread smit-pull command. No need for mutex.
-  */
-int Project::officializeMerging(const Issue &i)
-{
-    std::string officialIssuePath = getPath() + "/" PATH_ISSUES "/" + i.id;
-    std::string pathMergePending = officialIssuePath + K_MERGE_PENDING;
-    if (fileExists(pathMergePending)) {
-        // the cause of this error might be the interruption of a previous merging
-        // TODO in order to repair this, the db.load should fix this (at startup)
-        LOG_ERROR("Cannot officialize pulling, impeding file: %s", pathMergePending.c_str());
-        return -1;
-    }
-    // move away the local issue : $PROJECT/issues/$ID -> $PROJECT/issues/$ID.merge-pending
-    int r = rename(officialIssuePath.c_str(), pathMergePending.c_str());
-    if (r != 0) {
-        LOG_ERROR("Cannot move directory of issue %s to %s: %s",
-                  officialIssuePath.c_str(), pathMergePending.c_str(), strerror(errno));
-        return -1;
-    }
-
-    // move the merged issue : $PROJECT/tmp/$ID -> $PROJECT/issues/$ID
-    std::string oldpath = i.path;
-    r = rename(oldpath.c_str(), officialIssuePath.c_str());
-    if (r != 0) {
-        LOG_ERROR("Cannot move directory of issue %s to %s", oldpath.c_str(),
-                  officialIssuePath.c_str());
-        return -1;
-    }
-
-    // remove the obsolete local issue : $PROJECT/issues/$ID.merge-pending
-    r = removeDir(pathMergePending);
-    if (r != 0) {
-        LOG_ERROR("Cannot remove directory: %s", pathMergePending.c_str());
-        return -1;
-    }
-    return 0;
-}
-
-
 
 /**
   * issues may be a list of 1 empty string, meaning that associations have been removed
