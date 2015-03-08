@@ -354,11 +354,12 @@ void pullAttachedFiles(const PullContext &pullCtx, const Project &p, const Issue
                 std::string localPath = p.getObjectsDir() + "/" + Object::getSubpath(id);
                 if (!fileExists(localPath)) {
                     // download the file
-                    printf("Downloading file %s...\n", f->c_str());
+                    printf("Pulling file %s...\n", f->c_str());
                     HttpRequest hr(pullCtx.httpCtx);
                     std::string resource = "/" + p.getUrlName() + "/" RESOURCE_FILES "/" + *f;
                     hr.setUrl(pullCtx.rooturl, resource);
-                    hr.downloadFile(localPath);
+                    int r = hr.downloadFile(localPath);
+                    if (r!=0) LOG_ERROR("Cannot get file: %s", resource.c_str());
                 } else {
                     LOG_DEBUG("Remote file already exists locally: %s", f->c_str());
 
@@ -396,7 +397,9 @@ Issue *cloneIssue(const PullContext &pullCtx, Project &p, const std::string &iss
             HttpRequest hr(pullCtx.httpCtx);
             std::string resource = "/" + p.getUrlName() + "/" RESOURCE_FILES "/" + (*remoteEntry);
             hr.setUrl(pullCtx.rooturl, resource);
-            hr.downloadFile(localfile);
+            int r = hr.downloadFile(localfile);
+            if (r!=0) LOG_ERROR("Cannot get file: %s", resource.c_str());
+
         }
         latest = *remoteEntry;
     }
@@ -543,6 +546,8 @@ int pullProject(const PullContext &pullCtx, Project &p)
             // store issue ref on disk
             r = p.storeRefIssue(id, i->latest->id);
             if (r != 0) exit(1);
+
+            pullAttachedFiles(pullCtx, p, *i);
 
         } else {
             pullIssue(pullCtx, p, i);

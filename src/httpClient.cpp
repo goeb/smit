@@ -57,7 +57,7 @@ void HttpRequest::getFileStdout()
 
 }
 
-void HttpRequest::downloadFile(const std::string &localPath)
+int HttpRequest::downloadFile(const std::string &localPath)
 {
     LOG_DEBUG("downloadFile: resourcePath=%s", resourcePath.c_str());
     curl_easy_setopt(curlHandle, CURLOPT_WRITEDATA, (void *)this);
@@ -81,13 +81,18 @@ void HttpRequest::downloadFile(const std::string &localPath)
             closeFile();
         }
     }
-    int r = rename(tmp.c_str(), localPath.c_str());
-    if (r != 0) {
-        LOG_ERROR("Cannot rename after download '%s' -> '%s': %s",
-                  tmp.c_str(), localPath.c_str(), strerror(errno));
-        exit(1);
-    }
+    if (httpStatusCode == 200) {
+        int r = rename(tmp.c_str(), localPath.c_str());
+        if (r != 0) {
+            LOG_ERROR("Cannot rename after download '%s' -> '%s': %s",
+                      tmp.c_str(), localPath.c_str(), strerror(errno));
+            exit(1);
+        }
+        return 0;
 
+    } else {
+        return -1;
+    }
 }
 
 
@@ -462,6 +467,9 @@ void HttpRequest::handleReceiveFileOrDirectory(void *data, size_t size)
 
 void HttpRequest::handleDownload(void *data, size_t size)
 {
+    // if error, then do not store anything in the file
+    if (httpStatusCode != 200) return;
+
     if (!fd) openFile();
 
     if (size) {
