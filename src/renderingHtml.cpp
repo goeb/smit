@@ -1603,16 +1603,16 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
         }
 
         // link to raw entry
-        ctx.req->printf("(<a href=\"/%s/issues/%s/%s\" class=\"sm_entry_raw\">%s</a>",
+        ctx.req->printf("(<a href=\"/%s/" RESOURCE_FILES "/%s\" class=\"sm_entry_raw\">%s</a>",
                         ctx.getProject().getUrlName().c_str(),
-                        urlEncode(issue.id).c_str(), urlEncode(ee.id).c_str(), _("raw"));
+                        urlEncode(ee.id).c_str(), _("raw"));
         // link to possible amendments
         int i = 1;
         std::list<std::string>::const_iterator a;
         FOREACH(a, ee.amendments) {
-            ctx.req->printf(", <a href=\"/%s/issues/%s/%s\" class=\"sm_entry_raw\">%s%d</a>",
+            ctx.req->printf(", <a href=\"/%s/" RESOURCE_FILES "/%s\" class=\"sm_entry_raw\">%s%d</a>",
                             ctx.getProject().getUrlName().c_str(),
-                            urlEncode(issue.id).c_str(), urlEncode(*a).c_str(), _("amend"), i);
+                            urlEncode(*a).c_str(), _("amend"), i);
             i++;
         }
         ctx.req->printf(")");
