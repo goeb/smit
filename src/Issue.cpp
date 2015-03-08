@@ -68,11 +68,14 @@ void Issue::addEntryInTable(Entry *e)
     if (!latest) ctime = e->ctime;
 
     // update the chain list of entries
+    if (!first) first = e;
+
     e->prev = latest;
     if (latest) {
         latest->next = e;
     }
     latest = e;
+
     e->issue = this;
 }
 
