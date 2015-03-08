@@ -464,17 +464,17 @@ int pullIssue(const PullContext &pullCtx, Project &p, const Issue &localIssue)
         Entry *remoteEntry = remoteIssue->first;
         while (1) {
 
-            if (!localEntry) {
+            if (!remoteEntry) {
+                // local issue has the same entries as the remote, or more.
+                // entry-pulling complete
+                break;
+
+            } else if (!localEntry) {
                 // remote issue has more entries. they are already downloaded...
                 // entry-pulling completed.
                 int r = p.storeRefIssue(remoteIssue->id, remoteIssue->latest->id);
                 if (r != 0) exit(1);
 
-                break;
-
-            } else if (!remoteEntry) {
-                // local issue has more entries.
-                // entry-pulling complete
                 break;
 
             } else if (localEntry->id != remoteEntry->id) {
@@ -540,6 +540,10 @@ int pullProject(const PullContext &pullCtx, Project &p)
                 LOG_ERROR("Cannot add cloned issue: %s", id.c_str());
                 exit(1);
             }
+            // store issue ref on disk
+            r = p.storeRefIssue(id, i->latest->id);
+            if (r != 0) exit(1);
+
         } else {
             pullIssue(pullCtx, p, i);
         }
