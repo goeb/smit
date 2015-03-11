@@ -215,10 +215,10 @@ int cmdProject(int argc, char **argv)
             return 1;
         }
         // list projects
-        const Project *p = Database::Db.getNext(0);
+        const Project *p = Database::Db.getNextProject(0);
         while (p) {
             printf("%s: %d issues\n", p->getName().c_str(), p->getNumIssues());
-            p = Database::Db.getNext(p);
+            p = Database::Db.getNextProject(p);
         }
         printf("%lu project(s)\n", L(Database::Db.getNumProjects()));
         return 0;

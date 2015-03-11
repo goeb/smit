@@ -1238,38 +1238,22 @@ int pushProjects(const PullContext &pushCtx)
 
     // for each local project, push it
 
-    const Project *p = Database::Db.getNext(0);
+    const Project *p = Database::Db.getNextProject(0);
     while (p) {
         pushProject(pushCtx, *p);
-        p = Database::Db.getNext(p);
+        p = Database::Db.getNextProject(p);
     }
     return 0;
 }
 
-Args *setupPushOptions()
-{
-    Args *args = new Args();
-    args->setDescription("Push local changes to a remote repository.");
-    args->setUsage("smit push [options] [<local-repository>]");
-    args->setOpt("verbose", 'v', "be verbose", 0);
-    args->setOpt("user", 0, "specify user name", 1);
-    args->setOpt("passwd", 0, "specify password", 1);
-    args->setOpt("insecure", 0, "do not verify the server certificate", 0);
-    args->setOpt("cacert", 0,
-                 "specify the CA certificate, in PEM format, for authenticating the server\n"
-                 "(HTTPS only)", 1);
-    args->setNonOptionLimit(1);
-    return args;
-}
 
-int helpPush(const Args *args)
-{
-    if (!args) args = setupPushOptions();
-    args->usage(true);
-    return 1;
-}
-
-/**
+/** Sign-in or reuse existing cookie
+  *
+  * @param username
+  *    Optional. If not given, try to use the cookie.
+  *
+  *
+  * @param ctx IN/OUT
   */
 int establishSession(const char *dir, const char *username, const char *password, PullContext &ctx)
 {
@@ -1332,6 +1316,29 @@ void terminateSession()
     curl_global_cleanup();
 }
 
+Args *setupPushOptions()
+{
+    Args *args = new Args();
+    args->setDescription("Push local changes to a remote repository.");
+    args->setUsage("smit push [options] [<local-repository>]");
+    args->setOpt("verbose", 'v', "be verbose", 0);
+    args->setOpt("user", 0, "specify user name", 1);
+    args->setOpt("passwd", 0, "specify password", 1);
+    args->setOpt("insecure", 0, "do not verify the server certificate", 0);
+    args->setOpt("cacert", 0,
+                 "specify the CA certificate, in PEM format, for authenticating the server\n"
+                 "(HTTPS only)", 1);
+    args->setNonOptionLimit(1);
+    return args;
+}
+
+int helpPush(const Args *args)
+{
+    if (!args) args = setupPushOptions();
+    args->usage(true);
+    return 1;
+}
+
 int cmdPush(int argc, char **argv)
 {
     PullContext pushCtx;
@@ -1364,7 +1371,7 @@ int cmdPush(int argc, char **argv)
     int r = establishSession(dir, username, password, pushCtx);
     if (r != 0) return 1;
 
-    // pull new entries and new attached files of all projects
+    // push new entries and new attached files of all projects
     pushCtx.localRepo = dir;
     r = pushProjects(pushCtx);
 
