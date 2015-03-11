@@ -36,9 +36,9 @@ init() {
     $SMIT issue $REPO/$PROJECT1 -a 1 status=open
     # create issue 2
     $SMIT issue $REPO/$PROJECT2 -a - "summary=p2: second issue" color=yellow
-    mkdir $REPO/$PROJECT1/objects/00
+    mkdir -p $REPO/$PROJECT1/objects/00
     echo file1 > $REPO/$PROJECT1/objects/00/file1
-    mkdir $REPO/$PROJECT2/objects/00
+    mkdir -p $REPO/$PROJECT2/objects/00
     echo file2 > $REPO/$PROJECT2/objects/00/file2
     # issue 3
     $SMIT issue $REPO/$PROJECT1 -a - "summary=p1: third issue"
