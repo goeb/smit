@@ -353,3 +353,10 @@ std::string getTmpPath(const std::string &path)
     std::string base = getBasename(path);
     return dir + "/." + base + ".tmp";
 }
+
+int cmpFiles(const std::string &srcPath, const std::string &destPath)
+{
+    // TODO
+    return 0;
+}
+

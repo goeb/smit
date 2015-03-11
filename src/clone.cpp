@@ -1085,43 +1085,6 @@ int pushFile(const PullContext &pushCtx, const std::string localFile, const std:
     return r;
 }
 
-int pushAttachedFiles(const PullContext &pushCtx, const Project &p)
-{
-    // get the remote files
-    HttpRequest hr(pushCtx.httpCtx);
-    std::string resourceFilesDir = "/" + p.getUrlName() + "/" K_UPLOADED_FILES_DIR "/";
-    hr.setUrl(pushCtx.rooturl, resourceFilesDir);
-    hr.getRequestLines();
-    hr.closeCurl(); // free the resource
-
-    // for each local file, if not existing remotely, the upload it
-    std::string localFilesDir = pushCtx.localRepo + "/" + p.getUrlName() + "/" K_UPLOADED_FILES_DIR;
-
-    DIR *d = openDir(localFilesDir.c_str());
-    if (!d) {
-        LOG_ERROR("Cannot open directory %s: %s", localFilesDir.c_str(), strerror(errno));
-        return -1;
-    }
-
-    while (1) {
-        std::string filename = getNextFile(d);
-        if (filename.empty()) break;
-        std::list<std::string>::const_iterator i;
-        i = std::find(hr.lines.begin(), hr.lines.end(), filename);
-        if (i == hr.lines.end()) {
-            printf("pushing attached file: %s\n", filename.c_str());
-            std::string localFile = localFilesDir + '/' + filename;
-            std::string url = pushCtx.rooturl + resourceFilesDir + '/' + filename;
-            std::string response; // not used in this context
-            int r = pushFile(pushCtx, localFile, url, response);
-            if (r != 0) exit(1);
-        }
-    }
-
-    closeDir(d);
-    return 0;
-}
-
 /** Push the first entry of an issue.
   *
   * @param i
@@ -1206,13 +1169,7 @@ int pushProject(const PullContext &pushCtx, const Project &project)
 {
     printf("pushing project %s...\n", project.getName().c_str());
 
-    // pushFiles:
-    // - get list of remote files
-    // - upload local files missing on the remote side
-    int r = pushAttachedFiles(pushCtx, project);
-    if (r != 0) return r;
-
-    // push issues
+    // get all local issues and push them
     std::map<std::string, std::list<std::string> > filterIn;
     std::map<std::string, std::list<std::string> > filterOut;
 
@@ -1221,7 +1178,7 @@ int pushProject(const PullContext &pushCtx, const Project &project)
     std::vector<const Issue*>::const_iterator it;
     FOREACH(it, issues) {
         const Issue* i = *it;
-        r = pushIssue(pushCtx, project, *i);
+        int r = pushIssue(pushCtx, project, *i);
         if (r != 0) return r;
     }
     return 0;

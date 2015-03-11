@@ -31,5 +31,7 @@ int removeDir(const std::string &path);
 int copyFile(const std::string &srcPath, const std::string &destPath);
 std::string getTmpPath(const std::string &path);
 
+int cmpFiles(const std::string &srcPath, const std::string &destPath);
+
 
 #endif

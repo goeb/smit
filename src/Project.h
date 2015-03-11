@@ -25,7 +25,6 @@
 #define K_SUMMARY "summary"
 #define K_AMEND "+amend"
 
-#define K_UPLOADED_FILES_DIR "files"
 #define K_PROJECT_TMP "tmp"
 
 #define DELETE_DELAY_S (10*60) // seconds
@@ -119,8 +118,7 @@ public:
     inline std::string getIssuesDir() const { return path + '/' + PATH_ISSUES; }
 
     // methods for handling attached files
-    inline std::string getPathUploadedFiles() const { return path + "/" + K_UPLOADED_FILES_DIR; }
-    int addFile(const std::string &basename);
+    int addFile(const std::string &objectId);
 
     // methods for handling views
     PredefinedView getPredefinedView(const std::string &name);

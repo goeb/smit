@@ -884,22 +884,31 @@ int Project::reload()
   *     -2: file name does not match hash of the file contents
   *     -3: internal error: cannot rename
   */
-int Project::addFile(const std::string &basename)
+int Project::addFile(const std::string &objectId)
 {
     ScopeLocker L1(locker, LOCK_READ_WRITE);
 
-    std::string destPath = getPathUploadedFiles() + '/' + basename;
-    if (fileExists(destPath)) return -1;
-
-    std::string srcPath = getTmpDir() + '/' + basename;
+    std::string srcPath = getTmpDir() + "/" + objectId;
+    std::string destPath = getObjectsDir() + "/" + Object::getSubpath(objectId);
 
     // check that the hash of the file contents matches the file name (the 40 first characters)
     std::string sha1 = getSha1OfFile(srcPath);
     // check the SHA1
-    if (sha1 != basename.substr(0, 40)) {
-        LOG_ERROR("SHA1 does not match: %s (%s)", basename.c_str(), sha1.c_str());
+    if (sha1 != objectId) {
+        LOG_ERROR("SHA1 does not match: %s (%s)", objectId.c_str(), sha1.c_str());
         // remove tmp file
-        return -2;
+        return -1;
+    }
+
+    if (fileExists(destPath)) {
+        int r = cmpFiles(srcPath, destPath);
+        if (r != 0) {
+            LOG_ERROR("ID collision, files differ: %s", objectId.c_str());
+            return -2;
+        } else {
+            // ok the are the same
+            return 0;
+        }
     }
 
     // rename to final location
