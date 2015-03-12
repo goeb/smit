@@ -1080,41 +1080,48 @@ int pushFile(const PullContext &pushCtx, const std::string localFile, const std:
 {
     HttpRequest hr(pushCtx.httpCtx);
     int r = hr.postFile(localFile, url);
-    // TODO
-    // response = hr.lines;
+    if (r == 0 && hr.lines.size()) response = hr.lines.front();
     return r;
 }
 
-/** Push the first entry of an issue.
+/** Push an entry
   *
-  * @param i
-  *     The issue id may be modified, as the server allocates the issue identifiers.
+  * @param issue
+  *     IN/OUT
+  *     The issue id may be changed by the server when the entry is the first entry.
+  *
+  * @return
+  *    < 0 : error, the entry could not be pushed
+  *    0   : ok, no change for issue id
+  *    1   : issue id has changed
   */
-int pushFirstEntry(const PullContext &pushCtx, const Project &project, const Issue &i, const Entry &e)
+int pushEntry(const PullContext &pushCtx, const Project &p, std::string &issue, const std::string &entry)
 {
+    LOG_INFO("Pushing entry: %s/issues/%s/%s", p.getName().c_str(), issue.c_str(), entry.c_str());
     // post the entry (which must be the first entry of an issue)
     // the result of the POST indicates the issue number that has been allocated
-    std::string localFile = i.path + '/' + e.id;
-    std::string url = pushCtx.rooturl + '/' + project.getUrlName() + "/issues/" + i.id + '/' + e.id;
+    std::string localFile = p.getObjectsDir() + '/' + Object::getSubpath(entry);
+    std::string url = pushCtx.rooturl + '/' + p.getUrlName() + "/" RESOURCE_ISSUES "/" + issue + '/' + entry;
     std::string response;
     int r = pushFile(pushCtx, localFile, url, response);
     if (r != 0) {
         // error
-        LOG_ERROR("%s: Could not push entry %s", project.getName().c_str(), e.id.c_str());
+        LOG_ERROR("%s: Could not push entry %s/%s", p.getName().c_str(), issue.c_str(), entry.c_str());
         exit(1);
     }
+
     // first line of response gives the new allocated issue id
     // format is:
     //     issue: 010203045666
     popToken(response, ':');
     trim(response);
-    if (i.id != response) {
-        printf("%s: Renaming local issue %s -> %s\n", project.getName().c_str(),
-               i.id.c_str(), response.c_str());
-        // TODO rename locally
-    } // else: no change
+    if (issue != response) {
+        printf("%s: Renaming local issue %s -> %s\n", p.getName().c_str(),
+               issue.c_str(), response.c_str());
+        return 1;
+    }
 
-    return -1; // TODO
+    return 0;
 }
 
 
@@ -1124,8 +1131,7 @@ int pushIssue(const PullContext &pushCtx, const Project &project, const Issue &i
     //    + if no such remote issue, push
     //    + if discrepancy (first entries do not match), abort and ask the user to pull first
     //    + else, push the local entries missing on the remote side
-    Entry *e = i.latest;
-    while (e && e->prev) e = e->prev; // rewind to first entry
+    Entry *e = i.first;
     if (!e) {
         LOG_ERROR("%s: null first entry for issue %s", project.getName().c_str(),
                   i.id.c_str());
@@ -1133,14 +1139,21 @@ int pushIssue(const PullContext &pushCtx, const Project &project, const Issue &i
     }
     const Entry &firstEntry = *e;
 
-    // TODO check if
     std::list<std::string> entries;
     int r = getEntriesOfRemoteIssue(pushCtx, project, i.id, entries);
     if (r != 0) {
         // no such remote issue
         // push first entry
-        pushFirstEntry(pushCtx, project, i, firstEntry);
+        std::string issueId = i.id;
+        r = pushEntry(pushCtx, project, issueId, firstEntry.id);
 
+        if (r > 0) {
+            // issue was renamed
+            Issue i2 = i;
+            i2.id = issueId; // new issue id
+            // TODO update local project
+
+        }
         // TODO push remaining entries
 
     } else if (entries.empty()) {
@@ -1161,6 +1174,8 @@ int pushIssue(const PullContext &pushCtx, const Project &project, const Issue &i
         // walk through entries and push missing ones
         // TODO
     }
+
+    // TODO push the refs to the issue (and possibly get a new issue id
 
     return -1; // TODO
 }
