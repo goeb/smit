@@ -1150,26 +1150,46 @@ std::string Project::renameIssue(const std::string &oldId)
 {
     ScopeLocker scopeLocker(locker, LOCK_READ_WRITE);
     //
-    std::map<std::string, Issue*>::const_iterator i;
+    std::map<std::string, Issue*>::iterator i;
     i = issues.find(oldId);
     if (i == issues.end()) {
         LOG_ERROR("Cannot rename issue %s: not in database", oldId.c_str());
+        return "";
+    }
+    if (!i->second) {
+        LOG_ERROR("Cannot rename issue %s: null issue", oldId.c_str());
         return "";
     }
 
     // get a new id
     std::string newId = allocateNewIssueId();
 
+    int r = renameIssue(*(i->second), newId);
+    if (r!=0) return "";
+
+    return newId;
+}
+
+/** Rename an issue
+  *
+  * No mutex protection here.
+  */
+int Project::renameIssue(Issue &i, const std::string &newId)
+{
     // add the issue in the table
-    issues[newId] = i->second;
+    issues[newId] = &i;
 
     // delete the old slot
-    issues.erase(oldId);
+    issues.erase(i.id);
+
+    std::string oldId = i.id;
+    // set the new id
+    i.id = newId;
 
     // store the new id on disk
-    int r = storeRefIssue(newId, i->second->latest->id);
+    int r = storeRefIssue(newId, i.latest->id);
     if (r!=0) {
-        return "";
+        return -1;
     }
 
     // unlink the old issue
@@ -1177,9 +1197,10 @@ std::string Project::renameIssue(const std::string &oldId)
     r = unlink(oldIssuePath.c_str());
     if (r!=0) {
         LOG_ERROR("Cannot unlink %s: %s", oldIssuePath.c_str(), strerror(errno));
+        return -1;
     }
 
-    return newId;
+    return 0;
 }
 
 

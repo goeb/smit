@@ -147,7 +147,7 @@ void Database::updateMaxIssueId(uint32_t i)
     if (i > Db.maxIssueId) Db.maxIssueId = i;
 }
 
-const Project *Database::getNextProject(const Project *p) const
+Project *Database::getNextProject(const Project *p) const
 {
     std::map<std::string, Project*>::const_iterator pit;
 

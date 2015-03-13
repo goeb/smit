@@ -88,6 +88,7 @@ public:
     int insertIssue(Issue *i);
     int storeRefIssue(const std::string &issueId, const std::string &entryId);
     std::string renameIssue(const std::string &oldId);
+    int renameIssue(Issue &i, const std::string &newId);
 
     // methods for handling entries
     int storeEntry(const Entry *e);

@@ -1125,7 +1125,7 @@ int pushEntry(const PullContext &pushCtx, const Project &p, std::string &issue, 
 }
 
 
-int pushIssue(const PullContext &pushCtx, const Project &project, const Issue &i)
+int pushIssue(const PullContext &pushCtx, Project &project, const Issue &i)
 {
     // - get list of entries of the same remote issue
     //    + if no such remote issue, push
@@ -1150,9 +1150,7 @@ int pushIssue(const PullContext &pushCtx, const Project &project, const Issue &i
         if (r > 0) {
             // issue was renamed
             Issue i2 = i;
-            i2.id = issueId; // new issue id
-            // TODO update local project
-
+            project.renameIssue(i2, issueId);
         }
         // TODO push remaining entries
 
@@ -1180,7 +1178,7 @@ int pushIssue(const PullContext &pushCtx, const Project &project, const Issue &i
     return -1; // TODO
 }
 
-int pushProject(const PullContext &pushCtx, const Project &project)
+int pushProject(const PullContext &pushCtx, Project &project)
 {
     printf("pushing project %s...\n", project.getName().c_str());
 
@@ -1210,7 +1208,7 @@ int pushProjects(const PullContext &pushCtx)
 
     // for each local project, push it
 
-    const Project *p = Database::Db.getNextProject(0);
+    Project *p = Database::Db.getNextProject(0);
     while (p) {
         pushProject(pushCtx, *p);
         p = Database::Db.getNextProject(p);
