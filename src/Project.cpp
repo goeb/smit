@@ -1203,6 +1203,29 @@ int Project::renameIssue(Issue &i, const std::string &newId)
     return 0;
 }
 
+/** get the next issue
+  *
+  * This method is a helper for iterating over the issues of the project.
+  */
+Issue *Project::getNextIssue(Issue *i)
+{
+    std::map<std::string, Issue*>::iterator it;
+    if (!i) {
+        // get the first issue
+        it = issues.begin();
+    } else {
+        // get the next after the given issue
+        it = issues.find(i->id);
+
+        if (it == issues.end()) return 0; // this should not happen
+
+        it++;
+    }
+
+    if (it == issues.end()) return 0;
+    else return it->second;
+}
+
 
 /**
   * issues may be a list of 1 empty string, meaning that associations have been removed

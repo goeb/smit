@@ -302,11 +302,8 @@ void handleConflictOnEntries(const PullContext &pullCtx, Project &p,
         conflictingLocalEntry = conflictingLocalEntry->next;
     }
     // store to disk
-    // TODO check if entry already exists in memory
-
     // The storage is done after all merging is complete
-    // because if the user interrupts the inetractive merging, then we don't
-    // want a mess.
+    // but it could perhaps be done in the loop above?
     std::list<Entry *>::const_iterator e;
     FOREACH(e, mergingEntries) {
         int r = p.storeEntry(*e);
@@ -1125,7 +1122,7 @@ int pushEntry(const PullContext &pushCtx, const Project &p, std::string &issue, 
 }
 
 
-int pushIssue(const PullContext &pushCtx, Project &project, const Issue &i)
+int pushIssue(const PullContext &pushCtx, Project &project, Issue &i)
 {
     // - get list of entries of the same remote issue
     //    + if no such remote issue, push
@@ -1149,8 +1146,7 @@ int pushIssue(const PullContext &pushCtx, Project &project, const Issue &i)
 
         if (r > 0) {
             // issue was renamed
-            Issue i2 = i;
-            project.renameIssue(i2, issueId);
+            project.renameIssue(i, issueId);
         }
         // TODO push remaining entries
 
@@ -1182,15 +1178,8 @@ int pushProject(const PullContext &pushCtx, Project &project)
 {
     printf("pushing project %s...\n", project.getName().c_str());
 
-    // get all local issues and push them
-    std::map<std::string, std::list<std::string> > filterIn;
-    std::map<std::string, std::list<std::string> > filterOut;
-
-    std::vector<const Issue*> issues = project.search(0, filterIn, filterOut, "id");
-
-    std::vector<const Issue*>::const_iterator it;
-    FOREACH(it, issues) {
-        const Issue* i = *it;
+    Issue *i = 0;
+    while ( (i = project.getNextIssue(i)) ) {
         int r = pushIssue(pushCtx, project, *i);
         if (r != 0) return r;
     }
