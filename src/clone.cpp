@@ -1121,6 +1121,37 @@ int pushEntry(const PullContext &pushCtx, const Project &p, std::string &issue, 
     return 0;
 }
 
+/** Push the files attached to an entry
+  */
+void pushAttachedFiles(const PullContext &pushCtx, const Project &p, const Entry &e)
+{
+    LOG_FUNC();
+    LOG_DEBUG("Pushing files attached to entry %s", e.id.c_str());
+
+    PropertiesIt files = e.properties.find(K_FILE);
+    if (files != e.properties.end()) {
+        LOG_DEBUG("Entry %s has files: %s", e.id.c_str(), toString(files->second).c_str());
+        std::list<std::string>::const_iterator f;
+        FOREACH(f, files->second) {
+            // file is like: <object-id>/<basename>
+            std::string fid = *f;
+            std::string id = popToken(fid, '/');
+            std::string localPath = p.getObjectsDir() + "/" + Object::getSubpath(id);
+            // push the file
+
+            printf("Pushing file %s...\n", f->c_str());
+            std::string url = pushCtx.rooturl + '/' + p.getUrlName() + "/" RESOURCE_FILES "/" + *f;
+            std::string response;
+            int r = pushFile(pushCtx, localPath, url, response);
+
+            if (r != 0) {
+                LOG_ERROR("Cannot push file: %s", url.c_str());
+                exit(1);
+            }
+        }
+    }
+}
+
 
 int pushIssue(const PullContext &pushCtx, Project &project, Issue &i)
 {
@@ -1147,7 +1178,13 @@ int pushIssue(const PullContext &pushCtx, Project &project, Issue &i)
         if (r > 0) {
             // issue was renamed
             project.renameIssue(i, issueId);
+        } else if (r < 0) {
+            LOG_ERROR("Failed to push entry %s/issues/%s/%s", project.getName().c_str(),
+                      i.id.c_str(), firstEntry.id.c_str());
+            exit(1);
         }
+        pushAttachedFiles(pushCtx, project, firstEntry);
+
         // recurse
         return pushIssue(pushCtx, project, i);
 
@@ -1184,7 +1221,7 @@ int pushIssue(const PullContext &pushCtx, Project &project, Issue &i)
                     exit(1);
                 } else {
                     // ok
-
+                    pushAttachedFiles(pushCtx, project, *localEntry);
                 }
             } else {
                 // check that local and remote entries are aligned
@@ -1203,6 +1240,7 @@ int pushIssue(const PullContext &pushCtx, Project &project, Issue &i)
         }
     }
 
+    // TODO push the files
     // TODO push the refs to the issue (and possibly get a new issue id
 
     return -1; // TODO
