@@ -1128,16 +1128,16 @@ int pushIssue(const PullContext &pushCtx, Project &project, Issue &i)
     //    + if no such remote issue, push
     //    + if discrepancy (first entries do not match), abort and ask the user to pull first
     //    + else, push the local entries missing on the remote side
-    Entry *e = i.first;
-    if (!e) {
+    Entry *localEntry = i.first;
+    if (!localEntry) {
         LOG_ERROR("%s: null first entry for issue %s", project.getName().c_str(),
                   i.id.c_str());
         exit(1);
     }
-    const Entry &firstEntry = *e;
+    const Entry &firstEntry = *localEntry;
 
-    std::list<std::string> entries;
-    int r = getEntriesOfRemoteIssue(pushCtx, project, i.id, entries);
+    std::list<std::string> remoteEntries;
+    int r = getEntriesOfRemoteIssue(pushCtx, project, i.id, remoteEntries);
     if (r != 0) {
         // no such remote issue
         // push first entry
@@ -1148,9 +1148,10 @@ int pushIssue(const PullContext &pushCtx, Project &project, Issue &i)
             // issue was renamed
             project.renameIssue(i, issueId);
         }
-        // TODO push remaining entries
+        // recurse
+        return pushIssue(pushCtx, project, i);
 
-    } else if (entries.empty()) {
+    } else if (remoteEntries.empty()) {
         // internal error, should not happen
         LOG_ERROR("%s: error, empty entries for remote issue %s", project.getName().c_str(),
                 i.id.c_str());
@@ -1158,15 +1159,48 @@ int pushIssue(const PullContext &pushCtx, Project &project, Issue &i)
 
     } else {
         // check if first entries match
-        if (entries.front() != firstEntry.id) {
+        if (remoteEntries.front() != firstEntry.id) {
             printf("%s: mismatch of first entries for issue %s\n", project.getName().c_str(),
                    i.id.c_str());
             printf("Try pulling first to resolve\n");
             exit(1);
         }
 
+        std::list<std::string>::iterator remoteEntryIt = remoteEntries.begin();
         // walk through entries and push missing ones
-        // TODO
+        while (localEntry) {
+
+            if (remoteEntryIt == remoteEntries.end()) {
+                // push the local entry to the remote side
+                printf("Pushing entry %s/issues/%s/%s", project.getName().c_str(),
+                       i.id.c_str(), localEntry->id.c_str());
+                r = pushEntry(pushCtx, project, i.id, localEntry->id);
+                if (r > 0) {
+                    // the issue was renamed. this should not happen.
+                    LOG_ERROR("pushEntry returned %d: localEntry=%s", r, localEntry->id.c_str());
+                    exit(1);
+                } else if (r < 0) {
+                    LOG_ERROR("Could not push local entry %s", localEntry->id.c_str());
+                    exit(1);
+                } else {
+                    // ok
+
+                }
+            } else {
+                // check that local and remote entries are aligned
+                std::string remoteEntryId = *remoteEntryIt;
+
+                if (localEntry->id == remoteEntryId) {
+                    // ok, still aligned
+                } else {
+                    // error, not aligned
+                    LOG_ERROR("Remote issue not pulled. Try pulling before pushing.");
+                    exit(1);
+                }
+                remoteEntryIt++;
+            }
+            localEntry = localEntry->next;
+        }
     }
 
     // TODO push the refs to the issue (and possibly get a new issue id
