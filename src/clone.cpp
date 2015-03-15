@@ -324,8 +324,10 @@ int getEntriesOfRemoteIssue(const PullContext &pullCtx, const Project &p, const 
     hr.closeCurl(); // free the curl resource
 
     if (hr.lines.empty() || hr.lines.front().empty()) {
-        // may happen if remote issue does not exist
         return -1;
+    } else if (hr.httpStatusCode != 200) {
+        // may happen if remote issue does not exist
+        return -2;
     }
     entries = hr.lines;
     return 0;
@@ -440,7 +442,7 @@ int pullIssue(const PullContext &pullCtx, Project &p, const Issue &localIssue)
         // propose to the user a new id for the issue?
 
         printf("Issue conflicting with remote: %s %s\n", localIssue.id.c_str(), localIssue.getSummary().c_str());
-        printf("Issue %s: local and remote diverge: %s <> %s", localIssue.id.c_str(),
+        printf("Issue %s: local and remote diverge: %s <> %s\n", localIssue.id.c_str(),
                   localIssue.first->id.c_str(), remoteIssue->first->id.c_str());
 
         std::string newId = p.renameIssue(localIssue.id);
@@ -1152,6 +1154,10 @@ void pushAttachedFiles(const PullContext &pushCtx, const Project &p, const Entry
     }
 }
 
+void break_here()
+{
+    printf("break_here\n");
+}
 
 int pushIssue(const PullContext &pushCtx, Project &project, Issue &i)
 {
@@ -1166,7 +1172,7 @@ int pushIssue(const PullContext &pushCtx, Project &project, Issue &i)
         exit(1);
     }
     const Entry &firstEntry = *localEntry;
-
+    if (i.id == "123") break_here();
     std::list<std::string> remoteEntries;
     int r = getEntriesOfRemoteIssue(pushCtx, project, i.id, remoteEntries);
     if (r != 0) {

@@ -1136,6 +1136,7 @@ int Project::insertIssue(Issue *i)
 
 int Project::storeRefIssue(const std::string &issueId, const std::string &entryId)
 {
+    LOG_DEBUG("storeRefIssue: %s -> %s", issueId.c_str(), entryId.c_str());
     std::string issuePath = path + "/" PATH_ISSUES "/" + issueId;
     int r = writeToFile(issuePath.c_str(), entryId);
     if (r!=0) {
@@ -1531,11 +1532,8 @@ int Project::pushEntry(std::string issueId, const std::string &entryId,
     if (e->parent == K_PARENT_NULL) {
         // assign a new issue id
         newI = createNewIssue();
-        if (!newI) {
-            delete e;
-            return -3;
-        }
         i = newI;
+        issueId = newI->id; // update the IN/OUT parameter
 
     } else {
         i = getIssue(issueId);
@@ -1577,7 +1575,13 @@ int Project::pushEntry(std::string issueId, const std::string &entryId,
     // insert the new entry in the database
     i->addEntry(e);
 
-    // store the ref of the issue
+    if (newI) {
+        // insert the new issue in the database
+        int r = insertIssue(i);
+        if (r != 0) return -1;
+    }
+
+    // store the new ref of the issue
     r = storeRefIssue(i->id, i->latest->id);
     if (r!=0) {
         return -8;

@@ -51,7 +51,6 @@ struct Issue {
     std::string getSummary() const;
     bool lessThan(const Issue *other, const std::list<std::pair<bool, std::string> > &sortingSpec) const;
     bool isInFilter(const std::map<std::string, std::list<std::string> > &filter) const;
-    Entry* mergePending; // null if no merge-pending entry
 
     void consolidate();
     void consolidateWithSingleEntry(Entry *e, bool overwrite);

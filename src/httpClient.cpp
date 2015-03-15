@@ -284,7 +284,7 @@ int HttpRequest::putFile(const std::string &srcFile, const std::string &destUrl)
     /* Now run off and do what you've been told! */
     res = curl_easy_perform(curlHandle);
     /* Check for errors */
-    if(res != CURLE_OK)
+    if (res != CURLE_OK)
         fprintf(stderr, "curl_easy_perform() failed: %s\n",
                 curl_easy_strerror(res));
 
@@ -335,7 +335,7 @@ void HttpRequest::performRequest()
     LOG_DEBUG("resource: %s%s", rooturl.c_str(), resourcePath.c_str());
     res = curl_easy_perform(curlHandle);
 
-    if(res != CURLE_OK) {
+    if (res != CURLE_OK) {
         fprintf(stderr, "curl_easy_perform() failed: %s (%s%s)\n", curl_easy_strerror(res), rooturl.c_str(), resourcePath.c_str());
         exit(1);
     }

@@ -110,7 +110,7 @@ void sendHttpHeader200(const RequestContext *request)
 void sendHttpHeader201(const RequestContext *request)
 {
     LOG_FUNC();
-    request->printf("HTTP/1.0 200 Created\r\n\r\n");
+    request->printf("HTTP/1.0 201 Created\r\n\r\n");
     addHttpStat(H_2XX);
 }
 
