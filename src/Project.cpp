@@ -1328,15 +1328,11 @@ void Project::cleanupMultiselect(std::list<std::string> &values, const std::list
 /** Create a new issue
   *
   * - Allocate a new issue id
-  * - Create the directory for this issue
-  * - Insert the new issue object in the table of the project
   */
 Issue *Project::createNewIssue()
 {
     // create new directory for this issue
     std::string issueId = allocateNewIssueId();
-
-    std::string pathOfIssue = path + '/' + PATH_ISSUES + '/' + issueId;
 
     Issue *i = new Issue();
     i->id = issueId;
@@ -1514,11 +1510,10 @@ int Project::addEntry(PropertiesMap properties, std::string &issueId, std::strin
   * In this case, a new issueId is assigned, then it is returned (IN/OUT parameter).
   */
 int Project::pushEntry(std::string issueId, const std::string &entryId,
-                       const std::string &username, const std::string &tmpDir,
-                       const std::string &filename)
+                       const std::string &username, const std::string &tmpPath)
 {
     // load the file as an entry
-    Entry *e = Entry::loadEntry(tmpDir.c_str(), filename.c_str(), entryId.c_str());
+    Entry *e = Entry::loadEntry(tmpPath, entryId, true); // check that the sha1 matches
     if (!e) return -1;
 
     // check that the username is the same as the author of the entry
@@ -1535,7 +1530,7 @@ int Project::pushEntry(std::string issueId, const std::string &entryId,
 
     if (e->parent == K_PARENT_NULL) {
         // assign a new issue id
-        newI = createNewIssue(); // TODO createNewIssue modified dbv3
+        newI = createNewIssue();
         if (!newI) {
             delete e;
             return -3;
@@ -1543,8 +1538,8 @@ int Project::pushEntry(std::string issueId, const std::string &entryId,
         i = newI;
 
     } else {
-        int r = get(issueId, *i);
-        if (r < 0) {
+        i = getIssue(issueId);
+        if (!i) {
             LOG_ERROR("pushEntry error: parent is not null and issueId does not exist (%s / %s)",
                       issueId.c_str(), entryId.c_str());
 
@@ -1558,8 +1553,7 @@ int Project::pushEntry(std::string issueId, const std::string &entryId,
     }
 
     // move the entry to the official place
-    std::string oldpath = tmpDir + "/" + filename;
-    std::string newpath = i->path + "/" + filename;
+    std::string newpath = getObjectsDir() + "/" + Object::getSubpath(entryId);
 
     // verify that newpath does not exist
     if (fileExists(newpath)) {
@@ -1569,7 +1563,9 @@ int Project::pushEntry(std::string issueId, const std::string &entryId,
         return -6;
     }
 
-    int r = rename(oldpath.c_str(), newpath.c_str());
+    mkdirs(getDirname(newpath));
+    LOG_DEBUG("rename: %s -> %s", tmpPath.c_str(), newpath.c_str());
+    int r = rename(tmpPath.c_str(), newpath.c_str());
     if (r != 0) {
         LOG_ERROR("pushEntry error: could not officiliaze pushed entry %s/%s: %s",
                   issueId.c_str(), entryId.c_str(), strerror(errno));

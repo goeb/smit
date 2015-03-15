@@ -1813,27 +1813,16 @@ void parseMultipartAndStoreUploadedFiles(const std::string &data, std::string bo
 void httpPushEntry(const RequestContext *req, Project &p, const std::string &issueId,
                    const std::string &entryId, User u)
 {
-    printf("httpPushEntry: %s/%s\n", issueId.c_str(), entryId.c_str()); // TODO remove this debug
+    LOG_DEBUG("httpPushEntry: %s/%s", issueId.c_str(), entryId.c_str());
 
     enum Role r = u.getRole(p.getName());
     if (r != ROLE_RW && r != ROLE_ADMIN) {
         sendHttpHeader403(req);
         return;
     }
-    const char *multipart = "multipart/form-data";
-    PropertiesMap vars;
+    const char *multipart = "application/octet-stream";
     const char *contentType = req->getHeader("Content-Type");
     if (0 == strncmp(multipart, contentType, strlen(multipart))) {
-        // extract the boundary
-        const char *b = "boundary=";
-        const char *ptr = mg_strcasestr(contentType, b);
-        if (!ptr) {
-            LOG_ERROR("Missing boundary in multipart form data");
-            return;
-        }
-        ptr += strlen(b);
-        std::string boundary = ptr;
-        LOG_DEBUG("Boundary: %s", boundary.c_str());
 
         std::string postData;
         int rc = readMgreq(req, postData, MAX_SIZE_UPLOAD);
@@ -1842,24 +1831,19 @@ void httpPushEntry(const RequestContext *req, Project &p, const std::string &iss
             return;
         }
 
-        printf("pushed-data: %s\n", postData.c_str()); // TODO remove this printf
-        std::string tmpDir = p.getTmpDir();
+        LOG_DEBUG("Got upload data: %ld bytes", L(postData.size()));
 
-        // store the entry in a tmp directory
-        parseMultipartAndStoreUploadedFiles(postData, boundary, vars, p);
-        // uploaded file(s) must be with the key K_PUSH_FILE
-        PropertiesIt files = vars.find(K_PUSH_FILE);
-        if (files == vars.end()) {
-            sendHttpHeader400(req, "Missing pushed file");
-            return;
-        }
-        if (files->second.size() != 1) {
-            sendHttpHeader400(req, "Invalid number of pushed files");
+        // store the entry in a temporary location
+        std::string tmpPath = p.getTmpDir() + "/" + entryId;
+        int r = writeToFile(tmpPath.c_str(), postData);
+        if (r != 0) {
+            std::string msg = "Failed to store pushed entry: %s" + entryId;
+            sendHttpHeader500(req, msg.c_str());
             return;
         }
 
         // insert the entry into the database
-        int r = p.pushEntry(issueId, entryId, u.username, tmpDir, files->second.front());
+        r = p.pushEntry(issueId, entryId, u.username, tmpPath);
         if (r < 0) {
             std::string msg = "Cannot push the entry";
             sendHttpHeader400(req, msg.c_str());
@@ -1872,7 +1856,6 @@ void httpPushEntry(const RequestContext *req, Project &p, const std::string &iss
         }
 
     } else {
-        // multipart/form-data
         LOG_ERROR("Content-Type '%s' not supported", contentType);
         sendHttpHeader400(req, "bad content-type");
         return;

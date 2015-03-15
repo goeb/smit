@@ -1209,7 +1209,7 @@ int pushIssue(const PullContext &pushCtx, Project &project, Issue &i)
 
             if (remoteEntryIt == remoteEntries.end()) {
                 // push the local entry to the remote side
-                printf("Pushing entry %s/issues/%s/%s", project.getName().c_str(),
+                printf("Pushing entry %s/issues/%s/%s\n", project.getName().c_str(),
                        i.id.c_str(), localEntry->id.c_str());
                 r = pushEntry(pushCtx, project, i.id, localEntry->id);
                 if (r > 0) {
@@ -1240,10 +1240,7 @@ int pushIssue(const PullContext &pushCtx, Project &project, Issue &i)
         }
     }
 
-    // TODO push the files
-    // TODO push the refs to the issue (and possibly get a new issue id
-
-    return -1; // TODO
+    return 0;
 }
 
 int pushProject(const PullContext &pushCtx, Project &project)
@@ -1383,6 +1380,8 @@ int cmdPush(int argc, char **argv)
     pushCtx.httpCtx.tlsCacert = args->get("cacert");
     if (args->get("verbose")) {
         setLoggingLevel(LL_DEBUG);
+    } else {
+        setLoggingLevel(LL_ERROR);
     }
     // manage non-option ARGV elements
     const char *dir = args->pop();
@@ -1397,7 +1396,6 @@ int cmdPush(int argc, char **argv)
 
     setLoggingOption(LO_CLI);
     // set log level to hide INFO logs
-    setLoggingLevel(LL_ERROR);
 
     int r = establishSession(dir, username, password, pushCtx);
     if (r != 0) return 1;
