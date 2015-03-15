@@ -1575,7 +1575,13 @@ int Project::pushEntry(std::string issueId, const std::string &entryId,
     }
 
     // insert the new entry in the database
-    i->addEntryInTable(e);
+    i->addEntry(e);
+
+    // store the ref of the issue
+    r = storeRefIssue(i->id, i->latest->id);
+    if (r!=0) {
+        return -8;
+    }
 
     return 0;
 }

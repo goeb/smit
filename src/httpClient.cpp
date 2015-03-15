@@ -226,7 +226,7 @@ int HttpRequest::postFile(const std::string &srcFile, const std::string &destUrl
         return -1;
 
     } else if (httpStatusCode < 200 || httpStatusCode >= 300) {
-        fprintf(stderr, "Got HTTP status %d\n", httpStatusCode);
+        LOG_ERROR("Got HTTP status %d", httpStatusCode);
         return -1;
 
     } else {
