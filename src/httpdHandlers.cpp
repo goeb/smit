@@ -1847,6 +1847,8 @@ void httpPushEntry(const RequestContext *req, Project &p, const std::string &iss
         if (r < 0) {
             std::string msg = "Cannot push the entry";
             sendHttpHeader400(req, msg.c_str());
+            unlink(tmpPath.c_str()); // clean-up the tmp file
+
         } else {
             // ok, no problem
             sendHttpHeader201(req);

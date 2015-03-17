@@ -33,5 +33,7 @@ std::string getTmpPath(const std::string &path);
 
 int cmpFiles(const std::string &srcPath, const std::string &destPath);
 
+int mkdir(const std::string &path);
+
 
 #endif

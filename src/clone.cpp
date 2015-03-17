@@ -612,8 +612,7 @@ void createSmitDir(const std::string &dir)
 {
     LOG_DEBUG("createSmitDir(%s)...", dir.c_str());
 
-    mode_t mode = S_IRUSR | S_IWUSR | S_IXUSR;
-    int r = mg_mkdir(getSmitDir(dir).c_str(), mode);
+    int r = mkdir(getSmitDir(dir));
     if (r != 0) {
         fprintf(stderr, "Cannot create directory '%s': %s\n", getSmitDir(dir).c_str(), strerror(errno));
         fprintf(stderr, "Abort.\n");
@@ -1142,7 +1141,7 @@ void pushAttachedFiles(const PullContext &pushCtx, const Project &p, const Entry
             // push the file
 
             printf("Pushing file %s...\n", f->c_str());
-            std::string url = pushCtx.rooturl + '/' + p.getUrlName() + "/" RESOURCE_FILES "/" + *f;
+            std::string url = pushCtx.rooturl + '/' + p.getUrlName() + "/" RESOURCE_FILES "/" + id;
             std::string response;
             int r = pushFile(pushCtx, localPath, url, response);
 
@@ -1172,10 +1171,10 @@ int pushIssue(const PullContext &pushCtx, Project &project, Issue &i)
         exit(1);
     }
     const Entry &firstEntry = *localEntry;
-    if (i.id == "123") break_here();
     std::list<std::string> remoteEntries;
     int r = getEntriesOfRemoteIssue(pushCtx, project, i.id, remoteEntries);
     if (r != 0) {
+        break_here();
         // no such remote issue
         // push first entry
         std::string issueId = i.id;

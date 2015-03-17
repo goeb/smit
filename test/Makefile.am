@@ -1,5 +1,10 @@
 # Enable parallel tests
-TESTS = T_parseConfig T_stringTools T_smparser T_smp_encode_decode.sh functest.sh T_clone.sh T_pull.sh T_pull_2.sh
+TESTS = T_parseConfig \
+		T_stringTools \
+		T_smparser \
+		T_smp_encode_decode.sh functest.sh \
+		T_clone.sh T_pull.sh T_pull_2.sh \
+		T_push.sh
 
 check_PROGRAMS = T_parseConfig T_stringTools smparser get_random_value
 T_parseConfig_SOURCES = T_parseConfig.cpp ../src/parseConfig.cpp

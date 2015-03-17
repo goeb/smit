@@ -36,7 +36,7 @@ host_triplet = @host@
 target_triplet = @target@
 TESTS = T_parseConfig$(EXEEXT) T_stringTools$(EXEEXT) T_smparser \
 	T_smp_encode_decode.sh functest.sh T_clone.sh T_pull.sh \
-	T_pull_2.sh
+	T_pull_2.sh T_push.sh
 check_PROGRAMS = T_parseConfig$(EXEEXT) T_stringTools$(EXEEXT) \
 	smparser$(EXEEXT) get_random_value$(EXEEXT)
 subdir = test

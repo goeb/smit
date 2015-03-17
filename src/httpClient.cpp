@@ -123,9 +123,8 @@ void HttpRequest::doCloning(bool recursive, int recursionLevel)
         trimRight(localPath, "/");
 
         // make current directory locally
-        mode_t mode = S_IRUSR | S_IWUSR | S_IXUSR;
         LOG_DEBUG("mkdir %s...", localPath.c_str());
-        int r = mg_mkdir(localPath.c_str(), mode);
+        int r = mkdir(localPath);
         if (r != 0) {
             fprintf(stderr, "Cannot create directory '%s': %s\n", localPath.c_str(), strerror(errno));
             fprintf(stderr, "Abort.\n");

@@ -108,8 +108,7 @@ int initRepository(int argc, char **argv)
     dirp = opendir(directory);
     if (!dirp) {
         // try create it
-        mode_t mode = S_IRUSR | S_IWUSR | S_IXUSR;
-        int r = mg_mkdir(directory, mode);
+        int r = mkdir(directory);
         if (r != 0) {
             LOG_ERROR("Cannot create directory '%s': %s", directory, strerror(errno));
             return 1;

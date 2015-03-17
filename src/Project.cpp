@@ -683,7 +683,7 @@ int Project::createProjectFiles(const char *repositoryPath, const char *projectN
 
     resultingPath = std::string(repositoryPath) + "/" + Project::urlNameEncode(projectName);
     std::string path = resultingPath;
-    int r = mg_mkdir(path.c_str(), S_IRUSR | S_IXUSR | S_IWUSR);
+    int r = mkdir(path);
     if (r != 0) {
         LOG_ERROR("Could not create directory '%s': %s", path.c_str(), strerror(errno));
         return -1;
@@ -717,7 +717,7 @@ int Project::createProjectFiles(const char *repositoryPath, const char *projectN
 
     // create directory 'objects'
     subpath = path + "/" + PATH_OBJECTS;
-    r = mg_mkdir(subpath.c_str(), S_IRUSR | S_IXUSR | S_IWUSR);
+    r = mkdir(subpath);
     if (r != 0) {
         LOG_ERROR("Could not create directory '%s': %s", subpath.c_str(), strerror(errno));
         return -1;
@@ -725,7 +725,7 @@ int Project::createProjectFiles(const char *repositoryPath, const char *projectN
 
     // create directory 'html'
     subpath = path + "/html";
-    r = mg_mkdir(subpath.c_str(), S_IRUSR | S_IXUSR | S_IWUSR);
+    r = mkdir(subpath);
     if (r != 0) {
         LOG_ERROR("Could not create directory '%s': %s", subpath.c_str(), strerror(errno));
         return -1;
@@ -733,7 +733,7 @@ int Project::createProjectFiles(const char *repositoryPath, const char *projectN
 
     // create directory 'tmp'
     subpath = path + "/" K_PROJECT_TMP;
-    r = mg_mkdir(subpath.c_str(), S_IRUSR | S_IXUSR | S_IWUSR);
+    r = mkdir(subpath);
     if (r != 0) {
         LOG_ERROR("Could not create directory '%s': %s", subpath.c_str(), strerror(errno));
         return -1;
@@ -741,7 +741,7 @@ int Project::createProjectFiles(const char *repositoryPath, const char *projectN
 
     // create directory 'refs'
     subpath = path + "/refs";
-    r = mg_mkdir(subpath.c_str(), S_IRUSR | S_IXUSR | S_IWUSR);
+    r = mkdir(subpath);
     if (r != 0) {
         LOG_ERROR("Could not create directory '%s': %s", subpath.c_str(), strerror(errno));
         return -1;
@@ -749,7 +749,7 @@ int Project::createProjectFiles(const char *repositoryPath, const char *projectN
 
     // create directory 'issues'
     subpath = path + '/' + PATH_ISSUES;
-    r = mg_mkdir(subpath.c_str(), S_IRUSR | S_IXUSR | S_IWUSR);
+    r = mkdir(subpath);
     if (r != 0) {
         LOG_ERROR("Could not create directory '%s': %s", subpath.c_str(), strerror(errno));
         return -1;
@@ -757,7 +757,7 @@ int Project::createProjectFiles(const char *repositoryPath, const char *projectN
 
     // create directory 'tags'
     subpath = path + '/' + PATH_TAGS;
-    r = mg_mkdir(subpath.c_str(), S_IRUSR | S_IXUSR | S_IWUSR);
+    r = mkdir(subpath);
     if (r != 0) {
         LOG_ERROR("Could not create directory '%s': %s", subpath.c_str(), strerror(errno));
         return -1;
@@ -802,9 +802,9 @@ int Project::toggleTag(const std::string &issueId, const std::string &entryId, c
         int r;
         if (tag != e->tags.end()) {
             // create sub directories every time (not optimum)
-            mg_mkdir(path.c_str(), S_IRUSR | S_IXUSR | S_IWUSR);
+            mkdir(path);
             path += issueId;
-            mg_mkdir(path.c_str(), S_IRUSR | S_IXUSR | S_IWUSR);
+            mkdir(path);
             path += "/" + entryId;
             path += "." + tagid;
 
@@ -912,6 +912,7 @@ int Project::addFile(const std::string &objectId)
     }
 
     // rename to final location
+    mkdirs(getDirname(destPath));
     int r = rename(srcPath.c_str(), destPath.c_str());
     if (r != 0) {
         LOG_ERROR("cannot rename %s -> %s: %s", srcPath.c_str(), destPath.c_str(), strerror(errno));
@@ -1540,12 +1541,13 @@ int Project::pushEntry(std::string issueId, const std::string &entryId,
         if (!i) {
             LOG_ERROR("pushEntry error: parent is not null and issueId does not exist (%s / %s)",
                       issueId.c_str(), entryId.c_str());
-
+            delete e;
             return -4; // the parent is not null and issueId does not exist
         }
         if (i->latest->id != e->parent) {
             LOG_ERROR("pushEntry error: parent does not match latest entry (%s / %s)",
                       issueId.c_str(), entryId.c_str());
+            delete e;
             return -5;
         }
     }
@@ -1561,7 +1563,20 @@ int Project::pushEntry(std::string issueId, const std::string &entryId,
         return -6;
     }
 
-    mkdirs(getDirname(newpath));
+    // insert the new entry in the database
+    i->addEntry(e);
+
+    if (newI) {
+        // insert the new issue in the database
+        int r = insertIssue(i);
+        if (r != 0) {
+            delete e;
+            delete i;
+            return -1;
+        }
+    }
+
+    mkdir(getDirname(newpath));
     LOG_DEBUG("rename: %s -> %s", tmpPath.c_str(), newpath.c_str());
     int r = rename(tmpPath.c_str(), newpath.c_str());
     if (r != 0) {
@@ -1572,18 +1587,12 @@ int Project::pushEntry(std::string issueId, const std::string &entryId,
         return -7;
     }
 
-    // insert the new entry in the database
-    i->addEntry(e);
-
-    if (newI) {
-        // insert the new issue in the database
-        int r = insertIssue(i);
-        if (r != 0) return -1;
-    }
-
     // store the new ref of the issue
     r = storeRefIssue(i->id, i->latest->id);
-    if (r!=0) {
+    if (r != 0) {
+        unlink(newpath.c_str()); // cleanup entry file
+        if (newI) delete newI;
+        delete e;
         return -8;
     }
 
