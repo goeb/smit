@@ -49,4 +49,5 @@ $SMIT issue clone2/$PROJECT1 3 -ph | grep -v ^Date >> $TEST_NAME.out
 
 diff -u $srcdir/$TEST_NAME.ref $TEST_NAME.out 
 
+checkFileExists $REPO/$PROJECT1/objects/5a/b64de1bcfb3d5500b2a95145f44f74aa6ed72f
 
