@@ -16,7 +16,9 @@ rm -rf clone1
 $SMIT clone http://127.0.0.1:$PORT --user $USER1 --passwd $PASSWD1 clone1
 
 # add an issue and push
-$SMIT issue clone1/p1 -a - summary="an issue in p1"
+$SMIT issue clone1/p1 -a - summary="an issue 1 in p1"
+$SMIT issue clone1/p1 -a - summary="an issue 2 in p1"
+$SMIT issue clone1/p1 -a - summary="an issue 3 in p1"
 $SMIT push clone1
 
 # do another clone
@@ -24,8 +26,12 @@ rm -rf clone2
 $SMIT clone http://127.0.0.1:$PORT --user $USER2 --passwd $PASSWD2 clone2
 
 # add an issue and push
-$SMIT issue clone2/p2 -a - summary="an issue in p2"
+$SMIT issue clone2/p2 -a - summary="an issue A in p2"
+$SMIT issue clone2/p2 -a - summary="an issue B in p2"
 $SMIT push clone2
+
+$SMIT issue clone1/p1 -a - summary="an issue 4 in p1"
+$SMIT push clone1
 
 stopServer
 
