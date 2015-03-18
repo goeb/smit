@@ -1074,7 +1074,21 @@ int cmdPull(int argc, char * const *argv)
 
 }
 
-int pushFile(const PullContext &pushCtx, const std::string localFile, const std::string url, std::string &response)
+int getHead(const PullContext &pushCtx, const std::string &url)
+{
+    HttpRequest hr(pushCtx.httpCtx);
+    int r = hr.head(url);
+    if (r !=0 ) {
+        LOG_ERROR("Could not get HEAD for: %s", url.c_str());
+        exit(1);
+    } else if (hr.httpStatusCode >= 200 && hr.httpStatusCode < 300) {
+        return 0;
+    } else {
+        return -1;
+    }
+}
+
+int pushFile(const PullContext &pushCtx, const std::string &localFile, const std::string &url, std::string &response)
 {
     HttpRequest hr(pushCtx.httpCtx);
     int r = hr.postFile(localFile, url);
@@ -1095,7 +1109,7 @@ int pushFile(const PullContext &pushCtx, const std::string localFile, const std:
   */
 int pushEntry(const PullContext &pushCtx, const Project &p, std::string &issue, const std::string &entry)
 {
-    LOG_INFO("Pushing entry: %s/issues/%s/%s", p.getName().c_str(), issue.c_str(), entry.c_str());
+    printf("Pushing entry: %s/issues/%s/%s\n", p.getName().c_str(), issue.c_str(), entry.c_str());
     // post the entry (which must be the first entry of an issue)
     // the result of the POST indicates the issue number that has been allocated
     std::string localFile = p.getObjectsDir() + '/' + Object::getSubpath(entry);
@@ -1114,8 +1128,7 @@ int pushEntry(const PullContext &pushCtx, const Project &p, std::string &issue, 
     popToken(response, ':');
     trim(response);
     if (issue != response) {
-        printf("%s: Renaming local issue %s -> %s\n", p.getName().c_str(),
-               issue.c_str(), response.c_str());
+        issue = response;
         return 1;
     }
 
@@ -1137,27 +1150,25 @@ void pushAttachedFiles(const PullContext &pushCtx, const Project &p, const Entry
             // file is like: <object-id>/<basename>
             std::string fid = *f;
             std::string id = popToken(fid, '/');
-            std::string localPath = p.getObjectsDir() + "/" + Object::getSubpath(id);
-            // push the file
-
-            // TODO this is not very optimized: all big files will be pushed, but
-            // for most of them it is a waste of performance.
-            printf("Pushing file %s...\n", f->c_str());
             std::string url = pushCtx.rooturl + '/' + p.getUrlName() + "/" RESOURCE_FILES "/" + id;
-            std::string response;
-            int r = pushFile(pushCtx, localPath, url, response);
-
+            // test if the file exists on the server
+            int r = getHead(pushCtx, url);
             if (r != 0) {
-                LOG_ERROR("Cannot push file: %s", url.c_str());
-                exit(1);
+                // file does not exist on the server
+                // push the file
+                std::string localPath = p.getObjectsDir() + "/" + Object::getSubpath(id);
+                printf("Pushing file %s...\n", f->c_str());
+                std::string url = pushCtx.rooturl + '/' + p.getUrlName() + "/" RESOURCE_FILES "/" + id;
+                std::string response;
+                int r = pushFile(pushCtx, localPath, url, response);
+
+                if (r != 0) {
+                    LOG_ERROR("Cannot push file: %s", url.c_str());
+                    exit(1);
+                }
             }
         }
     }
-}
-
-void break_here() // TODO remove
-{
-    printf("break_here\n");
 }
 
 int pushIssue(const PullContext &pushCtx, Project &project, Issue &i)
@@ -1176,7 +1187,6 @@ int pushIssue(const PullContext &pushCtx, Project &project, Issue &i)
     std::list<std::string> remoteEntries;
     int r = getEntriesOfRemoteIssue(pushCtx, project, i.id, remoteEntries);
     if (r != 0) {
-        break_here();
         // no such remote issue
         // push first entry
         std::string issueId = i.id;
@@ -1184,6 +1194,8 @@ int pushIssue(const PullContext &pushCtx, Project &project, Issue &i)
 
         if (r > 0) {
             // issue was renamed, update local project
+            printf("%s: Issue renamed: %s -> %s\n", project.getName().c_str(), i.id.c_str(),
+                   issueId.c_str());
             project.renameIssue(i, issueId);
         } else if (r < 0) {
             LOG_ERROR("Failed to push entry %s/issues/%s/%s", project.getName().c_str(),

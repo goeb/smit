@@ -94,7 +94,7 @@ public:
     // methods for handling entries
     int storeEntry(const Entry *e);
     int addEntry(PropertiesMap properties, std::string &iid, std::string &eid, std::string username);
-    int pushEntry(std::string issueId, const std::string &entryId,
+    int pushEntry(std::string &issueId, const std::string &entryId,
                   const std::string &user, const std::string &tmpPath);
     Entry *getEntry(const std::string &id) const;
 

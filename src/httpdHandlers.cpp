@@ -1361,6 +1361,26 @@ void httpGetObject(const RequestContext *req, Project &p, std::string object)
     req->sendObject(basemane, realpath);
 }
 
+/** Get the HEAD of an object
+  *
+  * This is used by client pushers to know if a file exists.
+  */
+void httpGetHeadObject(const RequestContext *req, Project &p, std::string object)
+{
+    LOG_FUNC();
+    std::string id = popToken(object, '/');
+    std::string basemane = object;
+    std::string realpath = p.getObjectsDir() + "/" + Object::getSubpath(id);
+
+    if (fileExists(realpath)) {
+        sendHttpHeader204(req);
+        req->printf("\r\n");
+
+    } else {
+        sendHttpHeader404(req);
+    }
+}
+
 /** Handle the pushing of a file
   *
   * If the file already exists, then do not overwrite it.
@@ -1843,7 +1863,8 @@ void httpPushEntry(const RequestContext *req, Project &p, const std::string &iss
         }
 
         // insert the entry into the database
-        r = p.pushEntry(issueId, entryId, u.username, tmpPath);
+        std::string id = issueId;
+        r = p.pushEntry(id, entryId, u.username, tmpPath);
         if (r < 0) {
             std::string msg = "Cannot push the entry";
             sendHttpHeader400(req, msg.c_str());
@@ -1852,9 +1873,9 @@ void httpPushEntry(const RequestContext *req, Project &p, const std::string &iss
         } else {
             // ok, no problem
             sendHttpHeader201(req);
-            // give the issueId, as it may be necessary to inform
+            // give the issue id, as it may be necessary to inform
             // the client that it has been renamed (renumbered)
-            req->printf("issue: %s\r\n", issueId.c_str());
+            req->printf("issue: %s\r\n", id.c_str());
         }
 
     } else {
@@ -2070,7 +2091,8 @@ int begin_request_handler(const RequestContext *req)
     else addHttpStat(H_OTHER);
 
     // check method
-    if (method != "GET" && method != "POST") return sendHttpHeader400(req, "invalid method");
+    std::string m = method; // use a shorter name to have a shorter next line
+    if (m != "GET" && m != "POST" && m != "HEAD") return sendHttpHeader400(req, "invalid method");
 
     // public access to /public and /sm
     if    ( (resource == "public") && (method == "GET")) return httpGetFile(req);
@@ -2150,6 +2172,7 @@ int begin_request_handler(const RequestContext *req)
         else if ( (resource == "reload") && (method == "POST") ) httpReloadProject(req, *p, user);
         else if ( (resource == RESOURCE_FILES) && (method == "POST") ) httpPushAttachedFile(req, *p, uri, user);
         else if ( (resource == RESOURCE_FILES) && (method == "GET") ) httpGetObject(req, *p, uri);
+        else if ( (resource == RESOURCE_FILES) && (method == "HEAD") ) httpGetHeadObject(req, *p, uri);
         else handled = false;
 
     }

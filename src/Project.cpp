@@ -1515,7 +1515,7 @@ int Project::addEntry(PropertiesMap properties, std::string &issueId, std::strin
   * A new issue is created if the parent of the pushed entry is 'null'
   * In this case, a new issueId is assigned, then it is returned (IN/OUT parameter).
   */
-int Project::pushEntry(std::string issueId, const std::string &entryId,
+int Project::pushEntry(std::string &issueId, const std::string &entryId,
                        const std::string &username, const std::string &tmpPath)
 {
     LOG_FUNC();

@@ -37,6 +37,7 @@ public:
     void getRequestRaw();
     void post(const std::string &params);
     int postFile(const std::string &srcFile, const std::string &destUrl);
+    int head(const std::string &url);
     int putFile(const std::string &srcFile, const std::string &destUrl);
 
     std::map<std::string, Cookie> cookies;

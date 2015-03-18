@@ -165,6 +165,31 @@ void HttpRequest::post(const std::string &params)
     performRequest();
 }
 
+int HttpRequest::head(const std::string &url)
+{
+    CURLcode res;
+    /* upload to this place */
+    curl_easy_setopt(curlHandle, CURLOPT_URL, url.c_str());
+    curl_easy_setopt(curlHandle, CURLOPT_NOBODY, 1L);
+    curl_easy_setopt(curlHandle, CURLOPT_CUSTOMREQUEST, "HEAD");
+
+    /* enable verbose for easier tracing */
+    if (getLoggingLevel() > LL_INFO) curl_easy_setopt(curlHandle, CURLOPT_VERBOSE, 1L);
+
+    res = curl_easy_perform(curlHandle);
+
+    /* Check for errors */
+    if (res != CURLE_OK) {
+        fprintf(stderr, "curl_easy_perform() failed: %s\n",
+                curl_easy_strerror(res));
+        return -1;
+
+    }
+
+    return 0; // ok
+
+}
+
 /** Post a file (file upload)
   *
   * @param destUrl
