@@ -2,9 +2,17 @@
 # common functions and environment variables
 
 REPO=trepo
+
+# project 1
 PROJECT1=p1
 USER1=tuser1
 PASSWD1=tpasswd1
+
+# project 2
+PROJECT2=p2
+USER2=tuser2
+PASSWD2=tpasswd2
+
 PORT=8099
 SMIT=../smit
 
@@ -33,10 +41,27 @@ initRepo() {
     # create issue 2
     $SMIT issue $REPO/$PROJECT1 -a - "summary=second issue" status=open
 }
+initRepoGlobalNumbering() {
+    mkdir $REPO
+    $SMIT init $REPO
+
+    # project 1
+    $SMIT project -c $PROJECT1 -d $REPO
+    $SMIT user $USER1 --passwd $PASSWD1 --project $PROJECT1:rw -d $REPO
+    chmod u+w $REPO/$PROJECT1/project
+    echo "numberIssues global" >> $REPO/$PROJECT1/project
+
+    # project 2
+    $SMIT project -c $PROJECT2 -d $REPO
+    $SMIT user $USER2 --passwd $PASSWD2 --project $PROJECT2:rw -d $REPO
+    chmod u+w $REPO/$PROJECT2/project
+    echo "numberIssues global" >> $REPO/$PROJECT2/project
+}
 cleanRepo() {
     REPO=trepo # just to be sure before the rm -rf
     rm -rf $REPO
     rm -rf clone1
+    rm -rf clone2
 }
 
 startServer() {

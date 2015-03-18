@@ -1118,10 +1118,13 @@ std::map<std::string, std::set<std::string> > Project::getReverseAssociations(co
 
 int Project::insertIssue(Issue *i)
 {
+    LOG_FUNC();
     if (!i) {
         LOG_ERROR("Cannot insert null issue in project");
         return -1;
     }
+
+    LOG_DEBUG("insertIssue %s", i->id.c_str());
 
     std::map<std::string, Issue*>::const_iterator existingIssue;
     existingIssue = issues.find(i->id);
@@ -1333,6 +1336,7 @@ void Project::cleanupMultiselect(std::list<std::string> &values, const std::list
   */
 Issue *Project::createNewIssue()
 {
+    LOG_FUNC();
     // create new directory for this issue
     std::string issueId = allocateNewIssueId();
 
@@ -1514,6 +1518,10 @@ int Project::addEntry(PropertiesMap properties, std::string &issueId, std::strin
 int Project::pushEntry(std::string issueId, const std::string &entryId,
                        const std::string &username, const std::string &tmpPath)
 {
+    LOG_FUNC();
+    LOG_DEBUG("pushEntry(%s, %s, %s, %s)", issueId.c_str(), entryId.c_str(),
+              username.c_str(), tmpPath.c_str());
+
     // load the file as an entry
     Entry *e = Entry::loadEntry(tmpPath, entryId, true); // check that the sha1 matches
     if (!e) return -1;
@@ -1531,6 +1539,7 @@ int Project::pushEntry(std::string issueId, const std::string &entryId,
     ScopeLocker scopeLocker(locker, LOCK_READ_WRITE);
 
     if (e->parent == K_PARENT_NULL) {
+        LOG_DEBUG("pushEntry: parent null");
         // assign a new issue id
         newI = createNewIssue();
         i = newI;

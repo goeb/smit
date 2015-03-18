@@ -86,6 +86,7 @@ void Issue::addEntryInTable(Entry *e)
   */
 void Issue::addEntry(Entry *e)
 {
+    LOG_FUNC();
     addEntryInTable(e);
 
     // consolidate the issue

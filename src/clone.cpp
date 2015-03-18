@@ -1140,6 +1140,8 @@ void pushAttachedFiles(const PullContext &pushCtx, const Project &p, const Entry
             std::string localPath = p.getObjectsDir() + "/" + Object::getSubpath(id);
             // push the file
 
+            // TODO this is not very optimized: all big files will be pushed, but
+            // for most of them it is a waste of performance.
             printf("Pushing file %s...\n", f->c_str());
             std::string url = pushCtx.rooturl + '/' + p.getUrlName() + "/" RESOURCE_FILES "/" + id;
             std::string response;
@@ -1181,14 +1183,13 @@ int pushIssue(const PullContext &pushCtx, Project &project, Issue &i)
         r = pushEntry(pushCtx, project, issueId, firstEntry.id);
 
         if (r > 0) {
-            // issue was renamed
+            // issue was renamed, update local project
             project.renameIssue(i, issueId);
         } else if (r < 0) {
             LOG_ERROR("Failed to push entry %s/issues/%s/%s", project.getName().c_str(),
                       i.id.c_str(), firstEntry.id.c_str());
             exit(1);
         }
-        pushAttachedFiles(pushCtx, project, firstEntry);
 
         // recurse
         return pushIssue(pushCtx, project, i);
@@ -1226,7 +1227,6 @@ int pushIssue(const PullContext &pushCtx, Project &project, Issue &i)
                     exit(1);
                 } else {
                     // ok
-                    pushAttachedFiles(pushCtx, project, *localEntry);
                 }
             } else {
                 // check that local and remote entries are aligned
@@ -1244,6 +1244,14 @@ int pushIssue(const PullContext &pushCtx, Project &project, Issue &i)
             localEntry = localEntry->next;
         }
     }
+
+    // push attached files of this issue
+    const Entry *e = i.first;
+    while (e) {
+        pushAttachedFiles(pushCtx, project, *e);
+        e = e->next;
+    }
+
 
     return 0;
 }
