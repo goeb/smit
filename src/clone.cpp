@@ -1227,8 +1227,6 @@ int pushIssue(const PullContext &pushCtx, Project &project, Issue &i)
 
             if (remoteEntryIt == remoteEntries.end()) {
                 // push the local entry to the remote side
-                printf("Pushing entry %s/issues/%s/%s\n", project.getName().c_str(),
-                       i.id.c_str(), localEntry->id.c_str());
                 r = pushEntry(pushCtx, project, i.id, localEntry->id);
                 if (r > 0) {
                     // the issue was renamed. this should not happen.
