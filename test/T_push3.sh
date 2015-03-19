@@ -15,7 +15,7 @@ startServer
 rm -rf clone1
 $SMIT clone http://127.0.0.1:$PORT --user $USER1 --passwd $PASSWD1 clone1
 
-# add an issue and push
+# add some issues and push
 $SMIT issue clone1/p1 -a - summary="an issue 1 in p1"
 $SMIT issue clone1/p1 -a - summary="an issue 2 in p1"
 $SMIT issue clone1/p1 -a - summary="an issue 3 in p1"

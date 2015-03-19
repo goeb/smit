@@ -1211,6 +1211,12 @@ int Project::renameIssue(Issue &i, const std::string &newId)
 /** get the next issue
   *
   * This method is a helper for iterating over the issues of the project.
+  *
+  * Eg:
+  *     Issue *i = 0;
+  *     while ( (i = project.getNextIssue(i)) ) {
+  *         ...
+  *     }
   */
 Issue *Project::getNextIssue(Issue *i)
 {
@@ -1222,15 +1228,20 @@ Issue *Project::getNextIssue(Issue *i)
         // get the next after the given issue
         it = issues.find(i->id);
 
-        if (it == issues.end()) return 0; // this should not happen
+        if (it == issues.end()) {
+            // try getting the next
+            // this is used when iterating over the issues,
+            // and an issue is renamed
+            it = issues.upper_bound(i->id);
 
-        it++;
+        } else {
+            it++;
+        }
     }
 
     if (it == issues.end()) return 0;
     else return it->second;
 }
-
 
 /**
   * issues may be a list of 1 empty string, meaning that associations have been removed

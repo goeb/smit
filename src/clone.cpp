@@ -1171,7 +1171,7 @@ void pushAttachedFiles(const PullContext &pushCtx, const Project &p, const Entry
     }
 }
 
-int pushIssue(const PullContext &pushCtx, Project &project, Issue &i)
+int pushIssue(const PullContext &pushCtx, Project &project, Issue i)
 {
     // - get list of entries of the same remote issue
     //    + if no such remote issue, push
