@@ -1178,6 +1178,10 @@ int Project::storeRefIssue(const std::string &issueId, const std::string &entryI
 }
 
 /** Rename an issue (take the next available id)
+  *
+  * @return
+  *     the newly assigned
+  *     or and empty string in case of failure
   */
 std::string Project::renameIssue(const std::string &oldId)
 {

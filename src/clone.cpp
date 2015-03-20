@@ -370,6 +370,7 @@ void pullAttachedFiles(const PullContext &pullCtx, const Project &p, const Issue
 }
 /** Clone a remote issue
   *
+  * Download all entries of the remote that do not exist locally.
   */
 Issue *cloneIssue(const PullContext &pullCtx, Project &p, const std::string &issueId)
 {
@@ -417,55 +418,95 @@ Issue *cloneIssue(const PullContext &pullCtx, Project &p, const std::string &iss
     return remoteIssue;
 }
 
-/** Pull an issue
-  *
-  * If the remote issue conflicts with a local issue (ie: they have not the same first entry):
-  * - rename the local issue (thus changing its identifier)
-  * - clone the remote issue
+/** Rename local issue if existing
   */
-int pullIssue(const PullContext &pullCtx, Project &p, const Issue &localIssue)
+void renameIssueStandingInTheWay(Project &p, const std::string issueId)
 {
-    LOG_FUNC();
-    LOG_DEBUG("Pulling %s/issues/%s", p.getName().c_str(), localIssue.id.c_str());
-
-    // compare the remote and local issue
-    // get the first entry of the issue
-    // check conflict on issue id
-
-    Issue *remoteIssue = cloneIssue(pullCtx, p, localIssue.id);
-
-    if (localIssue.first->id != remoteIssue->first->id) {
-
-        // TODO check if the remote is not the same as one of the locals (under a different id)
-
-        // The remote issue and the local issue have not the same first entry
-        // and therefore are not the same.
-        // The local issue must be renamed.
-
-        // propose to the user a new id for the issue?
-
-        printf("Issue conflicting with remote: %s %s\n", localIssue.id.c_str(), localIssue.getSummary().c_str());
-        printf("Issue %s: local and remote diverge: %s <> %s\n", localIssue.id.c_str(),
-                  localIssue.first->id.c_str(), remoteIssue->first->id.c_str());
-
-        std::string newId = p.renameIssue(localIssue.id);
+    Issue i;
+    int r = p.get(issueId, i);
+    if (r == 0) {
+        // Yes, another issue is in the way. Rename it.
+        printf("Local issue %s is in the way: needs renaming\n", issueId.c_str());
+        std::string newId = p.renameIssue(issueId);
         if (newId.empty()) {
-            fprintf(stderr, "Cannot rename issue %s. Aborting\n", localIssue.id.c_str());
+            fprintf(stderr, "Cannot rename issue %s\n", issueId.c_str());
             exit(1);
         }
+        printf("Local issue renamed: %s -> %s\n", issueId.c_str(), newId.c_str());
+    }
+}
 
-        // inform the user
-        printf("Local issue %s renamed %s (%s)\n", localIssue.id.c_str(), newId.c_str(), localIssue.getSummary().c_str());
+/** Pull an issue
+  *
+  */
+int pullIssue(const PullContext &pullCtx, Project &p, const std::string &remoteIssueId)
+{
+    LOG_FUNC();
+    LOG_DEBUG("Pulling %s/issues/%s", p.getName().c_str(), remoteIssueId.c_str());
 
-        // store new issue id
-        int r = p.storeRefIssue(remoteIssue->id, remoteIssue->latest->id);
+    // download the remote issue
+    Issue *remoteIssue = cloneIssue(pullCtx, p, remoteIssueId);
+
+    // Get the related local issue. 3 possible cases:
+    // - no related local issue
+    // - a related local issue with same identifier
+    // - a related local issue with a different id
+
+    Issue *localIssue = 0; // the local issue related to the remote issue being pulled
+
+    std::string firstEntry = remoteIssue->first->id;
+    // look if the first entry of the remote issue is known locally
+    Entry *e = p.getEntry(firstEntry);
+    if (e) {
+        // yes, we have it locally
+        localIssue = e->issue;
+        if (!localIssue) {
+            fprintf(stderr, "Entry %s related to null issue\n", firstEntry.c_str());
+            exit(1);
+        }
+        if (localIssue->id != remoteIssueId) {
+            // The local issue needs to be renamed and assigned the same id as the remote.
+            // But first check (and rename) if another local issue occupies the id.
+            printf("%s/issues/%s needs renaming to %s (remote does not match)\n",
+                   p.getName().c_str(), localIssue->id.c_str(), remoteIssueId.c_str());
+
+            // check if another local issue is in the way
+            renameIssueStandingInTheWay(p, remoteIssueId);
+
+            // rename the local issue to the same id as the remote issue
+            int r = p.renameIssue(*localIssue, remoteIssueId);
+            if (r != 0) {
+                fprintf(stderr, "Cannot get entries of remote issue %s\n", remoteIssueId.c_str());
+                exit(1);
+            }
+        }
+    } else {
+        // this entry does not exist locally
+        localIssue = 0;
+    }
+
+    if (!localIssue) {
+        // Local issue not existing
+
+        // Check if a local issue with same id exists.
+        renameIssueStandingInTheWay(p, remoteIssueId);
+
+        // Simply insert the remote issue in the project tables
+        int r = p.insertIssue(remoteIssue);
+        if (r!=0) {
+            LOG_ERROR("Cannot insert cloned issue: %s", remoteIssue->id.c_str());
+            exit(1);
+        }
+        // Store issue ref on disk
+        r = p.storeRefIssue(remoteIssueId, remoteIssue->latest->id);
         if (r != 0) exit(1);
 
-
     } else {
-        // same issue. Walk through the entries...
 
-        Entry *localEntry = localIssue.first;
+        // Local and remote issues are now aligned.
+        // Walk through the entries...
+
+        Entry *localEntry = localIssue->first;
         Entry *remoteEntry = remoteIssue->first;
         while (1) {
 
@@ -504,6 +545,7 @@ int pullIssue(const PullContext &pullCtx, Project &p, const Issue &localIssue)
             remoteEntry = remoteEntry->next;
         }
     }
+
     pullAttachedFiles(pullCtx, p, *remoteIssue);
     return 0; // ok
 }
@@ -513,6 +555,7 @@ int pullIssue(const PullContext &pullCtx, Project &p, const Issue &localIssue)
 int pullProject(const PullContext &pullCtx, Project &p)
 {
     printf("Pulling project %s\n", p.getName().c_str());
+
     // get the remote issues
     HttpRequest hr(pullCtx.httpCtx);
     std::string resource = "/" + p.getUrlName() + "/issues/";
@@ -520,42 +563,12 @@ int pullProject(const PullContext &pullCtx, Project &p)
     hr.getRequestLines();
     hr.closeCurl(); // free the resource
 
-    std::list<std::string>::iterator issueId;
-    FOREACH(issueId, hr.lines) {
-        std::string id = *issueId;
-        if (id.empty()) continue;
-        LOG_DEBUG("Remote: %s/issues/%s", p.getName().c_str(), id.c_str());
+    std::list<std::string>::iterator issueIt;
+    FOREACH(issueIt, hr.lines) {
+        std::string remoteIssueId = *issueIt;
+        if (remoteIssueId.empty()) continue;
 
-        // get the issue with same id in local repository
-        Issue i;
-        int r = p.get(id, i);
-
-        // check if the pulled remote issue is not already
-        // locally under another issue id (this may happen
-        // if a previous push was interrupted)
-
-        // TODO
-
-
-        if (r < 0) {
-            // simply clone the remote issue
-            Issue *i = cloneIssue(pullCtx, p, id);
-
-            // insert the issue in the project tables
-            int r = p.insertIssue(i);
-            if (r!=0) {
-                LOG_ERROR("Cannot add cloned issue: %s", id.c_str());
-                exit(1);
-            }
-            // store issue ref on disk
-            r = p.storeRefIssue(id, i->latest->id);
-            if (r != 0) exit(1);
-
-            pullAttachedFiles(pullCtx, p, *i);
-
-        } else {
-            pullIssue(pullCtx, p, i);
-        }
+        pullIssue(pullCtx, p, remoteIssueId);
     }
 
     return 0; // ok
