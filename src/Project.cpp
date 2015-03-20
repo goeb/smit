@@ -266,15 +266,11 @@ int Project::loadIssues()
             continue;
         }
 
-
+        // store the entries in the 'entries' table
         Entry *e = issue->latest;
         while (e) {
-            std::map<std::string, Entry*>::const_iterator otherEntry = entries.find(e->id);
-            if (otherEntry != entries.end()) {
-                LOG_ERROR("duplicate entry (merge not complete ?) TODO");
-                // TODO
-            }
-            entries[e->id] = e; // store in the global table
+            int r = insertEntry(e);
+            // if (r != 0) ? TODO
             e = e->prev;
         }
 
@@ -1124,19 +1120,51 @@ int Project::insertIssue(Issue *i)
         return -1;
     }
 
+    if (i->id.empty()) {
+        LOG_ERROR("Cannot insert issue with empty id in project");
+        return -2;
+    }
+
     LOG_DEBUG("insertIssue %s", i->id.c_str());
 
     std::map<std::string, Issue*>::const_iterator existingIssue;
     existingIssue = issues.find(i->id);
     if (existingIssue != issues.end()) {
         LOG_ERROR("Cannot insert issue %s: already in database", i->id.c_str());
-        return -2;
+        return -3;
     }
 
     // add the issue in the table
     issues[i->id] = i;
     return 0;
 }
+
+int Project::insertEntry(Entry *e)
+{
+    LOG_FUNC();
+    if (!e) {
+        LOG_ERROR("Cannot insert null entry in project");
+        return -1;
+    }
+    if (e->id.empty()) {
+        LOG_ERROR("Cannot insert entry with empty id in project");
+        return -2;
+    }
+
+    LOG_DEBUG("insertEntry %s", e->id.c_str());
+
+    std::map<std::string, Entry*>::const_iterator existingEntry;
+    existingEntry = entries.find(e->id);
+    if (existingEntry != entries.end()) {
+        LOG_ERROR("Cannot insert entry %s: already in database", e->id.c_str());
+        return -3;
+    }
+
+    // add the issue in the table
+    entries[e->id] = e;
+    return 0;
+}
+
 
 int Project::storeRefIssue(const std::string &issueId, const std::string &entryId)
 {
@@ -1476,7 +1504,9 @@ int Project::addEntry(PropertiesMap properties, std::string &issueId, std::strin
     // write the entry to disk
 
     // if issueId is empty, create a new issue
+    bool newIssueCreated = false;
     if (!i) {
+        newIssueCreated = true;
         i = createNewIssue();
         if (!i) return -1;
         issueId = i->id; // in/out parameter
@@ -1485,23 +1515,24 @@ int Project::addEntry(PropertiesMap properties, std::string &issueId, std::strin
     // create the new entry object
     Entry *e = Entry::createNewEntry(properties, username, i->latest);
 
-    // check that this entry ID does not already exist in memory
-    if (entries.find(e->id) != entries.end()) {
-        LOG_ERROR("Entry with same id already exists: %s", e->id.c_str());
-        return -1;
+    // add this entry in internal in-memory tables
+    int r = insertEntry(e);
+    if (r != 0) return r; // already exists
+
+    i->addEntry(e);
+
+    if (newIssueCreated) {
+        r = insertIssue(i);
+        if (r != 0) return r; // already exists
     }
 
-    int r = storeEntry(e);
-    if (r<0) return r;
+    r = storeEntry(e);
+    if (r < 0) return r;
 
 	// update latest entry of issue on disk
     r = storeRefIssue(issueId, e->id);
-    if (r<0) return r;
+    if (r < 0) return r;
 
-    // add this entry in internal in-memory tables
-    entries[e->id] = e;
-    i->addEntry(e);
-    issues[issueId] = i;
 
     // if some association has been updated, then update the associations tables
     FOREACH(p, properties) {
@@ -1586,6 +1617,9 @@ int Project::pushEntry(std::string &issueId, const std::string &entryId,
     // insert the new entry in the database
     i->addEntry(e);
 
+    int r = insertEntry(e);
+    if (r != 0) return -1;
+
     if (newI) {
         // insert the new issue in the database
         int r = insertIssue(i);
@@ -1598,7 +1632,7 @@ int Project::pushEntry(std::string &issueId, const std::string &entryId,
 
     mkdir(getDirname(newpath));
     LOG_DEBUG("rename: %s -> %s", tmpPath.c_str(), newpath.c_str());
-    int r = rename(tmpPath.c_str(), newpath.c_str());
+    r = rename(tmpPath.c_str(), newpath.c_str());
     if (r != 0) {
         LOG_ERROR("pushEntry error: could not officiliaze pushed entry %s/%s: %s",
                   issueId.c_str(), entryId.c_str(), strerror(errno));

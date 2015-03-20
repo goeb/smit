@@ -368,6 +368,9 @@ void pullAttachedFiles(const PullContext &pullCtx, const Project &p, const Issue
         e = e->next;
     }
 }
+/** Clone a remote issue
+  *
+  */
 Issue *cloneIssue(const PullContext &pullCtx, Project &p, const std::string &issueId)
 {
     LOG_DEBUG("Cloning %s/issues/%s", p.getName().c_str(), issueId.c_str());
@@ -486,9 +489,11 @@ int pullIssue(const PullContext &pullCtx, Project &p, const Issue &localIssue)
 
                 handleConflictOnEntries(pullCtx, p, localEntry, *remoteIssue);
 
-                // TODO check if the issue must be inserted in memory or not
                 int r = p.storeRefIssue(remoteIssue->id, remoteIssue->latest->id);
                 if (r != 0) exit(1);
+
+                // the updated issue need not be inserted in memory
+                // as the pulling of subsequent issues does need it
 
                 break; // leave the loop.
 

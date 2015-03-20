@@ -93,6 +93,7 @@ public:
 
 
     // methods for handling entries
+    int insertEntry(Entry *e);
     int storeEntry(const Entry *e);
     int addEntry(PropertiesMap properties, std::string &iid, std::string &eid, std::string username);
     int pushEntry(std::string &issueId, const std::string &entryId,
