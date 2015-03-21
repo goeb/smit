@@ -52,7 +52,7 @@ CONFIG_CLEAN_FILES = parseConfig1.txt parseConfig2.txt
 CONFIG_CLEAN_VPATH_FILES =
 am__dirstamp = $(am__leading_dot)dirstamp
 am_T_parseConfig_OBJECTS = T_parseConfig.$(OBJEXT) \
-	../src/parseConfig.$(OBJEXT)
+	../src/parseConfig.$(OBJEXT) ../src/stringTools.$(OBJEXT)
 T_parseConfig_OBJECTS = $(am_T_parseConfig_OBJECTS)
 T_parseConfig_LDADD = $(LDADD)
 am_T_stringTools_OBJECTS = T_stringTools.$(OBJEXT) \
@@ -222,7 +222,7 @@ target_vendor = @target_vendor@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-T_parseConfig_SOURCES = T_parseConfig.cpp ../src/parseConfig.cpp
+T_parseConfig_SOURCES = T_parseConfig.cpp ../src/parseConfig.cpp ../src/stringTools.cpp
 T_stringTools_SOURCES = T_stringTools.cpp ../src/stringTools.cpp
 get_random_value_SOURCES = get_random_value.c
 smparser_SOURCES = ../src/parseConfig.cpp ../src/filesystem.cpp ../src/stringTools.cpp
@@ -280,11 +280,11 @@ clean-checkPROGRAMS:
 	@: > ../src/$(DEPDIR)/$(am__dirstamp)
 ../src/parseConfig.$(OBJEXT): ../src/$(am__dirstamp) \
 	../src/$(DEPDIR)/$(am__dirstamp)
+../src/stringTools.$(OBJEXT): ../src/$(am__dirstamp) \
+	../src/$(DEPDIR)/$(am__dirstamp)
 T_parseConfig$(EXEEXT): $(T_parseConfig_OBJECTS) $(T_parseConfig_DEPENDENCIES) $(EXTRA_T_parseConfig_DEPENDENCIES) 
 	@rm -f T_parseConfig$(EXEEXT)
 	$(AM_V_CXXLD)$(CXXLINK) $(T_parseConfig_OBJECTS) $(T_parseConfig_LDADD) $(LIBS)
-../src/stringTools.$(OBJEXT): ../src/$(am__dirstamp) \
-	../src/$(DEPDIR)/$(am__dirstamp)
 T_stringTools$(EXEEXT): $(T_stringTools_OBJECTS) $(T_stringTools_DEPENDENCIES) $(EXTRA_T_stringTools_DEPENDENCIES) 
 	@rm -f T_stringTools$(EXEEXT)
 	$(AM_V_CXXLD)$(CXXLINK) $(T_stringTools_OBJECTS) $(T_stringTools_LDADD) $(LIBS)
