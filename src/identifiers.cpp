@@ -18,32 +18,13 @@
 
 #include "identifiers.h"
 #include "logging.h"
-
-
-std::string bin2hex(const ustring & in)
-{
-    const char hexTable[] = { '0', '1', '2', '3',
-                              '4', '5', '6', '7',
-                              '8', '9', 'a', 'b',
-                              'c', 'd', 'e', 'f' };
-    std::string hexResult;
-    size_t i;
-    size_t L = in.size();
-    for (i=0; i<L; i++) {
-        int c = in[i];
-        hexResult += hexTable[c >> 4];
-        hexResult += hexTable[c & 0x0f];
-    }
-    return hexResult;
-}
+#include "stringTools.h"
 
 std::string getSha1(const char *data, size_t len)
 {
     unsigned char sha[SHA_DIGEST_LENGTH];
     SHA1((uint8_t*)data, len, sha);
-    ustring sha1sum;
-    sha1sum.assign(sha, SHA_DIGEST_LENGTH);
-    return bin2hex(sha1sum);
+    return bin2hex(sha, SHA_DIGEST_LENGTH);
 }
 
 std::string getSha1(const std::string &data)

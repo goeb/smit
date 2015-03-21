@@ -22,6 +22,28 @@
 #include "stringTools.h"
 #include "global.h"
 
+std::string bin2hex(const ustring & in)
+{
+    return bin2hex(in.data(), in.size());
+}
+
+std::string bin2hex(const unsigned char *buffer, size_t len)
+{
+    const char hexTable[] = { '0', '1', '2', '3',
+                              '4', '5', '6', '7',
+                              '8', '9', 'a', 'b',
+                              'c', 'd', 'e', 'f' };
+    std::string hexResult;
+    size_t i;
+    for (i=0; i<len; i++) {
+        int c = buffer[i];
+        hexResult += hexTable[c >> 4];
+        hexResult += hexTable[c & 0x0f];
+    }
+    return hexResult;
+}
+
+
 /** take first token name out of uri
   * Examples:
   *     popToken("/a/b/c", '/') -> return "a" and set uri to "b/c"
