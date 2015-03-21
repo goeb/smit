@@ -491,15 +491,12 @@ int pullIssue(const PullContext &pullCtx, Project &p, const std::string &remoteI
         // Check if a local issue with same id exists.
         renameIssueStandingInTheWay(p, remoteIssueId);
 
-        // Simply insert the remote issue in the project tables
-        int r = p.insertIssue(remoteIssue);
+        // add the issue to the project
+        int r = p.addNewIssue(*remoteIssue);
         if (r!=0) {
             LOG_ERROR("Cannot insert cloned issue: %s", remoteIssue->id.c_str());
             exit(1);
         }
-        // Store issue ref on disk
-        r = p.storeRefIssue(remoteIssueId, remoteIssue->latest->id);
-        if (r != 0) exit(1);
 
     } else {
 

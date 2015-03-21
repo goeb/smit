@@ -269,7 +269,7 @@ int Project::loadIssues()
         // store the entries in the 'entries' table
         Entry *e = issue->latest;
         while (e) {
-            int r = insertEntry(e);
+            int r = insertEntryInTable(e);
             // if (r != 0) ? TODO
             e = e->prev;
         }
@@ -280,7 +280,7 @@ int Project::loadIssues()
 
         // store the issue in memory
         issue->id = issueId;
-        issues[issue->id] = issue;
+        insertIssueInTable(issue);
     }
 
     closeDir(issuesDirHandle);
@@ -1112,7 +1112,7 @@ std::map<std::string, std::set<std::string> > Project::getReverseAssociations(co
     else return raIssue->second;
 }
 
-int Project::insertIssue(Issue *i)
+int Project::insertIssueInTable(Issue *i)
 {
     LOG_FUNC();
     if (!i) {
@@ -1125,7 +1125,7 @@ int Project::insertIssue(Issue *i)
         return -2;
     }
 
-    LOG_DEBUG("insertIssue %s", i->id.c_str());
+    LOG_DEBUG("insertIssueInTable %s", i->id.c_str());
 
     std::map<std::string, Issue*>::const_iterator existingIssue;
     existingIssue = issues.find(i->id);
@@ -1139,7 +1139,7 @@ int Project::insertIssue(Issue *i)
     return 0;
 }
 
-int Project::insertEntry(Entry *e)
+int Project::insertEntryInTable(Entry *e)
 {
     LOG_FUNC();
     if (!e) {
@@ -1151,7 +1151,7 @@ int Project::insertEntry(Entry *e)
         return -2;
     }
 
-    LOG_DEBUG("insertEntry %s", e->id.c_str());
+    LOG_DEBUG("insertEntryInTable %s", e->id.c_str());
 
     std::map<std::string, Entry*>::const_iterator existingEntry;
     existingEntry = entries.find(e->id);
@@ -1274,6 +1274,21 @@ Issue *Project::getNextIssue(Issue *i)
     if (it == issues.end()) return 0;
     else return it->second;
 }
+
+/** Add an issue to the project
+  */
+int Project::addNewIssue(Issue &i)
+{
+    // insert the issue in the table of issues
+    int r = insertIssueInTable(&i);
+    if (r!=0) return r;
+
+    // Store issue ref on disk
+    r = storeRefIssue(i.id, i.latest->id);
+
+    return r;
+}
+
 
 /**
   * issues may be a list of 1 empty string, meaning that associations have been removed
@@ -1407,6 +1422,14 @@ int Project::storeEntry(const Entry *e)
         LOG_ERROR("Could not write new entry to disk");
         return -2;
     }
+
+    // check for debug TODO
+    std::string s = getSha1OfFile(pathOfNewEntry);
+    if (s != e->id) {
+        LOG_ERROR("sha1 do not match: s=%s <> e->id=%s", s.c_str(), e->id.c_str());
+    }
+
+
     return 0;
 }
 
@@ -1519,24 +1542,21 @@ int Project::addEntry(PropertiesMap properties, std::string &issueId, std::strin
     // create the new entry object
     Entry *e = Entry::createNewEntry(properties, username, i->latest);
 
-    // add this entry in internal in-memory tables
-    int r = insertEntry(e);
+    // add the entry to the project
+    int r = addNewEntry(e);
     if (r != 0) return r; // already exists
 
+    // add the entry to the issue
     i->addEntry(e);
 
     if (newIssueCreated) {
-        r = insertIssue(i);
+        r = insertIssueInTable(i);
         if (r != 0) return r; // already exists
     }
-
-    r = storeEntry(e);
-    if (r < 0) return r;
 
 	// update latest entry of issue on disk
     r = storeRefIssue(issueId, e->id);
     if (r < 0) return r;
-
 
     // if some association has been updated, then update the associations tables
     FOREACH(p, properties) {
@@ -1550,6 +1570,20 @@ int Project::addEntry(PropertiesMap properties, std::string &issueId, std::strin
 
     return 0; // success
 }
+
+/** Add a new entry to the project
+  */
+int Project::addNewEntry(Entry *e)
+{
+    // add this entry in internal in-memory tables
+    int r = insertEntryInTable(e);
+    if (r != 0) return r; // already exists
+
+    r = storeEntry(e);
+
+    return r;
+}
+
 
 /** Push an uploaded entry in the database
   *
@@ -1621,12 +1655,12 @@ int Project::pushEntry(std::string &issueId, const std::string &entryId,
     // insert the new entry in the database
     i->addEntry(e);
 
-    int r = insertEntry(e);
+    int r = insertEntryInTable(e);
     if (r != 0) return -1;
 
     if (newI) {
         // insert the new issue in the database
-        int r = insertIssue(i);
+        int r = insertIssueInTable(i);
         if (r != 0) {
             delete e;
             delete i;
@@ -1704,7 +1738,21 @@ int Project::deleteEntry(const std::string &entryId, const std::string &username
     else if (e->isAmending()) return -8; // one cannot amend an amending message
 
     // ok, we can proceed
-    e->issue->amendEntry(entryId, "", username);
+    Entry *amendingEntry = e->issue->amendEntry(entryId, "", username);
+    if (!amendingEntry) {
+        // should never happen
+        LOG_ERROR("amending entry: null");
+        return -1;
+    }
+
+    int r = addNewEntry(amendingEntry);
+    if (r != 0) return r;
+
+    // update latest entry of issue on disk
+    r = storeRefIssue(e->issue->id, amendingEntry->id);
+    if (r < 0) return r;
+
+
     return 0;
 }
 

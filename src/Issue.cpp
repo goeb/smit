@@ -154,7 +154,7 @@ Issue *Issue::load(const std::string &objectsDir, const std::string &latestEntry
   * The former message will be replaced by the new one
   * in the consolidation of the issue.
   */
-void Issue::amendEntry(const std::string &entryId, const std::string &newMsg, const std::string &username)
+Entry *Issue::amendEntry(const std::string &entryId, const std::string &newMsg, const std::string &username)
 {
     PropertiesMap properties;
     properties[K_MESSAGE].push_back(newMsg);
@@ -164,6 +164,8 @@ void Issue::amendEntry(const std::string &entryId, const std::string &newMsg, co
     addEntry(amendingEntry);
 
     consolidateAmendment(amendingEntry);
+
+    return amendingEntry;
 }
 
 

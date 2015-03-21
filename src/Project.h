@@ -85,17 +85,16 @@ public:
     std::string allocateNewIssueId();
     void updateMaxIssueId(uint32_t i);
     std::map<std::string, std::set<std::string> > getReverseAssociations(const std::string &issue) const;
-    int insertIssue(Issue *i);
     int storeRefIssue(const std::string &issueId, const std::string &entryId);
     std::string renameIssue(const std::string &oldId);
     int renameIssue(Issue &i, const std::string &newId);
     Issue *getNextIssue(Issue *i);
-
+    int addNewIssue(Issue &i);
 
     // methods for handling entries
-    int insertEntry(Entry *e);
     int storeEntry(const Entry *e);
     int addEntry(PropertiesMap properties, std::string &iid, std::string &eid, std::string username);
+    int addNewEntry(Entry *e);
     int pushEntry(std::string &issueId, const std::string &entryId,
                   const std::string &user, const std::string &tmpPath);
     Entry *getEntry(const std::string &id) const;
@@ -147,6 +146,8 @@ private:
 
     int storeViewsToFile();
     Issue *getIssue(const std::string &id) const;
+    int insertEntryInTable(Entry *e);
+    int insertIssueInTable(Issue *i);
 
     ProjectConfig config;
     std::map<std::string, Issue*> issues;
