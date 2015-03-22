@@ -43,7 +43,6 @@
 #define K_AUTHOR "+author"
 #define K_CTIME "+ctime"
 #define K_PARENT_NULL "null"
-#define K_MERGE_PENDING ".merge-pending";
 
 
 /** Load an entry from a file

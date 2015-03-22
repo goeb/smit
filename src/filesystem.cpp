@@ -368,7 +368,20 @@ std::string getTmpPath(const std::string &path)
 
 int cmpFiles(const std::string &srcPath, const std::string &destPath)
 {
+    LOG_INFO("cmpFiles not implemented");
     // TODO
     return 0;
 }
+
+int cmpContents(const std::string &contents, const std::string &file)
+{
+    std::string data;
+    int r = loadFile(file.c_str(), data);
+    LOG_ERROR("cmpContents: loadFile failed: %s => %s", file.c_str(), strerror(errno));
+    if (r != 0) return r;
+
+    if (contents == data) return 0;
+    else return -1;
+}
+
 

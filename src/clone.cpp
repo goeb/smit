@@ -1105,11 +1105,13 @@ int getHead(const PullContext &pushCtx, const std::string &url)
     }
 }
 
-int pushFile(const PullContext &pushCtx, const std::string &localFile, const std::string &url, std::string &response)
+int pushFile(const PullContext &pushCtx, const std::string &localFile, const std::string &url,
+             int &httpStatusCode, std::string &response)
 {
     HttpRequest hr(pushCtx.httpCtx);
     int r = hr.postFile(localFile, url);
     if (r == 0 && hr.lines.size()) response = hr.lines.front();
+    httpStatusCode = hr.httpStatusCode;
     return r;
 }
 
@@ -1120,11 +1122,13 @@ int pushFile(const PullContext &pushCtx, const std::string &localFile, const std
   *     The issue id may be changed by the server when the entry is the first entry.
   *
   * @return
-  *    < 0 : error, the entry could not be pushed
+  *   -3   : conflict error, the entry could not be pushed
+  *   <0   : other error, the entry could not be pushed
   *    0   : ok, no change for issue id
   *    1   : issue id has changed
   */
-int pushEntry(const PullContext &pushCtx, const Project &p, std::string &issue, const std::string &entry)
+int pushEntry(const PullContext &pushCtx, const Project &p, std::string &issue,
+              const std::string &entry)
 {
     LOG_CLI("Pushing entry: %s/issues/%s/%s\n", p.getName().c_str(), issue.c_str(), entry.c_str());
     // post the entry (which must be the first entry of an issue)
@@ -1132,10 +1136,17 @@ int pushEntry(const PullContext &pushCtx, const Project &p, std::string &issue, 
     std::string localFile = p.getObjectsDir() + '/' + Object::getSubpath(entry);
     std::string url = pushCtx.rooturl + '/' + p.getUrlName() + "/" RESOURCE_ISSUES "/" + issue + '/' + entry;
     std::string response;
-    int r = pushFile(pushCtx, localFile, url, response);
-    if (r != 0) {
+    int httpStatusCode = 0;
+    int r = pushFile(pushCtx, localFile, url, httpStatusCode, response);
+    if (httpStatusCode == 409) {
+        // conflict
+        LOG_ERROR("Conflict for pushing entry of project %s: %s/%s",
+                  p.getName().c_str(), issue.c_str(), entry.c_str());
+        printf("Try pulling first.\n");
+        exit(1);
+    } else if (r != 0) {
         // error
-        LOG_ERROR("%s: Could not push entry %s/%s", p.getName().c_str(), issue.c_str(), entry.c_str());
+        LOG_ERROR("Could not push entry of project %s: %s/%s", p.getName().c_str(), issue.c_str(), entry.c_str());
         exit(1);
     }
 
@@ -1177,10 +1188,11 @@ void pushAttachedFiles(const PullContext &pushCtx, const Project &p, const Entry
                 LOG_CLI("Pushing file %s...\n", f->c_str());
                 std::string url = pushCtx.rooturl + '/' + p.getUrlName() + "/" RESOURCE_FILES "/" + id;
                 std::string response;
-                int r = pushFile(pushCtx, localPath, url, response);
+                int httpStatusCode = 0;
+                int r = pushFile(pushCtx, localPath, url, httpStatusCode, response);
 
                 if (r != 0) {
-                    LOG_ERROR("Cannot push file: %s", url.c_str());
+                    LOG_ERROR("Cannot push file: %s (HTTP %d)", url.c_str(), httpStatusCode);
                     exit(1);
                 }
             }
@@ -1190,57 +1202,59 @@ void pushAttachedFiles(const PullContext &pushCtx, const Project &p, const Entry
 
 int pushIssue(const PullContext &pushCtx, Project &project, Issue localIssue)
 {
+    LOG_DEBUG("pushIssue %s: %s", project.getName().c_str(), localIssue.id.c_str());
+
     // - get list of entries of the same remote issue
     //    + if no such remote issue, push
     //    + if discrepancy (first entries do not match), abort and ask the user to pull first
     //    + else, push the local entries missing on the remote side
-    Entry *localEntry = i.first;
+    Entry *localEntry = localIssue.first;
     if (!localEntry) {
         LOG_ERROR("%s: null first entry for issue %s", project.getName().c_str(),
-                  i.id.c_str());
+                  localIssue.id.c_str());
         exit(1);
     }
     const Entry &firstEntry = *localEntry;
     std::list<std::string> remoteEntries;
-    int r = getEntriesOfRemoteIssue(pushCtx, project, i.id, remoteEntries);
+    int r = getEntriesOfRemoteIssue(pushCtx, project, localIssue.id, remoteEntries);
     if (r != 0) {
         // no such remote issue
         // push first entry
-        std::string issueId = i.id;
+        std::string issueId = localIssue.id;
         r = pushEntry(pushCtx, project, issueId, firstEntry.id);
 
         if (r > 0) {
             // issue was renamed, update local project
-            LOG_CLI("%s: Issue renamed: %s -> %s\n", project.getName().c_str(), i.id.c_str(),
-                   issueId.c_str());
+            LOG_CLI("%s: Issue renamed: %s -> %s\n", project.getName().c_str(),
+                    localIssue.id.c_str(), issueId.c_str());
             renameIssueStandingInTheWay(project, issueId);
-            r = project.renameIssue(i, issueId);
+            r = project.renameIssue(localIssue, issueId);
             if (r != 0) {
-                fprintf(stderr, "Cannot rename issue %s -> %s\n", i.id.c_str(),
+                fprintf(stderr, "Cannot rename issue %s -> %s\n", localIssue.id.c_str(),
                         issueId.c_str());
                 exit(1);
 
             }
         } else if (r < 0) {
             LOG_ERROR("Failed to push entry %s/issues/%s/%s", project.getName().c_str(),
-                      i.id.c_str(), firstEntry.id.c_str());
+                      localIssue.id.c_str(), firstEntry.id.c_str());
             exit(1);
         }
 
         // recurse
-        return pushIssue(pushCtx, project, i);
+        return pushIssue(pushCtx, project, localIssue);
 
     } else if (remoteEntries.empty()) {
         // internal error, should not happen
         LOG_ERROR("%s: error, empty entries for remote issue %s", project.getName().c_str(),
-                i.id.c_str());
+                localIssue.id.c_str());
         exit(1);
 
     } else {
         // check if first entries match
         if (remoteEntries.front() != firstEntry.id) {
             LOG_CLI("%s: mismatch of first entries for issue %s: %s <> %s\n", project.getName().c_str(),
-                   i.id.c_str(), remoteEntries.front().c_str(), firstEntry.id.c_str());
+                   localIssue.id.c_str(), remoteEntries.front().c_str(), firstEntry.id.c_str());
             LOG_CLI("Try pulling first to resolve\n");
             exit(1);
         }
@@ -1251,7 +1265,7 @@ int pushIssue(const PullContext &pushCtx, Project &project, Issue localIssue)
 
             if (remoteEntryIt == remoteEntries.end()) {
                 // push the local entry to the remote side
-                r = pushEntry(pushCtx, project, i.id, localEntry->id);
+                r = pushEntry(pushCtx, project, localIssue.id, localEntry->id);
                 if (r > 0) {
                     // the issue was renamed. this should not happen.
                     LOG_ERROR("pushEntry returned %d: localEntry=%s", r, localEntry->id.c_str());
@@ -1280,7 +1294,7 @@ int pushIssue(const PullContext &pushCtx, Project &project, Issue localIssue)
     }
 
     // push attached files of this issue
-    const Entry *e = i.first;
+    const Entry *e = localIssue.first;
     while (e) {
         pushAttachedFiles(pushCtx, project, *e);
         e = e->next;

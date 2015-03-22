@@ -151,6 +151,11 @@ void sendHttpHeader404(const RequestContext *request)
     request->printf("HTTP/1.1 404 Not Found\r\n\r\n");
     request->printf("404 Not Found\r\n");
 }
+void sendHttpHeader409(const RequestContext *request)
+{
+    request->printf("HTTP/1.1 409 Conflict\r\n\r\n");
+    request->printf("409 Conflict\r\n");
+}
 
 void sendHttpHeader500(const RequestContext *request, const char *msg)
 {
@@ -1865,10 +1870,17 @@ void httpPushEntry(const RequestContext *req, Project &p, const std::string &iss
         // insert the entry into the database
         std::string id = issueId;
         r = p.pushEntry(id, entryId, u.username, tmpPath);
-        if (r < 0) {
+        if (r == -1) {
             std::string msg = "Cannot push the entry";
             sendHttpHeader400(req, msg.c_str());
-            unlink(tmpPath.c_str()); // clean-up the tmp file
+
+        } else if (r == -2) {
+            // Internal Server Error
+            std::string msg = "pushEntry error";
+            sendHttpHeader500(req, msg.c_str());
+        } else if (r == -3) {
+            // HTTP 409 Conflict
+            sendHttpHeader409(req);
 
         } else {
             // ok, no problem
@@ -1877,6 +1889,8 @@ void httpPushEntry(const RequestContext *req, Project &p, const std::string &iss
             // the client that it has been renamed (renumbered)
             req->printf("issue: %s\r\n", id.c_str());
         }
+
+        unlink(tmpPath.c_str()); // clean-up the tmp file
 
     } else {
         LOG_ERROR("Content-Type '%s' not supported", contentType);

@@ -1408,19 +1408,31 @@ Issue *Project::createNewIssue()
 int Project::storeEntry(const Entry *e)
 {
     std::string pathOfNewEntry = getObjectsDir() + "/" + e->getSubpath();
+    const std::string data = e->serialize();
+
     if (fileExists(pathOfNewEntry)) {
-        LOG_ERROR("Cannot create new entry as object already exists: %s", pathOfNewEntry.c_str());
-        return -1;
-    }
+        int r = cmpContents(data, pathOfNewEntry);
+        if (r != 0) {
+            // Sha1 conflict: the client's entry and the server's entry
+            // have same sha1 but different contents.
+            // Reject the client's request.
+            LOG_ERROR("Push-entry: sha1 conflict on entry %s", e->id.c_str());
+            return -1;
+        }
+        // the pushed entry is already there (from previous push & fail?)
 
-    std::string subdir = getObjectsDir() + "/" + e->getSubdir();
-    mkdirs(subdir); // create dir if needed
+    } else {
 
-    int r = writeToFile(pathOfNewEntry.c_str(), e->serialize());
-    if (r != 0) {
-        // error.
-        LOG_ERROR("Could not write new entry to disk");
-        return -2;
+        // store the entry
+        std::string subdir = getObjectsDir() + "/" + e->getSubdir();
+        mkdirs(subdir); // create dir if needed
+
+        int r = writeToFile(pathOfNewEntry.c_str(), data);
+        if (r != 0) {
+            // error.
+            LOG_ERROR("Could not write new entry to disk");
+            return -2;
+        }
     }
 
     // check for debug TODO
@@ -1588,12 +1600,21 @@ int Project::addNewEntry(Entry *e)
 /** Push an uploaded entry in the database
   *
   * An error is raised in any of the following cases:
-  * - the author of the entry is not the same as the username
-  * - the parent is not null and issueId does not already exist
-  * - the parent is not null and does not match the latest entry of the existing issueId
+  * (a) the author of the entry is not the same as the username
+  * (b) the parent is not null and issueId does not already exist
+  * (c) the parent is not null and does not match the latest entry of the existing issueId
+  * (d) the entry already exists
+  *
+  * Error cases (c) and (d) may be resolved by a smit-pull from the client.
   *
   * A new issue is created if the parent of the pushed entry is 'null'
   * In this case, a new issueId is assigned, then it is returned (IN/OUT parameter).
+  *
+  * @return
+  *     0 success, and the issueId is possibly updated
+  *    -1 client error occurred (map to HTTP 400 Bad Request)
+  *    -2 server error (map to HTTP 500 Internal Server Error)
+  *    -3 conflict that could be resolved by a pull (map to HTTP 409 Conflict)
   */
 int Project::pushEntry(std::string &issueId, const std::string &entryId,
                        const std::string &username, const std::string &tmpPath)
@@ -1603,7 +1624,7 @@ int Project::pushEntry(std::string &issueId, const std::string &entryId,
               username.c_str(), tmpPath.c_str());
 
     // load the file as an entry
-    Entry *e = Entry::loadEntry(tmpPath, entryId, true); // check that the sha1 matches
+    Entry *e = Entry::loadEntry(tmpPath, entryId, true); // check also that the sha1s match
     if (!e) return -1;
 
     // check that the username is the same as the author of the entry
@@ -1611,12 +1632,20 @@ int Project::pushEntry(std::string &issueId, const std::string &entryId,
         LOG_ERROR("pushEntry error: usernames do not match (%s / %s)",
                   username.c_str(), e->author.c_str());
         delete e;
-        return -2;
+        return -1;
     }
 
     Issue *i = 0;
     Issue *newI = 0;
     ScopeLocker scopeLocker(locker, LOCK_READ_WRITE);
+
+    // check if the entry already exists
+    Entry *existingEntry = getEntry(entryId);
+    if (existingEntry) {
+        LOG_ERROR("Pushed entry already exists: %s", entryId.c_str());
+        delete e;
+        return -3; // conflict
+    }
 
     if (e->parent == K_PARENT_NULL) {
         LOG_DEBUG("pushEntry: parent null");
@@ -1631,32 +1660,15 @@ int Project::pushEntry(std::string &issueId, const std::string &entryId,
             LOG_ERROR("pushEntry error: parent is not null and issueId does not exist (%s / %s)",
                       issueId.c_str(), entryId.c_str());
             delete e;
-            return -4; // the parent is not null and issueId does not exist
+            return -1; // the parent is not null and issueId does not exist
         }
         if (i->latest->id != e->parent) {
             LOG_ERROR("pushEntry error: parent does not match latest entry (%s / %s)",
                       issueId.c_str(), entryId.c_str());
             delete e;
-            return -5;
+            return -3; // conflict
         }
     }
-
-    // move the entry to the official place
-    std::string newpath = getObjectsDir() + "/" + Object::getSubpath(entryId);
-
-    // verify that newpath does not exist
-    if (fileExists(newpath)) {
-        LOG_ERROR("cannot push entry %s: already exists", entryId.c_str());
-        delete e;
-        if (newI) delete newI;
-        return -6;
-    }
-
-    // insert the new entry in the database
-    i->addEntry(e);
-
-    int r = insertEntryInTable(e);
-    if (r != 0) return -1;
 
     if (newI) {
         // insert the new issue in the database
@@ -1664,28 +1676,23 @@ int Project::pushEntry(std::string &issueId, const std::string &entryId,
         if (r != 0) {
             delete e;
             delete i;
-            return -1;
+            return -2;
         }
     }
 
-    mkdir(getDirname(newpath));
-    LOG_DEBUG("rename: %s -> %s", tmpPath.c_str(), newpath.c_str());
-    r = rename(tmpPath.c_str(), newpath.c_str());
-    if (r != 0) {
-        LOG_ERROR("pushEntry error: could not officiliaze pushed entry %s/%s: %s",
-                  issueId.c_str(), entryId.c_str(), strerror(errno));
-        if (newI) delete newI;
-        delete e;
-        return -7;
-    }
+    // insert the new entry in the issue
+    i->addEntry(e);
+
+    // add the new entry in the project
+    int r = addNewEntry(e);
+    if (r != 0) return -2;
 
     // store the new ref of the issue
     r = storeRefIssue(i->id, i->latest->id);
     if (r != 0) {
-        unlink(newpath.c_str()); // cleanup entry file
         if (newI) delete newI;
         delete e;
-        return -8;
+        return -2;
     }
 
     return 0;
