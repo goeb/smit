@@ -257,7 +257,7 @@ int cmdIssue(int argc, char * const *argv)
     // load the project
     Project *p = Project::init(projectPath);
     if (!p) {
-        fprintf(stderr, "Cannot load project '%s'", projectPath);
+        fprintf(stderr, "Cannot load project '%s'\n", projectPath);
         exit(1);
     }
 
@@ -288,9 +288,9 @@ int cmdIssue(int argc, char * const *argv)
         int r = p->addEntry(properties, issueId, entryId, username);
         if (r == 0) {
             if (entryId.empty()) {
-                printf("Issue %s: no change\n", issueId.c_str());
+                printf("%s/-\n", issueId.c_str());
             } else {
-                printf("Issue %s: Entry %s\n", issueId.c_str(), entryId.c_str());
+                printf("%s/%s\n", issueId.c_str(), entryId.c_str());
             }
         } else {
             printf("Error: cannot add entry\n");

@@ -58,6 +58,7 @@ initRepoGlobalNumbering() {
     echo "numberIssues global" >> $REPO/$PROJECT2/project
 }
 cleanRepo() {
+    echo "cleanRepo $REPO"
     REPO=trepo # just to be sure before the rm -rf
     rm -rf $REPO
     rm -rf clone1

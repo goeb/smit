@@ -38,6 +38,7 @@
 #include "restApi.h"
 #include "Project.h"
 
+#define LOG_CLI(...) { printf(__VA_ARGS__); fflush(stdout);}
 
 /** smit distributed functions
   *     smit clone .... : download a local copy of a smit repository
@@ -73,7 +74,7 @@
 
 int helpClone()
 {
-    printf("Usage: smit clone [options] <url> <directory>\n"
+    LOG_CLI("Usage: smit clone [options] <url> <directory>\n"
            "\n"
            "  Clone a smit repository into a new directory.\n"
            "\n"
@@ -203,12 +204,12 @@ Entry *mergeEntry(const Entry *localEntry, Issue &remoteIssue, const Issue &remo
 
             if (ms == MERGE_INTERACTIVE) {
                 std::list<std::string> remoteValue = remoteProperty->second;
-                printf("-- Conflict on issue %s: %s\n", remoteIssue.id.c_str(), remoteIssue.getSummary().c_str());
-                printf("Remote: %s => %s\n", propertyName.c_str(), toString(remoteValue).c_str());
-                printf("Local : %s => %s\n", propertyName.c_str(), toString(localValue).c_str());
+                LOG_CLI("-- Conflict on issue %s: %s\n", remoteIssue.id.c_str(), remoteIssue.getSummary().c_str());
+                LOG_CLI("Remote: %s => %s\n", propertyName.c_str(), toString(remoteValue).c_str());
+                LOG_CLI("Local : %s => %s\n", propertyName.c_str(), toString(localValue).c_str());
                 std::string response;
                 while (response != "l" && response != "L" && response != "r" && response != "R") {
-                    printf("Select: (l)ocal, (r)emote: ");
+                    LOG_CLI("Select: (l)ocal, (r)emote: ");
                     std::cin >> response;
                 }
                 if (response == "l" || response == "L") {
@@ -231,13 +232,13 @@ Entry *mergeEntry(const Entry *localEntry, Issue &remoteIssue, const Issue &remo
     if (localEntry->getMessage().size() > 0) {
         // if a conflict was detected before, then ask the user to keep the message of not
         if (isConflicting && ms == MERGE_INTERACTIVE) {
-            printf("Local message:\n");
-            printf("--------------------------------------------------\n");
-            printf("%s\n", localEntry->getMessage().c_str());
-            printf("--------------------------------------------------\n");
+            LOG_CLI("Local message:\n");
+            LOG_CLI("--------------------------------------------------\n");
+            LOG_CLI("%s\n", localEntry->getMessage().c_str());
+            LOG_CLI("--------------------------------------------------\n");
             std::string response;
             while (response != "k" && response != "K" && response != "d" && response != "D") {
-                printf("Select: (k)eep message, (d)rop message: ");
+                LOG_CLI("Select: (k)eep message, (d)rop message: ");
                 std::cin >> response;
             }
             if (response == "k" || response == "K") {
@@ -258,7 +259,7 @@ Entry *mergeEntry(const Entry *localEntry, Issue &remoteIssue, const Issue &remo
         // store the new entry
         Entry *e = Entry::createNewEntry(newProperties, localEntry->author, remoteIssue.latest);
         remoteIssue.addEntry(e);
-        printf("New entry: %s\n", e->id.c_str());
+        LOG_CLI("New entry: %s\n", e->id.c_str());
         return e;
     } else {
         return 0;
@@ -353,7 +354,7 @@ void pullAttachedFiles(const PullContext &pullCtx, const Project &p, const Issue
                 std::string localPath = p.getObjectsDir() + "/" + Object::getSubpath(id);
                 if (!fileExists(localPath)) {
                     // download the file
-                    printf("Pulling file %s...\n", f->c_str());
+                    LOG_CLI("Pulling file %s...\n", f->c_str());
                     HttpRequest hr(pullCtx.httpCtx);
                     std::string resource = "/" + p.getUrlName() + "/" RESOURCE_FILES "/" + *f;
                     hr.setUrl(pullCtx.rooturl, resource);
@@ -395,7 +396,7 @@ Issue *cloneIssue(const PullContext &pullCtx, Project &p, const std::string &iss
         std::string localfile = p.getObjectsDir() + "/" + Entry::getSubpath(*remoteEntry);
         if (!fileExists(localfile)) {
             // file not existing locally: do download
-            printf("Pulling entry: %s\n", remoteEntry->c_str());
+            LOG_CLI("Pulling entry: %s\n", remoteEntry->c_str());
 
             HttpRequest hr(pullCtx.httpCtx);
             std::string resource = "/" + p.getUrlName() + "/" RESOURCE_FILES "/" + (*remoteEntry);
@@ -426,13 +427,13 @@ void renameIssueStandingInTheWay(Project &p, const std::string issueId)
     int r = p.get(issueId, i);
     if (r == 0) {
         // Yes, another issue is in the way. Rename it.
-        printf("Local issue %s is in the way: needs renaming\n", issueId.c_str());
+        LOG_CLI("Local issue %s is in the way: needs renaming\n", issueId.c_str());
         std::string newId = p.renameIssue(issueId);
         if (newId.empty()) {
             fprintf(stderr, "Cannot rename issue %s\n", issueId.c_str());
             exit(1);
         }
-        printf("Local issue renamed: %s -> %s\n", issueId.c_str(), newId.c_str());
+        LOG_CLI("Local issue renamed: %s -> %s\n", issueId.c_str(), newId.c_str());
     }
 }
 
@@ -467,7 +468,7 @@ int pullIssue(const PullContext &pullCtx, Project &p, const std::string &remoteI
         if (localIssue->id != remoteIssueId) {
             // The local issue needs to be renamed and assigned the same id as the remote.
             // But first check (and rename) if another local issue occupies the id.
-            printf("%s/issues/%s needs renaming to %s (remote does not match)\n",
+            LOG_CLI("%s/issues/%s needs renaming to %s (remote does not match)\n",
                    p.getName().c_str(), localIssue->id.c_str(), remoteIssueId.c_str());
 
             // check if another local issue is in the way
@@ -476,7 +477,8 @@ int pullIssue(const PullContext &pullCtx, Project &p, const std::string &remoteI
             // rename the local issue to the same id as the remote issue
             int r = p.renameIssue(*localIssue, remoteIssueId);
             if (r != 0) {
-                fprintf(stderr, "Cannot get entries of remote issue %s\n", remoteIssueId.c_str());
+                fprintf(stderr, "Cannot rename issue %s -> %s\n", localIssue->id.c_str(),
+                        remoteIssueId.c_str());
                 exit(1);
             }
         }
@@ -551,7 +553,7 @@ int pullIssue(const PullContext &pullCtx, Project &p, const std::string &remoteI
 
 int pullProject(const PullContext &pullCtx, Project &p)
 {
-    printf("Pulling project %s\n", p.getName().c_str());
+    LOG_CLI("Pulling project %s\n", p.getName().c_str());
 
     // get the remote issues
     HttpRequest hr(pullCtx.httpCtx);
@@ -604,7 +606,7 @@ int pullProjects(const PullContext &pullCtx)
         if (!p) {
             // the remote project was not locally cloned
             // do cloning now
-            printf("Cloning project: %s\n", unmangledName.c_str());
+            LOG_CLI("Cloning project: %s\n", unmangledName.c_str());
             HttpRequest hr(pullCtx.httpCtx);
             std::string resource = *projectName;
             resource = "/" + resource;
@@ -764,7 +766,7 @@ int cmdClone(int argc, char * const *argv)
             return helpClone();
             break;
         default:
-            printf("?? getopt returned character code 0x%x ??\n", c);
+            LOG_CLI("?? getopt returned character code 0x%x ??\n", c);
             return helpClone();
         }
     }
@@ -778,12 +780,12 @@ int cmdClone(int argc, char * const *argv)
         optind++;
     }
     if (optind < argc) {
-        printf("Too many arguments.\n\n");
+        LOG_CLI("Too many arguments.\n\n");
         return helpClone();
     }
 
     if (!url || !dir) {
-        printf("You must specify a repository to clone and a directory.\n\n");
+        LOG_CLI("You must specify a repository to clone and a directory.\n\n");
         return helpClone();
     }
 
@@ -822,7 +824,7 @@ int cmdClone(int argc, char * const *argv)
 
 int helpGet()
 {
-    printf("Usage: smit get <root-url> <resource>\n"
+    LOG_CLI("Usage: smit get <root-url> <resource>\n"
            "\n"
            "  Get with format x-smit.\n"
            "\n"
@@ -871,7 +873,7 @@ int cmdGet(int argc, char * const *argv)
             return helpGet();
             break;
         default:
-            printf("?? getopt returned character code 0x%x ??\n", c);
+            LOG_CLI("?? getopt returned character code 0x%x ??\n", c);
             return helpGet();
         }
     }
@@ -887,11 +889,11 @@ int cmdGet(int argc, char * const *argv)
     }
 
     if (optind < argc) {
-        printf("Too many arguments.\n\n");
+        LOG_CLI("Too many arguments.\n\n");
         return helpGet();
     }
     if (rooturl.empty()) {
-        printf("Missing url.\n");
+        LOG_CLI("Missing url.\n");
         return helpGet();
     }
 
@@ -942,7 +944,7 @@ int cmdGet(int argc, char * const *argv)
 
 int helpPull()
 {
-    printf("Usage: smit pull [<local-repository>]\n"
+    LOG_CLI("Usage: smit pull [<local-repository>]\n"
            "\n"
            "  Incorporates changes from a remote repository into the local copy.\n"
            "\n"
@@ -998,7 +1000,7 @@ int cmdPull(int argc, char * const *argv)
                 if (0 == strcmp(optarg, "keep-local")) pullCtx.mergeStrategy = MERGE_KEEP_LOCAL;
                 else if (0 == strcmp(optarg, "drop-local")) pullCtx.mergeStrategy = MERGE_DROP_LOCAL;
                 else {
-                    printf("invalid value for --resolve-conflict\n");
+                    LOG_CLI("invalid value for --resolve-conflict\n");
                     return helpPull();
                 }
             } else if (0 == strcmp(longOptions[optionIndex].name, "insecure")) {
@@ -1014,7 +1016,7 @@ int cmdPull(int argc, char * const *argv)
             return helpPull();
             break;
         default:
-            printf("?? getopt returned character code 0x%x ??\n", c);
+            LOG_CLI("?? getopt returned character code 0x%x ??\n", c);
             return helpPull();
         }
     }
@@ -1024,7 +1026,7 @@ int cmdPull(int argc, char * const *argv)
         optind++;
     }
     if (optind < argc) {
-        printf("Too many arguments.\n\n");
+        LOG_CLI("Too many arguments.\n\n");
         return helpPull();
     }
 
@@ -1033,7 +1035,7 @@ int cmdPull(int argc, char * const *argv)
     // get the remote url from local configuration file
     std::string url = loadUrl(dir);
     if (url.empty()) {
-        printf("Cannot get remote url.\n");
+        LOG_CLI("Cannot get remote url.\n");
         exit(1);
     }
 
@@ -1124,7 +1126,7 @@ int pushFile(const PullContext &pushCtx, const std::string &localFile, const std
   */
 int pushEntry(const PullContext &pushCtx, const Project &p, std::string &issue, const std::string &entry)
 {
-    printf("Pushing entry: %s/issues/%s/%s\n", p.getName().c_str(), issue.c_str(), entry.c_str());
+    LOG_CLI("Pushing entry: %s/issues/%s/%s\n", p.getName().c_str(), issue.c_str(), entry.c_str());
     // post the entry (which must be the first entry of an issue)
     // the result of the POST indicates the issue number that has been allocated
     std::string localFile = p.getObjectsDir() + '/' + Object::getSubpath(entry);
@@ -1172,7 +1174,7 @@ void pushAttachedFiles(const PullContext &pushCtx, const Project &p, const Entry
                 // file does not exist on the server
                 // push the file
                 std::string localPath = p.getObjectsDir() + "/" + Object::getSubpath(id);
-                printf("Pushing file %s...\n", f->c_str());
+                LOG_CLI("Pushing file %s...\n", f->c_str());
                 std::string url = pushCtx.rooturl + '/' + p.getUrlName() + "/" RESOURCE_FILES "/" + id;
                 std::string response;
                 int r = pushFile(pushCtx, localPath, url, response);
@@ -1186,7 +1188,7 @@ void pushAttachedFiles(const PullContext &pushCtx, const Project &p, const Entry
     }
 }
 
-int pushIssue(const PullContext &pushCtx, Project &project, Issue i)
+int pushIssue(const PullContext &pushCtx, Project &project, Issue localIssue)
 {
     // - get list of entries of the same remote issue
     //    + if no such remote issue, push
@@ -1209,9 +1211,16 @@ int pushIssue(const PullContext &pushCtx, Project &project, Issue i)
 
         if (r > 0) {
             // issue was renamed, update local project
-            printf("%s: Issue renamed: %s -> %s\n", project.getName().c_str(), i.id.c_str(),
+            LOG_CLI("%s: Issue renamed: %s -> %s\n", project.getName().c_str(), i.id.c_str(),
                    issueId.c_str());
-            project.renameIssue(i, issueId);
+            renameIssueStandingInTheWay(project, issueId);
+            r = project.renameIssue(i, issueId);
+            if (r != 0) {
+                fprintf(stderr, "Cannot rename issue %s -> %s\n", i.id.c_str(),
+                        issueId.c_str());
+                exit(1);
+
+            }
         } else if (r < 0) {
             LOG_ERROR("Failed to push entry %s/issues/%s/%s", project.getName().c_str(),
                       i.id.c_str(), firstEntry.id.c_str());
@@ -1230,9 +1239,9 @@ int pushIssue(const PullContext &pushCtx, Project &project, Issue i)
     } else {
         // check if first entries match
         if (remoteEntries.front() != firstEntry.id) {
-            printf("%s: mismatch of first entries for issue %s\n", project.getName().c_str(),
-                   i.id.c_str());
-            printf("Try pulling first to resolve\n");
+            LOG_CLI("%s: mismatch of first entries for issue %s: %s <> %s\n", project.getName().c_str(),
+                   i.id.c_str(), remoteEntries.front().c_str(), firstEntry.id.c_str());
+            LOG_CLI("Try pulling first to resolve\n");
             exit(1);
         }
 
@@ -1283,8 +1292,13 @@ int pushIssue(const PullContext &pushCtx, Project &project, Issue i)
 
 int pushProject(const PullContext &pushCtx, Project &project)
 {
-    printf("pushing project %s...\n", project.getName().c_str());
+    LOG_CLI("pushing project %s...\n", project.getName().c_str());
 
+    // debug TODO
+    std::map<std::string, Issue*>::iterator it;
+    FOREACH(it, project.issues) {
+        LOG_CLI("key=%s => issue.id=%s\n", it->first.c_str(), it->second->id.c_str());
+    }
     Issue *i = 0;
     while ( (i = project.getNextIssue(i)) ) {
         int r = pushIssue(pushCtx, project, *i);
@@ -1328,7 +1342,7 @@ int establishSession(const char *dir, const char *username, const char *password
     // get the remote url from local configuration file
     std::string url = loadUrl(dir);
     if (url.empty()) {
-        printf("Cannot get remote url.\n");
+        LOG_CLI("Cannot get remote url.\n");
         return -1;
     }
 
@@ -1345,7 +1359,7 @@ int establishSession(const char *dir, const char *username, const char *password
 
         if (r < 0) {
             // failed (session may have expired), then prompt for user name/password
-            printf("Session not valid. You must sign-in again.\n");
+            LOG_CLI("Session not valid. You must sign-in again.\n");
             user = getString("Username: ", false);
 
             // and redo the signing-in
@@ -1428,7 +1442,7 @@ int cmdPush(int argc, char **argv)
     const char *unexpected = args->pop();
     if (unexpected) {
         // normally already managed by the Args class
-        printf("Too many arguments.\n\n");
+        LOG_CLI("Too many arguments.\n\n");
         return helpPush(args);
     }
 

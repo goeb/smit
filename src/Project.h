@@ -150,7 +150,7 @@ private:
     int insertIssueInTable(Issue *i);
 
     ProjectConfig config;
-    std::map<std::string, Issue*> issues;
+public:    std::map<std::string, Issue*> issues; // TODO public to be removed
     mutable Locker locker; // mutex for issues
     mutable Locker lockerForConfig; // mutext for config
     std::string name; //< name of the project, plain text
