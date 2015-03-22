@@ -281,6 +281,13 @@ std::string getBoundary(const std::string &text)
     return boundary;
 }
 
+std::string serializeProperty(const std::string &propertyName, const std::string &value)
+{
+    std::list<std::string> values;
+    values.push_back(value);
+    return serializeProperty(propertyName, values);
+}
+
 std::string serializeProperty(const std::string &propertyName, const std::list<std::string> &values)
 {
     std::ostringstream s;

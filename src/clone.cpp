@@ -668,6 +668,7 @@ std::string loadUsername(const std::string &clonedRepo)
         username = "Anonymous";
         fprintf(stderr, "Cannot load username. Set '%s'\n", username.c_str());
     }
+    trim(username); // remove trailing \n
     return username;
 }
 

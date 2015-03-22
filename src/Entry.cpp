@@ -102,6 +102,17 @@ Entry *Entry::loadEntry(const std::string &path, const std::string &id, bool che
         }
     }
 
+    if (checkId) {
+        // check again the sha1, against the result of serialize()
+        std::string hash = getSha1(e->serialize());
+        if (0 != hash.compare(id)) {
+            LOG_ERROR("Hash does not match: %s / %s", path.c_str(), id.c_str());
+            delete e;
+            return 0;
+        }
+    }
+
+
     return e;
 }
 
@@ -152,7 +163,7 @@ std::string Entry::serialize() const
 
     s << K_SMIT_VERSION << " " << VERSION << "\n";
     s << K_PARENT << " " << parent << "\n";
-    s << K_AUTHOR << " " << author << "\n";
+    s << serializeProperty(K_AUTHOR, author) << "\n";
     s << K_CTIME << " " << ctime << "\n";
 
     std::map<std::string, std::list<std::string> >::const_iterator p;
