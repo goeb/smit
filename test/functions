@@ -49,12 +49,14 @@ initRepoGlobalNumbering() {
     $SMIT project -c $PROJECT1 -d $REPO
     $SMIT user $USER1 --passwd $PASSWD1 --project $PROJECT1:rw -d $REPO
     chmod u+w $REPO/$PROJECT1/project
+    echo "addProperty freeText text" >> $REPO/$PROJECT1/project
     echo "numberIssues global" >> $REPO/$PROJECT1/project
 
     # project 2
     $SMIT project -c $PROJECT2 -d $REPO
     $SMIT user $USER2 --passwd $PASSWD2 --project $PROJECT2:rw -d $REPO
     chmod u+w $REPO/$PROJECT2/project
+    echo "addProperty freeText text" >> $REPO/$PROJECT1/project
     echo "numberIssues global" >> $REPO/$PROJECT2/project
 }
 cleanRepo() {
