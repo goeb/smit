@@ -43,7 +43,8 @@ runClone() {
         $SMIT issue $project -a - summary="issue #$issue (bis) in p${projectNum} [$i]" freeText="diver:${DIVERSIFICATION}_$$" +message="creation of issue bis: issue #$issue (bis) in p${projectNum}"
         DIVERSIFICATION=$(expr $DIVERSIFICATION + 1)
 
-        # push these 2 issues
+        # push these 2 issues (pull first)
+        $SMIT pull $clone
         $SMIT push $clone
     done
 }
