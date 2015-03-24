@@ -163,7 +163,7 @@ std::string Entry::serialize() const
 
     s << K_SMIT_VERSION << " " << VERSION << "\n";
     s << K_PARENT << " " << parent << "\n";
-    s << serializeProperty(K_AUTHOR, author) << "\n";
+    s << serializeProperty(K_AUTHOR, author);
     s << K_CTIME << " " << ctime << "\n";
 
     std::map<std::string, std::list<std::string> >::const_iterator p;
