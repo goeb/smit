@@ -313,6 +313,14 @@ int Project::get(const std::string &issueId, Issue &issue) const
     return 0;
 }
 
+void Project::getAllIssues(std::vector<Issue*> &issuesList)
+{
+    std::map<std::string, Issue*>::iterator i;
+    FOREACH(i, issues) {
+        issuesList.push_back(i->second);
+    }
+}
+
 
 /** Convert a string to a PropertyType
   *
@@ -1213,13 +1221,14 @@ std::string Project::renameIssue(const std::string &oldId)
   */
 int Project::renameIssue(Issue &i, const std::string &newId)
 {
+    std::string oldId = i.id;
+
     // add the issue in the table
     issues[newId] = &i;
 
     // delete the old slot
-    issues.erase(i.id);
+    issues.erase(oldId);
 
-    std::string oldId = i.id;
     // set the new id
     i.id = newId;
 

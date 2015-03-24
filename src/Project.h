@@ -81,6 +81,7 @@ public:
                                const std::map<std::string, std::list<std::string> > &filterOut,
                                const char *sortingSpec) const;
     int get(const std::string &issueId, Issue &issue) const;
+    void getAllIssues(std::vector<Issue*> &issuesList);
     Issue *createNewIssue();
     std::string allocateNewIssueId();
     void updateMaxIssueId(uint32_t i);

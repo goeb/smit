@@ -421,7 +421,7 @@ Issue *cloneIssue(const PullContext &pullCtx, Project &p, const std::string &iss
 
 /** Rename local issue if existing
   */
-void renameIssueStandingInTheWay(Project &p, const std::string issueId)
+void renameIssueStandingInTheWay(Project &p, const std::string &issueId)
 {
     Issue i;
     int r = p.get(issueId, i);
@@ -1309,14 +1309,13 @@ int pushProject(const PullContext &pushCtx, Project &project)
 {
     LOG_CLI("pushing project %s...\n", project.getName().c_str());
 
-    // debug TODO
-    std::map<std::string, Issue*>::iterator it;
-    FOREACH(it, project.issues) {
-        LOG_CLI("key=%s => issue.id=%s\n", it->first.c_str(), it->second->id.c_str());
-    }
-    Issue *i = 0;
-    while ( (i = project.getNextIssue(i)) ) {
-        int r = pushIssue(pushCtx, project, *i);
+    // First, get a linear list of all issues
+    // (we need a fixed list of the issues, and not a map, because some issues may be renamed)
+    std::vector<Issue*> issues;
+    project.getAllIssues(issues);
+    std::vector<Issue*>::iterator i;
+    FOREACH(i, issues) {
+        int r = pushIssue(pushCtx, project, **i);
         if (r != 0) return r;
     }
     return 0;
