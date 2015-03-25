@@ -1,6 +1,6 @@
 #!/bin/sh
 
-set -x
+#set -x
 # Test smit with many concurrent pullers/pushers
 
 . $srcdir/functions
@@ -15,36 +15,39 @@ startServer
 
 runClone() {
     echo "START runClone $1 $2"
-    i=$1 # instance of the clone
-    project=$2
+    local i=$1 # instance of the clone
+    local project=$2
     # initiate clone number i
-    clone=clone_${i}
+    local clone=clone_${i}
+    set -x
     rm -rf $clone
     if [ "$project" = "p1" ]; then
-        user=$USER1
-        passwd=$PASSWD1
+        local user=$USER1
+        local passwd=$PASSWD1
     else
-        user=$USER2
-        passwd=$PASSWD2
+        local user=$USER2
+        local passwd=$PASSWD2
     fi
+    echo "runClone[$i]: do clone"
     $SMIT clone http://127.0.0.1:$PORT --user $user --passwd $passwd $clone
+    set +x
 
-    project=$clone/${project}
+    projectPath=$clone/${project}
     # create some issues and push them
     for issue in $(seq 1 $N_ISSUES); do
         # add an issue
         echo "runClone[$i]: add an issue ($issue)"
-        r=$($SMIT issue $project -a - summary="#$i.$issue.a" freeText="diver:${DIVERSIFICATION}_$$" +message="creation of issue: #$i.$issue.a")
+        r=$($SMIT issue $projectPath -a - summary="#$i.$issue.a" freeText="diver:${DIVERSIFICATION}_$$" +message="creation of issue: #$i.$issue.a")
         DIVERSIFICATION=$(expr $DIVERSIFICATION + 1)
         createdIssue=$(echo $r | sed -e "s;/.*;;")
         createdEntry=$(echo $r | sed -e "s;.*/;;")
         # add a message in this issue
         echo "runClone[$i]: add an entry to this issue ($issue)"
-        $SMIT issue $project -a $createdIssue +message="some message #2"
+        $SMIT issue $projectPath -a $createdIssue +message="some message #2"
 
         # add another issue "bis"
         echo "runClone[$i]: add an issue bis ($issue)"
-        $SMIT issue $project -a - summary="#$i.$issue.b" freeText="diver:${DIVERSIFICATION}_$$" +message="creation of issue: #$i.$issue.b"
+        $SMIT issue $projectPath -a - summary="#$i.$issue.b" freeText="diver:${DIVERSIFICATION}_$$" +message="creation of issue: #$i.$issue.b"
         DIVERSIFICATION=$(expr $DIVERSIFICATION + 1)
 
         # push these 2 issues (pull first)
@@ -52,8 +55,10 @@ runClone() {
         $SMIT pull $clone
         echo "runClone[$i]: push ($issue)"
         $SMIT push $clone
-        echo "push: $?"
-        sleep 0.2
+        # if some entries could not be pushed because
+        # of conflicts, they will be pushed again at next 
+        # iteration or at the end
+        sleep 0.1
     done
     echo "END runClone $1 $2"
 }
@@ -65,21 +70,34 @@ checkClone() {
     # initiate clone number i
     clone=clone_${i}
     echo "-- $clone --" >> $TEST_NAME.out
-    $SMIT issue $clone/${project} >> $TEST_NAME.out
+    $SMIT issue $clone/${project} | 
+        sed -e "s/^Issue [0-9]*:/Issue ...:/" |
+        sort >> $TEST_NAME.out
 }
 
 N_CLONES=2
 DIVERSIFICATION=0
 pids=""
 for c in $(seq 1 $N_CLONES); do
-    runClone $c p1
+    runClone $c p1 &
     pids="$pids $!"
 done
 
 # wait for all sub-processes
-#for p in $pids; do
-#    wait $p
-#done
+for p in $pids; do
+    wait $p
+done
+
+# push all, in order to fix possible previous pushing conflicts
+for c in $(seq 1 $N_CLONES); do
+    $SMIT pull clone_$c
+    $SMIT push clone_$c
+done
+
+# pull all, to synchronize all clones
+for c in $(seq 1 $N_CLONES); do
+    $SMIT pull clone_$c
+done
 
 stopServer
 
