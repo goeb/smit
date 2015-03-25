@@ -29,7 +29,7 @@ runClone() {
         local passwd=$PASSWD2
     fi
     echo "runClone[$i]: do clone"
-    $SMIT clone http://127.0.0.1:$PORT --user $user --passwd $passwd $clone
+    $SMIT clone -v http://127.0.0.1:$PORT --user $user --passwd $passwd $clone
     set +x
 
     projectPath=$clone/${project}

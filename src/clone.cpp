@@ -125,9 +125,9 @@ int getProjects(const std::string &rooturl, const std::string &destdir, const Ht
     HttpRequest hr(ctx);
     hr.setUrl(rooturl, "/");
     hr.setRepository(destdir);
-    hr.doCloning(true, 0);
+    int r = hr.doCloning(true, 0);
 
-    return 0;
+    return r;
 }
 
 // resolve strategies for pulling conflicts
@@ -612,7 +612,8 @@ int pullProjects(const PullContext &pullCtx)
             resource = "/" + resource;
             hr.setUrl(pullCtx.rooturl, resource);
             hr.setRepository(pullCtx.localRepo);
-            hr.doCloning(true, 0);
+            int r = hr.doCloning(true, 0);
+            if (r < 0) return r;
         } else {
             pullProject(pullCtx, *p);
         }
@@ -806,13 +807,17 @@ int cmdClone(int argc, char * const *argv)
 
     if (sessid.empty()) {
         fprintf(stderr, "Authentication failed\n");
-        return 1; // authentication failed
+        exit(1);
     }
     ctx.sessid = sessid;
 
-    getProjects(url, dir, ctx);
+    int r = getProjects(url, dir, ctx);
+    if (r < 0) {
+        fprintf(stderr, "Clone failed. Abort.\n");
+        exit(1);
+    }
 
-    // ceate persistent configuration of the local clone
+    // create persistent configuration of the local clone
     createSmitDir(dir);
     storeSessid(dir, ctx.sessid);
     storeUsername(dir, username);

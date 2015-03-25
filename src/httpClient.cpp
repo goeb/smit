@@ -102,7 +102,7 @@ int HttpRequest::downloadFile(const std::string &localPath)
   * @param recursionLevel
   *    used to track the depth in the sub-directories
   */
-void HttpRequest::doCloning(bool recursive, int recursionLevel)
+int HttpRequest::doCloning(bool recursive, int recursionLevel)
 {
     LOG_DEBUG("Entering doCloning: resourcePath=%s", resourcePath.c_str());
     curl_easy_setopt(curlHandle, CURLOPT_WRITEDATA, (void *)this);
@@ -110,6 +110,11 @@ void HttpRequest::doCloning(bool recursive, int recursionLevel)
 
     if (recursionLevel < 2) printf("%s\n", resourcePath.c_str());
     performRequest();
+
+    if (httpStatusCode < 200 || httpStatusCode >= 300) {
+        LOG_ERROR("GET %s: failed with HTTP %d", resourcePath.c_str(), httpStatusCode);
+        return -1;
+    }
 
     if (isDirectory && recursive) {
         // finalize received lines
@@ -145,7 +150,8 @@ void HttpRequest::doCloning(bool recursive, int recursionLevel)
             HttpRequest hr(httpCtx);
             hr.setUrl(rooturl, subpath);
             hr.setRepository(repository);
-            hr.doCloning(true, recursionLevel+1);
+            int r = hr.doCloning(true, recursionLevel+1);
+            if (r < 0) return r;
         }
     }
     if (!isDirectory) {
@@ -155,6 +161,7 @@ void HttpRequest::doCloning(bool recursive, int recursionLevel)
             fprintf(stderr, "unexpected null file descriptor\n");
         } else closeFile();
     }
+    return 0;
 }
 
 void HttpRequest::post(const std::string &params)
@@ -472,6 +479,8 @@ void HttpRequest::closeFile()
   */
 void HttpRequest::handleReceiveFileOrDirectory(void *data, size_t size)
 {
+    if (httpStatusCode != 200) return;
+
     if (isDirectory) {
         // store the lines temporarily in memory
         handleReceivedLines((char*)data, size);

@@ -42,7 +42,7 @@ public:
 
     std::map<std::string, Cookie> cookies;
     std::list<std::string> lines; // fulfilled after calling getRequestLines()
-    void doCloning(bool recursive, int recursionLevel);
+    int doCloning(bool recursive, int recursionLevel);
     void getFileStdout();
     int downloadFile(const std::string &localPath);
 
