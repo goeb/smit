@@ -411,7 +411,7 @@ Issue *cloneIssue(const PullContext &pullCtx, Project &p, const std::string &iss
     // Load the remote issue from its latest entry
     Issue *remoteIssue = Issue::load(p.getObjectsDir(), latest);
     if (!remoteIssue) {
-        fprintf(stderr, "Cannot load remote issue from latest %s", latest.c_str());
+        fprintf(stderr, "Cannot load remote issue from latest %s\n", latest.c_str());
         exit(1);
     }
     // set the id of the remote, as it is not fulfilled by "load()"

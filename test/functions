@@ -16,7 +16,6 @@ PASSWD2=tpasswd2
 PORT=8099
 SMIT=../smit
 
-set -e 
 
 initTest() {
     TEST_NAME=`basename $0`
