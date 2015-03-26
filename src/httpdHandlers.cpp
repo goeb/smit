@@ -64,7 +64,7 @@ void initHttpStats()
 void addHttpStat(HttpEvent e)
 {
     if (e >= HTTP_EVENT_SIZE || e < 0) return;
-    ScopeLocker(HttpStats.lock, LOCK_READ_WRITE);
+    ScopeLocker scopeLocker(HttpStats.lock, LOCK_READ_WRITE);
     HttpStats.httpCodes[e]++;
 }
 
