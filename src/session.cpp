@@ -225,7 +225,7 @@ int UserBase::store(const std::string &repository)
 
 User* UserBase::getUser(const std::string &username)
 {
-    ScopeLocker(UserDb.locker, LOCK_READ_ONLY);
+    ScopeLocker scopeLocker(UserDb.locker, LOCK_READ_ONLY);
     std::map<std::string, User*>::iterator u = UserDb.configuredUsers.find(username);
     if (u == UserDb.configuredUsers.end()) return 0;
     else return u->second;
@@ -258,7 +258,7 @@ int UserBase::addUser(User newUser)
         return -2;
     }
 
-    ScopeLocker(UserDb.locker, LOCK_READ_WRITE);
+    ScopeLocker scopeLocker(UserDb.locker, LOCK_READ_WRITE);
     addUserInArray(newUser);
     return store(Repository);
 }
@@ -270,7 +270,7 @@ std::set<std::string> UserBase::getUsersOfProject(const std::string &project)
     std::set<std::string> result;
     if (localUserInterface) return result;
 
-    ScopeLocker(UserDb.locker, LOCK_READ_ONLY);
+    ScopeLocker scopeLocker(UserDb.locker, LOCK_READ_ONLY);
 
     std::map<std::string, User*>::const_iterator u;
     FOREACH(u, UserDb.configuredUsers) {
@@ -288,7 +288,7 @@ std::map<std::string, Role> UserBase::getUsersRolesOfProject(const std::string &
     std::map<std::string, Role> result;
     if (localUserInterface) return result;
 
-    ScopeLocker(UserDb.locker, LOCK_READ_ONLY);
+    ScopeLocker scopeLocker(UserDb.locker, LOCK_READ_ONLY);
 
     std::map<std::string, User*>::const_iterator u;
     FOREACH(u, UserDb.configuredUsers) {
@@ -307,7 +307,7 @@ std::map<Role, std::set<std::string> > UserBase::getUsersByRole(const std::strin
     std::map<Role, std::set<std::string> > result;
     if (localUserInterface) return result;
 
-    ScopeLocker(UserDb.locker, LOCK_READ_ONLY);
+    ScopeLocker scopeLocker(UserDb.locker, LOCK_READ_ONLY);
 
     std::map<std::string, User*>::const_iterator u;
     FOREACH(u, UserDb.configuredUsers) {
@@ -332,7 +332,7 @@ int UserBase::updateUser(const std::string &username, User newConfig)
 {
     if (username.empty() || newConfig.username.empty()) return -1;
 
-    ScopeLocker(UserDb.locker, LOCK_READ_WRITE);
+    ScopeLocker scopeLocker(UserDb.locker, LOCK_READ_WRITE);
 
     std::map<std::string, User*>::iterator u;
 
@@ -364,7 +364,7 @@ int UserBase::updateUser(const std::string &username, User newConfig)
 
 int UserBase::updatePassword(const std::string &username, const std::string &password)
 {
-    ScopeLocker(UserDb.locker, LOCK_READ_WRITE);
+    ScopeLocker scopeLocker(UserDb.locker, LOCK_READ_WRITE);
     std::map<std::string, User*>::iterator u = UserDb.configuredUsers.find(username);
     if (u == UserDb.configuredUsers.end()) return -1;
 
@@ -376,7 +376,7 @@ std::list<User> UserBase::getAllUsers()
 {
     std::list<User> result;
 
-    ScopeLocker(UserDb.locker, LOCK_READ_ONLY);
+    ScopeLocker scopeLocker(UserDb.locker, LOCK_READ_ONLY);
     std::map<std::string, User*>::const_iterator u;
     FOREACH(u, UserDb.configuredUsers) {
         result.push_back(*(u->second));
@@ -460,8 +460,7 @@ User SessionBase::getLoggedInUser(const std::string &sessionId)
     }
 
     LOG_DEBUG("getLoggedInUser(%s)...", sessionId.c_str());
-    ScopeLocker(SessionDb.locker, LOCK_READ_ONLY);
-
+    ScopeLocker scopeLocker(SessionDb.locker, LOCK_READ_ONLY);
     std::map<std::string, Session>::iterator i = SessionDb.sessions.find(sessionId);
 
     if (i != SessionDb.sessions.end()) {
@@ -479,13 +478,14 @@ User SessionBase::getLoggedInUser(const std::string &sessionId)
             // else session found, but related user no longer exists
         }
     }
+
     LOG_DEBUG("no valid logged-in user");
     return User();
 }
 
 int SessionBase::destroySession(const std::string &sessionId)
 {
-    ScopeLocker(SessionDb.locker, LOCK_READ_WRITE);
+    ScopeLocker scopeLocker(SessionDb.locker, LOCK_READ_WRITE);
 
     std::map<std::string, Session>::iterator i = SessionDb.sessions.find(sessionId);
     if (i != SessionDb.sessions.end()) {
@@ -500,7 +500,7 @@ int SessionBase::destroySession(const std::string &sessionId)
 
 std::string SessionBase::createSession(const std::string &username)
 {
-    ScopeLocker(locker, LOCK_READ_WRITE);
+    ScopeLocker scopeLocker(locker, LOCK_READ_WRITE);
 
     std::stringstream randomStr;
     randomStr << std::hex << rand() << rand();

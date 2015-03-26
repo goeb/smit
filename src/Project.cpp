@@ -1717,7 +1717,7 @@ Entry *Project::getEntry(const std::string &id) const
 
 ProjectConfig Project::getConfig() const
 {
-    ScopeLocker(lockerForConfig, LOCK_READ_ONLY);
+    ScopeLocker scopeLocker(lockerForConfig, LOCK_READ_ONLY);
     return config;
 }
 
@@ -1739,7 +1739,7 @@ ProjectConfig Project::getConfig() const
 
 int Project::deleteEntry(const std::string &entryId, const std::string &username)
 {
-    ScopeLocker(locker, LOCK_READ_WRITE);
+    ScopeLocker scopeLocker(locker, LOCK_READ_WRITE);
 
     std::map<std::string, Entry*>::iterator ite;
     ite = entries.find(entryId);
