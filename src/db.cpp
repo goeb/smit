@@ -1887,7 +1887,7 @@ int Project::addEntry(std::map<std::string, std::list<std::string> > properties,
 
 ProjectConfig Project::getConfig() const
 {
-    ScopeLocker(lockerForConfig, LOCK_READ_ONLY);
+    ScopeLocker scopeLocker(lockerForConfig, LOCK_READ_ONLY);
     return config;
 }
 
@@ -1907,7 +1907,7 @@ ProjectConfig Project::getConfig() const
 
 int Project::deleteEntry(const std::string &issueId, const std::string &entryId, const std::string &username)
 {
-    ScopeLocker(locker, LOCK_READ_WRITE);
+    ScopeLocker scopeLocker(locker, LOCK_READ_WRITE);
 
     Issue *i = getIssue(issueId);
     if (!i) return -6;
