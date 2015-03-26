@@ -67,7 +67,7 @@ cleanRepo() {
 }
 
 startServer() {
-    $SMIT serve $REPO --listen-port $PORT -d &
+    $SMIT serve $REPO --listen-port $PORT &
     smitServerPid=$!
     sleep 0.5 # wait for the server to start
 }
