@@ -4,6 +4,7 @@ v2.3.0
       changed by the user
     - fix in-memory residual property after deleted entry
     - textarea2 in rich text
+    - fix race condition in assignment of session ids
 
 v2.2.0, 15 Jan 2015
 
