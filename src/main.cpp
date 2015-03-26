@@ -444,6 +444,7 @@ int serveRepository(int argc, char **argv)
         {NULL, 0, NULL, 0}
     };
     optind = 1; // reset this in case cmdUi has already parsed with getopt_long
+    int loglevel = LL_INFO;
     while ((c = getopt_long(argc, argv, "d", longOptions, &optionIndex)) != -1) {
         switch (c) {
         case 0: // manage long options
@@ -451,7 +452,7 @@ int serveRepository(int argc, char **argv)
             else if (0 == strcmp(longOptions[optionIndex].name, "ssl-cert")) certificatePemFile = optarg;
             break;
         case 'd':
-            setLoggingLevel(LL_DEBUG);
+            loglevel++;
             break;
         case '?': // incorrect syntax, a message is printed by getopt_long
             return helpServe();
@@ -461,6 +462,7 @@ int serveRepository(int argc, char **argv)
             return helpServe();
         }
     }
+    setLoggingLevel((LogLevel)loglevel);
 
     // manage non-option ARGV elements
     if (optind < argc) {

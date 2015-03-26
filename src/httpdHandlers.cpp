@@ -125,6 +125,7 @@ void sendHttpHeader204(const RequestContext *request)
 
 int sendHttpHeader400(const RequestContext *request, const char *msg)
 {
+    LOG_DIAG("HTTP 400 Bad Request: %s", msg);
     request->printf("HTTP/1.0 400 Bad Request\r\n\r\n");
     request->printf("400 Bad Request\r\n");
     request->printf("%s\r\n", msg);
@@ -134,6 +135,7 @@ int sendHttpHeader400(const RequestContext *request, const char *msg)
 }
 void sendHttpHeader403(const RequestContext *request)
 {
+    LOG_DIAG("HTTP 403 Forbidden");
     request->printf("HTTP/1.1 403 Forbidden\r\n\r\n");
     request->printf("403 Forbidden\r\n");
     addHttpStat(H_403);
@@ -141,6 +143,7 @@ void sendHttpHeader403(const RequestContext *request)
 
 void sendHttpHeader413(const RequestContext *request, const char *msg)
 {
+    LOG_DIAG("HTTP 413 Request Entity Too Large");
     request->printf("HTTP/1.1 413 Request Entity Too Large\r\n\r\n");
     request->printf("413 Request Entity Too Large\r\n%s\r\n", msg);
     addHttpStat(H_413);
@@ -148,17 +151,20 @@ void sendHttpHeader413(const RequestContext *request, const char *msg)
 
 void sendHttpHeader404(const RequestContext *request)
 {
+    LOG_DIAG("HTTP 404 Not Found");
     request->printf("HTTP/1.1 404 Not Found\r\n\r\n");
     request->printf("404 Not Found\r\n");
 }
 void sendHttpHeader409(const RequestContext *request)
 {
+    LOG_DIAG("HTTP 409 Conflict");
     request->printf("HTTP/1.1 409 Conflict\r\n\r\n");
     request->printf("409 Conflict\r\n");
 }
 
 void sendHttpHeader500(const RequestContext *request, const char *msg)
 {
+    LOG_ERROR("HTTP 500 Internal Server Error");
     request->printf("HTTP/1.1 500 Internal Server Error\r\n\r\n");
     request->printf("500 Internal Server Error\r\n");
     request->printf("%s\r\n", msg);
@@ -321,6 +327,7 @@ int httpPostSignin(const RequestContext *request)
 
         // check credentials
         std::string sessionId = SessionBase::requestSession(username, password);
+        LOG_DIAG("User %s got sessid: %s", username.c_str(), sessionId.c_str());
 
         if (sessionId.size() == 0) {
             LOG_DEBUG("Authentication refused");
@@ -352,6 +359,7 @@ std::string getDeletedCookieString(const std::string &name)
 
 void redirectToSignin(const RequestContext *request, const char *resource = 0)
 {
+    LOG_DIAG("redirectToSignin");
     sendHttpHeader200(request);
 
     // delete session cookie
@@ -2097,7 +2105,7 @@ int begin_request_handler(const RequestContext *req)
     std::string method = req->getMethod();
     std::string resource = popToken(uri, '/');
 
-    LOG_DEBUG("uri=%s, method=%s, resource=%s", uri.c_str(), method.c_str(), resource.c_str());
+    LOG_DIAG("%s %s %s", method.c_str(), uri.c_str(), resource.c_str());
 
     // increase statistics
     if (method == "GET") addHttpStat(H_GET);
@@ -2125,11 +2133,13 @@ int begin_request_handler(const RequestContext *req)
     // even if cookie not found, call getLoggedInUser in order to manage
     // local user interface case (smit ui)
     User user = SessionBase::getLoggedInUser(sessionId);
+    LOG_DIAG("Session %s -> user '%s'", sessionId.c_str(), user.username.c_str());
     // if username is empty, then no access is granted (only public pages will be available)
 
     if (user.username.empty()) return handleUnauthorizedAccess(req, false); // no user signed-in
 
     // at this point there is a signed-in user
+    LOG_DIAG("User signed-in: %s", user.username.c_str());
 
     bool handled = true; // by default, do not let Mongoose handle the request
 

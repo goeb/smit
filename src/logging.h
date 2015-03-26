@@ -18,6 +18,7 @@ enum LogLevel {
     LL_FATAL,
     LL_ERROR,
     LL_INFO,
+    LL_DIAG,
     LL_DEBUG
 };
 
@@ -35,6 +36,7 @@ bool doPrint(enum LogLevel msgLevel);
 
 #define LOG_ERROR(...) do { if (doPrint(LL_ERROR)) { LOG("ERROR", __VA_ARGS__); } } while (0)
 #define LOG_INFO(...)  do { if (doPrint(LL_INFO)) { LOG("INFO ", __VA_ARGS__); } } while (0)
+#define LOG_DIAG(...)  do { if (doPrint(LL_DIAG)) { LOG("DIAG ", __VA_ARGS__); } } while (0)
 #define LOG_DEBUG(...) do { if (doPrint(LL_DEBUG)) { LOG("DEBUG", __VA_ARGS__); } } while (0)
 
 #define LOG(_level, ...) LOG2(_level, __FILE__, __LINE__, __VA_ARGS__)
