@@ -27,7 +27,7 @@ std::string bin2hex(const ustring & in)
     return bin2hex(in.data(), in.size());
 }
 
-std::string bin2hex(const unsigned char *buffer, size_t len)
+std::string bin2hex(const uint8_t *buffer, size_t len)
 {
     const char hexTable[] = { '0', '1', '2', '3',
                               '4', '5', '6', '7',

@@ -261,21 +261,14 @@ std::string serializeSimpleToken(const std::string token)
 
 std::string getBoundary(const std::string &text)
 {
-    unsigned int x1 = 0x0a0a0a0a;
-    unsigned int x2 = 0x0b0b0b0b;
-    const int SIZE = sizeof(x1) + sizeof(x2);
-    unsigned char buffer[SIZE];
-    memset(buffer, 0, SIZE);
+    uint64_t x = 0x0b0b0b0b0a0a0a10;
     // The boundary must not be random, but deterministic and reproduceable
     std::string boundary = "0a0a0a0a0b0b0b0b";
-    while(text.find(boundary) != std::string::npos) {
-        x1++;
-        if (x1 == 0) x2++; // x1 wrapped
+    do {
+        x++;
+        boundary = bin2hex((uint8_t*)&x, sizeof(x));
+    } while((text.find(boundary) != std::string::npos));
 
-        memcpy(buffer, &x1, sizeof(x1));
-        memcpy(buffer+sizeof(x1), &x2, sizeof(x2));
-        boundary = bin2hex(buffer, SIZE);
-    }
     boundary = "boundary:" + boundary;
     LOG_DEBUG("boundary: %s", boundary.c_str());
     return boundary;
