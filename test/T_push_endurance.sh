@@ -5,7 +5,7 @@
 
 . $srcdir/functions
 
-N_ISSUES=10
+N_ISSUES=30
 
 initTest
 cleanRepo
@@ -29,7 +29,7 @@ runClone() {
         local passwd=$PASSWD2
     fi
     echo "runClone[$i]: do clone"
-    $SMIT clone -v http://127.0.0.1:$PORT --user $user --passwd $passwd $clone
+    $SMIT clone http://127.0.0.1:$PORT --user $user --passwd $passwd $clone
     set +x
 
     projectPath=$clone/${project}
@@ -75,7 +75,7 @@ checkClone() {
         sort >> $TEST_NAME.out
 }
 
-N_CLONES=2
+N_CLONES=5
 DIVERSIFICATION=0
 pids=""
 for c in $(seq 1 $N_CLONES); do
@@ -101,8 +101,10 @@ done
 
 stopServer
 
-for c in $(seq 1 $N_CLONES); do
-    checkClone $c p1
+# check first clone and do a diff with others
+checkClone 1 p1
+for c in $(seq 2 $N_CLONES); do
+    diff -ru clone_1/p1 clone_${c}/p1 >> $TEST_NAME.out
 done
 
 diff $srcdir/$TEST_NAME.ref $TEST_NAME.out
