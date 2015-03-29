@@ -56,7 +56,7 @@ dowritesnew() {
         entryId=`echo $r | sed -e "s;.*/;;"`
         # add entries
         for j in `seq 1 $nentries`; do
-            $SMITC post "http://127.0.0.1:$PORT/$PROJECT/issues/$issueId" "+message=test-xxx-$i-$j" summary=title-$i-$j
+            $SMITC post "http://127.0.0.1:$PORT/$PROJECT/issues/$issueId" "+message=test-xxx-$i-$j" summary="title-$i-$j-L:$label"
         done
     done
 }

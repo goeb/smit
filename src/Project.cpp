@@ -43,7 +43,6 @@
 #define K_AUTHOR "+author"
 #define K_CTIME "+ctime"
 #define K_PARENT_NULL "null"
-#define K_MERGE_PENDING ".merge-pending";
 
 /** Get the specification of a given property
   *
@@ -270,7 +269,11 @@ int Project::loadIssues()
         Entry *e = issue->latest;
         while (e) {
             int r = insertEntryInTable(e);
-            // if (r != 0) ? TODO
+            if (r != 0) {
+                // this should not happen
+                // maybe 2 issues pointing to the same first entry?
+                LOG_ERROR("Cannot load issue %s", issueId.c_str());
+            }
             e = e->prev;
         }
 
@@ -850,9 +853,10 @@ void Project::updateMaxIssueId(uint32_t i)
   */
 int Project::reload()
 {
-    LOG_INFO("Reloading project '%s'...", getName().c_str());
     ScopeLocker L1(locker, LOCK_READ_WRITE);
     ScopeLocker L2(lockerForConfig, LOCK_READ_WRITE);
+
+    LOG_INFO("Reloading project '%s'...", getName().c_str());
 
     // delete all issues
     std::map<std::string, Issue*>::iterator issue;
@@ -1176,7 +1180,7 @@ int Project::insertEntryInTable(Entry *e)
 
 int Project::storeRefIssue(const std::string &issueId, const std::string &entryId)
 {
-    LOG_DEBUG("storeRefIssue: %s -> %s", issueId.c_str(), entryId.c_str());
+    LOG_DIAG("storeRefIssue: %s -> %s", issueId.c_str(), entryId.c_str());
     std::string issuePath = path + "/" PATH_ISSUES "/" + issueId;
     int r = writeToFile(issuePath.c_str(), entryId);
     if (r!=0) {
@@ -1187,14 +1191,14 @@ int Project::storeRefIssue(const std::string &issueId, const std::string &entryI
 
 /** Rename an issue (take the next available id)
   *
+  * No mutex protection here.
+  *
   * @return
   *     the newly assigned
   *     or and empty string in case of failure
   */
 std::string Project::renameIssue(const std::string &oldId)
 {
-    ScopeLocker scopeLocker(locker, LOCK_READ_WRITE);
-    //
     std::map<std::string, Issue*>::iterator i;
     i = issues.find(oldId);
     if (i == issues.end()) {
@@ -1249,40 +1253,6 @@ int Project::renameIssue(Issue &i, const std::string &newId)
     return 0;
 }
 
-/** get the next issue
-  *
-  * This method is a helper for iterating over the issues of the project.
-  *
-  * Eg:
-  *     Issue *i = 0;
-  *     while ( (i = project.getNextIssue(i)) ) {
-  *         ...
-  *     }
-  */
-Issue *Project::getNextIssue(Issue *i)
-{
-    std::map<std::string, Issue*>::iterator it;
-    if (!i) {
-        // get the first issue
-        it = issues.begin();
-    } else {
-        // get the next after the given issue
-        it = issues.find(i->id);
-
-        if (it == issues.end()) {
-            // try getting the next
-            // this is used when iterating over the issues,
-            // and an issue is renamed
-            it = issues.upper_bound(i->id);
-
-        } else {
-            it++;
-        }
-    }
-
-    if (it == issues.end()) return 0;
-    else return it->second;
-}
 
 /** Add an issue to the project
   */
@@ -1456,17 +1426,21 @@ int Project::storeEntry(const Entry *e)
 
 /** If issueId is empty:
   *     - a new issue is created
-  *     - its ID is returned within parameter 'issueId'
+  *     - its id is returned within parameter 'issueId'
+  *
+  * @param entry IN/OUT
+  *
   * @return
   *     0 if no error. The entryId is fullfilled.
   *       except if no entry was created due to no change.
   */
-int Project::addEntry(PropertiesMap properties, std::string &issueId, std::string &entryId, std::string username)
+int Project::addEntry(PropertiesMap properties, const std::string &issueId,
+                      Entry *&entry, std::string username)
 {
     ScopeLocker scopeLocker(locker, LOCK_READ_WRITE);
     ScopeLocker scopeLockerConfig(lockerForConfig, LOCK_READ_ONLY);
 
-    entryId.clear();
+    entry = 0;
 
     // check that all properties are in the project config
     // else, remove them
@@ -1537,12 +1511,13 @@ int Project::addEntry(PropertiesMap properties, std::string &issueId, std::strin
                 properties.erase(itemToErase);
             } else entryProperty++;
         }
-
-        if (properties.size() == 0) {
-            LOG_INFO("addEntry: no change. return without adding entry.");
-            return 0; // no change
-        }
     }
+
+    if (properties.size() == 0) {
+        LOG_INFO("addEntry: no change. return without adding entry.");
+        return 0; // no change
+    }
+
     // at this point properties have been cleaned up
 
     FOREACH(p, properties) {
@@ -1557,7 +1532,6 @@ int Project::addEntry(PropertiesMap properties, std::string &issueId, std::strin
         newIssueCreated = true;
         i = createNewIssue();
         if (!i) return -1;
-        issueId = i->id; // in/out parameter
     }
 
     // create the new entry object
@@ -1576,7 +1550,7 @@ int Project::addEntry(PropertiesMap properties, std::string &issueId, std::strin
     }
 
 	// update latest entry of issue on disk
-    r = storeRefIssue(issueId, e->id);
+    r = storeRefIssue(i->id, e->id);
     if (r < 0) return r;
 
     // if some association has been updated, then update the associations tables
@@ -1587,7 +1561,7 @@ int Project::addEntry(PropertiesMap properties, std::string &issueId, std::strin
         }
     }
 
-    entryId = e->id;
+    entry = e;
 
     return 0; // success
 }

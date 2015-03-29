@@ -82,23 +82,13 @@ public:
                                const char *sortingSpec) const;
     int get(const std::string &issueId, Issue &issue) const;
     void getAllIssues(std::vector<Issue*> &issuesList);
-    Issue *createNewIssue();
-    std::string allocateNewIssueId();
-    void updateMaxIssueId(uint32_t i);
     std::map<std::string, std::set<std::string> > getReverseAssociations(const std::string &issue) const;
     int storeRefIssue(const std::string &issueId, const std::string &entryId);
-    std::string renameIssue(const std::string &oldId);
-    int renameIssue(Issue &i, const std::string &newId);
-    Issue *getNextIssue(Issue *i);
-    int addNewIssue(Issue &i);
 
     // methods for handling entries
-    int storeEntry(const Entry *e);
-    int addEntry(PropertiesMap properties, std::string &iid, std::string &eid, std::string username);
-    int addNewEntry(Entry *e);
+    int addEntry(PropertiesMap properties, const std::string &iid, Entry *&entry, std::string username);
     int pushEntry(std::string &issueId, const std::string &entryId,
                   const std::string &user, const std::string &tmpPath);
-    Entry *getEntry(const std::string &id) const;
 
     int deleteEntry(const std::string &entryId, const std::string &username);
     int getNumIssues() const;
@@ -110,10 +100,11 @@ public:
     inline static std::string urlNameDecode(const std::string &name) { return urlDecode(name, false, '='); }
     inline std::string getPath() const { return path; }
     inline std::string getTmpDir() const { return path + "/" K_PROJECT_TMP; }
+
+    // project config
     ProjectConfig getConfig() const;
     inline void setConfig(ProjectConfig pconfig) { config = pconfig; }
     int modifyConfig(std::list<std::list<std::string> > &tokens);
-    int createProject(std::string name, std::list<std::list<std::string> > &tokens);
     static int createProjectFiles(const char *repositoryPath, const char *projectName, std::string &resultingPath);
     int reload(); // reload a project from disk storage
 
@@ -133,39 +124,51 @@ public:
     // methods for handling tags
     int toggleTag(const std::string &issueId, const std::string &entryId, const std::string &tagid);
 
+    // local usage methods (not mutex-protected)
+    Entry *getEntry(const std::string &id) const;
+    int addNewIssue(Issue &i);
+    std::string renameIssue(const std::string &oldId);
+    int renameIssue(Issue &i, const std::string &newId);
+    int storeEntry(const Entry *e);
+
+
 private:
-    int load(); // load a project: config, views, entries, tags
-    int loadConfig();
-    int loadIssues();
-    void loadPredefinedViews();
-    void loadTags();
-    void computeAssociations();
-
-    std::map<std::string, Entry*> entries;
-
-    void cleanupMultiselect(std::list<std::string> &values, const std::list<std::string> &selectOptions);
-
-    int storeViewsToFile();
-    Issue *getIssue(const std::string &id) const;
-    int insertEntryInTable(Entry *e);
-    int insertIssueInTable(Issue *i);
-
-    ProjectConfig config;
-public:    std::map<std::string, Issue*> issues; // TODO public to be removed
-    mutable Locker locker; // mutex for issues
-    mutable Locker lockerForConfig; // mutext for config
+    // private member variables
     std::string name; //< name of the project, plain text
     std::string path; //< path to the project, in which the basename is the urlencoded name
     uint32_t maxIssueId;
+    std::map<std::string, Entry*> entries;
+    std::map<std::string, Issue*> issues;
+    ProjectConfig config;
+    mutable Locker locker; // mutex for issues and entries
+    mutable Locker lockerForConfig; // mutext for config
 
     // associations table
     // { issue : { association-name : [other-issues] } }
     std::map<std::string, std::map<std::string, std::list<std::string> > > associations;
 
     // reverse associations table
-    //
     std::map<std::string, std::map<std::string, std::set<std::string> > > reverseAssociations;
-    void updateAssociations(const Issue *i, const std::string &associationName, const std::list<std::string> &issues);
+
+    // private member methods
+    Issue *createNewIssue();
+    std::string allocateNewIssueId();
+    void updateMaxIssueId(uint32_t i);
+    int addNewEntry(Entry *e);
+    int load(); // load a project: config, views, entries, tags
+    int loadConfig();
+    int loadIssues();
+    void loadPredefinedViews();
+    void loadTags();
+    void computeAssociations();
+    void cleanupMultiselect(std::list<std::string> &values,
+                            const std::list<std::string> &selectOptions);
+    int storeViewsToFile();
+    Issue *getIssue(const std::string &id) const;
+    int insertEntryInTable(Entry *e);
+    int insertIssueInTable(Issue *i);
+    void updateAssociations(const Issue *i, const std::string &associationName,
+                            const std::list<std::string> &issues);
 
 };
 

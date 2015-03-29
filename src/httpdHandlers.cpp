@@ -2038,8 +2038,8 @@ void httpPostEntry(const RequestContext *req, Project &pro, const std::string & 
 
     std::string id = issueId;
     if (id == "new") id = "";
-    std::string entryId;
-    int status = pro.addEntry(vars, id, entryId, u.username);
+    Entry *entry = 0;
+    int status = pro.addEntry(vars, id, entry, u.username);
     if (status != 0) {
         // error
         sendHttpHeader500(req, "Cannot add entry");
@@ -2049,18 +2049,19 @@ void httpPostEntry(const RequestContext *req, Project &pro, const std::string & 
 #if !defined(_WIN32)
         // launch the trigger, if any
         // launch the trigger only if a new entry was actually created
-        if (!entryId.empty()) Trigger::notifyEntry(pro, issueId, entryId);
+        if (entry) Trigger::notifyEntry(pro, entry);
 #endif
-
 
         if (getFormat(req) == RENDERING_HTML) {
             // HTTP redirect
             std::string redirectUrl = "/" + pro.getUrlName() + "/issues/" + id;
             sendHttpRedirect(req, redirectUrl.c_str(), 0);
+
         } else {
             sendHttpHeader200(req);
             req->printf("\r\n");
-            req->printf("%s/%s\r\n", id.c_str(), entryId.c_str());
+            if (entry) req->printf("%s/%s\r\n", entry->issue->id.c_str(), entry->id.c_str());
+            else req->printf("%s/(no change)\r\n", id.c_str());
         }
     }
 
