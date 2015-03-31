@@ -31,7 +31,8 @@ init() {
     # create issue 1
     $SMIT issue $REPO/$PROJECT1 -a - "summary=first issue" freeText="creation of issue1"
     $SMIT issue $REPO/$PROJECT1 -a 1 status=open +message="some text...."
-    $SMIT issue $REPO/$PROJECT1 -a 1 freeText=textServer0 +message="message server 0"
+    tobeAmended=$($SMIT issue $REPO/$PROJECT1 -a 1 freeText=textServer0 +message="message server 0" | sed -e "s/.*Entry *//")
+    echo tobeAmended=$tobeAmended
 
 }
 cleanup() {
@@ -60,9 +61,7 @@ stopServer
 # server side: add entries
 $SMIT issue $REPO/$PROJECT1 -a 1 freeText=textServer1 +message="message server 1"
 $SMIT issue $REPO/$PROJECT1 -a 1 freeText=textServer2 +message="message server 2"
-latestEntry=`grep -l textServer0 $REPO/$PROJECT1/issues/*/*`
-latestEntry=`basename $latestEntry`
-$SMIT issue $REPO/$PROJECT1 -a 1 +amend=$latestEntry +message="amendment of msg server 2"
+$SMIT issue $REPO/$PROJECT1 -a 1 +amend=$tobeAmended +message="amendment of msg server 2"
 
 # local side: add NON-conflicting entries
 $SMIT issue $CLONE/$PROJECT1 -a 1 manager="john smith" +message="local msg 1"

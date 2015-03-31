@@ -46,16 +46,17 @@ doreads() {
 }
 
 dowritesnew() {
-    n=$1
-    nentries=$2 # number of messages under each issue
+	label=$1
+    n=$2
+    nentries=$3 # number of messages under each issue
     for i in `seq 1 $n`; do
         echo "dowrites[$$]: $i"
-        r=`$SMITC post "http://127.0.0.1:$PORT/$PROJECT/issues/new" "summary=test-xxx-$i" "+message=new-message-$i"`
+        r=`$SMITC post "http://127.0.0.1:$PORT/$PROJECT/issues/new" "summary=test-xxx-$i" "+message=new-message-$i-$label"`
         issueId=`echo $r | sed -e "s;/.*;;"`
         entryId=`echo $r | sed -e "s;.*/;;"`
         # add entries
         for j in `seq 1 $nentries`; do
-            $SMITC post "http://127.0.0.1:$PORT/$PROJECT/issues/$issueId" "+message=test-xxx-$i-$j" summary=title-$i-$j
+            $SMITC post "http://127.0.0.1:$PORT/$PROJECT/issues/$issueId" "+message=test-xxx-$i-$j" summary="title-$i-$j-L:$label"
         done
     done
 }
@@ -78,8 +79,8 @@ doreads 10 &
 doreads 10 &
 doreads 10 &
 doreads 10 &
-dowritesnew 10 10 &
-dowritesnew 15 8 
+dowritesnew label-a 10 10 &
+dowritesnew label-b 15 8 
 sleep 2
 dowritesUpdateAllSummaries
 

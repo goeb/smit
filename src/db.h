@@ -28,7 +28,7 @@ public:
     static void updateMaxIssueId(uint32_t i);
     inline static uint32_t getMaxIssueId() { return Db.maxIssueId; }
     inline size_t getNumProjects() const { return projects.size(); }
-    const Project *getNext(const Project *p) const;
+    Project *getNextProject(const Project *p) const;
 private:
     std::map<std::string, Project*> projects;
     Locker locker;

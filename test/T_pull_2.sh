@@ -35,8 +35,9 @@ init() {
     # create issue 2
     $SMIT issue $REPO/$PROJECT1 -a - "summary=second issue" freeText="creation of issue2"
     $SMIT issue $REPO/$PROJECT1 -a 2 status=open +message="some text (issue2)...."
-    $SMIT issue $REPO/$PROJECT1 -a 2 status=open +message="add a file" +file="a_file.txt"
-    echo file1_data_yy > $REPO/$PROJECT1/files/a_file.txt
+    $SMIT issue $REPO/$PROJECT1 -a 2 status=open +message="add a file" +file="0123/a_file.txt"
+    mkdir $REPO/$PROJECT1/objects/01
+    echo file1_data_yy > $REPO/$PROJECT1/objects/01/23
 }
 cleanup() {
     REPO=trepo # just to be sure before the rm -rf
@@ -64,7 +65,7 @@ cleanup
 init
 startServer
 
-# check that clone of p1 has correct content
+# do clone
 $SMIT clone http://127.0.0.1:$PORT --user $USER1 --passwd $PASSWD1 $CLONE
 
 cd $CLONE

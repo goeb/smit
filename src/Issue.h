@@ -17,7 +17,6 @@
 
 #define K_PARENT_NULL "null"
 
-#define K_UPLOADED_FILES_DIR "files"
 #define K_PROJECT_TMP "tmp"
 
 #define DELETE_DELAY_S (10*60) // seconds
@@ -38,33 +37,32 @@ enum PropertyType {
 struct Issue {
     std::string id; // same as the first entry
     std::string path; // path of the directory where the issue is stored
+    Entry *first; // the first entry
     Entry *latest; // the latest entry
     int ctime; // creation time (the one of the first entry)
     int mtime; // modification time (the one of the last entry)
     std::map<std::string, std::list<std::string> > properties;
 
     /** { association-name : [related issues] } */
-    Issue() : latest(0), ctime(0), mtime(0) {}
+    Issue() : first(0), latest(0), ctime(0), mtime(0) {}
 
     // the properties of the issue is the consolidation of all the properties
     // of its entries. For a given key, the most recent value has priority.
     std::string getSummary() const;
     bool lessThan(const Issue *other, const std::list<std::pair<bool, std::string> > &sortingSpec) const;
     bool isInFilter(const std::map<std::string, std::list<std::string> > &filter) const;
-    std::map<std::string, Entry*> entries;
-    Entry* mergePending; // null if no merge-pending entry
 
-    int computeLatestEntry();
     void consolidate();
-    void consolidateIssueWithSingleEntry(Entry *e, bool overwrite);
+    void consolidateWithSingleEntry(Entry *e, bool overwrite);
     void consolidateAmendment(Entry *e);
     bool searchFullText(const char *text) const;
     int getNumberOfTaggedIEntries(const std::string &tagId) const;
     Entry *getEntry(const std::string id);
 
-    int load(const std::string &issueId, const std::string &issuePath);
     void addEntryInTable(Entry *e);
-    Entry *addEntry(const PropertiesMap &properties, const std::string &username);
+    void addEntry(Entry *e);
+    static Issue *load(const std::string &objectsDir, const std::string &latestEntryOfIssue);
+    void insertEntry(Entry *e);
     Entry *amendEntry(const std::string &entryId, const std::string &newMsg, const std::string &username);
 
 };

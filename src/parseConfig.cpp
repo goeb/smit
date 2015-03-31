@@ -25,6 +25,7 @@
 
 #include "parseConfig.h"
 #include "global.h"
+#include "stringTools.h"
 
 // SM_PARSER is a small executable than helps parsing smit config file and smit entries.
 #ifndef SM_PARSER
@@ -260,16 +261,24 @@ std::string serializeSimpleToken(const std::string token)
 
 std::string getBoundary(const std::string &text)
 {
-    std::stringstream randomStr;
+    uint64_t x = 0x0b0b0b0b0a0a0a10;
+    // The boundary must not be random, but deterministic and reproduceable
+    std::string boundary = "0a0a0a0a0b0b0b0b";
+    do {
+        x++;
+        boundary = bin2hex((uint8_t*)&x, sizeof(x));
+    } while((text.find(boundary) != std::string::npos));
 
-    while(1) {
-        randomStr.str(""); // clear the contents
-        randomStr << std::hex << rand() << rand() << rand();
-        if (text.find(randomStr.str()) == std::string::npos) break;
-    }
-    std::string boundary = "boundary:" + randomStr.str();
+    boundary = "boundary:" + boundary;
     LOG_DEBUG("boundary: %s", boundary.c_str());
     return boundary;
+}
+
+std::string serializeProperty(const std::string &propertyName, const std::string &value)
+{
+    std::list<std::string> values;
+    values.push_back(value);
+    return serializeProperty(propertyName, values);
 }
 
 std::string serializeProperty(const std::string &propertyName, const std::list<std::string> &values)

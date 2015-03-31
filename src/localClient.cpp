@@ -257,7 +257,7 @@ int cmdIssue(int argc, char * const *argv)
     // load the project
     Project *p = Project::init(projectPath);
     if (!p) {
-        fprintf(stderr, "Cannot load project '%s'", projectPath);
+        fprintf(stderr, "Cannot load project '%s'\n", projectPath);
         exit(1);
     }
 
@@ -283,14 +283,15 @@ int cmdIssue(int argc, char * const *argv)
         repo += "/..";
         std::string username = loadUsername(repo);
 
-        std::string entryId;
+        Entry *entry = 0;
         if (issueId == "-") issueId = "";
-        int r = p->addEntry(properties, issueId, entryId, username);
+        int r = p->addEntry(properties, issueId, entry, username);
         if (r == 0) {
-            if (entryId.empty()) {
-                printf("Issue %s: no change\n", issueId.c_str());
+            if (entry) {
+                printf("%s/%s\n", entry->issue->id.c_str(), entry->id.c_str());
             } else {
-                printf("Issue %s: Entry %s\n", issueId.c_str(), entryId.c_str());
+                // no entry created, because no change
+                printf("%s/-\n", issueId.c_str());
             }
         } else {
             printf("Error: cannot add entry\n");

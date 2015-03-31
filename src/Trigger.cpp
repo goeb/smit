@@ -149,9 +149,12 @@ std::string Trigger::formatEntry(const Project &project, const Issue &issue, con
 
 /** Run an external program for notifying a new entry
   */
-void Trigger::notifyEntry(const Project &project, const std::string issueId, const std::string &entryId, bool isNewIssue)
+void Trigger::notifyEntry(const Project &project, const Entry *entry, bool isNewIssue)
 {
     LOG_FUNC();
+    if (!entry) return;
+    if (!entry->issue) return;
+
     // load the 'trigger' file, in order to get the path of the external program
     std::string programPath;
     std::string trigger = project.getPath() + "/" + K_TRIGGER;
@@ -162,23 +165,9 @@ void Trigger::notifyEntry(const Project &project, const std::string issueId, con
 
     if (programPath.size()) {
         // format the data that will be given to the external program on its stdin
-        Issue i;
-        int r = project.get(issueId, i);
-        if (r != 0) {
-            LOG_ERROR("notifyEntry: could not retrieved issue: project '%s', issue '%s'",
-                      project.getName().c_str(), issueId.c_str());
-            return;
-        }
-
-        Entry *e = i.getEntry(entryId);
-        if (!e) {
-            LOG_ERROR("notifyEntry: could not retrieved entry: project '%s', issue '%s', entry '%s'",
-                      project.getName().c_str(), issueId.c_str(), entryId.c_str());
-            return;
-        }
-
+        Issue *i = entry->issue;
         std::map<std::string, Role> users = UserBase::getUsersRolesOfProject(project.getName());
-        std::string text = formatEntry(project, i, *e, users, isNewIssue);
+        std::string text = formatEntry(project, *i, *entry, users, isNewIssue);
 
         run(programPath, text);
     }

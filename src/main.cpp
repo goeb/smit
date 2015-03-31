@@ -108,8 +108,7 @@ int initRepository(int argc, char **argv)
     dirp = opendir(directory);
     if (!dirp) {
         // try create it
-        mode_t mode = S_IRUSR | S_IWUSR | S_IXUSR;
-        int r = mg_mkdir(directory, mode);
+        int r = mkdir(directory);
         if (r != 0) {
             LOG_ERROR("Cannot create directory '%s': %s", directory, strerror(errno));
             return 1;
@@ -215,10 +214,10 @@ int cmdProject(int argc, char **argv)
             return 1;
         }
         // list projects
-        const Project *p = Database::Db.getNext(0);
+        const Project *p = Database::Db.getNextProject(0);
         while (p) {
             printf("%s: %d issues\n", p->getName().c_str(), p->getNumIssues());
-            p = Database::Db.getNext(p);
+            p = Database::Db.getNextProject(p);
         }
         printf("%lu project(s)\n", L(Database::Db.getNumProjects()));
         return 0;
@@ -449,6 +448,7 @@ int serveRepository(int argc, char **argv)
         {NULL, 0, NULL, 0}
     };
     optind = 1; // reset this in case cmdUi has already parsed with getopt_long
+    int loglevel = LL_INFO;
     while ((c = getopt_long(argc, argv, "d", longOptions, &optionIndex)) != -1) {
         switch (c) {
         case 0: // manage long options
@@ -457,7 +457,7 @@ int serveRepository(int argc, char **argv)
             else if (0 == strcmp(longOptions[optionIndex].name, "url-rewrite-root")) urlRewritingRoot = optarg;
             break;
         case 'd':
-            setLoggingLevel(LL_DEBUG);
+            loglevel++;
             break;
         case '?': // incorrect syntax, a message is printed by getopt_long
             return helpServe();
@@ -467,6 +467,7 @@ int serveRepository(int argc, char **argv)
             return helpServe();
         }
     }
+    setLoggingLevel((LogLevel)loglevel);
 
     // manage non-option ARGV elements
     if (optind < argc) {

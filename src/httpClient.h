@@ -37,13 +37,14 @@ public:
     void getRequestRaw();
     void post(const std::string &params);
     int postFile(const std::string &srcFile, const std::string &destUrl);
+    int head(const std::string &url);
     int putFile(const std::string &srcFile, const std::string &destUrl);
 
     std::map<std::string, Cookie> cookies;
     std::list<std::string> lines; // fulfilled after calling getRequestLines()
-    void doCloning(bool recursive, int recursionLevel);
+    int doCloning(bool recursive, int recursionLevel);
     void getFileStdout();
-    void downloadFile(const std::string localPath);
+    int downloadFile(const std::string &localPath);
 
     int test();
     void handleReceiveFileOrDirectory(void *data, size_t size);
@@ -68,8 +69,6 @@ public:
     static size_t ignoreResponseCallback(void *contents, size_t size, size_t nmemb, void *userp);
 
     int httpStatusCode;
-    static inline void setVerbose(bool v) {Verbose = v;}
-    static bool Verbose;
 
 private:
     void performRequest();

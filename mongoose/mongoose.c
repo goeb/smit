@@ -2790,7 +2790,7 @@ static void fclose_on_exec(struct file *filep) {
 }
 
 static void handle_file_request(struct mg_connection *conn, const char *path,
-                                struct file *filep) {
+                                struct file *filep, const char *realpath) {
   char date[64], lm[64], etag[64], range[64];
   const char *msg = "OK", *hdr;
   time_t curtime = time(NULL);
@@ -2814,7 +2814,9 @@ static void handle_file_request(struct mg_connection *conn, const char *path,
     encoding = "Content-Encoding: gzip\r\n";
   }
 
-  if (!mg_fopen(conn, path, "rb", filep)) {
+  // realpath is used when we want to serve a file under another name
+  if (!realpath) realpath = path;
+  if (!mg_fopen(conn, realpath, "rb", filep)) {
     send_http_error(conn, 500, http_500_error,
                     "fopen(%s): %s", path, strerror(ERRNO));
     return;
@@ -2871,7 +2873,16 @@ static void handle_file_request(struct mg_connection *conn, const char *path,
 void mg_send_file(struct mg_connection *conn, const char *path) {
   struct file file = STRUCT_FILE_INITIALIZER;
   if (mg_stat(conn, path, &file)) {
-    handle_file_request(conn, path, &file);
+    handle_file_request(conn, path, &file, 0);
+  } else {
+    send_http_error(conn, 404, "Not Found", "%s", "File not found");
+  }
+}
+
+void mg_send_object(struct mg_connection *conn, const char *path, const char *realpath) {
+  struct file file = STRUCT_FILE_INITIALIZER;
+  if (mg_stat(conn, realpath, &file)) {
+    handle_file_request(conn, path, &file, realpath);
   } else {
     send_http_error(conn, 404, "Not Found", "%s", "File not found");
   }
@@ -3719,7 +3730,7 @@ static void handle_request(struct mg_connection *conn) {
   } else if (is_not_modified(conn, &file)) {
     send_http_error(conn, 304, "Not Modified", "%s", "");
   } else {
-    handle_file_request(conn, path, &file);
+    handle_file_request(conn, path, &file, 0);
   }
 }
 

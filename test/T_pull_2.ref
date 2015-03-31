@@ -43,7 +43,7 @@ Modified Properties:
 Message:
     add a file
 Modified Properties:
-    +file: a_file.txt
+    +file: 0123/a_file.txt
 Issue 3: third issue
 ---- Properties ----------------------------------------------------------------
     freeText                  : x2server

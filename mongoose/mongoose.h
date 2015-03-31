@@ -237,6 +237,8 @@ int mg_printf(struct mg_connection *,
 // Send contents of the entire file together with HTTP headers.
 void mg_send_file(struct mg_connection *conn, const char *path);
 
+// Send contents of the entire file under another name together with HTTP headers.
+void mg_send_object(struct mg_connection *conn, const char *path, const char *realpath);
 
 // Read data from the remote end, return number of bytes read.
 // Return:

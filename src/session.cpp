@@ -482,6 +482,7 @@ User SessionBase::getLoggedInUser(const std::string &sessionId)
             // else session found, but related user no longer exists
         }
     }
+
     LOG_DEBUG("no valid logged-in user");
     return User();
 }

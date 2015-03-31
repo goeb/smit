@@ -28,10 +28,7 @@
 #include "mg_win32.h"
 #include "console.h"
 #include "filesystem.h"
-
-bool HttpRequest::Verbose = false;
-
-#define LOGV(...) do { if (HttpRequest::Verbose) { printf(__VA_ARGS__); fflush(stdout);} } while (0)
+#include "logging.h"
 
 HttpClientContext::HttpClientContext()
 {
@@ -60,12 +57,17 @@ void HttpRequest::getFileStdout()
 
 }
 
-void HttpRequest::downloadFile(const std::string localPath)
+int HttpRequest::downloadFile(const std::string &localPath)
 {
-    LOGV("downloadFile: resourcePath=%s\n", resourcePath.c_str());
+    LOG_DEBUG("downloadFile: resourcePath=%s", resourcePath.c_str());
     curl_easy_setopt(curlHandle, CURLOPT_WRITEDATA, (void *)this);
     curl_easy_setopt(curlHandle, CURLOPT_WRITEFUNCTION, downloadCallback);
-    filename = localPath;
+
+    mkdirs(getDirname(localPath));
+
+    // download to tmp file, then rename at the end.
+    std::string tmp = getTmpPath(localPath);
+    filename = tmp;
     performRequest();
     if (fd) closeFile();
     else {
@@ -79,21 +81,40 @@ void HttpRequest::downloadFile(const std::string localPath)
             closeFile();
         }
     }
+    if (httpStatusCode == 200) {
+        int r = rename(tmp.c_str(), localPath.c_str());
+        if (r != 0) {
+            LOG_ERROR("Cannot rename after download '%s' -> '%s': %s",
+                      tmp.c_str(), localPath.c_str(), strerror(errno));
+            exit(1);
+        }
+        return 0;
+
+    } else {
+        return -1;
+    }
 }
+
+
 
 /** Get files recursively through sub-directories
   *
   * @param recursionLevel
   *    used to track the depth in the sub-directories
   */
-void HttpRequest::doCloning(bool recursive, int recursionLevel)
+int HttpRequest::doCloning(bool recursive, int recursionLevel)
 {
-    LOGV("Entering doCloning: resourcePath=%s\n", resourcePath.c_str());
+    LOG_DEBUG("Entering doCloning: resourcePath=%s", resourcePath.c_str());
     curl_easy_setopt(curlHandle, CURLOPT_WRITEDATA, (void *)this);
     curl_easy_setopt(curlHandle, CURLOPT_WRITEFUNCTION, writeToFileOrDirCallback);
 
     if (recursionLevel < 2) printf("%s\n", resourcePath.c_str());
     performRequest();
+
+    if (httpStatusCode < 200 || httpStatusCode >= 300) {
+        LOG_ERROR("GET %s: failed with HTTP %d", resourcePath.c_str(), httpStatusCode);
+        return -1;
+    }
 
     if (isDirectory && recursive) {
         // finalize received lines
@@ -107,9 +128,8 @@ void HttpRequest::doCloning(bool recursive, int recursionLevel)
         trimRight(localPath, "/");
 
         // make current directory locally
-        mode_t mode = S_IRUSR | S_IWUSR | S_IXUSR;
-        LOGV("mkdir %s...\n", localPath.c_str());
-        int r = mg_mkdir(localPath.c_str(), mode);
+        LOG_DEBUG("mkdir %s...", localPath.c_str());
+        int r = mkdir(localPath);
         if (r != 0) {
             fprintf(stderr, "Cannot create directory '%s': %s\n", localPath.c_str(), strerror(errno));
             fprintf(stderr, "Abort.\n");
@@ -120,7 +140,8 @@ void HttpRequest::doCloning(bool recursive, int recursionLevel)
         FOREACH(file, lines) {
 
             if (file->empty()) continue;
-            if ((*file)[0] == '.') continue; // do not clone hidden files
+            if ((*file) == ".") continue;
+            if ((*file) == "..") continue;
 
             std::string subpath = resourcePath;
             if (resourcePath != "/")  subpath += '/';
@@ -129,7 +150,8 @@ void HttpRequest::doCloning(bool recursive, int recursionLevel)
             HttpRequest hr(httpCtx);
             hr.setUrl(rooturl, subpath);
             hr.setRepository(repository);
-            hr.doCloning(true, recursionLevel+1);
+            int r = hr.doCloning(true, recursionLevel+1);
+            if (r < 0) return r;
         }
     }
     if (!isDirectory) {
@@ -139,6 +161,7 @@ void HttpRequest::doCloning(bool recursive, int recursionLevel)
             fprintf(stderr, "unexpected null file descriptor\n");
         } else closeFile();
     }
+    return 0;
 }
 
 void HttpRequest::post(const std::string &params)
@@ -147,6 +170,31 @@ void HttpRequest::post(const std::string &params)
     curl_easy_setopt(curlHandle, CURLOPT_WRITEFUNCTION, ignoreResponseCallback);
     curl_easy_setopt(curlHandle, CURLOPT_POSTFIELDS, params.c_str());
     performRequest();
+}
+
+int HttpRequest::head(const std::string &url)
+{
+    CURLcode res;
+    /* upload to this place */
+    curl_easy_setopt(curlHandle, CURLOPT_URL, url.c_str());
+    curl_easy_setopt(curlHandle, CURLOPT_NOBODY, 1L);
+    curl_easy_setopt(curlHandle, CURLOPT_CUSTOMREQUEST, "HEAD");
+
+    /* enable verbose for easier tracing */
+    if (getLoggingLevel() > LL_INFO) curl_easy_setopt(curlHandle, CURLOPT_VERBOSE, 1L);
+
+    res = curl_easy_perform(curlHandle);
+
+    /* Check for errors */
+    if (res != CURLE_OK) {
+        fprintf(stderr, "curl_easy_perform() failed: %s\n",
+                curl_easy_strerror(res));
+        return -1;
+
+    }
+
+    return 0; // ok
+
 }
 
 /** Post a file (file upload)
@@ -174,9 +222,8 @@ int HttpRequest::postFile(const std::string &srcFile, const std::string &destUrl
         return -1;
     }
 
-    if (Verbose) {
-        printf("file '%s': size %ldo\n", srcFile.c_str(), file_info.st_size);
-    }
+
+    LOG_DEBUG("file '%s': size %ldo", srcFile.c_str(), file_info.st_size);
 
     /* upload to this place */
     curl_easy_setopt(curlHandle, CURLOPT_URL, destUrl.c_str());
@@ -188,7 +235,7 @@ int HttpRequest::postFile(const std::string &srcFile, const std::string &destUrl
     headerList = curl_slist_append(headerList, "Content-type: application/octet-stream");
     curl_easy_setopt(curlHandle, CURLOPT_HTTPHEADER, headerList);
 
-    /* set where to read from (on Windows you need to use READFUNCTION too) */
+    /* set where to read from (on Windows you need to use READFUNCTION too) */ // TODO
     curl_easy_setopt(curlHandle, CURLOPT_READDATA, fd);
 
     /* and give the size of the upload (optional) */
@@ -198,7 +245,7 @@ int HttpRequest::postFile(const std::string &srcFile, const std::string &destUrl
     curl_easy_setopt(curlHandle, CURLOPT_WRITEFUNCTION, receiveLinesCallback);
 
     /* enable verbose for easier tracing */
-    if (Verbose) curl_easy_setopt(curlHandle, CURLOPT_VERBOSE, 1L);
+    if (getLoggingLevel() > LL_INFO) curl_easy_setopt(curlHandle, CURLOPT_VERBOSE, 1L);
 
     res = curl_easy_perform(curlHandle);
     fclose(fd);
@@ -210,7 +257,7 @@ int HttpRequest::postFile(const std::string &srcFile, const std::string &destUrl
         return -1;
 
     } else if (httpStatusCode < 200 || httpStatusCode >= 300) {
-        fprintf(stderr, "Got HTTP status %d\n", httpStatusCode);
+        LOG_ERROR("Got HTTP status %d", httpStatusCode);
         return -1;
 
     } else {
@@ -219,12 +266,11 @@ int HttpRequest::postFile(const std::string &srcFile, const std::string &destUrl
         handleReceivedLines(0, 0); // finalize the last line of the response
 
         /* now extract transfer info */
-        double speed_upload, total_time;
-        curl_easy_getinfo(curlHandle, CURLINFO_SPEED_UPLOAD, &speed_upload);
-        curl_easy_getinfo(curlHandle, CURLINFO_TOTAL_TIME, &total_time);
+        double speedUpload, totalTime;
+        curl_easy_getinfo(curlHandle, CURLINFO_SPEED_UPLOAD, &speedUpload);
+        curl_easy_getinfo(curlHandle, CURLINFO_TOTAL_TIME, &totalTime);
 
-        if (Verbose) fprintf(stderr, "Speed: %.3f bytes/sec during %.3f seconds\n",
-                             speed_upload, total_time);
+        LOG_DEBUG("Speed: %.3f bytes/sec during %.3f seconds", speedUpload, totalTime);
 
     }
 
@@ -269,7 +315,7 @@ int HttpRequest::putFile(const std::string &srcFile, const std::string &destUrl)
     /* Now run off and do what you've been told! */
     res = curl_easy_perform(curlHandle);
     /* Check for errors */
-    if(res != CURLE_OK)
+    if (res != CURLE_OK)
         fprintf(stderr, "curl_easy_perform() failed: %s\n",
                 curl_easy_strerror(res));
 
@@ -309,7 +355,7 @@ int Cookie::parse(std::string cookieLine)
     expiration = popToken(cookieLine, '\t');
     name = popToken(cookieLine, '\t');
     value = cookieLine;
-    LOGV("cookie: %s = %s\n", name.c_str(), value.c_str());
+    LOG_DEBUG("cookie: %s = %s", name.c_str(), value.c_str());
     return 0;
 }
 
@@ -317,10 +363,10 @@ void HttpRequest::performRequest()
 {
     CURLcode res;
 
-    LOGV("resource: %s%s\n", rooturl.c_str(), resourcePath.c_str());
+    LOG_DEBUG("resource: %s%s", rooturl.c_str(), resourcePath.c_str());
     res = curl_easy_perform(curlHandle);
 
-    if(res != CURLE_OK) {
+    if (res != CURLE_OK) {
         fprintf(stderr, "curl_easy_perform() failed: %s (%s%s)\n", curl_easy_strerror(res), rooturl.c_str(), resourcePath.c_str());
         exit(1);
     }
@@ -352,7 +398,7 @@ size_t HttpRequest::headerCallback(void *contents, size_t size, size_t nmemb, vo
     HttpRequest *hr = (HttpRequest*)userp;
     size_t realsize = size * nmemb;
 
-    LOGV("HDR: %s", (char*)contents);
+    LOG_DEBUG("HDR: %s", (char*)contents);
 
     if (hr->httpStatusCode == -1) {
         // this header should be the HTTP response code
@@ -412,8 +458,8 @@ void HttpRequest::openFile()
             exit(1);
         }
     }
-    LOGV("Opening file: %s\n", filename.c_str());
-    fd = fopen(filename.c_str(), "wbx");
+    LOG_DEBUG("Opening file: %s", filename.c_str());
+    fd = fopen(filename.c_str(), "wb");
     if (!fd) {
         fprintf(stderr, "Cannot create file '%s': %s\n", filename.c_str(), strerror(errno));
         exit(1);
@@ -433,6 +479,8 @@ void HttpRequest::closeFile()
   */
 void HttpRequest::handleReceiveFileOrDirectory(void *data, size_t size)
 {
+    if (httpStatusCode != 200) return;
+
     if (isDirectory) {
         // store the lines temporarily in memory
         handleReceivedLines((char*)data, size);
@@ -452,6 +500,9 @@ void HttpRequest::handleReceiveFileOrDirectory(void *data, size_t size)
 
 void HttpRequest::handleDownload(void *data, size_t size)
 {
+    // if error, then do not store anything in the file
+    if (httpStatusCode != 200) return;
+
     if (!fd) openFile();
 
     if (size) {
@@ -483,7 +534,8 @@ void HttpRequest::handleReceivedLines(const char *data, size_t size)
 {
     if (data == 0) {
         // finalize the currentLine and return
-        lines.push_back(currentLine);
+        // do not push empty lines if it is a diectory listing
+        if (!isDirectory || !currentLine.empty()) lines.push_back(currentLine);
         currentLine.clear();
     }
     size_t i = 0;
@@ -495,7 +547,8 @@ void HttpRequest::handleReceivedLines(const char *data, size_t size)
             if (i > 0 && data[i-1] == '\r') endl--;
 
             currentLine.append(data + notConsumedOffset, endl-notConsumedOffset);
-            lines.push_back(currentLine);
+            // do not push empty lines if it is a diectory listing
+            if (!isDirectory || !currentLine.empty()) lines.push_back(currentLine);
             currentLine.clear();
             notConsumedOffset = i+1;
         }

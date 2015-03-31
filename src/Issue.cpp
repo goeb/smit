@@ -55,7 +55,10 @@ std::string Issue::getSummary() const
     return getProperty(properties, "summary");
 }
 
-
+/** Add an entry at the end
+  *
+  * This updates the latest entry.
+  */
 void Issue::addEntryInTable(Entry *e)
 {
     // modification time of the issue it the creation time of the latest entry
@@ -65,61 +68,85 @@ void Issue::addEntryInTable(Entry *e)
     if (!latest) ctime = e->ctime;
 
     // update the chain list of entries
+    if (!first) first = e;
+
     e->prev = latest;
     if (latest) {
         latest->next = e;
     }
     latest = e;
 
-    entries[e->id] = e;
+    e->issue = this;
 }
 
 /** Add an entry
   *
   * This does:
   * - update the issue in memory
-  * - store the on persistent storage
   */
-Entry *Issue::addEntry(const PropertiesMap &properties, const std::string &username)
+void Issue::addEntry(Entry *e)
 {
-    // create Entry object with properties
-    Entry *e = new Entry;
-    if (latest) e->parent = latest->id;
-    else e->parent = K_PARENT_NULL;
-    e->ctime = time(0);
-    //e->id
-    e->author = username;
-    e->properties = properties;
-
-    // serialize the entry
-    std::string data = e->serialize();
-
-    // generate a id for this entry
-    std::string newEntryId = getSha1(data.c_str(), data.size());
-
-    LOG_DEBUG("new entry: %s", newEntryId.c_str());
-
-    // check that this entry ID does not already exist
-    if (entries.find(newEntryId) != entries.end()) {
-        LOG_ERROR("Entry with same id already exists: %s", newEntryId.c_str());
-        return 0;
-    }
-    std::string pathOfNewEntry = path + '/' + newEntryId;
-    int r = writeToFile(pathOfNewEntry.c_str(), data);
-    if (r != 0) {
-        // error.
-        LOG_ERROR("Could not write new entry to disk");
-        return 0;
-    }
-
-    // add this entry in Issue::entries
-    e->id = newEntryId;
-
+    LOG_FUNC();
     addEntryInTable(e);
 
     // consolidate the issue
-    consolidateIssueWithSingleEntry(e, true);
-    return e;
+    consolidateWithSingleEntry(e, true);
+}
+
+/** Insert entry before the latest entry
+  *
+  * This is typically used when loading an issue from persistent storage
+  * (starting from latest entry).
+  */
+void Issue::insertEntry(Entry* e)
+{
+    if (!latest) latest = e;
+
+    if (first) {
+        // insert before the first
+        first->prev = e;
+        e->next = first;
+    }
+
+    first = e;
+    e->issue = this;
+}
+
+Issue *Issue::load(const std::string &objectsDir, const std::string &latestEntryOfIssue)
+{
+    Issue *issue = new Issue();
+
+    std::string entryid = latestEntryOfIssue;
+    int error = 0;
+    while (entryid.size() && entryid != K_PARENT_NULL) {
+        std::string entryPath = objectsDir + '/' + Entry::getSubpath(entryid);
+        Entry *e = Entry::loadEntry(entryPath, entryid, false);
+        if (!e) {
+            LOG_ERROR("Cannot load entry '%s'", entryPath.c_str());
+            error = 1;
+            break; // abort the loading of this issue
+        }
+
+        issue->insertEntry(e); // store the entry in the chain list
+
+        entryid = e->parent; // go to parent entry
+    }
+
+    if (error) {
+        // delete all entries and the issue
+        Entry *e = issue->first;
+        while (e) {
+            Entry *tobeDeleted = e;
+            e = e->next;
+            delete tobeDeleted;
+        }
+        delete issue;
+        return 0;
+
+    }
+
+    issue->consolidate();
+    return issue;
 }
 
 /** Amend the given Entry with a new message
@@ -132,7 +159,13 @@ Entry *Issue::amendEntry(const std::string &entryId, const std::string &newMsg, 
     PropertiesMap properties;
     properties[K_MESSAGE].push_back(newMsg);
     properties[K_AMEND].push_back(entryId);
-    return addEntry(properties, username);
+    Entry *amendingEntry = Entry::createNewEntry(properties, username, latest);
+
+    addEntry(amendingEntry);
+
+    consolidateAmendment(amendingEntry);
+
+    return amendingEntry;
 }
 
 
@@ -141,7 +174,7 @@ Entry *Issue::amendEntry(const std::string &entryId, const std::string &newMsg, 
   * If overwrite == false, then an already existing property in the
   * issue will not be overwritten.
   */
-void Issue::consolidateIssueWithSingleEntry(Entry *e, bool overwrite) {
+void Issue::consolidateWithSingleEntry(Entry *e, bool overwrite) {
     std::map<std::string, std::list<std::string> >::iterator p;
     FOREACH(p, e->properties) {
         if (p->first.size() && p->first[0] == '+') continue; // do not consolidate these (+file, +message, etc.)
@@ -160,7 +193,7 @@ void Issue::consolidateAmendment(Entry *e)
     PropertiesIt p = e->properties.find(K_AMEND);
     if (p == e->properties.end()) return; // no amendment
     if (p->second.empty()) {
-        LOG_ERROR("cannot consolidateAmendment with missing entry id");
+        LOG_ERROR("cannot consolidateAmendment with no entry to consolidate");
         return;
     }
     std::string amendedEntryId = p->second.front();
@@ -169,18 +202,20 @@ void Issue::consolidateAmendment(Entry *e)
     std::string msg;
     if (p == e->properties.end()) return; // no amending message
     if (p->second.empty()) {
-        LOG_ERROR("cannot consolidateAmendment with missing message");
+        LOG_ERROR("cannot consolidateAmendment with no message");
         // consider the message as empty
 
     } else msg = p->second.front();
 
     // find this entry and modify its message
-    std::map<std::string, Entry*>::iterator eit = entries.find(amendedEntryId);
-    if (eit == entries.end()) {
+    Entry *amendedEntry = e;
+    while ((amendedEntry = amendedEntry->prev)) {
+        if (amendedEntry->id == amendedEntryId) break;
+    }
+    if (!amendedEntry) {
         LOG_ERROR("cannot consolidateAmendment for unfound entry '%s'", amendedEntryId.c_str());
         return;
     }
-    Entry *amendedEntry = eit->second;
     amendedEntry->properties[K_MESSAGE].clear();
     amendedEntry->properties[K_MESSAGE].push_back(msg);
     amendedEntry->amendments.push_back(e->id);
@@ -208,104 +243,12 @@ void Issue::consolidate()
         // create the same property in the issue, if not already existing
         // (in order to have only most recent properties)
 
-        consolidateIssueWithSingleEntry(e, false); // do not overwrite as we move from most recent to oldest
+        consolidateWithSingleEntry(e, false); // do not overwrite as we move from most recent to oldest
         consolidateAmendment(e);
         ctime = e->ctime; // the oldest entry will take precedence for ctime
         e = e->prev;
     }
 }
-
-
-/** Load an issue from its directory
-  */
-int Issue::load(const std::string &issueId, const std::string &issuePath)
-{
-    id = issueId;
-    path = issuePath;
-    LOG_DEBUG("Loading issue: %s", path.c_str());
-    // open the directory and look for all files of this directory
-    DIR *issueDirHandle;
-    if ((issueDirHandle = opendir(path.c_str())) == NULL) {
-        LOG_ERROR("Not a directory '%s'", path.c_str());
-        return -1; // not a directory
-    }
-
-    struct dirent *entryFile;
-    while ((entryFile = readdir(issueDirHandle)) != NULL) {
-        if (0 == strcmp(entryFile->d_name, ".")) continue;
-        if (0 == strcmp(entryFile->d_name, "..")) continue;
-        if (0 == strcmp(entryFile->d_name, DIR_DELETED_OLD)) continue;
-        if (0 == strcmp(entryFile->d_name, "_HEAD")) {
-            // obsolete.
-            LOG_INFO("Found obsolete _HEAD");
-            continue;
-        }
-        // regular entry
-        LOG_DEBUG("Loading entry: %s", entryFile->d_name);
-
-        std::string filePath = path + '/' + entryFile->d_name;
-        Entry *e = Entry::loadEntry(path, entryFile->d_name);
-        if (e) entries[e->id] = e;
-        else LOG_ERROR("Cannot load entry '%s'", filePath.c_str());
-    }
-
-    closedir(issueDirHandle);
-    computeLatestEntry();
-    consolidate();
-
-    return 0;
-}
-
-/** Guess the head from the previously loaded entries
-  *
-  * And resolve missing nodes.
-  */
-int Issue::computeLatestEntry()
-{
-    std::map<std::string, Entry*>::iterator eit;
-    FOREACH(eit, entries) {
-        Entry *e = eit->second;
-        if (e->parent == K_PARENT_NULL) e->prev = 0;
-        else {
-            // get parent of current entry
-            std::map<std::string, Entry*>::iterator parentIt = entries.find(e->parent);
-            if (parentIt != entries.end()) {
-                Entry *parent = parentIt->second;
-                if (parent->next) {
-                    // error: the next of the parent was already assigned
-                    //
-                    //  a <-- parent <-- c <-- e
-                    //              \--- d
-                    // We relocate d as a child of e.
-                    // TODO relocate after the date ?
-                    LOG_ERROR("[issue %s] Entry '%s' has already a child: '%s'", id.c_str(), parent->id.c_str(),
-                              parent->next->id.c_str());
-                    // try to resolve this
-                    while (parent->next) parent = parent->next;
-                    LOG_INFO("Repair: new parent for '%s': '%s'", e->id.c_str(), parent->id.c_str());
-                }
-                parent->next = e;
-                e->prev = parent;
-            } else {
-                // error: parent is missing
-                LOG_ERROR("Parent missing: '%s'", e->parent.c_str());
-            }
-        }
-    }
-    // raise errors if several entries have no 'next'
-    FOREACH(eit, entries) {
-        Entry *e = eit->second;
-        if (e->next == 0) {
-            if (!latest) latest = e;
-            else {
-                // error: another entry was already claimed as latest
-                LOG_ERROR("Entries conflict for 'latest': %s, %s", latest->id.c_str(), e->id.c_str());
-            }
-        }
-    }
-    return 0;
-}
-
 
 
 /**
@@ -519,13 +462,6 @@ int Issue::getNumberOfTaggedIEntries(const std::string &tagId) const
         e = e->prev;
     }
     return n;
-}
-
-Entry *Issue::getEntry(const std::string id)
-{
-    std::map<std::string, Entry*>::const_iterator e = entries.find(id);
-    if (e == entries.end()) return 0;
-    return e->second;
 }
 
 

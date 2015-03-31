@@ -63,5 +63,7 @@ HEADERS += \
     ../../src/Entry.h \
     ../../src/Project.h \
     ../../src/Issue.h \
-    ../../src/View.h
+    ../../src/View.h \
+    ../../src/Object.h \
+    ../../src/restApi.h
 

@@ -19,7 +19,6 @@ extern "C" {
   int pthread_mutex_lock(pthread_mutex_t *mutex);
   int pthread_mutex_unlock(pthread_mutex_t *mutex);
 
-  int mg_mkdir(const char *path, int mode);
   #define sleep(x) Sleep((x) * 1000)
 
 }
@@ -42,8 +41,6 @@ extern "C" {
   // end #if _WIN32
 #else
   // linux
-
-  #define mg_mkdir(x, y) mkdir(x, y)
 
   #include <sys/syscall.h>
   #include <unistd.h>

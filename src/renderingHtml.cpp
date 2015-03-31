@@ -27,7 +27,7 @@
 #include "session.h"
 #include "global.h"
 #include "filesystem.h"
-
+#include "restApi.h"
 
 /** Convert a property type to a string
   *
@@ -1633,14 +1633,14 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
         ctx.req->printf("(<a href=\"%s/%s/issues/%s/%s\" class=\"sm_entry_raw\">%s</a>)\n",
                         MongooseServerContext::getInstance().getUrlRewritingRoot().c_str(),
                         ctx.getProject().getUrlName().c_str(),
-                        urlEncode(issue.id).c_str(), urlEncode(ee.id).c_str(), _("raw"));
+                        urlEncode(ee.id).c_str(), _("raw"));
         // link to possible amendments
         int i = 1;
         std::list<std::string>::const_iterator a;
         FOREACH(a, ee.amendments) {
-            ctx.req->printf(", <a href=\"/%s/issues/%s/%s\" class=\"sm_entry_raw\">%s%d</a>",
+            ctx.req->printf(", <a href=\"/%s/" RESOURCE_FILES "/%s\" class=\"sm_entry_raw\">%s%d</a>",
                             ctx.getProject().getUrlName().c_str(),
-                            urlEncode(issue.id).c_str(), urlEncode(*a).c_str(), _("amend"), i);
+                            urlEncode(*a).c_str(), _("amend"), i);
             i++;
         }
         ctx.req->printf(")");
@@ -1701,22 +1701,19 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
             ctx.req->printf("<div class=\"sm_entry_files\">\n");
             std::list<std::string>::iterator f;
             FOREACH(f, files->second) {
-                std::string shortName = *f;
-                // remove the id: up to first dot .
-                size_t dot = shortName.find_first_of('.');
-                if (dot != std::string::npos) {
-                    shortName = shortName.substr(dot+1);
-                }
+                std::string objectId = popToken(*f, '/');
+                std::string basename = *f;
 
+                std::string href = RESOURCE_FILES "/" + urlEncode(objectId) + "/" + urlEncode(basename);
                 ctx.req->printf("<div class=\"sm_entry_file\">\n");
-                ctx.req->printf("<a href=\"../%s/%s\" class=\"sm_entry_file\">", K_UPLOADED_FILES_DIR,
-                                urlEncode(*f).c_str());
+                ctx.req->printf("<a href=\"../%s\" class=\"sm_entry_file\">", href.c_str());
                 if (isImage(*f)) {
-                    ctx.req->printf("<img src=\"../files/%s\" class=\"sm_entry_file\"><br>", urlEncode(*f).c_str());
+                    // do not escape slashes
+                    ctx.req->printf("<img src=\"../%s\" class=\"sm_entry_file\"><br>", href.c_str());
                 }
-                ctx.req->printf("%s", htmlEscape(shortName).c_str());
+                ctx.req->printf("%s", htmlEscape(basename).c_str());
                 // size of the file
-                std::string path = ctx.project->getPathUploadedFiles()+'/'+(*f);
+                std::string path = ctx.project->getObjectsDir() + '/' + Object::getSubpath(objectId);
                 std::string size = getFileSize(path);
                 ctx.req->printf("<span> (%s)</span>", size.c_str());
                 ctx.req->printf("</a>");

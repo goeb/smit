@@ -26,6 +26,7 @@
 #include "logging.h"
 #include "mg_win32.h"
 #include "stringTools.h"
+#include "filesystem.h"
 
 #include "embedcpio.h" // generated
 
@@ -199,9 +200,8 @@ int cpioExtractTree(const char *cpioStart, size_t cpioSize, const char *src, con
             incrementalDir += "/";
             incrementalDir += subdir;
 
-            mode_t mode = S_IRUSR | S_IWUSR | S_IXUSR;
             LOG_DEBUG("cpioExtract: mkdir %s...", incrementalDir.c_str());
-            int r = mg_mkdir(incrementalDir.c_str(), mode);
+            int r = mkdir(incrementalDir);
             if (r == 0) continue; // ok
 #if defined(_WIN32)
             else if (errno == ERROR_ALREADY_EXISTS) continue; // maybe ok

@@ -6,9 +6,13 @@
 #include <map>
 #include <vector>
 #include <stdio.h>
+#include "ustring.h"
 
 typedef std::map<std::string, std::list<std::string> > PropertiesMap;
 typedef std::map<std::string, std::list<std::string> >::const_iterator PropertiesIt;
+
+std::string bin2hex(const uint8_t *buffer, size_t len);
+std::string bin2hex(const ustring & in);
 
 std::string popToken(std::string & uri, char separator);
 void trimLeft(std::string & s, const char *c);
@@ -29,6 +33,7 @@ std::list<std::string> splitLinesAndTrimBlanks(const std::string &s);
 
 std::string join(const std::list<std::string> &items, const char *separator);
 std::string getBasename(const std::string &path);
+std::string getDirname(const std::string &path);
 std::string getFirstParamFromQueryString(const std::string & queryString, const char *param);
 std::list<std::string> getParamListFromQueryString(const std::string & queryString, const char *param);
 

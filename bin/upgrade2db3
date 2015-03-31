@@ -1,0 +1,121 @@
+#!/bin/sh
+#set -e
+usage() {
+    echo "Usage: upgrade2db3 <src-repo> <dst-repo>"
+    echo ""
+    echo "Upgrade a v2 smit repository to a v3 format."
+    exit 1
+}
+
+srcDir=$1
+dstDir=$2
+
+[ -z "$srcDir" ] && usage
+[ -z "$dstDir" ] && usage
+
+# check that destination dir does not exist
+if [ -e "$dstDir" ]; then
+    echo "Error: Destination repository must not exist"
+    exit 1
+fi
+
+# first copy everything
+cp -a "$srcDir" "$dstDir"
+
+# then upgrade each project
+find "$dstDir" -name project | while read p; do
+
+    pDir=$(dirname "$p")
+    echo "project: $pDir..."
+    mkdir "$pDir/objects"
+    mkdir -p "$pDir/refs/issues"
+    mkdir -p "$pDir/refs/tags"
+
+    # change issues to .../<p>/refs/issues/1
+    find "$pDir/issues" -type d -maxdepth 1 | while read issue; do
+    
+        if [ "$issue" = "$pDir/issues" ]; then
+            continue
+        fi
+
+        # get the latest entry: ie the one that is not referenced as a parent
+        latest=""
+        echo "examining issue: $issue..."
+        for e in $(ls -- "$issue"); do
+            ref=$(basename -- $e)
+
+            if [ "$ref" = "_del" ]; then
+                continue
+            fi
+
+            grep -- "+parent *$ref" "$issue"/* > /dev/null 2>&1
+            if [ $? -ne 0 ]; then
+                # pattern, not found, thus we found an entry unreferenced
+                if [ -n "$latest" ]; then
+                    echo "ERROR: found 2 possible latest in $issue"
+                    echo "    $latest"
+                    echo "    $ref"
+                    echo "Choosing $ref..."
+                fi
+                latest=$ref
+                break
+            fi
+        done
+        if [ -z "$latest" ]; then
+            echo "ERROR: no latest found in $issue"
+        else
+            # draw the link
+            issueId=$(basename -- "$issue")
+            echo $latest > "$pDir/refs/issues/$issueId"
+        fi
+    done
+
+    # change entries to .../<p>/objects/73/97ca1fb539d0ecff232eadb8a9e26f16049da2
+    find "$pDir/issues" -maxdepth 2 -type f | while read entry; do
+        entryId=$(basename -- $entry)
+        # convert to new place
+        prefix=$(echo $entryId | sed -e "s/\(..\).*/\\1"/)
+        suffix=$(echo $entryId | sed -e "s/^..//")
+        if [ -z $suffix ]; then
+            echo "Error: entry $entry to short"
+            exit 1
+        fi
+        mkdir -p "$pDir/objects/$prefix"
+        mv "$entry" "$pDir/objects/$prefix/$suffix"
+    done
+
+    # change files references in the entries
+    # at this moment, the objects are all the entries
+    # <sha1>.file.pdf => <sha1>/file.pdf
+    find "$pDir/objects" -type f | while read entry; do
+    sed -i -e "/+file/ s; \([0-9a-zA-Z]*\)\.; \1/;g" $entry
+    done
+
+    # change files
+    find "$pDir/files" -type f | while read file; do
+        f=$(basename -- $file)
+        newId=$(echo $f | sed -e "s/\..*//")
+        prefix=$(echo $newId | sed -e "s/\(..\).*/\\1"/)
+        suffix=$(echo $newId | sed -e "s/^..//")
+
+        mkdir -p "$pDir/objects/$prefix"
+        mv $file "$pDir/objects/$prefix/$suffix"
+    done
+
+    # change tags
+    find "$pDir/tags" -type f | while read file; do
+        tag=$(basename -- $file)
+        prefix=$(echo $tag | sed -e "s/\(..\).*/\\1"/)
+        suffix=$(echo $tag | sed -e "s/^..//")
+        mkdir -p "$pDir/refs/tags/$prefix"
+        mv $file "$pDir/refs/tags/$prefix/$suffix"
+    done
+
+    # remove old directories files, issues, tags
+    rm -rf "$pDir/files"
+    rm -rf "$pDir/issues"
+    rm -rf "$pDir/tags"
+
+done
+
+

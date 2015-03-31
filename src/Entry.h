@@ -10,7 +10,7 @@
 
 #include "ustring.h"
 #include "stringTools.h"
-
+#include "Object.h"
 
 #define K_MESSAGE "+message" // keyword used for the message
 #define K_FILE "+file" // keyword used for uploaded files
@@ -19,10 +19,11 @@
 
 #define DELETE_DELAY_S (10*60) // seconds
 
-// Data types
+class Issue;
 
 // Entry
-struct Entry {
+class Entry : public Object {
+public:
     std::string parent; // id of the parent entry, empty if top-level
 
     /** The id of an entry
@@ -44,10 +45,17 @@ struct Entry {
     // chainlist pointers
     struct Entry *next; // child
     struct Entry *prev; // parent
+    Issue *issue;
     std::set<std::string> tags;
     Entry() : ctime(0), next(0), prev(0) {}
-    static Entry *loadEntry(const std::string &dir, const char* basename, const char *id=0);
+    static Entry *loadEntry(const std::string &path, const std::string &id, bool checkId=false);
+    void setId();
     std::list<std::string> amendments; // id of the entries that amend this entry
+    inline std::string getSubpath() const { return Object::getSubpath(id); }
+    inline std::string getSubdir() const { return Object::getSubdir(id); }
+    static inline std::string getSubpath(const std::string identifier) { return Object::getSubpath(identifier); }
+    static Entry *createNewEntry(const PropertiesMap &props, const std::string &author, const Entry *eParent);
+
 };
 
 #endif

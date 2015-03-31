@@ -21,6 +21,6 @@ int LoggingOptions = LO_NO_OPTION;
 
 bool doPrint(enum LogLevel msgLevel)
 {
-        return (msgLevel <= LoggingLevel);
+    return (msgLevel <= LoggingLevel);
 }
 

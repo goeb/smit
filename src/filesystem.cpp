@@ -26,6 +26,7 @@
 #include "filesystem.h"
 #include "logging.h"
 #include "global.h"
+#include "stringTools.h"
 
 #if defined(_WIN32)
 
@@ -38,6 +39,10 @@
 #endif
 
 
+int loadFile(const std::string &filepath, std::string &data)
+{
+    return loadFile(filepath.c_str(), data);
+}
 
 int loadFile(const char *filepath, std::string &data)
 {
@@ -100,6 +105,7 @@ int loadFile(const char *filepath, const char **data)
     return n;
 }
 
+
 /** Write a string to a file
   *
   * @return
@@ -124,8 +130,8 @@ int writeToFile(const char *filepath, const char *data, size_t len)
     flags |= S_IRGRP | S_IROTH;
 #endif
 
-    std::string tmp = filepath;
-    tmp += ".tmp";
+    std::string tmp = getTmpPath(filepath);
+
     int f = open(tmp.c_str(), mode, flags);
     if (-1 == f) {
         LOG_ERROR("Could not create file '%s', (%d) %s", tmp.c_str(), errno, strerror(errno));
@@ -172,12 +178,61 @@ std::string getExePath()
     return exePath;
 }
 
-bool fileExists(std::string &path)
+bool fileExists(const std::string &path)
 {
     struct stat fileStat;
 
     int r = stat(path.c_str(), &fileStat);
     return (r==0);
+}
+
+bool isDir(const std::string &path)
+{
+    struct stat fileStat;
+
+    int r = stat(path.c_str(), &fileStat);
+    if (r == 0 && S_ISDIR(fileStat.st_mode) ) return true;
+    else return false;
+}
+
+#if defined(_WIN32)
+int mg_mkdir(const char *path, int mode); // defined in mongoose.c
+#endif
+
+int mkdir(const std::string &path)
+{
+#if defined(_WIN32)
+    return mg_mkdir(path.c_str(), 0777);
+#else
+    return mkdir(path.c_str(), 0777);
+#endif
+}
+
+/** Create the given directory (create all intermediate directories if needed)
+  */
+int mkdirs(const std::string &path)
+{
+    if (path.empty()) return -1;
+
+    size_t offset = 0;
+    size_t pos = 0;
+    while (pos != std::string::npos) {
+        pos = path.find_first_of("/", offset);
+        std::string subpath;
+        if (pos == std::string::npos) {
+            subpath = path;
+
+        } else {
+            subpath = path.substr(0, pos);
+            offset = pos+1;
+        }
+
+        if (!isDir(subpath)) {
+            int r = mkdir(subpath.c_str(), 0777);
+            if (r != 0) return -1;
+        }
+    }
+    return 0;
 }
 
 std::string getFileSize(const std::string &path)
@@ -302,3 +357,31 @@ int copyFile(const std::string &srcPath, const std::string &destPath)
     dst.close();
     return 0;
 }
+
+
+std::string getTmpPath(const std::string &path)
+{
+    std::string dir = getDirname(path);
+    std::string base = getBasename(path);
+    return dir + "/." + base + ".tmp";
+}
+
+int cmpFiles(const std::string &srcPath, const std::string &destPath)
+{
+    LOG_INFO("cmpFiles not implemented");
+    // TODO
+    return 0;
+}
+
+int cmpContents(const std::string &contents, const std::string &file)
+{
+    std::string data;
+    int r = loadFile(file.c_str(), data);
+    LOG_ERROR("cmpContents: loadFile failed: %s => %s", file.c_str(), strerror(errno));
+    if (r != 0) return r;
+
+    if (contents == data) return 0;
+    else return -1;
+}
+
+

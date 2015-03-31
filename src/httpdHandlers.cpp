@@ -43,6 +43,7 @@
 #include "cpio.h"
 #include "Trigger.h"
 #include "filesystem.h"
+#include "restApi.h"
 
 #define K_ME "me"
 #define MAX_SIZE_UPLOAD (10*1024*1024)
@@ -109,7 +110,7 @@ void sendHttpHeader200(const RequestContext *request)
 void sendHttpHeader201(const RequestContext *request)
 {
     LOG_FUNC();
-    request->printf("HTTP/1.0 200 Created\r\n\r\n");
+    request->printf("HTTP/1.0 201 Created\r\n\r\n");
     addHttpStat(H_2XX);
 }
 
@@ -124,6 +125,7 @@ void sendHttpHeader204(const RequestContext *request)
 
 int sendHttpHeader400(const RequestContext *request, const char *msg)
 {
+    LOG_DIAG("HTTP 400 Bad Request: %s", msg);
     request->printf("HTTP/1.0 400 Bad Request\r\n\r\n");
     request->printf("400 Bad Request\r\n");
     request->printf("%s\r\n", msg);
@@ -133,6 +135,7 @@ int sendHttpHeader400(const RequestContext *request, const char *msg)
 }
 void sendHttpHeader403(const RequestContext *request)
 {
+    LOG_DIAG("HTTP 403 Forbidden");
     request->printf("HTTP/1.1 403 Forbidden\r\n\r\n");
     request->printf("403 Forbidden\r\n");
     addHttpStat(H_403);
@@ -140,6 +143,7 @@ void sendHttpHeader403(const RequestContext *request)
 
 void sendHttpHeader413(const RequestContext *request, const char *msg)
 {
+    LOG_DIAG("HTTP 413 Request Entity Too Large");
     request->printf("HTTP/1.1 413 Request Entity Too Large\r\n\r\n");
     request->printf("413 Request Entity Too Large\r\n%s\r\n", msg);
     addHttpStat(H_413);
@@ -147,12 +151,20 @@ void sendHttpHeader413(const RequestContext *request, const char *msg)
 
 void sendHttpHeader404(const RequestContext *request)
 {
+    LOG_DIAG("HTTP 404 Not Found");
     request->printf("HTTP/1.1 404 Not Found\r\n\r\n");
     request->printf("404 Not Found\r\n");
+}
+void sendHttpHeader409(const RequestContext *request)
+{
+    LOG_DIAG("HTTP 409 Conflict");
+    request->printf("HTTP/1.1 409 Conflict\r\n\r\n");
+    request->printf("409 Conflict\r\n");
 }
 
 void sendHttpHeader500(const RequestContext *request, const char *msg)
 {
+    LOG_ERROR("HTTP 500 Internal Server Error");
     request->printf("HTTP/1.1 500 Internal Server Error\r\n\r\n");
     request->printf("500 Internal Server Error\r\n");
     request->printf("%s\r\n", msg);
@@ -318,6 +330,7 @@ int httpPostSignin(const RequestContext *request)
 
         // check credentials
         std::string sessionId = SessionBase::requestSession(username, password);
+        LOG_DIAG("User %s got sessid: %s", username.c_str(), sessionId.c_str());
 
         if (sessionId.size() == 0) {
             LOG_DEBUG("Authentication refused");
@@ -351,6 +364,7 @@ std::string getDeletedCookieString(const std::string &name)
 
 void redirectToSignin(const RequestContext *request, const char *resource = 0)
 {
+    LOG_DIAG("redirectToSignin");
     sendHttpHeader200(request);
 
     // delete session cookie
@@ -710,23 +724,18 @@ int httpGetFile(const RequestContext *request)
     std::string uri = request->getUri();
     std::string dir = Database::Db.pathToRepository + uri; // uri contains a leading /
 
-    struct dirent *dp;
-    DIR *dirp;
-    if ((dirp = opendir(dir.c_str())) == NULL) return REQUEST_NOT_PROCESSED; // not a directory: let Mongoose handle it
+    DIR *d = openDir(dir.c_str());
+    if (!d) return REQUEST_NOT_PROCESSED; // not a directory: let Mongoose handle it
 
     // send the directory contents
     // walk through the directory and print the entries
     sendHttpHeader200(request);
     request->printf("Content-Type: text/directory\r\n\r\n");
 
-    while ((dp = readdir(dirp)) != NULL) {
-        // Do not show . and ..
-        if (0 == strcmp(dp->d_name, ".")) continue;
-        if (0 == strcmp(dp->d_name, "..")) continue;
+    std::string f;
+    while ((f = getNextFile(d)) != "") request->printf("%s\n", f.c_str());
 
-       request->printf("%s\n", dp->d_name);
-    }
-    closedir(dirp);
+    closeDir(d);
 
     return REQUEST_COMPLETED; // the request is completely handled
 }
@@ -1289,14 +1298,11 @@ void httpGetProject(const RequestContext *req, const Project &p, User u)
         sendHttpHeader200(req);
         req->printf("Content-Type: text/directory\r\n\r\n");
 
-        req->printf("files\n");
-        std::string path = p.getPath()+"/html";
-        if (fileExists(path)) req->printf("html\n");
-        req->printf("issues\n");
-        req->printf("project\n");
-        path = p.getPath()+"/tags";
-        if (fileExists(path)) req->printf("tags\n");
-        req->printf("views\n");
+        DIR *d = openDir(p.getPath().c_str());
+        std::string f;
+        while ((f = getNextFile(d)) != "") req->printf("%s\n", f.c_str());
+
+        closedir(d);
         return;
     }
 
@@ -1352,6 +1358,44 @@ void httpGetView(const RequestContext *req, Project &p, const std::string &view,
         }
         ContextParameters ctx = ContextParameters(req, u, p);
         RHtml::printPageView(ctx, pv);
+    }
+}
+
+/** Get an object
+  *
+  * Read access is supposed to have already been granted.
+  *
+  * @param object
+  *    Must be <id>/<filename>, where:
+  *    - <id> is the identifier of the object
+  *    - <filename> is the name of the file. The extension is used to determine the type.
+  */
+void httpGetObject(const RequestContext *req, Project &p, std::string object)
+{
+    std::string id = popToken(object, '/');
+    std::string basemane = object;
+    std::string realpath = p.getObjectsDir() + "/" + Object::getSubpath(id);
+    LOG_DEBUG("httpGetObject: basename=%s, realpath=%s", basemane.c_str(), realpath.c_str());
+    req->sendObject(basemane, realpath);
+}
+
+/** Get the HEAD of an object
+  *
+  * This is used by client pushers to know if a file exists.
+  */
+void httpGetHeadObject(const RequestContext *req, Project &p, std::string object)
+{
+    LOG_FUNC();
+    std::string id = popToken(object, '/');
+    std::string basemane = object;
+    std::string realpath = p.getObjectsDir() + "/" + Object::getSubpath(id);
+
+    if (fileExists(realpath)) {
+        sendHttpHeader204(req);
+        req->printf("\r\n");
+
+    } else {
+        sendHttpHeader404(req);
     }
 }
 
@@ -1608,7 +1652,7 @@ int httpGetIssue(const RequestContext *req, Project &p, const std::string &issue
 
     } else if (format == X_SMIT) {
         // for cloning, print the entries in the right order
-        const Entry *e = issue.latest;
+        const Entry *e = issue.first;
 
         if (!e) {
             std::string msg = "null entry for issue: ";
@@ -1616,9 +1660,6 @@ int httpGetIssue(const RequestContext *req, Project &p, const std::string &issue
             sendHttpHeader500(req, msg.c_str());
             return REQUEST_COMPLETED;
         }
-
-        // rewind to oldest entry
-        while (e->prev) e = e->prev;
 
         // print the entries in the rigth order
         sendHttpHeader200(req);
@@ -1653,7 +1694,7 @@ int httpGetIssue(const RequestContext *req, Project &p, const std::string &issue
 
 void parseMultipartAndStoreUploadedFiles(const std::string &data, std::string boundary,
                                          std::map<std::string, std::list<std::string> > &vars,
-                                         const std::string &tmpDirectory)
+                                         const Project &project)
 {
     const char *p = data.data();
     size_t len = data.size();
@@ -1760,28 +1801,35 @@ void parseMultipartAndStoreUploadedFiles(const std::string &data, std::string bo
 
             size_t size = endOfPart-p; // size of the file
             if (size) {
-                // get the file extension
+                // keep only the basename
                 size_t lastSlash = filename.find_last_of("\\/");
                 if (lastSlash != std::string::npos) filename = filename.substr(lastSlash+1);
 
                 std::string id = getSha1(p, size);
-                std::string basename = id + "." + filename;
-
-                LOG_DEBUG("New filename: %s", basename.c_str());
+                std::string base = id + "/" + filename;
 
                 // store to tmpDirectory
-                std::string path = tmpDirectory;
-                mg_mkdir(tmpDirectory.c_str(), S_IRUSR | S_IWUSR | S_IXUSR); // create dir if needed
-                path += "/";
-                path += basename;
-                int r = writeToFile(path.c_str(), p, size);
-                if (r < 0) {
-                    LOG_ERROR("Could not store uploaded file.");
-                    return;
+                std::string destDir = project.getObjectsDir() + "/" + Object::getSubdir(id);
+                std::string destFile = project.getObjectsDir() + "/" + Object::getSubpath(id);
+
+                LOG_DEBUG("New file: %s => %s (size %lu)", filename.c_str(), id.c_str(), L(size));
+
+                if (fileExists(destFile)) {
+                    LOG_INFO("File already existing: %s", destFile.c_str());
+                    // no problem. It has been uploaded previously...
+
+                } else {
+
+                    mkdirs(destDir);
+
+                    int r = writeToFile(destFile.c_str(), p, size);
+                    if (r < 0) {
+                        LOG_ERROR("Could not store uploaded file: %s", destFile.c_str());
+                        return;
+                    }
                 }
 
-                vars[name].push_back(basename);
-                LOG_DEBUG("name=%s, basename=%s, size=%lu", name.c_str(), basename.c_str(), L(size));
+                vars[name].push_back(base);
 
             } // else: empty file, ignore.
         }
@@ -1803,27 +1851,16 @@ void parseMultipartAndStoreUploadedFiles(const std::string &data, std::string bo
 void httpPushEntry(const RequestContext *req, Project &p, const std::string &issueId,
                    const std::string &entryId, User u)
 {
-    printf("httpPushEntry: %s/%s\n", issueId.c_str(), entryId.c_str()); // TODO remove this debug
+    LOG_DEBUG("httpPushEntry: %s/%s", issueId.c_str(), entryId.c_str());
 
     enum Role r = u.getRole(p.getName());
     if (r != ROLE_RW && r != ROLE_ADMIN) {
         sendHttpHeader403(req);
         return;
     }
-    const char *multipart = "multipart/form-data";
-    PropertiesMap vars;
+    const char *multipart = "application/octet-stream";
     const char *contentType = req->getHeader("Content-Type");
     if (0 == strncmp(multipart, contentType, strlen(multipart))) {
-        // extract the boundary
-        const char *b = "boundary=";
-        const char *ptr = mg_strcasestr(contentType, b);
-        if (!ptr) {
-            LOG_ERROR("Missing boundary in multipart form data");
-            return;
-        }
-        ptr += strlen(b);
-        std::string boundary = ptr;
-        LOG_DEBUG("Boundary: %s", boundary.c_str());
 
         std::string postData;
         int rc = readMgreq(req, postData, MAX_SIZE_UPLOAD);
@@ -1832,37 +1869,43 @@ void httpPushEntry(const RequestContext *req, Project &p, const std::string &iss
             return;
         }
 
-        printf("pushed-data: %s\n", postData.c_str()); // TODO remove this printf
-        std::string tmpDir = p.getTmpDir();
+        LOG_DEBUG("Got upload data: %ld bytes", L(postData.size()));
 
-        // store the entry in a tmp directory
-        parseMultipartAndStoreUploadedFiles(postData, boundary, vars, tmpDir);
-        // uploaded file(s) must be with the key K_PUSH_FILE
-        PropertiesIt files = vars.find(K_PUSH_FILE);
-        if (files == vars.end()) {
-            sendHttpHeader400(req, "Missing pushed file");
-            return;
-        }
-        if (files->second.size() != 1) {
-            sendHttpHeader400(req, "Invalid number of pushed files");
+        // store the entry in a temporary location
+        std::string tmpPath = p.getTmpDir() + "/" + entryId;
+        int r = writeToFile(tmpPath.c_str(), postData);
+        if (r != 0) {
+            std::string msg = "Failed to store pushed entry: %s" + entryId;
+            sendHttpHeader500(req, msg.c_str());
             return;
         }
 
         // insert the entry into the database
-        int r = p.pushEntry(issueId, entryId, u.username, tmpDir, files->second.front());
-        if (r < 0) {
+        std::string id = issueId;
+        r = p.pushEntry(id, entryId, u.username, tmpPath);
+        if (r == -1) {
             std::string msg = "Cannot push the entry";
             sendHttpHeader400(req, msg.c_str());
+
+        } else if (r == -2) {
+            // Internal Server Error
+            std::string msg = "pushEntry error";
+            sendHttpHeader500(req, msg.c_str());
+        } else if (r == -3) {
+            // HTTP 409 Conflict
+            sendHttpHeader409(req);
+
         } else {
             // ok, no problem
             sendHttpHeader201(req);
-            // give the issueId, as it may be necessary to inform
+            // give the issue id, as it may be necessary to inform
             // the client that it has been renamed (renumbered)
-            req->printf("issue: %s\r\n", issueId.c_str());
+            req->printf("issue: %s\r\n", id.c_str());
         }
 
+        unlink(tmpPath.c_str()); // clean-up the tmp file
+
     } else {
-        // multipart/form-data
         LOG_ERROR("Content-Type '%s' not supported", contentType);
         sendHttpHeader400(req, "bad content-type");
         return;
@@ -1889,7 +1932,7 @@ void httpDeleteEntry(const RequestContext *req, Project &p, const std::string &i
         return;
     }
 
-    int r = p.deleteEntry(issueId, entryId, u.username);
+    int r = p.deleteEntry(entryId, u.username);
     if (r < 0) {
         // failure
         LOG_INFO("deleteEntry returned %d", r);
@@ -2017,12 +2060,12 @@ void httpPostEntry(const RequestContext *req, Project &pro, const std::string & 
         }
 
         std::string tmpDir = pro.getTmpDir();
-        parseMultipartAndStoreUploadedFiles(postData, boundary, vars, tmpDir);
+        parseMultipartAndStoreUploadedFiles(postData, boundary, vars, pro);
 
     } else {
-        // multipart/form-data
+        // other Content-Type
         LOG_ERROR("Content-Type '%s' not supported", contentType);
-        sendHttpHeader400(req, "bad Content-Type");
+        sendHttpHeader400(req, "Bad Content-Type");
         return;
     }
 
@@ -2034,8 +2077,8 @@ void httpPostEntry(const RequestContext *req, Project &pro, const std::string & 
         id = "";
         isNewIssue = true;
     }
-    std::string entryId;
-    int status = pro.addEntry(vars, id, entryId, u.username);
+    Entry *entry = 0;
+    int status = pro.addEntry(vars, id, entry, u.username);
     if (status < 0) {
         // error
         sendHttpHeader500(req, "Cannot add entry");
@@ -2052,22 +2095,25 @@ void httpPostEntry(const RequestContext *req, Project &pro, const std::string & 
 #if !defined(_WIN32)
         // launch the trigger, if any
         // launch the trigger only if a new entry was actually created
-        if (!entryId.empty()) Trigger::notifyEntry(pro, id, entryId, isNewIssue);
+        if (entry) Trigger::notifyEntry(pro, entry, isNewIssue);
 #endif
-
 
         if (getFormat(req) == RENDERING_HTML) {
             // HTTP redirect
             std::string redirectUrl = "/" + pro.getUrlName() + "/issues/" + id;
             sendHttpRedirect(req, redirectUrl.c_str(), 0);
+
         } else {
             sendHttpHeader200(req);
             req->printf("\r\n");
-            req->printf("%s/%s\r\n", id.c_str(), entryId.c_str());
+            if (entry) req->printf("%s/%s\r\n", entry->issue->id.c_str(), entry->id.c_str());
+            else req->printf("%s/(no change)\r\n", id.c_str());
         }
     }
 
 }
+
+
 
 
 /** begin_request_handler is the main entry point of an incoming HTTP request
@@ -2080,18 +2126,19 @@ void httpPostEntry(const RequestContext *req, Project &pro, const std::string & 
   * /users                             superadmin        management of users for all projects
   * /_                      GET/POST   superadmin        new project
   * /users/<user>           GET/POST   user, superadmin  management of a single user
-  * /myp/config             GET/POST   admin             configuration of the project
-  * /myp/views              GET/POST   admin             list predefined views / create new view
-  * /myp/views/_            GET        admin             form for advanced search / new predefined view
-  * /myp/views/xyz          GET/POST   admin             display / update / rename predefined view
-  * /myp/views/xyz?delete=1 POST       admin             delete predefined view
-  * /myp/issues             GET/POST   user              issues of the project / add new issue
-  * /myp/issues/new         GET        user              page with a form for submitting new issue
-  * /myp/issues/123         GET/POST   user              a particular issue: get all entries or add a new entry
-  * /myp/issues/x/y/delete  POST       user              delete an entry y of issue x
-  * /myp/issues/x/y         POST       user              push an entry
-  * /myp/tags/x/y           POST       user              tag / untag an entry
-  * /myp/reload             POST       admin             reload project from disk storage
+  * /<p>/config             GET/POST   admin             configuration of the project
+  * /<p>/views              GET/POST   admin             list predefined views / create new view
+  * /<p>/views/_            GET        admin             form for advanced search / new predefined view
+  * /<p>/views/xyz          GET/POST   admin             display / update / rename predefined view
+  * /<p>/views/xyz?delete=1 POST       admin             delete predefined view
+  * /<p>/issues             GET/POST   user              issues of the project / add new issue
+  * /<p>/issues/new         GET        user              page with a form for submitting new issue
+  * /<p>/issues/123         GET/POST   user              a particular issue: get all entries or add a new entry
+  * /<p>/issues/x/y/delete  POST       user              delete an entry y of issue x
+  * /<p>/issues/x/y         POST       user              push an entry
+  * /<p>/tags/x/y           POST       user              tag / untag an entry
+  * /<p>/reload             POST       admin             reload project from disk storage
+  * /<p>/files/0102/t.pdf   GET        user              get an attached file
   * / * /issues             GET        user              issues of all projects
   * /any/other/file         GET        user              any existing file (in the repository)
   * /myp/files/123          POST       user              push a file
@@ -2105,7 +2152,7 @@ int begin_request_handler(const RequestContext *req)
     std::string method = req->getMethod();
     std::string resource = popToken(uri, '/');
 
-    LOG_DEBUG("uri=%s, method=%s, resource=%s", uri.c_str(), method.c_str(), resource.c_str());
+    LOG_DIAG("%s %s %s", method.c_str(), uri.c_str(), resource.c_str());
 
     // increase statistics
     if (method == "GET") addHttpStat(H_GET);
@@ -2113,7 +2160,8 @@ int begin_request_handler(const RequestContext *req)
     else addHttpStat(H_OTHER);
 
     // check method
-    if (method != "GET" && method != "POST") return sendHttpHeader400(req, "invalid method");
+    std::string m = method; // use a shorter name to have a shorter next line
+    if (m != "GET" && m != "POST" && m != "HEAD") return sendHttpHeader400(req, "invalid method");
 
     // public access to /public and /sm
     if    ( (resource == "public") && (method == "GET")) return httpGetFile(req);
@@ -2132,11 +2180,13 @@ int begin_request_handler(const RequestContext *req)
     // even if cookie not found, call getLoggedInUser in order to manage
     // local user interface case (smit ui)
     User user = SessionBase::getLoggedInUser(sessionId);
+    LOG_DIAG("Session %s -> user '%s'", sessionId.c_str(), user.username.c_str());
     // if username is empty, then no access is granted (only public pages will be available)
 
     if (user.username.empty()) return handleUnauthorizedAccess(req, false); // no user signed-in
 
     // at this point there is a signed-in user
+    LOG_DIAG("User signed-in: %s", user.username.c_str());
 
     bool handled = true; // by default, do not let Mongoose handle the request
 
@@ -2191,7 +2241,9 @@ int begin_request_handler(const RequestContext *req)
         else if ( (resource == "tags") && (method == "GET") ) return httpGetFile(req);
         else if ( (resource == "tags") && (method == "POST") ) httpPostTag(req, *p, uri, user);
         else if ( (resource == "reload") && (method == "POST") ) httpReloadProject(req, *p, user);
-        else if ( (resource == "files") && (method == "POST") ) httpPushAttachedFile(req, *p, uri, user);
+        else if ( (resource == RESOURCE_FILES) && (method == "POST") ) httpPushAttachedFile(req, *p, uri, user);
+        else if ( (resource == RESOURCE_FILES) && (method == "GET") ) httpGetObject(req, *p, uri);
+        else if ( (resource == RESOURCE_FILES) && (method == "HEAD") ) httpGetHeadObject(req, *p, uri);
         else handled = false;
 
     }
