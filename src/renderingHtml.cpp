@@ -28,6 +28,26 @@
 #include "global.h"
 #include "filesystem.h"
 
+
+/** Convert a property type to a string
+  *
+  * @return
+  *     empty string if unknown property type
+  */
+std::string propertyTypeToStr(PropertyType type)
+{
+    switch (type) {
+    case F_TEXT: return "text";
+    case F_SELECT: return "select";
+    case F_MULTISELECT: return "multiselect";
+    case F_SELECT_USER: return "selectUser";
+    case F_TEXTAREA: return "textarea";
+    case F_TEXTAREA2: return "textarea2";;
+    case F_ASSOCIATION: return "association";
+    default: return "";
+    }
+}
+
 /** Build a context for a user and project
   *
   * ContextParameters::projectConfig should be user rather than ContextParameters::project.getConfig()

@@ -1104,7 +1104,8 @@ int pushFile(const PullContext &pushCtx, const std::string localFile, const std:
 {
     HttpRequest hr(pushCtx.httpCtx);
     int r = hr.postFile(localFile, url);
-    response = hr.lines;
+    // TODO
+    // response = hr.lines;
     return r;
 }
 
@@ -1150,7 +1151,7 @@ int pushAttachedFiles(const PullContext &pushCtx, const Project &p)
   * @param i
   *     The issue id may be modified, as the server allocates the issue identifiers.
   */
-int pushFirstEntry(const PullContext &pushCtx, const Project &project, Issue &i, const Entry &e)
+int pushFirstEntry(const PullContext &pushCtx, const Project &project, const Issue &i, const Entry &e)
 {
     // post the entry (which must be the first entry of an issue)
     // the result of the POST indicates the issue number that has been allocated
@@ -1166,13 +1167,15 @@ int pushFirstEntry(const PullContext &pushCtx, const Project &project, Issue &i,
     // first line of response gives the new allocated issue id
     // format is:
     //     issue: 010203045666
-    popToken(response, ":");
+    popToken(response, ':');
     trim(response);
     if (i.id != response) {
         printf("%s: Renaming local issue %s -> %s\n", project.getName().c_str(),
                i.id.c_str(), response.c_str());
         // TODO rename locally
     } // else: no change
+
+    return -1; // TODO
 }
 
 
@@ -1209,7 +1212,7 @@ int pushIssue(const PullContext &pushCtx, const Project &project, const Issue &i
 
     } else {
         // check if first entries match
-        if (entries.front() != firstEntry) {
+        if (entries.front() != firstEntry.id) {
             printf("%s: mismatch of first entries for issue %s\n", project.getName().c_str(),
                    i.id.c_str());
             printf("Try pulling first to resolve\n");
@@ -1220,7 +1223,7 @@ int pushIssue(const PullContext &pushCtx, const Project &project, const Issue &i
         // TODO
     }
 
-
+    return -1; // TODO
 }
 
 int pushProject(const PullContext &pushCtx, const Project &project)
