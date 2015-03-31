@@ -1630,7 +1630,7 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
         }
 
         // link to raw entry
-        ctx.req->printf("(<a href=\"%s/%s/issues/%s/%s\" class=\"sm_entry_raw\">%s</a>)\n",
+        ctx.req->printf("(<a href=\"%s/%s/" RESOURCE_FILES "/%s\" class=\"sm_entry_raw\">%s</a>",
                         MongooseServerContext::getInstance().getUrlRewritingRoot().c_str(),
                         ctx.getProject().getUrlName().c_str(),
                         urlEncode(ee.id).c_str(), _("raw"));
