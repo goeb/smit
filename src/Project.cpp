@@ -782,23 +782,16 @@ int Project::createProjectFiles(const char *repositoryPath, const char *projectN
 /** Tag or untag an entry
   *
   */
-int Project::toggleTag(const std::string &issueId, const std::string &entryId, const std::string &tagid)
+int Project::toggleTag(const std::string &entryId, const std::string &tagid)
 {
     ScopeLocker scopeLocker(locker, LOCK_READ_WRITE);
 
-    Issue *i = getIssue(issueId);
-    if (!i) {
-        // issue not found
-        LOG_DEBUG("Issue not found: %s", issueId.c_str());
+    Entry *e = getEntry(entryId);
+    if (!e) {
+        // entry not found
+        LOG_DEBUG("Entry not found: %s", entryId.c_str());
         return -1;
     } else {
-        std::map<std::string, Entry*>::iterator eit;
-        eit = entries.find(entryId);
-        if (eit == entries.end()) {
-            LOG_DEBUG("Entry not found: %s/%s", issueId.c_str(), entryId.c_str());
-            return -1;
-        }
-        Entry *e = eit->second;
 
         // invert the tag
         std::set<std::string>::iterator tag = e->tags.find(tagid);
@@ -808,27 +801,33 @@ int Project::toggleTag(const std::string &issueId, const std::string &entryId, c
         tag = e->tags.find(tagid); // update tag status after inversion
 
         // store to disk
-        std::string path = getPath() + "/" PATH_TAGS "/";
-
-        int r;
+        std::string tagDir = getPath() + "/" PATH_TAGS;
+        std::string path = tagDir + "/" + Object::getSubpath(entryId) + "." + tagid;
         if (tag != e->tags.end()) {
-            // create sub directories every time (not optimum)
-            mkdir(path);
-            path += issueId;
-            mkdir(path);
-            path += "/" + entryId;
-            path += "." + tagid;
+            std::string dir = getDirname(path);
+            int r = mkdirs(getDirname(path));
+            if (r != 0) {
+                LOG_ERROR("Cannot create dir '%s': %s", dir.c_str(), strerror(errno));
+                return -1;
+            }
 
-            // create the file
+            // create the empty file
             r = writeToFile(path.c_str(), "");
+            if (r != 0) {
+                LOG_ERROR("Cannot create tag '%s': %s", path.c_str(), strerror(errno));
+                return -1;
+            }
 
         } else {
             // remove the file
-            path += issueId + "/" + entryId + "." + tagid;
-            r = unlink(path.c_str());
+            int r = unlink(path.c_str());
+            if (r != 0) {
+                LOG_ERROR("Cannot remove tag '%s': %s", path.c_str(), strerror(errno));
+                return -1;
+            }
         }
 
-        return r;
+        return 0;
     }
 }
 

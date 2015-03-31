@@ -122,7 +122,7 @@ public:
     PredefinedView getDefaultView() const;
 
     // methods for handling tags
-    int toggleTag(const std::string &issueId, const std::string &entryId, const std::string &tagid);
+    int toggleTag(const std::string &entryId, const std::string &tagid);
 
     // local usage methods (not mutex-protected)
     Entry *getEntry(const std::string &id) const;

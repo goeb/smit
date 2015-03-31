@@ -1657,9 +1657,9 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
                 if (ctx.userRole == ROLE_ADMIN || ctx.userRole == ROLE_RW) {
                     const char *tagTitle = _("Click to tag/untag");
 
-                    ctx.req->printf("<a href=\"#\" onclick=\"tagEntry('/%s/tags/%s', '%s', '%s');return false;\""
+                    ctx.req->printf("<a href=\"#\" onclick=\"tagEntry('/%s/tags', '%s', '%s');return false;\""
                                     " title=\"%s\" class=\"sm_entry_tag\">",
-                                    ctx.getProject().getUrlName().c_str(), enquoteJs(issue.id).c_str(), enquoteJs(ee.id).c_str(),
+                                    ctx.getProject().getUrlName().c_str(), enquoteJs(ee.id).c_str(),
                                     enquoteJs(tag.id).c_str(), tagTitle);
 
                     // the tag itself
