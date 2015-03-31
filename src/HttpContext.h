@@ -1,6 +1,7 @@
 #ifndef _HttpContext_h
 #define _HttpContext_h
 
+#include <string>
 #include "mongoose.h"
 
 // functions not officially exposed by mongoose
@@ -9,6 +10,8 @@ extern "C" {
 }
 
 #define PARAMS_SIZE 30
+
+class MongooseServerContext; // forward declaration
 
 /** class that handles the context of a request
   *
@@ -27,7 +30,6 @@ public:
     inline int isSSL() const { return mg_get_request_info(conn)->is_ssl; }
     const char *getQueryString() const;
 
-
 private:
     mutable struct mg_connection *conn;
 };
@@ -42,6 +44,7 @@ typedef MongooseRequestContext RequestContext;
 class MongooseServerContext {
 public:
     MongooseServerContext();
+    static MongooseServerContext &getInstance(); // create of get the singleton instance
     void init();
     int start();
     void stop();
@@ -52,11 +55,15 @@ public:
     static int logMessage(const struct mg_connection *, const char *message);
     static int handleRequest(struct mg_connection *);
 
+    void setUrlRewritingRoot(const std::string &r) { urlRewritingRoot = r; }
+    std::string getUrlRewritingRoot() { return urlRewritingRoot; }
+
 private:
     struct mg_context *mongooseCtx; // mongoose inetrnal context, returned by mg_start
     struct mg_callbacks callbacks;
     const char *params[PARAMS_SIZE];
     static int (*requestHandler)(const RequestContext*);
+    std::string urlRewritingRoot;
 };
 
 

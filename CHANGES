@@ -1,3 +1,24 @@
+
+v2.3.0
+    - keep old values of select, multiselect, selectUser until deliberately
+      changed by the user
+    - fix in-memory residual property after deleted entry
+    - textarea2 in rich text
+    - fix race condition in assignment of session ids
+
+v2.2.0, 15 Jan 2015
+
+    - support for root-URL rewriting (for using behind a reverse proxy)
+    - fix trigger notification on creation of new issue
+    - fix lost password (salt part) when modifying user's permissions
+    - fix loading of tags (were no longer loaded)
+
+v2.1.0, 20 Nov 2014
+
+    - improve advanced search filtering with more usage-friendly AND/OR
+      combination
+    - fix smit ui session
+
 v2.0.2, 10 Oct 2014
 
     - fix freezed login page (caused by cookie 'view')

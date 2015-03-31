@@ -468,6 +468,10 @@ void Issue::consolidate()
     // starting from the head, walk through all entries
     // following the _parent properties.
 
+    // clear properties before consolidating
+    // this is especially necessary when consolidating after a deleted entry
+    properties.clear();
+
     Entry *e = latest;
     // the entries are walked through backwards (from most recent to oldest)
     while (e) {
@@ -765,9 +769,15 @@ PropertySpec parsePropertySpec(std::list<std::string> & tokens)
     if (F_SELECT == pspec.type || F_MULTISELECT == pspec.type) {
         // populate the allowed values
         while (tokens.size() > 0) {
+
             std::string value = tokens.front();
             tokens.pop_front();
-            pspec.selectOptions.push_back(value);
+
+            if (F_MULTISELECT == pspec.type && value.empty()) {
+                // for multiselect, an empty value has no sense and are removed
+
+            } else pspec.selectOptions.push_back(value);
+
         }
     } else if (F_ASSOCIATION == pspec.type) {
         if (tokens.size() > 1) {
@@ -1469,13 +1479,10 @@ void sort(std::vector<const Issue*> &inout, const std::list<std::pair<bool, std:
     std::sort(inout.begin(), inout.end(), ic);
 }
 
-enum FilterSearch {
-    PROPERTY_NOT_FILTERED,
-    PROPERTY_FILTERED_FOUND,
-    PROPERTY_FILTERED_NOT_FOUND
-};
-
 /** Look if the given multi-valued property is present in the given list
+  *
+  * The match may occur on a part of the value, and in a case insensitive manner.
+  *
   */
 bool isPropertyInFilter(const std::list<std::string> &propertyValue,
                         const std::list<std::string> &filteredValues)
@@ -1485,7 +1492,7 @@ bool isPropertyInFilter(const std::list<std::string> &propertyValue,
 
     FOREACH (fv, filteredValues) {
         FOREACH (v, propertyValue) {
-            if (mg_strcasestr(v->c_str(), fv->c_str())) return PROPERTY_FILTERED_FOUND;
+            if (mg_strcasestr(v->c_str(), fv->c_str())) return true;
         }
         if (fv->empty() && propertyValue.empty()) {
             // allow filtering for empty values
@@ -1495,7 +1502,9 @@ bool isPropertyInFilter(const std::list<std::string> &propertyValue,
     return false; // not found
 }
 
-/** Look if the given property is present in the given list
+/** Look if the given value is present in the given list
+  *
+  * Exact match
   */
 bool isPropertyInFilter(const std::string &propertyValue,
                         const std::list<std::string> &filteredValues)
@@ -1510,8 +1519,17 @@ bool isPropertyInFilter(const std::string &propertyValue,
 
 /**
   * @return
-  *    true, if the issue should be kept
-  *    false, if the issue should be excluded
+  *    true, if the issue does match the filter
+  *    false, if the issue does not match
+  *
+  * A logical OR is done for the filters on the same property
+  * and a logical AND is done between different properties.
+  * Example:
+  *    status:open, status:closed, author:john
+  * is interpreted as:
+  *    status == open OR status == closed
+  *    AND author == john
+  *
   */
 bool Issue::isInFilter(const std::map<std::string, std::list<std::string> > &filter) const
 {
@@ -1525,7 +1543,8 @@ bool Issue::isInFilter(const std::map<std::string, std::list<std::string> > &fil
 
         if (filteredProperty == K_ISSUE_ID) {
             // id
-            if (isPropertyInFilter(id, f->second)) return true;
+            // look if id matches one of the filter values
+            if (!isPropertyInFilter(id, f->second)) return false;
 
         } else {
             std::map<std::string, std::list<std::string> >::const_iterator p;
@@ -1534,10 +1553,10 @@ bool Issue::isInFilter(const std::map<std::string, std::list<std::string> > &fil
             if (p == properties.end()) fs = isPropertyInFilter("", f->second);
             else fs = isPropertyInFilter(p->second, f->second);
 
-            if (fs) return true;
+            if (!fs) return false;
         }
     }
-    return false;
+    return true;
 }
 
 /** search
@@ -1909,28 +1928,6 @@ void parseAssociation(std::list<std::string> &values)
     values.sort();
 }
 
-/** Remove "" values from list of multiselect values if "" is not in the allowed range
-  *
-  * This is because the HTML form adds a hidden input with empty value.
-  */
-void Project::cleanupMultiselect(std::list<std::string> &values, const std::list<std::string> &selectOptions)
-{
-    // convert to a set
-    std::set<std::string> allowed(selectOptions.begin(), selectOptions.end());
-    std::list<std::string>::iterator v = values.begin();
-    bool gotEmpty = false;
-    while (v != values.end()) {
-        if ( (allowed.find(*v) == allowed.end()) || (gotEmpty && v->empty()) ) {
-            // erase currect item
-            std::list<std::string>::iterator v0 = v;
-            v++;
-            values.erase(v0);
-        } else {
-            if (v->empty()) gotEmpty = true; // empty is allowed. but we don't w<ant a second one
-            v++;
-        }
-    }
-}
 
 /** Create a new issue
   *
@@ -1973,9 +1970,11 @@ int Project::addEntry(PropertiesMap properties, std::string &issueId, std::strin
 
     entryId.clear();
 
-    // check that all properties are in the project config
-    // else, remove them
-    // and parse the associations, if any
+    // Check that all properties are in the project config, else remove them.
+    // Also parse the associations, if any.
+    //
+    // Note that the values of properties that have a type select, multiselect and selectUser
+    // are not verified (this is a known issue) TODO.
     std::map<std::string, std::list<std::string> >::iterator p;
     p = properties.begin();
     while (p != properties.end()) {
@@ -1995,7 +1994,6 @@ int Project::addEntry(PropertiesMap properties, std::string &issueId, std::strin
                 doErase = true;
             } // else do not erase and parse the association
             else if (pspec && pspec->type == F_ASSOCIATION) parseAssociation(p->second);
-            else if (pspec && pspec->type == F_MULTISELECT) cleanupMultiselect(p->second, pspec->selectOptions);
         }
 
         if (doErase) {
@@ -2009,7 +2007,7 @@ int Project::addEntry(PropertiesMap properties, std::string &issueId, std::strin
     }
 
     Issue *i = 0;
-    if (issueId.size()>0) {
+    if (issueId.size() > 0) {
         // adding an entry to an existing issue
 
         i = getIssue(issueId);
@@ -2018,8 +2016,12 @@ int Project::addEntry(PropertiesMap properties, std::string &issueId, std::strin
             return -1;
         }
 
-        // simplify the entry by removing properties that have the same value
+        // Simplify the entry by removing properties that have the same value
         // in the issue (only the modified fields are stored)
+
+        // Note that keep-old values are pruned here : values that are no longer
+        // in the official values (select, multiselect, selectUser), but
+        // that might still be used in some old issues.
         std::map<std::string, std::list<std::string> >::iterator entryProperty;
         entryProperty = properties.begin();
         while (entryProperty != properties.end()) {
@@ -2042,13 +2044,15 @@ int Project::addEntry(PropertiesMap properties, std::string &issueId, std::strin
                 properties.erase(itemToErase);
             } else entryProperty++;
         }
-
-        if (properties.size() == 0) {
-            LOG_INFO("addEntry: no change. return without adding entry.");
-            return 0; // no change
-        }
     }
+
     // at this point properties have been cleaned up
+
+    if (properties.size() == 0) {
+        LOG_INFO("addEntry: no change. return without adding entry.");
+        return 1; // no change
+    }
+
 
     FOREACH(p, properties) {
         LOG_DEBUG("properties: %s => %s", p->first.c_str(), join(p->second, ", ").c_str());
@@ -2192,7 +2196,7 @@ int Project::pushEntry(std::string issueId, const std::string &entryId,
 
 ProjectConfig Project::getConfig() const
 {
-    ScopeLocker(lockerForConfig, LOCK_READ_ONLY);
+    ScopeLocker scopeLocker(lockerForConfig, LOCK_READ_ONLY);
     return config;
 }
 
@@ -2214,7 +2218,7 @@ ProjectConfig Project::getConfig() const
 
 int Project::deleteEntry(const std::string &issueId, const std::string &entryId, const std::string &username)
 {
-    ScopeLocker(locker, LOCK_READ_WRITE);
+    ScopeLocker scopeLocker(locker, LOCK_READ_WRITE);
 
     Issue *i = getIssue(issueId);
     if (!i) return -6;

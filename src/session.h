@@ -9,6 +9,7 @@
 #include "mutexTools.h"
 
 #define SESSION_DURATION (60*60*24) // 1 day
+#define COOKIE_VIEW_DURATION (60*60*24) // 1 day
 #define HASH_SHA1 "sha1"
 
 enum Role {

@@ -63,7 +63,7 @@ void initHttpStats()
 void addHttpStat(HttpEvent e)
 {
     if (e >= HTTP_EVENT_SIZE || e < 0) return;
-    ScopeLocker(HttpStats.lock, LOCK_READ_WRITE);
+    ScopeLocker scopeLocker(HttpStats.lock, LOCK_READ_WRITE);
     HttpStats.httpCodes[e]++;
 }
 
@@ -159,12 +159,6 @@ void sendHttpHeader500(const RequestContext *request, const char *msg)
     addHttpStat(H_500);
 }
 
-void sendCookie(const RequestContext *request, const std::string &key, const std::string &value)
-{
-    request->printf("Set-Cookie: %s=%s; Path=/\r\n", key.c_str(), value.c_str());
-}
-
-
 /**
   * @redirectUrl
   *    Must be an absolute path (starting with /)
@@ -188,7 +182,9 @@ int sendHttpRedirect(const RequestContext *request, const std::string &redirectU
 
     if (redirectUrl[0] != '/') LOG_ERROR("Invalid redirect URL (missing first /): %s", redirectUrl.c_str());
 
-    request->printf("Location: %s://%s%s", scheme, host, redirectUrl.c_str());
+    request->printf("Location: %s://%s%s%s", scheme, host,
+                    MongooseServerContext::getInstance().getUrlRewritingRoot().c_str(),
+                    redirectUrl.c_str());
 
     if (otherHeader) request->printf("\r\n%s", otherHeader);
     request->printf("\r\n\r\n");
@@ -199,9 +195,16 @@ std::string getServerCookie(const std::string &name, const std::string &value, i
 {
     std::ostringstream s;
     s << "Set-Cookie: " << name << "=" << value;
-    s << "; Path=/";
+    s << "; Path=" << MongooseServerContext::getInstance().getUrlRewritingRoot() << "/";
     if (maxAgeSeconds > 0) s << ";  Max-Age=" << maxAgeSeconds;
     return s.str();
+}
+
+void sendCookie(const RequestContext *request, const std::string &name, const std::string &value, int duration)
+{
+    std::string s = getServerCookie(name, value, duration);
+
+    request->printf("%s\r\n", s.c_str());
 }
 
 void setCookieAndRedirect(const RequestContext *request, const char *name, const char *value, const char *redirectUrl)
@@ -340,7 +343,9 @@ int httpPostSignin(const RequestContext *request)
 std::string getDeletedCookieString(const std::string &name)
 {
     std::string cookieString;
-    cookieString = "Set-Cookie: " + name + "=deleted; Path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    cookieString = "Set-Cookie: " + name + "=deleted";
+    cookieString += ";Path=" + MongooseServerContext::getInstance().getUrlRewritingRoot() + "/" ;
+    cookieString += ";expires=Thu, 01 Jan 1970 00:00:00 GMT";
     return cookieString;
 }
 
@@ -1271,7 +1276,7 @@ void httpGetListOfIssues(const RequestContext *req, const Project &p, User u)
         if (full == "1") {
             RHtml::printPageIssuesFullContents(ctx, issueList);
         } else {
-            sendCookie(req, QS_ORIGIN_VIEW, q);
+            sendCookie(req, QS_ORIGIN_VIEW, q, COOKIE_VIEW_DURATION);
             RHtml::printPageIssueList(ctx, issueList, cols);
         }
     }
@@ -1947,6 +1952,36 @@ void parseQueryString(const std::string &queryString, std::map<std::string, std:
     // append the latest parameter (if any)
 }
 
+
+/** Remove empty values for multiselect properties
+  *
+  * empty values are not relevant
+  * and the HTML form forces the use of an empty value.
+  */
+
+void cleanMultiselectProperties(const ProjectConfig &config, std::map<std::string, std::list<std::string> > &properties)
+{
+    std::map<std::string, std::list<std::string> >::iterator p;
+    FOREACH(p, properties) {
+        // if multiselect
+        const PropertySpec *pspec = config.getPropertySpec(p->first);
+        if (pspec && pspec->type == F_MULTISELECT) {
+            // erase empty values from p->second
+            std::list<std::string>::iterator v;
+            v = p->second.begin();
+            while (v != p->second.end()) {
+                if (v->empty()) {
+                    // delete the current value
+                    std::list<std::string>::iterator itemToErase = v;
+                    v++;
+                    p->second.erase(itemToErase);
+
+                } else v++;
+            }
+        }
+    }
+}
+
 /** Handle the posting of an entry
   * If issueId is empty, then a new issue is created.
   */
@@ -1961,26 +1996,7 @@ void httpPostEntry(const RequestContext *req, Project &pro, const std::string & 
     std::map<std::string, std::list<std::string> > vars;
 
     const char *contentType = req->getHeader("Content-Type");
-    if (0 == strcmp("application/x-www-form-urlencoded", contentType)) {
-
-        // this branch is obsolete. It was the old code without file-upload capability
-
-        // application/x-www-form-urlencoded
-        // post_data is "var1=val1&var2=val2...".
-        // multiselect is like: "tags=v4.1&tags=v5.0" (same var repeated)
-
-        std::string postData;
-        int rc = readMgreq(req, postData, MAX_SIZE_UPLOAD);
-        if (rc < 0) {
-            sendHttpHeader413(req, "You tried to upload too much data. Max is 10 MB.");
-            return;
-        }
-
-        parseQueryString(postData, vars);
-
-    } else if (0 == strncmp(multipart, contentType, strlen(multipart))) {
-        //std::string x = request2string(req);
-        //mg_printf(req, "%s", x.c_str());
+    if (0 == strncmp(multipart, contentType, strlen(multipart))) {
 
         // extract the boundary
         const char *b = "boundary=";
@@ -2006,22 +2022,37 @@ void httpPostEntry(const RequestContext *req, Project &pro, const std::string & 
     } else {
         // multipart/form-data
         LOG_ERROR("Content-Type '%s' not supported", contentType);
+        sendHttpHeader400(req, "bad Content-Type");
+        return;
     }
 
+   cleanMultiselectProperties(pro.getConfig(), vars);
+
     std::string id = issueId;
-    if (id == "new") id = "";
+    bool isNewIssue = false;
+    if (id == "new") {
+        id = "";
+        isNewIssue = true;
+    }
     std::string entryId;
     int status = pro.addEntry(vars, id, entryId, u.username);
-    if (status != 0) {
+    if (status < 0) {
         // error
         sendHttpHeader500(req, "Cannot add entry");
 
+    } else if (status > 0) {
+        // entry not added (beacuse it brings no change, etc.)
+        // HTTP redirect
+        std::string redirectUrl = "/" + pro.getUrlName() + "/issues/" + id;
+        sendHttpRedirect(req, redirectUrl.c_str(), 0);
+
     } else {
+        // entry correctly added
 
 #if !defined(_WIN32)
         // launch the trigger, if any
         // launch the trigger only if a new entry was actually created
-        if (!entryId.empty()) Trigger::notifyEntry(pro, issueId, entryId);
+        if (!entryId.empty()) Trigger::notifyEntry(pro, id, entryId, isNewIssue);
 #endif
 
 

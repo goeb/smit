@@ -80,6 +80,7 @@ const Project &ContextParameters::getProject() const
 #define K_SM_HTML_ISSUE_SUMMARY "SM_HTML_ISSUE_SUMMARY"
 #define K_SM_DIV_ISSUE_FORM "SM_DIV_ISSUE_FORM"
 #define K_SM_DIV_ISSUE_MSG_PREVIEW "SM_DIV_ISSUE_MSG_PREVIEW"
+#define K_SM_REWRITE_ROOT "SM_REWRITE_ROOT"
 
 
 /** Load a page for a specific project
@@ -249,6 +250,11 @@ public:
             } else if (varname == K_SM_DIV_PREDEFINED_VIEWS) {
                 RHtml::printLinksToPredefinedViews(ctx);
 
+            } else if (varname == K_SM_REWRITE_ROOT) {
+                // url-rewriting
+                MongooseServerContext &mc = MongooseServerContext::getInstance();
+                ctx.req->printf("%s", mc.getUrlRewritingRoot().c_str());
+
             } else if (varname == K_SM_DIV_ISSUE_MSG_PREVIEW) {
                 ctx.req->printf("<div id=\"sm_entry_preview\" class=\"sm_entry_message\">"
                                 "%s"
@@ -365,7 +371,9 @@ void RHtml::printPageView(const ContextParameters &ctx, const PredefinedView &pv
     }
 
     ctx.req->printf("setSearch('%s');\n", enquoteJs(pv.search).c_str());
-    ctx.req->printf("setUrl('/%s/issues/?%s');\n", ctx.getProject().getUrlName().c_str(),
+    ctx.req->printf("setUrl('%s/%s/issues/?%s');\n",
+                    MongooseServerContext::getInstance().getUrlRewritingRoot().c_str(),
+                    ctx.getProject().getUrlName().c_str(),
                     pv.generateQueryString().c_str());
 
     // filter in and out
@@ -460,7 +468,15 @@ public:
         if (n >= LOCAL_SIZE || n < 0) {
             LOG_ERROR("addAttribute error: vsnprintf n=%d", n);
         } else {
-            attributes[name] = value;
+            std::string val = value;
+            std::string sname = name;
+            // do url rewriting if needed
+            if ( ( (sname == "href") || (sname == "src") || (sname == "action") )
+                 && value[0] == '/') {
+                val = MongooseServerContext::getInstance().getUrlRewritingRoot() + val;
+            }
+
+            attributes[name] = val;
         }
     }
 
@@ -659,7 +675,8 @@ void RHtml::printProjects(const ContextParameters &ctx,
         ctx.req->printf("<tr>\n");
 
         ctx.req->printf("<td class=\"sm_projects_link\">");
-        ctx.req->printf("<a href=\"/%s/issues/?defaultView=1\">%s</a></td>\n",
+        ctx.req->printf("<a href=\"%s/%s/issues/?defaultView=1\">%s</a></td>\n",
+                        MongooseServerContext::getInstance().getUrlRewritingRoot().c_str(),
                         Project::urlNameEncode(pname).c_str(), htmlEscape(pname).c_str());
         // my role
         ctx.req->printf("<td>%s</td>\n", htmlEscape(_(p->second.c_str())).c_str());
@@ -687,7 +704,7 @@ void RHtml::printProjects(const ContextParameters &ctx,
     }
     ctx.req->printf("</table><br>\n");
     if (ctx.user.superadmin) ctx.req->printf("<div class=\"sm_projects_new\">"
-                                             "<a href=\"/_\" class=\"sm_projects_new\">%s</a></div><br>",
+                                             "<a href=\"_\" class=\"sm_projects_new\">%s</a></div><br>",
                                              htmlEscape(_("New Project")).c_str());
 }
 
@@ -706,7 +723,8 @@ void RHtml::printUsers(const RequestContext *req, const std::list<User> &usersLi
     FOREACH(u, usersList) {
         req->printf("<tr class=\"sm_users\">");
         req->printf("<td class=\"sm_users\">\n");
-        req->printf("<a href=\"/users/%s\">%s<a><br>",
+        req->printf("<a href=\"%s/users/%s\">%s<a><br>",
+                    MongooseServerContext::getInstance().getUrlRewritingRoot().c_str(),
                     urlEncode(u->username).c_str(), htmlEscape(u->username).c_str());
         req->printf("</td>");
         // capability
@@ -718,7 +736,8 @@ void RHtml::printUsers(const RequestContext *req, const std::list<User> &usersLi
     }
     req->printf("</table><br>\n");
     req->printf("<div class=\"sm_users_new\">"
-                "<a href=\"/users/_\" class=\"sm_users_new\">%s</a></div><br>",
+                "<a href=\"%s/users/_\" class=\"sm_users_new\">%s</a></div><br>",
+                MongooseServerContext::getInstance().getUrlRewritingRoot().c_str(),
                 htmlEscape(_("New User")).c_str());
 
 }
@@ -953,7 +972,8 @@ void printFilters(const ContextParameters &ctx)
         ctx.req->printf("<div class=\"sm_issues_filters\">");
         if (!ctx.search.empty()) ctx.req->printf("search: %s<br>", htmlEscape(ctx.search).c_str());
         if (!ctx.filterin.empty()) ctx.req->printf("filterin: %s<br>", htmlEscape(toString(ctx.filterin)).c_str());
-        if (!ctx.filterout.empty()) ctx.req->printf("filterout: %s", htmlEscape(toString(ctx.filterout)).c_str());
+        if (!ctx.filterout.empty()) ctx.req->printf("filterout: %s<br>", htmlEscape(toString(ctx.filterout)).c_str());
+        if (!ctx.sort.empty())  ctx.req->printf("sort: %s<br>", htmlEscape(ctx.sort).c_str());
         ctx.req->printf("</div>");
     }
 }
@@ -995,15 +1015,14 @@ void RHtml::printIssueListFullContents(const ContextParameters &ctx, std::vector
 
 }
 
-/** concatenate a param to the URL (add ? or &)
+/** concatenate a param to the query string (add ? or &)
   */
-std::string urlAdd(const RequestContext *req, const char *param)
+std::string queryStringAdd(const RequestContext *req, const char *param)
 {
 
-    std::string uri = req->getUri();
     std::string qs = req->getQueryString();
 
-    std::string url = uri + '?';
+    std::string url = "?";
     if (qs.size() > 0) url = url + qs + '&' + param;
     else url += param;
 
@@ -1019,9 +1038,9 @@ void RHtml::printIssueList(const ContextParameters &ctx, const std::vector<const
     if (showOtherFormats) {
         ctx.req->printf("<div class=\"sm_issues_other_formats\">");
         ctx.req->printf("<a href=\"%s\" class=\"sm_issues_other_formats\">csv</a> ",
-                        urlAdd(ctx.req, "format=csv").c_str());
+                        queryStringAdd(ctx.req, "format=csv").c_str());
         ctx.req->printf("<a href=\"%s\" class=\"sm_issues_other_formats\">full-contents</a></div>\n",
-                        urlAdd(ctx.req, "full=1").c_str());
+                        queryStringAdd(ctx.req, "full=1").c_str());
     }
 
     printFilters(ctx);
@@ -1089,7 +1108,8 @@ void RHtml::printIssueList(const ContextParameters &ctx, const std::vector<const
             std::string href_rhs = "";
             if ( (column == "id") || (column == "summary") ) {
                 href_lhs = "<a href=\"";
-                std::string href = "/" + ctx.getProject().getUrlName() + "/issues/";
+                std::string href = MongooseServerContext::getInstance().getUrlRewritingRoot() + "/";
+                href += ctx.getProject().getUrlName() + "/issues/";
                 href += urlEncode((*i)->id);
                 href_lhs = href_lhs + href;
                 href_lhs = href_lhs +  + "\">";
@@ -1303,11 +1323,12 @@ std::string convertToRichTextInline(const std::string &in, const char *begin, co
 
 /** Convert text to HTML rich text
   *
-  *    *a b c* => <span class="sm_bold">a b c</span>
-  *    _a b c_ => <span class="sm_underline">a b c</span>
-  *    /a b c/ => <span class="sm_highlight">a b c</span>
-  *    [a b c] => <a href="a b c" class="sm_hyperlink">a b c</a>
+  *    **a b c** => <span class="sm_bold">a b c</span>
+  *    __a b c__ => <span class="sm_underline">a b c</span>
+  *    ++a b c++ => <span class="sm_highlight">a b c</span>
+  *    [[a b c]] => <a href="a b c" class="sm_hyperlink">a b c</a>
   *    > a b c =>  <span class="sm_quote">a b c</span> (> must be at the beginning of the line)
+  *    etc.
   *
   * (optional) Characters before and after block must be [\t \n.;:]
   * A line break in the middle prevents the pattern from being recognized.
@@ -1427,7 +1448,8 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
         const char *colspan = "";
         int workingColumnIncrement = 1;
 
-        if (type == F_TEXTAREA || type == F_TEXTAREA2) pvalueStyle = "sm_issue_pvalue_ta";
+        if (type == F_TEXTAREA) pvalueStyle = "sm_issue_pvalue_ta";
+        else if (type == F_TEXTAREA2) pvalueStyle = "sm_issue_pvalue_ta2";
 
         const char *trStyle = "";
         if (type == F_ASSOCIATION) trStyle = "class=\"sm_issue_asso\"";
@@ -1470,8 +1492,13 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
             std::string value;
             if (p != issue.properties.end()) value = toString(p->second);
 
+            // convert to rich text in case of textarea2
+            if (type == F_TEXTAREA2) value = convertToRichText(htmlEscape(value));
+            else value = htmlEscape(value);
+
+
             ctx.req->printf("<td %s class=\"%s sm_issue_pvalue_%s\">%s</td>\n",
-                            colspan, pvalueStyle, urlEncode(pname).c_str(), htmlEscape(value).c_str());
+                            colspan, pvalueStyle, urlEncode(pname).c_str(), value.c_str());
             workingColumn += workingColumnIncrement;
         }
 
@@ -1583,7 +1610,8 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
         }
 
         // link to raw entry
-        ctx.req->printf("(<a href=\"/%s/issues/%s/%s\" class=\"sm_entry_raw\">%s</a>",
+        ctx.req->printf("(<a href=\"%s/%s/issues/%s/%s\" class=\"sm_entry_raw\">%s</a>)\n",
+                        MongooseServerContext::getInstance().getUrlRewritingRoot().c_str(),
                         ctx.getProject().getUrlName().c_str(),
                         urlEncode(issue.id).c_str(), urlEncode(ee.id).c_str(), _("raw"));
         // link to possible amendments
@@ -1812,13 +1840,23 @@ void RHtml::printIssueForm(const ContextParameters &ctx, const Issue *issue, boo
             std::list<std::string>::const_iterator so;
             input << "<select class=\"sm_issue_pinput_" << pname << "\" name=\"" << pname << "\">";
 
-            for (so = pspec->selectOptions.begin(); so != pspec->selectOptions.end(); so++) {
-                input << "<option" ;
-                if (value == *so) input << " selected=\"selected\"";
-                input << ">" << htmlEscape(*so) << "</option>";
+            std::list<std::string> opts = pspec->selectOptions;
+            // if the present value is not empty and not in the list of official values
+            // then it means that probably this value has been removed lately from
+            // the official values
+            // but we want to allow the user keep the old value
+            // then add it in the list
+            if (!value.empty()) {
+                if (!inList(opts, value)) opts.push_back(value); // add it in the list
             }
 
-            input << "</select>";
+            for (so = opts.begin(); so != opts.end(); so++) {
+                input << "<option" ;
+                if (value == *so) input << " selected=\"selected\"";
+                input << ">" << htmlEscape(*so) << "</option>\n";
+            }
+
+            input << "</select>\n";
 
         } else if (pspec->type == F_MULTISELECT) {
             std::list<std::string>::const_iterator so;
@@ -1826,18 +1864,26 @@ void RHtml::printIssueForm(const ContextParameters &ctx, const Issue *issue, boo
             if (pspec->type == F_MULTISELECT) input << " multiple=\"multiple\"";
             input << ">";
 
-            for (so = pspec->selectOptions.begin(); so != pspec->selectOptions.end(); so++) {
-                input << "<option" ;
-                if (inList(propertyValues, *so)) input << " selected=\"selected\"";
-                input << ">" << htmlEscape(*so) << "</option>";
+            std::list<std::string> opts = pspec->selectOptions;
+            // same as above : keep the old value even if no longer in official values
+            std::list<std::string>::const_iterator v;
+            FOREACH(v, propertyValues) {
+                if (!v->empty() && !inList(opts, *v)) opts.push_back(*v);
             }
 
-            input << "</select>";
+            for (so = opts.begin(); so != opts.end(); so++) {
+                input << "<option" ;
+                if (inList(propertyValues, *so)) input << " selected=\"selected\"";
+                input << ">" << htmlEscape(*so) << "</option>\n";
+            }
+
+            input << "</select>\n";
 
             // add a hidden field to tell the server that this property was present, even if
             // no value selected
             input << "\n";
             input << "<input type=\"hidden\" name=\"" << pname << "\" value=\"\">";
+
 
         } else if (pspec->type == F_SELECT_USER) {
             if (propertyValues.size()>0) value = propertyValues.front();
@@ -1848,14 +1894,17 @@ void RHtml::printIssueForm(const ContextParameters &ctx, const Issue *issue, boo
             input << "<select class=\"sm_issue_pinput_" << pname << "\" name=\"" << pname << "\">";
 
             std::set<std::string> users = UserBase::getUsersOfProject(ctx.getProject().getName());
+            // same a as above : keep old value even if not in official list
+            if (!value.empty()) users.insert(value);
+
             std::set<std::string>::iterator u;
             for (u = users.begin(); u != users.end(); u++) {
                 input << "<option" ;
                 if (value == *u) input << " selected=\"selected\"";
-                input << ">" << htmlEscape(*u) << "</option>";
+                input << ">" << htmlEscape(*u) << "</option>\n";
             }
 
-            input << "</select>";
+            input << "</select>\n";
 
         } else if (pspec->type == F_TEXTAREA) {
             if (propertyValues.size()>0) value = propertyValues.front();
