@@ -36,6 +36,39 @@
 #include "httpClient.h"
 #include "Args.h"
 
+
+/** smit distributed functions
+  *     smit clone .... : download a local copy of a smit repository
+  *     smit pull ....  : download latest changes from a smit server
+  *     smit push ....  : upload local changes to a smit server
+  *
+  * 1. Conflicts on existing issues
+  *
+  * These conflicts occur typically when a user modifies an issue on the server and
+  * another user modifies the same issue on his/her local clone.
+  * These conflicts are detected during a pushing, but they can be resolved only
+  * during a pulling.
+  * These conflicts are resolved either automatically or interactively.
+  *
+  *
+  * 2. Conflicts on new issues
+  * These conflicts occur typically when a user creates a new issue on the server and
+  * another user creates a new issue on his/her local clone, and both new issues get
+  * the same issue id.
+  *
+  * These conflicts are resolved during a pulling. The local issue of the clone is
+  * renamed. For example issue 123 will be renamed issue 124.
+  *
+  * These conflicts are also resolved when pushing. New local issues may
+  * be renamed by the server. There may be 2 cases where a conflicting new issue on the server
+  * has already taken the id of the pushed issue :
+  *   - a new issue on the same project
+  *   - or a new issue on a different project (remember that with global numbering,
+  *     the issue ids are shared between several projects)
+  *
+  *
+  */
+
 bool Verbose = false;
 
 #define LOGV(...) do { if (Verbose) { printf(__VA_ARGS__); fflush(stdout);} } while (0)
@@ -333,6 +366,8 @@ void handleConflictOnEntries(const PullContext &pullCtx, Project &p,
     // no need to update the issue in memory, as it will not be re-accessed during the smit pulling
 }
 
+/** Get a list of the entries of a remote issue
+  */
 int getEntriesOfIssue(const PullContext &pullCtx, const Project &p, const Issue &i,
                       std::list<std::string> &entries)
 {
@@ -343,8 +378,7 @@ int getEntriesOfIssue(const PullContext &pullCtx, const Project &p, const Issue 
     hr.closeCurl(); // free the curl resource
 
     if (hr.lines.empty() || hr.lines.front().empty()) {
-        // should not happen
-        fprintf(stderr, "Got remote issue with no entry: %s", i.id.c_str());
+        // may happen if remote issue does not exist
         return -1;
     }
     return 0;
@@ -360,7 +394,9 @@ int pullIssue(const PullContext &pullCtx, Project &p, const Issue &i)
 {
     // compare the remote and local issue
     // get the first entry of the issue
-    // check conflict on issue id*
+    // check conflict on issue id
+
+    // get the entries of the remote issue
     std::list<std::string> remoteEntries;
     int r = getEntriesOfIssue(pullCtx, p, i, remoteEntries);
     if (r != 0) {
@@ -511,6 +547,13 @@ int pullProject(const PullContext &pullCtx, Project &p)
         // get the issue with same id in local repository
         Issue i;
         int r = p.get(id, i);
+
+        // check if the pulled remote issue is not already
+        // locally under another issue id (this may happen
+        // if a previous push was interrupted)
+
+        // TODO
+
 
         if (r < 0) {
             // simply clone the remote issue
@@ -1057,12 +1100,11 @@ int cmdPull(int argc, char * const *argv)
 
 }
 
-int pushFile(const PullContext &pushCtx, const std::string localFile, const std::string url)
+int pushFile(const PullContext &pushCtx, const std::string localFile, const std::string url, std::string &response)
 {
-    // test post of a file
-    // TODO remove this
     HttpRequest hr(pushCtx.httpCtx);
     int r = hr.postFile(localFile, url);
+    response = hr.lines;
     return r;
 }
 
@@ -1093,7 +1135,8 @@ int pushAttachedFiles(const PullContext &pushCtx, const Project &p)
             printf("pushing attached file: %s\n", filename.c_str());
             std::string localFile = localFilesDir + '/' + filename;
             std::string url = pushCtx.rooturl + resourceFilesDir + '/' + filename;
-            int r = pushFile(pushCtx, localFile, url);
+            std::string response; // not used in this context
+            int r = pushFile(pushCtx, localFile, url, response);
             if (r != 0) exit(1);
         }
     }
@@ -1102,14 +1145,81 @@ int pushAttachedFiles(const PullContext &pushCtx, const Project &p)
     return 0;
 }
 
+/** Push the first entry of an issue.
+  *
+  * @param i
+  *     The issue id may be modified, as the server allocates the issue identifiers.
+  */
+int pushFirstEntry(const PullContext &pushCtx, const Project &project, Issue &i, const Entry &e)
+{
+    // post the entry (which must be the first entry of an issue)
+    // the result of the POST indicates the issue number that has been allocated
+    std::string localFile = i.path + '/' + e.id;
+    std::string url = pushCtx.rooturl + '/' + project.getUrlName() + "/issues/" + i.id + '/' + e.id;
+    std::string response;
+    int r = pushFile(pushCtx, localFile, url, response);
+    if (r != 0) {
+        // error
+        LOG_ERROR("%s: Could not push entry %s\n", project.getName().c_str(), e.id.c_str());
+        exit(1);
+    }
+    // first line of response gives the new allocated issue id
+    // format is:
+    //     issue: 010203045666
+    popToken(response, ":");
+    trim(response);
+    if (i.id != response) {
+        printf("%s: Renaming local issue %s -> %s\n", project.getName().c_str(),
+               i.id.c_str(), response.c_str());
+        // TODO rename locally
+    } // else: no change
+}
+
+
 int pushIssue(const PullContext &pushCtx, const Project &project, const Issue &i)
 {
     // - get list of entries of the same remote issue
     //    + if no such remote issue, push
-    //    + if discrepancy, abort and ask the user to pull first
+    //    + if discrepancy (first entries do not match), abort and ask the user to pull first
     //    + else, push the local entries missing on the remote side
+    Entry *e = i.latest;
+    while (e && e->prev) e = e->prev; // rewind to first entry
+    if (!e) {
+        LOG_ERROR("%s: null first entry for issue %s", project.getName().c_str(),
+                  i.id.c_str());
+        exit(1);
+    }
+    const Entry &firstEntry = *e;
 
-// TODO
+    // TODO check if
+    std::list<std::string> entries;
+    int r = getEntriesOfIssue(pushCtx, project, i, entries);
+    if (r != 0) {
+        // no such remote issue
+        // push first entry
+        pushFirstEntry(pushCtx, project, i, firstEntry);
+
+        // TODO push remaining entries
+
+    } else if (entries.empty()) {
+        // internal error, should not happen
+        LOG_ERROR("%s: error, empty entries for remote issue %s\n", project.getName().c_str(),
+                i.id.c_str());
+        exit(1);
+
+    } else {
+        // check if first entries match
+        if (entries.front() != firstEntry) {
+            printf("%s: mismatch of first entries for issue %s\n", project.getName().c_str(),
+                   i.id.c_str());
+            printf("Try pulling first to resolve\n");
+            exit(1);
+        }
+
+        // walk through entries and push missing ones
+        // TODO
+    }
+
 
 }
 

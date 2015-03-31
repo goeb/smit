@@ -194,6 +194,9 @@ int HttpRequest::postFile(const std::string &srcFile, const std::string &destUrl
     /* and give the size of the upload (optional) */
     curl_easy_setopt(curlHandle, CURLOPT_INFILESIZE, (curl_off_t)file_info.st_size);
 
+    curl_easy_setopt(curlHandle, CURLOPT_WRITEDATA, (void *)this);
+    curl_easy_setopt(curlHandle, CURLOPT_WRITEFUNCTION, receiveLinesCallback);
+
     /* enable verbose for easier tracing */
     if (Verbose) curl_easy_setopt(curlHandle, CURLOPT_VERBOSE, 1L);
 
@@ -211,13 +214,17 @@ int HttpRequest::postFile(const std::string &srcFile, const std::string &destUrl
         return -1;
 
     } else {
+        // ok
+
+        handleReceivedLines(0, 0); // finalize the last line of the response
+
         /* now extract transfer info */
         double speed_upload, total_time;
         curl_easy_getinfo(curlHandle, CURLINFO_SPEED_UPLOAD, &speed_upload);
         curl_easy_getinfo(curlHandle, CURLINFO_TOTAL_TIME, &total_time);
 
         if (Verbose) fprintf(stderr, "Speed: %.3f bytes/sec during %.3f seconds\n",
-                speed_upload, total_time);
+                             speed_upload, total_time);
 
     }
 
