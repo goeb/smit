@@ -406,7 +406,11 @@ PropertySpec parsePropertySpec(std::list<std::string> & tokens)
         while (tokens.size() > 0) {
             std::string value = tokens.front();
             tokens.pop_front();
-            pspec.selectOptions.push_back(value);
+
+            if (F_MULTISELECT == pspec.type && value.empty()) {
+                // for multiselect, an empty value has no sense and are removed
+
+            } else pspec.selectOptions.push_back(value);
         }
     } else if (F_ASSOCIATION == pspec.type) {
         if (tokens.size() > 1) {
@@ -1344,29 +1348,6 @@ void parseAssociation(std::list<std::string> &values)
     values.sort();
 }
 
-/** Remove "" values from list of multiselect values if "" is not in the allowed range
-  *
-  * This is because the HTML form adds a hidden input with empty value.
-  */
-void Project::cleanupMultiselect(std::list<std::string> &values, const std::list<std::string> &selectOptions)
-{
-    // convert to a set
-    std::set<std::string> allowed(selectOptions.begin(), selectOptions.end());
-    std::list<std::string>::iterator v = values.begin();
-    bool gotEmpty = false;
-    while (v != values.end()) {
-        if ( (allowed.find(*v) == allowed.end()) || (gotEmpty && v->empty()) ) {
-            // erase currect item
-            std::list<std::string>::iterator v0 = v;
-            v++;
-            values.erase(v0);
-        } else {
-            if (v->empty()) gotEmpty = true; // empty is allowed. but we don't w<ant a second one
-            v++;
-        }
-    }
-}
-
 /** Create a new issue
   *
   * - Allocate a new issue id
@@ -1442,9 +1423,11 @@ int Project::addEntry(PropertiesMap properties, const std::string &issueId,
 
     entry = 0;
 
-    // check that all properties are in the project config
-    // else, remove them
-    // and parse the associations, if any
+    // Check that all properties are in the project config, else remove them.
+    // Also parse the associations, if any.
+    //
+    // Note that the values of properties that have a type select, multiselect and selectUser
+    // are not verified (this is a known issue) TODO.
     std::map<std::string, std::list<std::string> >::iterator p;
     p = properties.begin();
     while (p != properties.end()) {
@@ -1464,7 +1447,6 @@ int Project::addEntry(PropertiesMap properties, const std::string &issueId,
                 doErase = true;
             } // else do not erase and parse the association
             else if (pspec && pspec->type == F_ASSOCIATION) parseAssociation(p->second);
-            else if (pspec && pspec->type == F_MULTISELECT) cleanupMultiselect(p->second, pspec->selectOptions);
         }
 
         if (doErase) {
@@ -1487,8 +1469,12 @@ int Project::addEntry(PropertiesMap properties, const std::string &issueId,
             return -1;
         }
 
-        // simplify the entry by removing properties that have the same value
+        // Simplify the entry by removing properties that have the same value
         // in the issue (only the modified fields are stored)
+
+        // Note that keep-old values are pruned here : values that are no longer
+        // in the official values (select, multiselect, selectUser), but
+        // that might still be used in some old issues.
         std::map<std::string, std::list<std::string> >::iterator entryProperty;
         entryProperty = properties.begin();
         while (entryProperty != properties.end()) {
@@ -1515,7 +1501,7 @@ int Project::addEntry(PropertiesMap properties, const std::string &issueId,
 
     if (properties.size() == 0) {
         LOG_INFO("addEntry: no change. return without adding entry.");
-        return 0; // no change
+        return 1; // no change
     }
 
     // at this point properties have been cleaned up
