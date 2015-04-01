@@ -26,6 +26,7 @@
 <li><a href='#project-configuration'>Project Configuration</a></li>
 <li><a href='#set-up-a-trigger'>Set up a trigger</a></li>
 <li><a href='#make-a-backup'>Make a Backup</a></li>
+<li><a href='#setup-behind-a-reverse-proxy'>Setup behind a reverse proxy</a></li>
 <li><a href='#faq'>FAQ</a></li>
 </ul>
 </li>
@@ -176,6 +177,24 @@ notifyNewEntry.py</code></pre>
 <h2 id="make-a-backup">Make a Backup</h2>
 <p>Do a zip or tar of the repository, as follows:</p>
 <pre><code>tar cvfz $REPO.tar.gz $REPO</code></pre>
+<h2 id="setup-behind-a-reverse-proxy">Setup behind a reverse proxy</h2>
+<p>Use the <code>--url-rewrite-root</code> option. Eg:</p>
+<pre><code>linux/smit serve demo --url-rewrite-root /bugtracker</code></pre>
+<p>Example of reverse proxy configuration with lighttpd: (tested with lighttpd-1.4.35)</p>
+<pre><code>server.document-root = &quot;/tmp&quot;
+server.port = 3000
+server.modules += ( &quot;mod_proxy&quot; , &quot;mod_rewrite&quot;)
+
+$SERVER[&quot;socket&quot;] == &quot;:8092&quot; {
+    url.rewrite-once = ( &quot;^/bt/(.*)$&quot; =&gt; &quot;/$1&quot; )
+    proxy.server = ( &quot;&quot; =&gt; ( (
+        &quot;host&quot; =&gt; &quot;127.0.0.1&quot;,
+        &quot;port&quot; =&gt; 8090
+    ) )
+    )
+}
+</code></pre>
+<p>In this example, smit is available at address: <code>http://127.0.0.1:8092/bt/</code></p>
 <h2 id="faq">FAQ</h2>
 <h3 id="why-cannot-i-create-a-project-named-public">Why cannot I create a project named 'public'?</h3>
 <p><code>public</code> is reserved for storing HTML pages that are public, such as the signin page.</p>
@@ -190,7 +209,7 @@ users</code></pre>
 </div>
         </div> <!-- div class page -->
         <div class="footer">
-            Page updated on  3 Aug 2014
+            Page updated on 23 Nov 2014
         </div>
     </body>
 </html>

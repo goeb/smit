@@ -1,5 +1,20 @@
 # News
 
+## 1 April 2015
+
+Smit v2.3.0 is released.
+Major changes since v2.0:
+
+- keep old values of select, multiselect, selectUser until deliberately changed by the user
+- fix in-memory residual property after deleted entry
+- textarea2 in rich text
+- fix race condition in assignment of session ids
+- support for root-URL rewriting (for using behind a reverse proxy)
+- improve advanced search filtering with more usage-friendly AND/OR combination
+- fix freezed login
+- fix utf-8 characters in project config
+
+
 ## 3 August 2014
 
 Smit 2.0.0 is released.

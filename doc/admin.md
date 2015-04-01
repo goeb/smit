@@ -213,6 +213,35 @@ Do a zip or tar of the repository, as follows:
 tar cvfz $REPO.tar.gz $REPO
 ```
 
+## Setup behind a reverse proxy
+
+Use the `--url-rewrite-root` option. Eg:
+
+```
+linux/smit serve demo --url-rewrite-root /bugtracker
+```
+
+Example of reverse proxy configuration with lighttpd:
+(tested with lighttpd-1.4.35)
+
+```
+server.document-root = "/tmp"
+server.port = 3000
+server.modules += ( "mod_proxy" , "mod_rewrite")
+
+$SERVER["socket"] == ":8092" {
+    url.rewrite-once = ( "^/bt/(.*)$" => "/$1" )
+    proxy.server = ( "" => ( (
+        "host" => "127.0.0.1",
+        "port" => 8090
+    ) )
+    )
+}
+
+```
+
+In this example, smit is available at address: `http://127.0.0.1:8092/bt/`
+
 ## FAQ
 
 ### Why cannot I create a project named 'public'?
