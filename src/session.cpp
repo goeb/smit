@@ -78,6 +78,29 @@ void User::setPasswd(const std::string &password)
     hashValue = getSha1(password + hashSalt);
 }
 
+/** Authenticate a user after his/her password
+  * @return
+  *     0 success
+  *    -1 failure
+  */
+int User::authenticate(const std::string &passwd)
+{
+    if (hashType == HASH_SHA1) {
+        LOG_DEBUG("salt=%s", hashSalt.c_str());
+        std::string sha1 = getSha1(passwd + hashSalt);
+        if (sha1 != hashValue) {
+            LOG_DEBUG("Sha1 do not match %s <> %s", sha1.c_str(), hashValue.c_str());
+            LOG_INFO("Sha1 authentication failure for user '%s'", username.c_str());
+            return -1;
+
+        } else {
+            return 0;
+        }
+    }
+    LOG_ERROR("Unknown authentication scheme for user '%s'", username.c_str());
+    return -1;
+}
+
 
 std::string roleToString(Role r)
 {
@@ -428,18 +451,17 @@ std::string SessionBase::requestSession(const std::string &username, const std::
     std::string sessid = ""; // empty session id indicates that no session is on
     User *u = UserBase::getUser(username);
 
-    if (u && u->hashType == HASH_SHA1) {
-        LOG_DEBUG("salt=%s", u->hashSalt.c_str());
-        std::string sha1 = getSha1(passwd + u->hashSalt);
-        if (sha1 != u->hashValue) {
-            LOG_DEBUG("Sha1 do not match %s <> %s", sha1.c_str(), u->hashValue.c_str());
-            sessid = "";
-
-        } else {
+    if (u) {
+        int r = u->authenticate(passwd);
+        if (r == 0) {
             // authentication succeeded, create session
             sessid = SessionDb.createSession(username.c_str());
             LOG_DEBUG("Session created for '%s': %s", username.c_str(), sessid.c_str());
+        } else {
+            sessid = "";
         }
+    } else {
+        LOG_INFO("Session request for unknown user '%s'", username.c_str());
     }
     return sessid;
 }

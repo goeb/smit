@@ -38,6 +38,7 @@ struct User {
     User();
     std::string serialize();
     void setPasswd(const std::string &passwd);
+    int authenticate(const std::string &passwd);
 
 };
 
