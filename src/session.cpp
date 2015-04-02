@@ -519,7 +519,7 @@ int SessionBase::destroySession(const std::string &sessionId)
 
 std::string SessionBase::createSession(const std::string &username)
 {
-    ScopeLocker scopeLocker(locker, LOCK_READ_WRITE);
+    LOCK_SCOPE(locker, LOCK_READ_WRITE);
 
     std::stringstream randomStr;
     randomStr << std::hex << rand() << rand() << rand();
@@ -531,4 +531,4 @@ std::string SessionBase::createSession(const std::string &username)
     s.duration = SESSION_DURATION;
     SessionDb.sessions[s.id] = s;
     return s.id;
-};
+}
