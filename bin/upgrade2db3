@@ -7,6 +7,29 @@ usage() {
     exit 1
 }
 
+# migrateObject
+# $1 : source file
+# $2 : directory where the file is to be moved
+#
+# Eg: migrateObject 01020304.x a/b/c
+# => file will be moved to a/b/c/01/020304.x
+migrateObject() {
+    file="$1"
+    dest="$2"
+    basefile=$(basename -- "$file")
+
+    prefix=$(echo $basefile | sed -e "s/\(..\).*/\\1"/)
+    suffix=$(echo $basefile | sed -e "s/^..//")
+    if [ -z $suffix ]; then
+        echo "Cannot migrate file $file: suffix too short"
+        exit 1
+    fi
+    mkdir -p "$dest/$prefix"
+    mv $file "$dest/$prefix/$suffix"
+}
+
+# main -------------------------------------------------------------------------
+
 srcDir=$1
 dstDir=$2
 
@@ -72,16 +95,7 @@ find "$dstDir" -name project | while read p; do
 
     # change entries to .../<p>/objects/73/97ca1fb539d0ecff232eadb8a9e26f16049da2
     find "$pDir/issues" -maxdepth 2 -type f | while read entry; do
-        entryId=$(basename -- $entry)
-        # convert to new place
-        prefix=$(echo $entryId | sed -e "s/\(..\).*/\\1"/)
-        suffix=$(echo $entryId | sed -e "s/^..//")
-        if [ -z $suffix ]; then
-            echo "Error: entry $entry to short"
-            exit 1
-        fi
-        mkdir -p "$pDir/objects/$prefix"
-        mv "$entry" "$pDir/objects/$prefix/$suffix"
+        migrateObject $entry "$pDir/objects"
     done
 
     # change files references in the entries
@@ -104,11 +118,7 @@ find "$dstDir" -name project | while read p; do
 
     # change tags
     find "$pDir/tags" -type f | while read file; do
-        tag=$(basename -- $file)
-        prefix=$(echo $tag | sed -e "s/\(..\).*/\\1"/)
-        suffix=$(echo $tag | sed -e "s/^..//")
-        mkdir -p "$pDir/refs/tags/$prefix"
-        mv $file "$pDir/refs/tags/$prefix/$suffix"
+        migrateObject $file "$pDir/refs/tags"
     done
 
     # remove old directories files, issues, tags
