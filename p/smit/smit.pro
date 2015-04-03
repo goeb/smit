@@ -32,7 +32,8 @@ SOURCES += \
     ../../src/Project.cpp \
     ../../src/Issue.cpp \
     ../../src/View.cpp \
-    ../../src/Tag.cpp
+    ../../src/Tag.cpp \
+    ../../src/ProjectConfig.cpp
 
 HEADERS += \
     ../../mongoose/mongoose.h \
@@ -65,5 +66,6 @@ HEADERS += \
     ../../src/Issue.h \
     ../../src/View.h \
     ../../src/Object.h \
-    ../../src/restApi.h
+    ../../src/restApi.h \
+    ../../src/ProjectConfig.h
 

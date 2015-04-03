@@ -35,6 +35,7 @@ public:
     std::list<std::string> filterout;
     const Project *project;
     ProjectConfig projectConfig;
+    std::map<std::string, PredefinedView> predefinedViews;
     std::set<std::string> usersOfProject;
     std::list<std::pair<std::string, uint8_t> > htmlFieldDisplay;
     const RequestContext *req;

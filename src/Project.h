@@ -13,6 +13,7 @@
 #include "stringTools.h"
 #include "View.h"
 #include "Issue.h"
+#include "ProjectConfig.h"
 
 #define PROJECT_FILE "project"
 #define PATH_ISSUES "refs/issues" // sub-directory of a project where the entries are stored
@@ -30,46 +31,6 @@
 #define DELETE_DELAY_S (10*60) // seconds
 
 
-struct TagSpec {
-    TagSpec(): display(false) {}
-    std::string id;
-    std::string label; // UTF-8 text
-    bool display; // status should be displayed in issue header
-};
-
-int strToPropertyType(const std::string &s, PropertyType &out);
-std::list<std::pair<bool, std::string> > parseSortingSpec(const char *sortingSpec);
-
-struct PropertySpec {
-    std::string name;
-    std::string label;
-    enum PropertyType type;
-    std::list<std::string> selectOptions; // for F_SELECT and F_MULTISELECT only
-    std::string reverseLabel; // for F_RELATIONSHIP
-};
-
-
-struct ProjectConfig {
-    ProjectConfig() : numberIssueAcrossProjects(false) {}
-
-    // properties
-    std::list<PropertySpec> properties; // user defined properties
-    std::map<std::string, std::string> propertyLabels;
-    std::map<std::string, std::string> propertyReverseLabels;
-    std::map<std::string, PredefinedView> predefinedViews;
-    std::map<std::string, TagSpec> tags;
-    bool numberIssueAcrossProjects; // accross project
-
-    // methods
-    const PropertySpec *getPropertySpec(const std::string name) const;
-    std::list<std::string> getPropertiesNames() const;
-    static std::list<std::string> getReservedProperties();
-    static bool isReservedProperty(const std::string &name);
-    std::string getLabelOfProperty(const std::string &propertyName) const;
-    std::string getReverseLabelOfProperty(const std::string &propertyName) const;
-    bool isValidPropertyName(const std::string &name) const;
-    static bool isValidProjectName(const std::string &name);
-};
 
 class Project {
 public:
@@ -103,6 +64,8 @@ public:
 
     // project config
     ProjectConfig getConfig() const;
+    std::map<std::string, PredefinedView> getViews() const;
+
     inline void setConfig(ProjectConfig pconfig) { config = pconfig; }
     int modifyConfig(std::list<std::list<std::string> > &tokens);
     static int createProjectFiles(const char *repositoryPath, const char *projectName, std::string &resultingPath);
@@ -142,6 +105,7 @@ private:
     ProjectConfig config;
     mutable Locker locker; // mutex for issues and entries
     mutable Locker lockerForConfig; // mutext for config
+    mutable Locker lockerForViews; // mutext for views
 
     // associations table
     // { issue : { association-name : [other-issues] } }
@@ -149,6 +113,10 @@ private:
 
     // reverse associations table
     std::map<std::string, std::map<std::string, std::set<std::string> > > reverseAssociations;
+
+    // views
+    std::map<std::string, PredefinedView> predefinedViews;
+
 
     // private member methods
     Issue *createNewIssue();

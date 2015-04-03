@@ -60,6 +60,7 @@ ContextParameters::ContextParameters(const RequestContext *request, const User &
     init(request, u);
     project = &p;
     projectConfig = p.getConfig(); // take a copy of the config
+    predefinedViews = p.getViews(); // take a copy of the config
     userRole = u.getRole(p.getName());
 }
 
@@ -443,11 +444,10 @@ void RHtml::printPageView(const ContextParameters &ctx, const PredefinedView &pv
 
 void RHtml::printLinksToPredefinedViews(const ContextParameters &ctx)
 {
-    const ProjectConfig &c = ctx.projectConfig;
     std::map<std::string, PredefinedView>::const_iterator pv;
     ctx.req->printf("<table class=\"sm_views\">");
     ctx.req->printf("<tr><th>%s</th><th>%s</th></tr>\n", _("Name"), _("Associated Url"));
-    FOREACH(pv, c.predefinedViews) {
+    FOREACH(pv, ctx.predefinedViews) {
         ctx.req->printf("<tr><td class=\"sm_views_name\">");
         ctx.req->printf("<a href=\"%s\">%s</a>", urlEncode(pv->first).c_str(), htmlEscape(pv->first).c_str());
         ctx.req->printf("</td><td class=\"sm_views_link\">");
@@ -632,8 +632,7 @@ void RHtml::printNavigationIssues(const ContextParameters &ctx, bool autofocus)
     }
 
     std::map<std::string, PredefinedView>::const_iterator pv;
-    const ProjectConfig &config = ctx.projectConfig;
-    FOREACH (pv, config.predefinedViews) {
+    FOREACH (pv, ctx.predefinedViews) {
         HtmlNode a("a");
         a.addAttribute("href", "/%s/issues/?%s", ctx.getProject().getUrlName().c_str(),
                        pv->second.generateQueryString().c_str());
