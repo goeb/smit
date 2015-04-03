@@ -20,6 +20,47 @@
 #include "filesystem.h"
 #include "parseConfig.h"
 
+/** Convert a property type to a string
+  *
+  * @return
+  *     empty string if unknown property type
+  */
+std::string propertyTypeToStr(PropertyType type)
+{
+    switch (type) {
+    case F_TEXT: return "text";
+    case F_SELECT: return "select";
+    case F_MULTISELECT: return "multiselect";
+    case F_SELECT_USER: return "selectUser";
+    case F_TEXTAREA: return "textarea";
+    case F_TEXTAREA2: return "textarea2";;
+    case F_ASSOCIATION: return "association";
+    default: return "";
+    }
+}
+
+
+/** Convert a string to a PropertyType
+  *
+  * @return 0 on success, -1 on error
+  */
+int strToPropertyType(const std::string &s, PropertyType &out)
+{
+    if (s == "text") out = F_TEXT;
+    else if (s == "selectUser") out = F_SELECT_USER;
+    else if (s == "select") out = F_SELECT;
+    else if (s == "multiselect") out = F_MULTISELECT;
+    else if (s == "textarea") out = F_TEXTAREA;
+    else if (s == "textarea2") out = F_TEXTAREA2;
+    else if (s == "association") out = F_ASSOCIATION;
+
+    else return -1; // error
+
+
+    return 0; // ok
+}
+
+
 /** Get the specification of a given property
   *
   * @return 0 if not found.
@@ -213,6 +254,68 @@ int ProjectConfig::load(const std::string &path, ProjectConfig &config)
     config = ProjectConfig::parseProjectConfig(lines);
 
     return 0;
+}
+
+std::string ProjectConfig::serialize() const
+{
+    std::string result;
+
+    // header
+    result += serializeProperty(K_SMIT_VERSION, VERSION);
+
+    // setPropertyLabel
+    // for reserved properties
+    std::list<std::string> reserved = getReservedProperties();
+    std::list<std::string>::iterator r;
+    FOREACH(r, reserved) {
+        std::map<std::string, std::string>::const_iterator label;
+        label = propertyLabels.find(*r);
+        if (label != propertyLabels.end() && label->second != *r) {
+            result += "setPropertyLabel " + (*r) + " " + serializeSimpleToken(label->second) + "\n";
+        }
+    }
+
+    // properties
+    std::list<PropertySpec>::const_iterator p; // user defined properties
+    FOREACH(p, properties) {
+        PropertySpec pspec = *p;
+        result += "addProperty " + serializeSimpleToken(pspec.name);
+        if (! pspec.label.empty() && pspec.label != pspec.name) {
+            result += " -label " + serializeSimpleToken(pspec.label);
+        }
+        result += " " + propertyTypeToStr(pspec.type);
+        if (pspec.type == F_SELECT || pspec.type == F_MULTISELECT) {
+            // add std::list<std::string> selectOptions
+            std::list<std::string>::const_iterator opt;
+            FOREACH(opt, pspec.selectOptions) {
+                result += " " + serializeSimpleToken(*opt);
+            }
+
+        } else if (pspec.type == F_ASSOCIATION && !pspec.reverseLabel.empty()) {
+            result += " -reverseLabel " + serializeSimpleToken(pspec.reverseLabel);
+        }
+
+        result += "\n";
+    }
+
+    // tags
+    std::map<std::string, TagSpec>::const_iterator tag;
+    FOREACH(tag, tags) {
+        TagSpec tspec = tag->second;
+        result += "tag " + serializeSimpleToken(tspec.id);
+        if (!tspec.label.empty() && tspec.label != tspec.id) {
+            result += " -label " + serializeSimpleToken(tspec.label);
+        }
+        if (tspec.display) result += " -display";
+        result += "\n";
+    }
+
+    // numbering policy
+    if (numberIssueAcrossProjects) {
+        result += serializeProperty("numberIssues", "global");
+    }
+
+    return result;
 }
 
 

@@ -226,27 +226,6 @@ void Project::getAllIssues(std::vector<Issue*> &issuesList)
     }
 }
 
-
-/** Convert a string to a PropertyType
-  *
-  * @return 0 on success, -1 on error
-  */
-int strToPropertyType(const std::string &s, PropertyType &out)
-{
-    if (s == "text") out = F_TEXT;
-    else if (s == "selectUser") out = F_SELECT_USER;
-    else if (s == "select") out = F_SELECT;
-    else if (s == "multiselect") out = F_MULTISELECT;
-    else if (s == "textarea") out = F_TEXTAREA;
-    else if (s == "textarea2") out = F_TEXTAREA2;
-    else if (s == "association") out = F_ASSOCIATION;
-
-    else return -1; // error
-
-
-    return 0; // ok
-}
-
 // @return 0 if OK, -1 on error
 int Project::loadConfig()
 {
@@ -257,8 +236,6 @@ int Project::loadConfig()
     int r = ProjectConfig::load(pathToProjectFile, config);
     return r;
 }
-
-
 
 int Project::modifyConfig(std::list<std::list<std::string> > &tokens)
 {
@@ -271,24 +248,8 @@ int Project::modifyConfig(std::list<std::list<std::string> > &tokens)
     // keep unchanged the configuration items not managed via this modifyConfig
     c.numberIssueAcrossProjects = config.numberIssueAcrossProjects;
 
-    // add version
-    std::list<std::string> versionLine;
-    versionLine.push_back(K_SMIT_VERSION);
-    versionLine.push_back(VERSION);
-    tokens.insert(tokens.begin(), versionLine);
-
-    // at this point numbering policy is not managed by the web interface so they
-    // are not in 'tokens'
-    // serialize numbering policy (not managed by the web interface)
-    if (config.numberIssueAcrossProjects) {
-        std::list<std::string> line;
-        line.push_back("numberIssues");
-        line.push_back("global");
-        tokens.push_back(line);
-    }
-
     // write to file
-    std::string data = serializeTokens(tokens);
+    std::string data = c.serialize();
 
     std::string pathToProjectFile = path + '/';
     pathToProjectFile += PROJECT_FILE;

@@ -26,6 +26,7 @@ struct TagSpec {
     bool display; // status should be displayed in issue header
 };
 
+std::string propertyTypeToStr(PropertyType type);
 int strToPropertyType(const std::string &s, PropertyType &out);
 std::list<std::pair<bool, std::string> > parseSortingSpec(const char *sortingSpec);
 
@@ -48,8 +49,12 @@ struct ProjectConfig {
     std::map<std::string, TagSpec> tags;
     bool numberIssueAcrossProjects; // accross project
 
+    std::string id;
+    std::string parent;
+
     // methods
     static int load(const std::string &path, ProjectConfig &config);
+    std::string serialize() const;
     static ProjectConfig parseProjectConfig(std::list<std::list<std::string> > &lines);
     const PropertySpec *getPropertySpec(const std::string name) const;
     std::list<std::string> getPropertiesNames() const;
