@@ -254,19 +254,8 @@ int Project::loadConfig()
     std::string pathToProjectFile = path;
     pathToProjectFile = pathToProjectFile + '/' + PROJECT_FILE;
 
-
-    const char *buf = 0;
-    int n = loadFile(pathToProjectFile.c_str(), &buf);
-
-    if (n <= 0) return -1; // error or empty file
-
-    std::list<std::list<std::string> > lines = parseConfigTokens(buf, n);
-
-    free((void*)buf); // not needed any longer
-
-    config = ProjectConfig::parseProjectConfig(lines);
-
-    return 0;
+    int r = ProjectConfig::load(pathToProjectFile, config);
+    return r;
 }
 
 

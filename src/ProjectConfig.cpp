@@ -17,7 +17,8 @@
 #include "ProjectConfig.h"
 #include "global.h"
 #include "logging.h"
-
+#include "filesystem.h"
+#include "parseConfig.h"
 
 /** Get the specification of a given property
   *
@@ -196,6 +197,24 @@ PropertySpec parsePropertySpec(std::list<std::string> & tokens)
     }
     return pspec;
 }
+
+/** Load a project configuration from a file
+  *
+  * @param[out] config
+  */
+int ProjectConfig::load(const std::string &path, ProjectConfig &config)
+{
+    std::string data;
+    int r = loadFile(path, data);
+    if (r != 0) return r;
+
+    std::list<std::list<std::string> > lines = parseConfigTokens(data.c_str(), data.size());
+
+    config = ProjectConfig::parseProjectConfig(lines);
+
+    return 0;
+}
+
 
 /** Return a configuration object from a list of lines of tokens
   * The 'lines' parameter is modified and cleaned up of incorrect lines

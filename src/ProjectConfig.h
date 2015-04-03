@@ -49,6 +49,7 @@ struct ProjectConfig {
     bool numberIssueAcrossProjects; // accross project
 
     // methods
+    static int load(const std::string &path, ProjectConfig &config);
     static ProjectConfig parseProjectConfig(std::list<std::list<std::string> > &lines);
     const PropertySpec *getPropertySpec(const std::string name) const;
     std::list<std::string> getPropertiesNames() const;
