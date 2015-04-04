@@ -230,10 +230,19 @@ void Project::getAllIssues(std::vector<Issue*> &issuesList)
 int Project::loadConfig()
 {
     LOG_FUNC();
-    std::string pathToProjectFile = path;
-    pathToProjectFile = pathToProjectFile + '/' + PROJECT_FILE;
+    std::string pathToProjectFile = path + "/" PATH_PROJECT_CONFIG;
+    std::string objectid;
+    int r = loadFile(pathToProjectFile, objectid);
+    if (r != 0) {
+        LOG_ERROR("Cannot load project config '%s': %s", pathToProjectFile.c_str(), strerror(errno));
+        return -1;
+    }
 
-    int r = ProjectConfig::load(pathToProjectFile, config);
+    trim(objectid);
+
+    std::string pathToProjectConfig = getObjectsDir() + "/" + Object::getSubpath(objectid);
+
+    r = ProjectConfig::load(pathToProjectConfig, config);
     return r;
 }
 

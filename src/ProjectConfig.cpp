@@ -247,7 +247,10 @@ int ProjectConfig::load(const std::string &path, ProjectConfig &config)
 {
     std::string data;
     int r = loadFile(path, data);
-    if (r != 0) return r;
+    if (r != 0) {
+        LOG_ERROR("Cannot load project config '%s': %s", path.c_str(), strerror(errno));
+        return -1;
+    }
 
     std::list<std::list<std::string> > lines = parseConfigTokens(data.c_str(), data.size());
 
