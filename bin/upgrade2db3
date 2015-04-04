@@ -29,6 +29,41 @@ migrateObject() {
     mkdir -p "$dest/$prefix"
     mv $file "$dest/$prefix/$suffix"
 }
+# $1 : working directory of the project (where the migration is being done)
+# $2 : path to the issue directory
+migrateIssue() {
+
+    # get the latest entry: ie the one that is not referenced as a parent
+    latest=""
+    echo "examining issue: $issue..."
+    for e in $(ls -- "$issue"); do
+        ref=$(basename -- $e)
+
+        if [ "$ref" = "_del" ]; then
+            continue
+        fi
+
+        grep -- "+parent *$ref" "$issue"/* > /dev/null 2>&1
+        if [ $? -ne 0 ]; then
+            # pattern, not found, thus we found an entry unreferenced
+            if [ -n "$latest" ]; then
+                echo "ERROR: found 2 possible latest in $issue"
+                echo "    $latest"
+                echo "    $ref"
+                echo "Choosing $ref..."
+            fi
+            latest=$ref
+            break
+        fi
+    done
+    if [ -z "$latest" ]; then
+        echo "ERROR: no latest found in $issue"
+    else
+        # draw the link
+        issueId=$(basename -- "$issue")
+        echo $latest > "$pDir/refs/issues/$issueId"
+    fi
+}
 
 # main -------------------------------------------------------------------------
 
@@ -64,41 +99,13 @@ find "$dstDir" -name project | while read p; do
 
     # change issues to .../<p>/refs/issues/1
     find "$pDir/issues" -type d -maxdepth 1 | while read issue; do
-    
+
         if [ "$issue" = "$pDir/issues" ]; then
+            # this is not an issue
             continue
         fi
 
-        # get the latest entry: ie the one that is not referenced as a parent
-        latest=""
-        echo "examining issue: $issue..."
-        for e in $(ls -- "$issue"); do
-            ref=$(basename -- $e)
-
-            if [ "$ref" = "_del" ]; then
-                continue
-            fi
-
-            grep -- "+parent *$ref" "$issue"/* > /dev/null 2>&1
-            if [ $? -ne 0 ]; then
-                # pattern, not found, thus we found an entry unreferenced
-                if [ -n "$latest" ]; then
-                    echo "ERROR: found 2 possible latest in $issue"
-                    echo "    $latest"
-                    echo "    $ref"
-                    echo "Choosing $ref..."
-                fi
-                latest=$ref
-                break
-            fi
-        done
-        if [ -z "$latest" ]; then
-            echo "ERROR: no latest found in $issue"
-        else
-            # draw the link
-            issueId=$(basename -- "$issue")
-            echo $latest > "$pDir/refs/issues/$issueId"
-        fi
+        migrateIssue "$pDir" "$issue" 
     done
 
     # change entries to .../<p>/objects/73/97ca1fb539d0ecff232eadb8a9e26f16049da2
