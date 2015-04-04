@@ -258,6 +258,7 @@ int Project::modifyConfig(std::list<std::list<std::string> > &tokens, const std:
     c.numberIssueAcrossProjects = config.numberIssueAcrossProjects;
     c.parent = config.id;
     c.ctime = time(0);
+    c.author = author;
 
     // write to file
     std::string data = c.serialize();

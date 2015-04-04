@@ -255,6 +255,7 @@ int ProjectConfig::load(const std::string &path, ProjectConfig &config)
     std::list<std::list<std::string> > lines = parseConfigTokens(data.c_str(), data.size());
 
     config = ProjectConfig::parseProjectConfig(lines);
+    config.id = getBasename(path);
 
     return 0;
 }
@@ -265,6 +266,13 @@ std::string ProjectConfig::serialize() const
 
     // header
     result += serializeProperty(K_SMIT_VERSION, VERSION);
+
+    // authors, parent, ctime
+    result += K_PARENT " " + serializeSimpleToken(parent) + "\n";
+    char timestamp[128];
+    sprintf(timestamp, "%d", ctime);
+    result += K_CTIME " " + serializeSimpleToken(timestamp) + "\n";
+    result += K_AUTHOR " " + serializeSimpleToken(author) + "\n";
 
     // setPropertyLabel
     // for reserved properties
