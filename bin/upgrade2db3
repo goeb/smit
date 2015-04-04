@@ -90,18 +90,36 @@ migrateFileRefs() {
         # smp.1.2 JV4cgfKVwujvGPsXaEpWTAXnAWo.pic1.png
         # smp.1.3 JV4cgfKVwujvGPsXaEpWTAXnAWo.pic2.png
         grep "^+file" "$entry" | $SMPARSER - | grep -v "smp.1.1 +file" | sed -e "s/^smp\.[0-9]*\.[0-9]* //" | while read filename; do
-        newF=$(echo -n $filename | sed -e "s;\.;/;" | $SMPARSER -e)
-        echo -n " $newF" >> $newFiles
-    done
-    newFilesT=$(cat $newFiles)
-    echo -n "oldFiles: "
-    grep "^+file" "$entry"
-    echo "newFilesT: $newFilesT"
-    sed -i -e "/^+file /d" "$entry"
-    echo "$newFilesT" >> "$entry"
-    rm $newFiles # rm temporary file
-fi
-    }
+            newF=$(echo -n $filename | sed -e "s;\.;/;" | $SMPARSER -e)
+            echo -n " $newF" >> $newFiles
+        done
+        newFilesT=$(cat $newFiles)
+        echo -n "oldFiles: "
+        grep "^+file" "$entry"
+        echo "newFilesT: $newFilesT"
+        sed -i -e "/^+file /d" "$entry"
+        echo "$newFilesT" >> "$entry"
+        rm $newFiles # rm temporary file
+    fi
+}
+
+# migrate the 'project' configuration file
+# $1 : project dir
+migrateProjectConfig() {
+    local pDir="$1"
+    local project="$pDir/project"
+    chmod u+w "$project"
+    # add parent 'null', timestamp, author
+    echo "+parent null" >> "$project"
+    timestamp=$(date +%s)
+    echo "+ctime $timestamp" >> "$project"
+    echo "+author upgrade2db3" >> "$project"
+
+    objectId=$(sha1sum "$project" | sed -e "s/ .*//")
+    mv "$project" "$pDir/$objectId"
+    migrateObject "$pDir/$objectId" "$pDir/objects"
+    echo $objectId > "$pDir/refs/project"
+}
 
 # main -------------------------------------------------------------------------
 
@@ -128,6 +146,8 @@ cp -a "$srcDir" "$dstDir"
 
 # then upgrade each project
 find "$dstDir" -name project | while read p; do
+
+    # migrate the project
 
     pDir=$(dirname "$p")
     echo "project: $pDir..."
@@ -174,6 +194,8 @@ find "$dstDir" -name project | while read p; do
     find "$pDir/tags" -type f | while read file; do
         migrateObject $file "$pDir/refs/tags"
     done
+
+    migrateProjectConfig "$pDir"
 
     # remove old directories files, issues, tags
     rm -rf "$pDir/files"
