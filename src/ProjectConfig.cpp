@@ -395,6 +395,18 @@ ProjectConfig ProjectConfig::parseProjectConfig(std::list<std::list<std::string>
                       tagspec.display);
             config.tags[tagspec.id] = tagspec;
 
+        } else if (token == K_PARENT) {
+            token = pop(*line);
+            config.parent = token;
+
+        } else if (token == K_CTIME) {
+            token = pop(*line);
+            config.ctime = atoi(token.c_str());
+
+        } else if (token == K_AUTHOR) {
+            token = pop(*line);
+            config.author = token;
+
         } else {
             LOG_DEBUG("Unknown function '%s'", token.c_str());
             wellFormatedLines.pop_back(); // remove incorrect line

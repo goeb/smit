@@ -1021,7 +1021,7 @@ void httpPostProjectConfig(const RequestContext *req, Project &p, User u)
             }
             ptr = &p;
         }
-        int r = ptr->modifyConfig(tokens);
+        int r = ptr->modifyConfig(tokens, u.username);
 
         if (r == 0) {
             // success, redirect to

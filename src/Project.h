@@ -21,11 +21,13 @@
 #define VIEWS_FILE "views"
 #define PATH_TAGS "refs/tags"
 #define PATH_OBJECTS "objects"
+#define PATH_PROJECT "refs/project"
 
 #define K_MESSAGE "+message" // keyword used for the message
 #define K_FILE "+file" // keyword used for uploaded files
 #define K_SUMMARY "summary"
 #define K_AMEND "+amend"
+
 
 #define K_PROJECT_TMP "tmp"
 
@@ -68,7 +70,7 @@ public:
     std::map<std::string, PredefinedView> getViews() const;
 
     inline void setConfig(ProjectConfig pconfig) { config = pconfig; }
-    int modifyConfig(std::list<std::list<std::string> > &tokens);
+    int modifyConfig(std::list<std::list<std::string> > &tokens, const std::string &author);
     static int createProjectFiles(const char *repositoryPath, const char *projectName, std::string &resultingPath);
     int reload(); // reload a project from disk storage
 

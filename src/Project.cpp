@@ -246,7 +246,7 @@ int Project::loadConfig()
     return r;
 }
 
-int Project::modifyConfig(std::list<std::list<std::string> > &tokens)
+int Project::modifyConfig(std::list<std::list<std::string> > &tokens, const std::string &author)
 {
     LOG_FUNC();
     ScopeLocker scopeLocker(lockerForConfig, LOCK_READ_WRITE);
@@ -256,15 +256,25 @@ int Project::modifyConfig(std::list<std::list<std::string> > &tokens)
 
     // keep unchanged the configuration items not managed via this modifyConfig
     c.numberIssueAcrossProjects = config.numberIssueAcrossProjects;
+    c.parent = config.id;
+    c.ctime = time(0);
 
     // write to file
     std::string data = c.serialize();
+    std::string id = getSha1(data);
 
-    std::string pathToProjectFile = path + '/';
-    pathToProjectFile += PROJECT_FILE;
-    int r = writeToFile(pathToProjectFile.c_str(), data);
+    std::string newProjectConfig = getObjectsDir() + "/" + Object::getSubpath(id);
+    mkdirs(getDirname(newProjectConfig));
+    int r = writeToFile(newProjectConfig.c_str(), data);
     if (r != 0) {
-        LOG_ERROR("Cannot write new config of project: %s", pathToProjectFile.c_str());
+        LOG_ERROR("Cannot write new config of project: %s", newProjectConfig.c_str());
+        return -1;
+    }
+    // write ref
+    std::string newProjectRef = path + "/" PATH_PROJECT;
+    r = writeToFile(newProjectRef.c_str(), id);
+    if (r != 0) {
+        LOG_ERROR("Cannot write new config of project: %s", newProjectRef.c_str());
         return -1;
     }
 

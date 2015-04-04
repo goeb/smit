@@ -1,6 +1,9 @@
 #ifndef _Object_h
 #define _Object_h
 
+#define K_PARENT "+parent"
+#define K_AUTHOR "+author"
+#define K_CTIME "+ctime"
 
 class Object {
 

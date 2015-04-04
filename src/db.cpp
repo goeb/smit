@@ -37,10 +37,6 @@
 
 #include "Project.h"
 
-#define K_PARENT "+parent"
-#define K_AUTHOR "+author"
-#define K_CTIME "+ctime"
-#define K_MERGE_PENDING ".merge-pending";
 
 // global var Db
 Database Database::Db;
