@@ -13,7 +13,7 @@ int loadFile(const std::string &filepath, std::string &data);
 
 int loadFile(const char *filepath, std::string &data);
 int loadFile(const char *filepath, const char **data);
-int writeToFile(const char *filepath, const std::string &data);
+int writeToFile(const std::string &filepath, const std::string &data);
 int writeToFile(const char *filepath, const char *data, size_t len);
 
 bool fileExists(const std::string &path);

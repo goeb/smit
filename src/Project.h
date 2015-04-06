@@ -15,13 +15,11 @@
 #include "Issue.h"
 #include "ProjectConfig.h"
 
-#define PROJECT_FILE "project"
 #define PATH_ISSUES "refs/issues" // sub-directory of a project where the entries are stored
 #define PATH_PROJECT_CONFIG "refs/project"
 #define VIEWS_FILE "views"
 #define PATH_TAGS "refs/tags"
 #define PATH_OBJECTS "objects"
-#define PATH_PROJECT "refs/project"
 
 #define K_MESSAGE "+message" // keyword used for the message
 #define K_FILE "+file" // keyword used for uploaded files

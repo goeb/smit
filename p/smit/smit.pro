@@ -33,7 +33,8 @@ SOURCES += \
     ../../src/Issue.cpp \
     ../../src/View.cpp \
     ../../src/Tag.cpp \
-    ../../src/ProjectConfig.cpp
+    ../../src/ProjectConfig.cpp \
+    ../../src/Object.cpp
 
 HEADERS += \
     ../../mongoose/mongoose.h \

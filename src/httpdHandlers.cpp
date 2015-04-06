@@ -1872,7 +1872,7 @@ void httpPushEntry(const RequestContext *req, Project &p, const std::string &iss
 
         // store the entry in a temporary location
         std::string tmpPath = p.getTmpDir() + "/" + entryId;
-        int r = writeToFile(tmpPath.c_str(), postData);
+        int r = writeToFile(tmpPath, postData);
         if (r != 0) {
             std::string msg = "Failed to store pushed entry: %s" + entryId;
             sendHttpHeader500(req, msg.c_str());

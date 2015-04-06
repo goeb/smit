@@ -270,7 +270,7 @@ std::string ProjectConfig::serialize() const
     // authors, parent, ctime
     result += K_PARENT " " + serializeSimpleToken(parent) + "\n";
     char timestamp[128];
-    sprintf(timestamp, "%d", ctime);
+    sprintf(timestamp, "%ld", ctime);
     result += K_CTIME " " + serializeSimpleToken(timestamp) + "\n";
     result += K_AUTHOR " " + serializeSimpleToken(author) + "\n";
 

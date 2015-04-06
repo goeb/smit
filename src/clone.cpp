@@ -643,7 +643,7 @@ void storeSessid(const std::string &dir, const std::string &sessid)
 {
     LOG_DEBUG("storeSessid(%s, %s)...", dir.c_str(), sessid.c_str());
     std::string path = dir + "/" PATH_SESSID;
-    int r = writeToFile(path.c_str(), sessid + "\n");
+    int r = writeToFile(path, sessid + "\n");
     if (r < 0) {
         fprintf(stderr, "Abort.\n");
         exit(1);
@@ -654,7 +654,7 @@ void storeUsername(const std::string &dir, const std::string &username)
 {
     LOG_DEBUG("storeUsername(%s, %s)...", dir.c_str(), username.c_str());
     std::string path = dir + "/" PATH_USERNAME;
-    int r = writeToFile(path.c_str(), username + "\n");
+    int r = writeToFile(path, username + "\n");
     if (r < 0) {
         fprintf(stderr, "Abort.\n");
         exit(1);
@@ -689,7 +689,7 @@ void storeUrl(const std::string &dir, const std::string &url)
     LOG_DEBUG("storeUrl(%s, %s)...", dir.c_str(), url.c_str());
     std::string path = dir + "/" PATH_URL;
 
-    int r = writeToFile(path.c_str(), url + "\n");
+    int r = writeToFile(path, url + "\n");
     if (r < 0) {
         fprintf(stderr, "Abort.\n");
         exit(1);

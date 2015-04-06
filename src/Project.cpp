@@ -266,14 +266,14 @@ int Project::modifyConfig(std::list<std::list<std::string> > &tokens, const std:
 
     std::string newProjectConfig = getObjectsDir() + "/" + Object::getSubpath(id);
     mkdirs(getDirname(newProjectConfig));
-    int r = writeToFile(newProjectConfig.c_str(), data);
+    int r = writeToFile(newProjectConfig, data);
     if (r != 0) {
         LOG_ERROR("Cannot write new config of project: %s", newProjectConfig.c_str());
         return -1;
     }
     // write ref
-    std::string newProjectRef = path + "/" PATH_PROJECT;
-    r = writeToFile(newProjectRef.c_str(), id);
+    std::string newProjectRef = path + "/" PATH_PROJECT_CONFIG;
+    r = writeToFile(newProjectRef, id);
     if (r != 0) {
         LOG_ERROR("Cannot write new config of project: %s", newProjectRef.c_str());
         return -1;
@@ -356,7 +356,7 @@ int Project::storeViewsToFile()
         fileContents += i->second.serialize() + "\n";
     }
     std::string path = getPath() + '/' + VIEWS_FILE;
-    return writeToFile(path.c_str(), fileContents);
+    return writeToFile(path, fileContents);
 }
 
 int Project::deletePredefinedView(const std::string &name)
@@ -408,58 +408,8 @@ int Project::createProjectFiles(const char *repositoryPath, const char *projectN
         return -1;
     }
 
-    // create file 'project'
-    const char* config =
-            K_SMIT_VERSION " " VERSION "\n"
-            "setPropertyLabel id \"#\"\n"
-            "addProperty status select open closed deleted\n"
-            "addProperty owner selectUser\n"
-            ;
-    std::string subpath = path  + "/" + PROJECT_FILE;
-    r = writeToFile(subpath.c_str(), config);
-    if (r != 0) {
-        LOG_ERROR("Could not create file '%s': %s", subpath.c_str(), strerror(errno));
-        return r;
-    }
-
-    // create file 'views'
-    const char* views =
-            "addView \"All Issues\" sort status-mtime+id\n"
-            "addView \"My Issues\" filterin owner me sort status-mtime+id\n"
-            ;
-    subpath = path  + "/" + VIEWS_FILE;
-    r = writeToFile(subpath.c_str(), views);
-    if (r != 0) {
-        LOG_ERROR("Could not create file '%s': %s", subpath.c_str(), strerror(errno));
-        return r;
-    }
-
-    // create directory 'objects'
-    subpath = path + "/" + PATH_OBJECTS;
-    r = mkdir(subpath);
-    if (r != 0) {
-        LOG_ERROR("Could not create directory '%s': %s", subpath.c_str(), strerror(errno));
-        return -1;
-    }
-
-    // create directory 'html'
-    subpath = path + "/html";
-    r = mkdir(subpath);
-    if (r != 0) {
-        LOG_ERROR("Could not create directory '%s': %s", subpath.c_str(), strerror(errno));
-        return -1;
-    }
-
-    // create directory 'tmp'
-    subpath = path + "/" K_PROJECT_TMP;
-    r = mkdir(subpath);
-    if (r != 0) {
-        LOG_ERROR("Could not create directory '%s': %s", subpath.c_str(), strerror(errno));
-        return -1;
-    }
-
     // create directory 'refs'
-    subpath = path + "/refs";
+    std::string subpath = path + "/refs";
     r = mkdir(subpath);
     if (r != 0) {
         LOG_ERROR("Could not create directory '%s': %s", subpath.c_str(), strerror(errno));
@@ -482,7 +432,57 @@ int Project::createProjectFiles(const char *repositoryPath, const char *projectN
         return -1;
     }
 
+    // create file 'project'
+    const char* config =
+            K_SMIT_VERSION " " VERSION "\n"
+            "setPropertyLabel id \"#\"\n"
+            "addProperty status select open closed deleted\n"
+            "addProperty owner selectUser\n"
+            ;
+    std::string id;
+    // Create object in database
+    // This also creates the directory 'objects'
+    std::string objectsDir = path + "/" + PATH_OBJECTS;
+    r = Object::write(objectsDir, config, id);
+    if (r < 0) {
+        LOG_ERROR("Could not create project config");
+        return r;
+    }
+    // Store the reference 'id'
+    subpath = path  + "/" + PATH_PROJECT_CONFIG;
+    r = writeToFile(subpath, id);
+    if (r != 0) {
+        LOG_ERROR("Could not create file '%s': %s", subpath.c_str(), strerror(errno));
+        return r;
+    }
 
+    // create file 'views'
+    const char* views =
+            "addView \"All Issues\" sort status-mtime+id\n"
+            "addView \"My Issues\" filterin owner me sort status-mtime+id\n"
+            ;
+    subpath = path  + "/" + VIEWS_FILE;
+    r = writeToFile(subpath, views);
+    if (r != 0) {
+        LOG_ERROR("Could not create file '%s': %s", subpath.c_str(), strerror(errno));
+        return r;
+    }
+
+    // create directory 'html'
+    subpath = path + "/html";
+    r = mkdir(subpath);
+    if (r != 0) {
+        LOG_ERROR("Could not create directory '%s': %s", subpath.c_str(), strerror(errno));
+        return -1;
+    }
+
+    // create directory 'tmp'
+    subpath = path + "/" K_PROJECT_TMP;
+    r = mkdir(subpath);
+    if (r != 0) {
+        LOG_ERROR("Could not create directory '%s': %s", subpath.c_str(), strerror(errno));
+        return -1;
+    }
 
     return 0;
 }
@@ -520,7 +520,7 @@ int Project::toggleTag(const std::string &entryId, const std::string &tagid)
             }
 
             // create the empty file
-            r = writeToFile(path.c_str(), "");
+            r = writeToFile(path, "");
             if (r != 0) {
                 LOG_ERROR("Cannot create tag '%s': %s", path.c_str(), strerror(errno));
                 return -1;
@@ -893,7 +893,7 @@ int Project::storeRefIssue(const std::string &issueId, const std::string &entryI
 {
     LOG_DIAG("storeRefIssue: %s -> %s", issueId.c_str(), entryId.c_str());
     std::string issuePath = path + "/" PATH_ISSUES "/" + issueId;
-    int r = writeToFile(issuePath.c_str(), entryId);
+    int r = writeToFile(issuePath, entryId);
     if (r!=0) {
         LOG_ERROR("Cannot store issue %s", issueId.c_str());
     }
@@ -1094,7 +1094,7 @@ int Project::storeEntry(const Entry *e)
         std::string subdir = getObjectsDir() + "/" + e->getSubdir();
         mkdirs(subdir); // create dir if needed
 
-        int r = writeToFile(pathOfNewEntry.c_str(), data);
+        int r = writeToFile(pathOfNewEntry, data);
         if (r != 0) {
             // error.
             LOG_ERROR("Could not write new entry to disk");

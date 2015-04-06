@@ -203,7 +203,7 @@ int UserBase::initUsersFile(const char *repository)
     path += "/";
     path += FILE_USERS;
 
-    return writeToFile(path.c_str(), "");
+    return writeToFile(path, "");
 }
 
 
@@ -219,7 +219,7 @@ int UserBase::store(const std::string &repository)
     std::string path = repository;
     path += "/";
     path += FILE_USERS;
-    return writeToFile(path.c_str(), result);
+    return writeToFile(path, result);
 }
 
 

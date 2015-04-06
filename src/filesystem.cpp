@@ -112,9 +112,9 @@ int loadFile(const char *filepath, const char **data)
   *    0 if success
   *    <0 if error
   */
-int writeToFile(const char *filepath, const std::string &data)
+int writeToFile(const std::string &filepath, const std::string &data)
 {
-    return writeToFile(filepath, data.data(), data.size());
+    return writeToFile(filepath.c_str(), data.data(), data.size());
 }
 
 int writeToFile(const char *filepath, const char *data, size_t len)
@@ -373,6 +373,12 @@ int cmpFiles(const std::string &srcPath, const std::string &destPath)
     return 0;
 }
 
+/** Compare the contents of a file with some data
+  *
+  * @return
+  *    0 equal
+  *   -1 different
+  */
 int cmpContents(const std::string &contents, const std::string &file)
 {
     std::string data;
