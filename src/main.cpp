@@ -149,36 +149,56 @@ int initRepository(int argc, char **argv)
 
 int helpProject()
 {
-    printf("Usage: smit project [<project-name>] [options]\n"
+    printf("Usage: smit project [options] [<project-path>]\n"
            "\n"
            "  List, create, or update a smit project.\n"
            "\n"
+           "  <project-path>\n"
+           "        Path to a project or a repository\n"
+           "\n"
            "Options:\n"
-           "  -c         Create a project, with a default structure. The structure\n"
-           "             may be modified online by an admin user.\n"
-           "  -d <repo>  select a repository by its path (by default . is used)\n"
+           "  -a    List all projects under the given path.\n"
+           "\n"
+           "  -c    Create a project, with a default structure. The structure\n"
+           "        may be modified online by an admin user.\n"
+           "\n"
+           "  -l    Print the project configuration.\n"
+           "\n"
+           "  -u <...>\n"
+           "        Update the project configuration. Non compatible with\n"
+           "        option '-a'.\n"
+           "\n"
           );
     return 1;
 }
 
 int cmdProject(int argc, char **argv)
 {
-    const char *repo = ".";
-    const char *projectName = 0;
+    const char *path = ".";
     bool create = false;
+    bool printall = false;
+    bool update = false;
+    bool listconfig = false;
 
     int c;
     int optionIndex = 0;
     struct option longOptions[] = { {NULL, 0, NULL, 0}  };
-    while ((c = getopt_long(argc, argv, "cd:", longOptions, &optionIndex)) != -1) {
+    while ((c = getopt_long(argc, argv, "cau:l", longOptions, &optionIndex)) != -1) {
         switch (c) {
         case 0: // manage long options
             break;
-        case 'd':
-            repo = optarg;
-            break;
         case 'c':
             create = true;
+            break;
+        case 'u':
+            // TODO
+            update = true;
+            break;
+        case 'l':
+            listconfig = true;
+            break;
+        case 'a':
+            printall = true;
             break;
         case '?': // incorrect syntax, a message is printed by getopt_long
             return helpProject();
@@ -190,7 +210,7 @@ int cmdProject(int argc, char **argv)
     }
     // manage non-option ARGV elements
     if (optind < argc) {
-        projectName = argv[optind];
+        path = argv[optind];
         optind++;
     }
     if (optind < argc) {
@@ -200,43 +220,45 @@ int cmdProject(int argc, char **argv)
 
     // set log level to hide INFO logs
     setLoggingLevel(LL_ERROR);
+    setLoggingOption(LO_CLI);
 
-    // Load all projects
-    int r = dbLoad(repo);
-    if (r < 0) {
-        LOG_ERROR("Cannot load projects of repository '%s'. Aborting.", repo);
-        return 1;
+    if (printall && update) {
+        printf("Options '-a' and '-u' not compatible.\n\n");
+        return helpProject();
     }
+    if (printall) {
+        Database::loadProjects(path, true);
 
-    if (!projectName) {
-        if (create) {
-            LOG_ERROR("Cannot create project with no name.\n");
-            return 1;
-        }
-        // list projects
-        const Project *p = Database::Db.getNextProject(0);
-        while (p) {
-            printf("%s: %d issues\n", p->getName().c_str(), p->getNumIssues());
-            p = Database::Db.getNextProject(p);
-        }
-        printf("%lu project(s)\n", L(Database::Db.getNumProjects()));
-        return 0;
-    }
-
-    if (create) {
-        std::string resultingPath;
-        r = Project::createProjectFiles(repo, projectName, resultingPath);
-        if (r < 0) return 1;
-        printf("Project created: %s\n", resultingPath.c_str());
     } else {
-        // print project
-        const Project* p = Database::Db.getProject(projectName);
-        if (!p) {
-            printf("No such project: %s\n", projectName);
-            return 1;
+        if (create) {
+            if (fileExists(path)) {
+                printf("Cannot create project: existing file or directory '%s'\n", path);
+                return 1;
+            }
+            std::string resultingPath;
+            std::string projectName = getBasename(path);
+            std::string repo = getDirname(path);
+            int r = Project::createProjectFiles(repo, projectName, resultingPath);
+            if (r < 0) return 1;
+            printf("Project created: %s\n", resultingPath.c_str());
         }
-        printf("%s: %d issue(s)\n", projectName, p->getNumIssues());
+        Database::loadProjects(path, false); // do not recurse in sub directories
     }
+
+    const Project *p = Database::Db.getNextProject(0);
+    while (p) {
+        if (listconfig) {
+            std::string config = p->getConfig().serialize();
+            printf("Configuration of project '%s':\n", p->getName().c_str());
+            printf("%s\n", config.c_str());
+        } else {
+            // simply list projects
+            printf("%s: %d issues\n", p->getName().c_str(), p->getNumIssues());
+        }
+        p = Database::Db.getNextProject(p);
+    }
+    printf("%lu project(s)\n", L(Database::Db.getNumProjects()));
+
     return 0;
 }
 

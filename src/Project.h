@@ -35,7 +35,7 @@
 
 class Project {
 public:
-    static Project *init(const char *path); // init and load a project
+    static Project *init(const std::string &path); // init and load a project
     static bool isProject(const std::string &path);
     // methods for handling issues
     std::vector<const Issue*> search(const char *fulltextSearch,
@@ -69,7 +69,8 @@ public:
 
     inline void setConfig(ProjectConfig pconfig) { config = pconfig; }
     int modifyConfig(std::list<std::list<std::string> > &tokens, const std::string &author);
-    static int createProjectFiles(const char *repositoryPath, const char *projectName, std::string &resultingPath);
+    static int createProjectFiles(const std::string &repositoryPath, const std::string &projectName,
+                                  std::string &resultingPath);
     int reload(); // reload a project from disk storage
 
     // methods for database access

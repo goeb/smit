@@ -63,10 +63,10 @@
   *     url-decoding, so that a double url-encoding would not be enough.
   */
 
-Project *Project::init(const char *path)
+Project *Project::init(const std::string &path)
 {
     Project *p = new Project;
-    LOG_DEBUG("Loading project %s (%p)...", path, p);
+    LOG_DEBUG("Loading project %s (%p)...", path.c_str(), p);
 
     std::string bname = getBasename(path);
     p->name = urlNameDecode(bname);
@@ -396,9 +396,10 @@ PredefinedView Project::getDefaultView() const
 
 /** Create the directory and files for a new project
   */
-int Project::createProjectFiles(const char *repositoryPath, const char *projectName, std::string &resultingPath)
+int Project::createProjectFiles(const std::string &repositoryPath, const std::string &projectName,
+                                std::string &resultingPath)
 {
-    if (! projectName || strlen(projectName) == 0) {
+    if (projectName.empty()) {
         LOG_ERROR("Cannot create project with empty name");
         return -1;
     }

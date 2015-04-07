@@ -261,9 +261,9 @@ std::string getFileSize(const std::string &path)
 }
 
 
-DIR *openDir(const char *path)
+DIR *openDir(const std::string &path)
 {
-    return opendir(path);
+    return opendir(path.c_str());
 }
 
 std::string getNextFile(DIR *d)

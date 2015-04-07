@@ -34,49 +34,53 @@
 #include "global.h"
 #include "stringTools.h"
 #include "mg_win32.h"
-
+#include "filesystem.h"
 #include "Project.h"
 
 
 // global var Db
 Database Database::Db;
 
-
-int dbLoad(const char * pathToRepository)
+int dbLoad(const char * path)
 {
-    // look for all files "pathToRepository/p/project"
-    // and parse them
-    // then, load all pathToRepository/p/issues/*/*
-
-    Database::Db.pathToRepository = pathToRepository;
-    DIR *dirp;
-
-    if ((dirp = opendir(pathToRepository)) == NULL) {
-        return -1;
-
-    } else {
-        struct dirent *dp;
-
-        while ((dp = readdir(dirp)) != NULL) {
-            // Do not show current dir and hidden files
-            LOG_DEBUG("d_name=%s", dp->d_name);
-            if (0 == strcmp(dp->d_name, ".")) continue;
-            if (0 == strcmp(dp->d_name, "..")) continue;
-            std::string pathToProject = pathToRepository;
-            pathToProject += '/';
-            pathToProject += dp->d_name;
-            if (Project::isProject(pathToProject)) {
-                Database::loadProject(pathToProject.c_str());
-            }
-        }
-        closedir(dirp);
-    }
-    return Database::Db.getNumProjects();
+    Database::Db.pathToRepository = path;
+    int n = Database::Db.loadProjects(path, true);
+    return n;
 }
 
+/** Recursively load all projects under the given path
+  *
+  * @return
+  *    number of projects found
+  */
+int Database::loadProjects(const std::string &path, bool recurse)
+{
+    LOG_DEBUG("loadProjects(%s)", path.c_str());
 
+    int result = 0;
 
+    if (Project::isProject(path)) {
+        Project *p = Database::loadProject(path);
+        if (p) result += 1;
+    }
 
+    if (recurse) {
+        DIR *dirp;
+        if ((dirp = openDir(path)) == NULL) {
+            return 0;
+
+        } else {
+            std::string f;
+            while ((f = getNextFile(dirp)) != "") {
+                std::string subpath = path + "/" + f;
+                if (isDir(subpath)) result += loadProjects(subpath, recurse); // recurse
+            }
+            closedir(dirp);
+        }
+    }
+
+    return result;
+}
 
 
 Project *Database::createProject(const std::string &name)
@@ -89,7 +93,7 @@ Project *Database::createProject(const std::string &name)
     return p;
 }
 
-Project *Database::loadProject(const char *path)
+Project *Database::loadProject(const std::string &path)
 {
     Project *p = Project::init(path);
     if (!p) return 0;

@@ -23,7 +23,7 @@ int mkdirs(const std::string &path);
 std::string getExePath();
 std::string getFileSize(const std::string &path);
 
-DIR *openDir(const char *path);
+DIR *openDir(const std::string &path);
 std::string getNextFile(DIR *d);
 void closeDir(DIR *d);
 
