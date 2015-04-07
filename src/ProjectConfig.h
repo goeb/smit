@@ -36,6 +36,8 @@ struct PropertySpec {
     enum PropertyType type;
     std::list<std::string> selectOptions; // for F_SELECT and F_MULTISELECT only
     std::string reverseLabel; // for F_RELATIONSHIP
+
+    static PropertySpec parsePropertySpec(std::list<std::string> & tokens);
 };
 
 
@@ -59,6 +61,7 @@ struct ProjectConfig {
     static int load(const std::string &path, ProjectConfig &config);
     std::string serialize() const;
     static ProjectConfig parseProjectConfig(std::list<std::list<std::string> > &lines);
+    int addProperty(std::list<std::string> &tokens);
     const PropertySpec *getPropertySpec(const std::string name) const;
     std::list<std::string> getPropertiesNames() const;
     static std::list<std::string> getReservedProperties();

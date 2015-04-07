@@ -272,6 +272,7 @@ int Project::modifyConfig(std::list<std::list<std::string> > &tokens, const std:
     std::string data = c.serialize();
     std::string id = getSha1(data);
 
+    // TODO use Object::write()
     std::string newProjectConfig = getObjectsDir() + "/" + Object::getSubpath(id);
     mkdirs(getDirname(newProjectConfig));
     int r = writeToFile(newProjectConfig, data);

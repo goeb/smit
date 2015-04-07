@@ -161,7 +161,7 @@ bool ProjectConfig::isValidProjectName(const std::string &name)
 }
 
 
-PropertySpec parsePropertySpec(std::list<std::string> & tokens)
+PropertySpec PropertySpec::parsePropertySpec(std::list<std::string> & tokens)
 {
     // Supported syntax:
     // name [label <label>] type params ...
@@ -329,6 +329,27 @@ std::string ProjectConfig::serialize() const
     return result;
 }
 
+/** Add a property
+  *
+  * @param[in/out] tokens
+  *    The tokens are consumed.
+  */
+int ProjectConfig::addProperty(std::list<std::string> &tokens)
+{
+    PropertySpec property = PropertySpec::parsePropertySpec(tokens);
+    if (property.name.size() > 0) {
+        properties.push_back(property);
+        LOG_DEBUG("properties: added %s", property.name.c_str());
+
+        if (! property.label.empty()) propertyLabels[property.name] = property.label;
+        if (! property.reverseLabel.empty()) propertyReverseLabels[property.name] = property.reverseLabel;
+
+        return 0;
+    } else {
+        // syntax error or other error
+        return -1;
+    }
+}
 
 /** Return a configuration object from a list of lines of tokens
   * The 'lines' parameter is modified and cleaned up of incorrect lines
@@ -350,15 +371,8 @@ ProjectConfig ProjectConfig::parseProjectConfig(std::list<std::list<std::string>
             LOG_DEBUG("Smit version of project: %s", v.c_str());
 
         } else if (0 == token.compare("addProperty")) {
-            PropertySpec property = parsePropertySpec(*line);
-            if (property.name.size() > 0) {
-                config.properties.push_back(property);
-                LOG_DEBUG("properties: added %s", property.name.c_str());
-
-                if (! property.label.empty()) config.propertyLabels[property.name] = property.label;
-                if (! property.reverseLabel.empty()) config.propertyReverseLabels[property.name] = property.reverseLabel;
-
-            } else {
+            int r = config.addProperty(*line);
+            if (r != 0) {
                 // parse error, ignore
                 wellFormatedLines.pop_back(); // remove incorrect line
             }
