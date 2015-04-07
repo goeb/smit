@@ -83,6 +83,14 @@ Project *Project::init(const char *path)
     return p;
 }
 
+/** Tell if a path looks like a project
+  */
+bool Project::isProject(const std::string &path)
+{
+    return fileExists(path + "/" + PATH_PROJECT_CONFIG);
+}
+
+
 /** Load a project: configuration, views, entries, tags
   *
   * @return

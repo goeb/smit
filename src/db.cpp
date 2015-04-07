@@ -65,7 +65,9 @@ int dbLoad(const char * pathToRepository)
             std::string pathToProject = pathToRepository;
             pathToProject += '/';
             pathToProject += dp->d_name;
-            Database::loadProject(pathToProject.c_str());
+            if (Project::isProject(pathToProject)) {
+                Database::loadProject(pathToProject.c_str());
+            }
         }
         closedir(dirp);
     }

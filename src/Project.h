@@ -36,7 +36,7 @@
 class Project {
 public:
     static Project *init(const char *path); // init and load a project
-
+    static bool isProject(const std::string &path);
     // methods for handling issues
     std::vector<const Issue*> search(const char *fulltextSearch,
                                const std::map<std::string, std::list<std::string> > &filterIn,
