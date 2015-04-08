@@ -443,12 +443,7 @@ int Project::createProjectFiles(const std::string &repositoryPath, const std::st
     }
 
     // create file 'project'
-    const char* config =
-            K_SMIT_VERSION " " VERSION "\n"
-            "setPropertyLabel id \"#\"\n"
-            "addProperty status select open closed deleted\n"
-            "addProperty owner selectUser\n"
-            ;
+    const std::string config = ProjectConfig::getDefaultConfig();
     std::string id;
     // Create object in database
     // This also creates the directory 'objects'

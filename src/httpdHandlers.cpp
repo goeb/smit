@@ -923,7 +923,7 @@ void httpPostProjectConfig(const RequestContext *req, Project &p, User u)
                         // case of reserved properties (id, ctime, mtime, etc.)
                         if (label != propertyName) {
                             std::list<std::string> line;
-                            line.push_back("setPropertyLabel");
+                            line.push_back(KEY_SET_PROPERTY_LABEL);
                             line.push_back(propertyName);
                             line.push_back(label);
                             tokens.push_back(line);
@@ -942,7 +942,7 @@ void httpPostProjectConfig(const RequestContext *req, Project &p, User u)
                         }
 
                         std::list<std::string> line;
-                        line.push_back("addProperty");
+                        line.push_back(KEY_ADD_PROPERTY);
                         line.push_back(propertyName);
                         if (label != propertyName) {
                             line.push_back("-label");

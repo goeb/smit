@@ -40,6 +40,13 @@ struct PropertySpec {
     static PropertySpec parsePropertySpec(std::list<std::string> & tokens);
 };
 
+#define KEY_ADD_PROPERTY "addProperty"
+#define KEY_SET_PROPERTY_LABEL "setPropertyLabel"
+#define KEY_NUMBER_ISSUES "numberIssues"
+#define KEY_TAG "tag"
+#define OPT_LABEL "-label"
+#define OPT_REVERSE_LABEL "-reverseLabel"
+#define OPT_DISPLAY "-display"
 
 struct ProjectConfig {
     ProjectConfig() : numberIssueAcrossProjects(false) {}
@@ -70,6 +77,7 @@ struct ProjectConfig {
     std::string getReverseLabelOfProperty(const std::string &propertyName) const;
     bool isValidPropertyName(const std::string &name) const;
     static bool isValidProjectName(const std::string &name);
+    static std::string getDefaultConfig();
 };
 
 

@@ -160,6 +160,18 @@ bool ProjectConfig::isValidProjectName(const std::string &name)
     return true;
 }
 
+std::string ProjectConfig::getDefaultConfig()
+{
+    std::string defaultConfig =
+            K_SMIT_VERSION " " VERSION "\n"
+            KEY_SET_PROPERTY_LABEL " id \"#\"\n"
+            KEY_ADD_PROPERTY " status select open closed deleted\n"
+            KEY_ADD_PROPERTY " owner selectUser\n"
+            ;
+    return defaultConfig;
+}
+
+
 
 PropertySpec PropertySpec::parsePropertySpec(std::list<std::string> & tokens)
 {
@@ -229,7 +241,7 @@ PropertySpec PropertySpec::parsePropertySpec(std::list<std::string> & tokens)
     } else if (F_ASSOCIATION == pspec.type) {
         if (tokens.size() > 1) {
             // expect -reverseLabel
-            if (tokens.front() == "-reverseLabel") {
+            if (tokens.front() == OPT_REVERSE_LABEL) {
                 tokens.pop_front();
                 pspec.reverseLabel = tokens.front();
                 tokens.pop_front();
@@ -282,7 +294,7 @@ std::string ProjectConfig::serialize() const
         std::map<std::string, std::string>::const_iterator label;
         label = propertyLabels.find(*r);
         if (label != propertyLabels.end() && label->second != *r) {
-            result += "setPropertyLabel " + (*r) + " " + serializeSimpleToken(label->second) + "\n";
+            result += KEY_SET_PROPERTY_LABEL " " + (*r) + " " + serializeSimpleToken(label->second) + "\n";
         }
     }
 
@@ -290,7 +302,7 @@ std::string ProjectConfig::serialize() const
     std::list<PropertySpec>::const_iterator p; // user defined properties
     FOREACH(p, properties) {
         PropertySpec pspec = *p;
-        result += "addProperty " + serializeSimpleToken(pspec.name);
+        result += KEY_ADD_PROPERTY " " + serializeSimpleToken(pspec.name);
         if (! pspec.label.empty() && pspec.label != pspec.name) {
             result += " -label " + serializeSimpleToken(pspec.label);
         }
@@ -303,7 +315,7 @@ std::string ProjectConfig::serialize() const
             }
 
         } else if (pspec.type == F_ASSOCIATION && !pspec.reverseLabel.empty()) {
-            result += " -reverseLabel " + serializeSimpleToken(pspec.reverseLabel);
+            result += " " OPT_REVERSE_LABEL " " + serializeSimpleToken(pspec.reverseLabel);
         }
 
         result += "\n";
@@ -313,17 +325,17 @@ std::string ProjectConfig::serialize() const
     std::map<std::string, TagSpec>::const_iterator tag;
     FOREACH(tag, tags) {
         TagSpec tspec = tag->second;
-        result += "tag " + serializeSimpleToken(tspec.id);
+        result += KEY_TAG " " + serializeSimpleToken(tspec.id);
         if (!tspec.label.empty() && tspec.label != tspec.id) {
-            result += " -label " + serializeSimpleToken(tspec.label);
+            result += " " OPT_LABEL " " + serializeSimpleToken(tspec.label);
         }
-        if (tspec.display) result += " -display";
+        if (tspec.display) result += " " OPT_DISPLAY;
         result += "\n";
     }
 
     // numbering policy
     if (numberIssueAcrossProjects) {
-        result += serializeProperty("numberIssues", "global");
+        result += serializeProperty(KEY_NUMBER_ISSUES, "global");
     }
 
     return result;
@@ -370,16 +382,16 @@ ProjectConfig ProjectConfig::parseProjectConfig(std::list<std::list<std::string>
             std::string v = pop(*line);
             LOG_DEBUG("Smit version of project: %s", v.c_str());
 
-        } else if (0 == token.compare("addProperty")) {
+        } else if (token == KEY_ADD_PROPERTY) {
             int r = config.addProperty(*line);
             if (r != 0) {
                 // parse error, ignore
                 wellFormatedLines.pop_back(); // remove incorrect line
             }
 
-        } else if (0 == token.compare("setPropertyLabel")) {
+        } else if (token == KEY_SET_PROPERTY_LABEL) {
             if (line->size() != 2) {
-                LOG_ERROR("Invalid setPropertyLabel");
+                LOG_ERROR("Invalid %s", KEY_SET_PROPERTY_LABEL);
                 wellFormatedLines.pop_back(); // remove incorrect line
             } else {
                 std::string propName = line->front();
@@ -387,25 +399,25 @@ ProjectConfig ProjectConfig::parseProjectConfig(std::list<std::list<std::string>
                 config.propertyLabels[propName] = propLabel;
             }
 
-        } else if (token == "numberIssues") {
+        } else if (token == KEY_NUMBER_ISSUES) {
             std::string value = pop(*line);
             if (value == "global") config.numberIssueAcrossProjects = true;
-            else LOG_ERROR("Invalid value '%s' for numberIssues.", value.c_str());
+            else LOG_ERROR("Invalid value '%s' for %s.", value.c_str(), KEY_NUMBER_ISSUES);
 
-        } else if (token == "tag") {
+        } else if (token == KEY_TAG) {
             TagSpec tagspec;
             tagspec.id = pop(*line);
             tagspec.label = tagspec.id; // by default label = id
 
             if (tagspec.id.empty()) {
-                LOG_ERROR("Invalid tag id");
+                LOG_ERROR("Invalid %s id", KEY_TAG);
                 continue; // ignore current line and go to next one
             }
             while (line->size()) {
                 token = pop(*line);
                 if (token == "-label") {
                     std::string label = pop(*line);
-                    if (label.empty()) LOG_ERROR("Invalid empty tag label");
+                    if (label.empty()) LOG_ERROR("Invalid empty %s label", KEY_TAG);
                     else tagspec.label = label;
                 } else if (token == "-display") {
                     tagspec.display = true;
@@ -413,8 +425,8 @@ ProjectConfig ProjectConfig::parseProjectConfig(std::list<std::list<std::string>
                     LOG_ERROR("Invalid token '%s' in tag specification", token.c_str());
                 }
             }
-            LOG_DEBUG("tag '%s' -label '%s' -display=%d", tagspec.id.c_str(), tagspec.label.c_str(),
-                      tagspec.display);
+            LOG_DEBUG("%s '%s' -label '%s' -display=%d", KEY_TAG, tagspec.id.c_str(),
+                      tagspec.label.c_str(), tagspec.display);
             config.tags[tagspec.id] = tagspec;
 
         } else if (token == K_PARENT) {
