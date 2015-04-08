@@ -149,12 +149,16 @@ int initRepository(int argc, char **argv)
 
 int helpProject()
 {
-    printf("Usage: smit project [options] [<project-path>]\n"
+    printf("Usage: smit project [options] [<project-path> [<action> ...]]\n"
            "\n"
            "  List, create, or update a smit project.\n"
            "\n"
            "  <project-path>\n"
            "        Path to a project or a repository\n"
+           "\n"
+           "  <action>\n"
+           "        Update the project configuration. Non compatible with\n"
+           "        option '-a'.\n"
            "\n"
            "Options:\n"
            "  -a    List all projects under the given path.\n"
@@ -164,10 +168,10 @@ int helpProject()
            "\n"
            "  -l    Print the project configuration.\n"
            "\n"
-           "  -u <...>\n"
-           "        Update the project configuration. Non compatible with\n"
-           "        option '-a'.\n"
-           "\n"
+           "Example:\n"
+           "  smit project -c example addProperty \"priority select high low\"\n"
+           "  smit project example addProperty \"friendly_name text\"\n"
+           "  smit project example delProperty friendly_name\n"
           );
     return 1;
 }
@@ -183,22 +187,18 @@ int cmdProject(int argc, char **argv)
     int c;
     int optionIndex = 0;
     struct option longOptions[] = { {NULL, 0, NULL, 0}  };
-    while ((c = getopt_long(argc, argv, "cau:l", longOptions, &optionIndex)) != -1) {
+    while ((c = getopt_long(argc, argv, "acl", longOptions, &optionIndex)) != -1) {
         switch (c) {
         case 0: // manage long options
+            break;
+        case 'a':
+            printall = true;
             break;
         case 'c':
             create = true;
             break;
-        case 'u':
-            // TODO
-            update = true;
-            break;
         case 'l':
             listconfig = true;
-            break;
-        case 'a':
-            printall = true;
             break;
         case '?': // incorrect syntax, a message is printed by getopt_long
             return helpProject();
@@ -213,9 +213,33 @@ int cmdProject(int argc, char **argv)
         path = argv[optind];
         optind++;
     }
-    if (optind < argc) {
-        printf("Too many arguments.\n\n");
-        return helpProject();
+    std::list<std::string> updateActions;
+    while (optind < argc) {
+        // actions go by pair
+        std::string verb = argv[optind];
+        optind++;
+
+        if (verb == "addProperty" || verb == "tag" ||
+                verb == "numberIssues" || verb == "setPropertyLabel" ||
+                verb == "delProperty") {
+            // ok
+        } else {
+            printf("Invalid action '%s'. Allowed values are: \n"
+                   "  addProperty\n  setPropertyLabel\n  numberIssues\n  setPropertyLabel\n  delProperty"
+                   "\n\n", verb.c_str());
+            return helpProject();
+        }
+
+        if (optind >= argc) {
+            printf("Invalid action '%s': missing second argument\n\n", verb.c_str());
+            return helpProject();
+        }
+
+        std::string arg = argv[optind];
+        optind++;
+
+        updateActions.push_back(verb);
+        updateActions.push_back(arg);
     }
 
     // set log level to hide INFO logs
@@ -243,6 +267,9 @@ int cmdProject(int argc, char **argv)
             printf("Project created: %s\n", resultingPath.c_str());
         }
         Database::loadProjects(path, false); // do not recurse in sub directories
+        if (updateActions.size() > 0) {
+            // TODO
+        }
     }
 
     const Project *p = Database::Db.getNextProject(0);
