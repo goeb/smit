@@ -19,8 +19,8 @@ init() {
     REPO=testdir # just to be sure before the rm -rf
     rm -rf $REPO && mkdir $REPO
     $SMIT init $REPO
-    $SMIT project -c $PROJECT -d $REPO
-    $SMIT project $PROJECT -d $REPO
+    $SMIT project -c $REPO/$PROJECT
+    $SMIT project $REPO/$PROJECT
     $SMIT user $USER --passwd $PASSWD --project $PROJECT:rw -d $REPO
 }
 start() {

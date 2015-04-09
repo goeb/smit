@@ -21,12 +21,11 @@ CLONE=cloneX
 init() {
     mkdir $REPO
     $SMIT init $REPO
-    $SMIT project -c $PROJECT1 -d $REPO
+    $SMIT project -c $REPO/$PROJECT1
+    $SMIT project $REPO/$PROJECT1 addProperty "freeText text"
+    $SMIT project $REPO/$PROJECT1 addProperty "manager text"
+
     $SMIT user $USER1 --passwd $PASSWD1 --project $PROJECT1:rw -d $REPO
-    # add custom property
-    chmod u+w $REPO/$PROJECT1/project
-    echo "addProperty freeText text" >> $REPO/$PROJECT1/project
-    echo "addProperty manager text" >> $REPO/$PROJECT1/project
 
     # create issue 1
     $SMIT issue $REPO/$PROJECT1 -a - "summary=first issue" freeText="creation of issue1"

@@ -19,12 +19,12 @@ PORT=8099
 init() {
     mkdir $REPO
     $SMIT init $REPO
-    $SMIT project -c $PROJECT1 -d $REPO
-    $SMIT user $USER1 --passwd $PASSWD1 --project $PROJECT1:rw -d $REPO
+    $SMIT project -c $REPO/$PROJECT1
     # add custom property
-    chmod u+w $REPO/$PROJECT1/project
-    echo "addProperty color select blue green yellow" >> $REPO/$PROJECT1/project
-    echo "addProperty freeText text" >> $REPO/$PROJECT1/project
+    $SMIT project $REPO/$PROJECT1 addProperty "color select blue green yellow"
+    $SMIT project $REPO/$PROJECT1 addProperty "freeText text"
+
+    $SMIT user $USER1 --passwd $PASSWD1 --project $PROJECT1:rw -d $REPO
 
     # create some entries
     # create issue 1

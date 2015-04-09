@@ -219,12 +219,13 @@ int cmdProject(int argc, char **argv)
         std::string verb = argv[optind];
         optind++;
 
-        if (verb == "addProperty") {
+        if (verb == "addProperty" || verb == "numberIssues") {
             // ok
         } else {
             printf("Invalid action '%s'. Allowed values are: \n"
-                   "  addProperty"
-                   "\n\n", verb.c_str());
+                   "  addProperty\n"
+                   "  numberIssues\n"
+                   "\n", verb.c_str());
             return helpProject();
         }
 
@@ -283,6 +284,9 @@ int cmdProject(int argc, char **argv)
                         printf("Cannot addProperty: check the syntax\n");
                         return 1;
                     }
+                } else if (action->first == "numberIssues") {
+                    if (action->second == "global") config.numberIssueAcrossProjects = true;
+                    else config.numberIssueAcrossProjects = false;
                 }
             }
 

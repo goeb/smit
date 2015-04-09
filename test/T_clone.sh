@@ -25,8 +25,8 @@ init() {
     REPO=trepo # just to be sure before the rm -rf
     mkdir $REPO
     $SMIT init $REPO
-    $SMIT project -c $PROJECT1 -d $REPO
-    $SMIT project -c $PROJECT2 -d $REPO
+    $SMIT project -c $REPO/$PROJECT1
+    $SMIT project -c $REPO/$PROJECT2
     $SMIT user $USER1 --passwd $PASSWD1 --project $PROJECT1:rw -d $REPO
     $SMIT user $USER2 --passwd $PASSWD2 --project $PROJECT2:rw -d $REPO
 
@@ -73,7 +73,7 @@ $SMIT clone http://127.0.0.1:$PORT --user $USER1 --passwd $PASSWD1 clone1
 echo $?
 # check that clone of p1 has the files
 echo "Clone of p1" >> $TEST_NAME.out
-$SMIT project -d clone1 >> $TEST_NAME.out
+$SMIT project clone1 -a >> $TEST_NAME.out
 [ -f clone1/$PROJECT1/objects/00/file1 ] || fail "missing file 'clone1/$PROJECT1/files/file1'"
 [ -f clone1/$PROJECT2/objects/00/file2 ] && fail "unexpected file 'clone1/$PROJECT2/files/file2'"
 
@@ -86,7 +86,7 @@ $SMIT clone http://127.0.0.1:$PORT --user $USER2 --passwd $PASSWD2 clone2
 
 # check that clone of p2 has the files
 echo "Clone of p2" >> $TEST_NAME.out
-$SMIT project -d clone2 >> $TEST_NAME.out
+$SMIT project clone2 -a >> $TEST_NAME.out
 [ -f clone2/$PROJECT1/objects/00/file1 ] && fail "unexpected file 'clone2/$PROJECT1/files/file1'"
 [ -f clone2/$PROJECT2/objects/00/file2 ] || fail "missing file 'clone2/$PROJECT2/files/file2'"
 
