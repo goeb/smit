@@ -19,8 +19,8 @@ public:
       *     return: 01/020304
       */
     static std::string getSubpath(const std::string &id);
-    static std::string getSubdir(const std::string &id);
 
+    static int write(const std::string &objectsDir, const char *data, size_t size, std::string &id);
     static int write(const std::string &objectsDir, const std::string &data, std::string &id);
 
 };

@@ -32,6 +32,7 @@ int copyFile(const std::string &srcPath, const std::string &destPath);
 std::string getTmpPath(const std::string &path);
 
 int cmpFiles(const std::string &srcPath, const std::string &destPath);
+int cmpContents(const char *contents, size_t size, const std::string &file);
 int cmpContents(const std::string &contents, const std::string &file);
 
 int mkdir(const std::string &path);

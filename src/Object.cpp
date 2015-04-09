@@ -16,14 +16,6 @@ std::string Object::getSubpath(const std::string &id) {
     }
 }
 
-std::string Object::getSubdir(const std::string &id) {
-    if (id.size() <= 2) return "xx";
-    else {
-        std::string subdir = id.substr(0, 2);
-        return subdir;
-    }
-}
-
 /** Write an object into a database
   *
   * @param[out] id
@@ -35,10 +27,12 @@ std::string Object::getSubdir(const std::string &id) {
   *   -1 error,
   *   -2 error, sha1 conflict
   */
-int Object::write(const std::string &objectsDir, const std::string &data, std::string &id)
+int Object::write(const std::string &objectsDir, const char *data, size_t size, std::string &id)
 {
-    id = getSha1(data);
+    id = getSha1(data, size);
     std::string path = objectsDir + "/" + getSubpath(id);
+
+    LOG_DIAG("Write object: %s", path.c_str());
 
     if (fileExists(path)) {
         // check if files are the same
@@ -59,4 +53,8 @@ int Object::write(const std::string &objectsDir, const std::string &data, std::s
     return 0;
 }
 
+int Object::write(const std::string &objectsDir, const std::string &data, std::string &id)
+{
+    return write(objectsDir, data.data(), data.size(), id);
+}
 

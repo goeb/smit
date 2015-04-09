@@ -379,7 +379,7 @@ int cmpFiles(const std::string &srcPath, const std::string &destPath)
   *    0 equal
   *   -1 different
   */
-int cmpContents(const std::string &contents, const std::string &file)
+int cmpContents(const char *contents, size_t size, const std::string &file)
 {
     std::string data;
     int r = loadFile(file.c_str(), data);
@@ -389,5 +389,11 @@ int cmpContents(const std::string &contents, const std::string &file)
     if (contents == data) return 0;
     else return -1;
 }
+
+int cmpContents(const std::string &contents, const std::string &file)
+{
+    return cmpContents(contents.data(), contents.size(), file);
+}
+
 
 

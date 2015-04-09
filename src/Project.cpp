@@ -281,7 +281,7 @@ int Project::modifyConfig(ProjectConfig newConfig, const std::string &author)
     // write into objects database
     std::string id;
     int r = Object::write(getObjectsDir(), data, id);
-    if (r != 0) {
+    if (r < 0) {
         LOG_ERROR("Cannot write new config of project: id=%s", id.c_str());
         return -1;
     }
@@ -619,6 +619,8 @@ int Project::addFile(const std::string &objectId)
 
     std::string srcPath = getTmpDir() + "/" + objectId;
     std::string destPath = getObjectsDir() + "/" + Object::getSubpath(objectId);
+
+    // TODO use Object::insertFile(getObjectsDir(), srcPath, id)
 
     // check that the hash of the file contents matches the file name (the 40 first characters)
     std::string sha1 = getSha1OfFile(srcPath);
@@ -1084,40 +1086,21 @@ Issue *Project::createNewIssue()
   */
 int Project::storeEntry(const Entry *e)
 {
-    std::string pathOfNewEntry = getObjectsDir() + "/" + e->getSubpath();
     const std::string data = e->serialize();
 
-    if (fileExists(pathOfNewEntry)) {
-        int r = cmpContents(data, pathOfNewEntry);
-        if (r != 0) {
-            // Sha1 conflict: the client's entry and the server's entry
-            // have same sha1 but different contents.
-            // Reject the client's request.
-            LOG_ERROR("Push-entry: sha1 conflict on entry %s", e->id.c_str());
-            return -1;
-        }
-        // the pushed entry is already there (from previous push & fail?)
-
-    } else {
-
-        // store the entry
-        std::string subdir = getObjectsDir() + "/" + e->getSubdir();
-        mkdirs(subdir); // create dir if needed
-
-        int r = writeToFile(pathOfNewEntry, data);
-        if (r != 0) {
-            // error.
-            LOG_ERROR("Could not write new entry to disk");
-            return -2;
-        }
+    // store the entry
+    std::string id;
+    int r = Object::write(getObjectsDir(), data, id);
+    if (r < 0) {
+        // error.
+        LOG_ERROR("Could not write new entry to disk");
+        return -2;
     }
 
     // check for debug TODO
-    std::string s = getSha1OfFile(pathOfNewEntry);
-    if (s != e->id) {
-        LOG_ERROR("sha1 do not match: s=%s <> e->id=%s", s.c_str(), e->id.c_str());
+    if (id != e->id) {
+        LOG_ERROR("sha1 do not match: s=%s <> e->id=%s", id.c_str(), e->id.c_str());
     }
-
 
     return 0;
 }

@@ -1804,30 +1804,15 @@ void parseMultipartAndStoreUploadedFiles(const std::string &data, std::string bo
                 size_t lastSlash = filename.find_last_of("\\/");
                 if (lastSlash != std::string::npos) filename = filename.substr(lastSlash+1);
 
-                std::string id = getSha1(p, size);
-                std::string base = id + "/" + filename;
 
-                // store to tmpDirectory
-                std::string destDir = project.getObjectsDir() + "/" + Object::getSubdir(id);
-                std::string destFile = project.getObjectsDir() + "/" + Object::getSubpath(id);
-
-                LOG_DEBUG("New file: %s => %s (size %lu)", filename.c_str(), id.c_str(), L(size));
-
-                if (fileExists(destFile)) {
-                    LOG_INFO("File already existing: %s", destFile.c_str());
-                    // no problem. It has been uploaded previously...
-
-                } else {
-
-                    mkdirs(destDir);
-
-                    int r = writeToFile(destFile.c_str(), p, size);
-                    if (r < 0) {
-                        LOG_ERROR("Could not store uploaded file: %s", destFile.c_str());
-                        return;
-                    }
+                // store to objects directory
+                std::string objectid;
+                int r = Object::write(project.getObjectsDir(), p, size, objectid);
+                if (r < 0) {
+                    LOG_ERROR("Could not store uploaded file: %s", filename.c_str());
+                    return;
                 }
-
+                std::string base = objectid + "/" + filename;
                 vars[name].push_back(base);
 
             } // else: empty file, ignore.
