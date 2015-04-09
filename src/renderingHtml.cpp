@@ -402,8 +402,8 @@ void RHtml::printPageView(const ContextParameters &ctx, const PredefinedView &pv
 
     // Colums specification
     if (!pv.colspec.empty()) {
-        std::vector<std::string> items = split(pv.colspec, " +");
-        std::vector<std::string>::iterator i;
+        std::list<std::string> items = split(pv.colspec, " +");
+        std::list<std::string>::iterator i;
         FOREACH(i, items) {
             ctx.req->printf("addColspec('%s');\n", enquoteJs(*i).c_str());
         }

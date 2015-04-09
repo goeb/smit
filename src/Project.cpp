@@ -257,27 +257,32 @@ int Project::loadConfig()
 int Project::modifyConfig(std::list<std::list<std::string> > &tokens, const std::string &author)
 {
     LOG_FUNC();
-    ScopeLocker scopeLocker(lockerForConfig, LOCK_READ_WRITE);
-
     // verify the syntax of the tokens
     ProjectConfig c = ProjectConfig::parseProjectConfig(tokens);
 
     // keep unchanged the configuration items not managed via this modifyConfig
     c.numberIssueAcrossProjects = config.numberIssueAcrossProjects;
-    c.parent = config.id;
-    c.ctime = time(0);
-    c.author = author;
+
+    return modifyConfig(c, author);
+}
+
+int Project::modifyConfig(ProjectConfig newConfig, const std::string &author)
+{
+    LOG_FUNC();
+    ScopeLocker scopeLocker(lockerForConfig, LOCK_READ_WRITE);
+
+    newConfig.ctime = time(0);
+    newConfig.parent = config.id;
+    newConfig.author = author;
 
     // write to file
-    std::string data = c.serialize();
-    std::string id = getSha1(data);
+    std::string data = newConfig.serialize();
 
-    // TODO use Object::write()
-    std::string newProjectConfig = getObjectsDir() + "/" + Object::getSubpath(id);
-    mkdirs(getDirname(newProjectConfig));
-    int r = writeToFile(newProjectConfig, data);
+    // write into objects database
+    std::string id;
+    int r = Object::write(getObjectsDir(), data, id);
     if (r != 0) {
-        LOG_ERROR("Cannot write new config of project: %s", newProjectConfig.c_str());
+        LOG_ERROR("Cannot write new config of project: id=%s", id.c_str());
         return -1;
     }
     // write ref
@@ -288,7 +293,7 @@ int Project::modifyConfig(std::list<std::list<std::string> > &tokens, const std:
         return -1;
     }
 
-    config = c;
+    config = newConfig;
 
     return 0;
 }
@@ -443,7 +448,7 @@ int Project::createProjectFiles(const std::string &repositoryPath, const std::st
     }
 
     // create file 'project'
-    const std::string config = ProjectConfig::getDefaultConfig();
+    const std::string config = ProjectConfig::getDefaultConfig().serialize();
     std::string id;
     // Create object in database
     // This also creates the directory 'objects'
@@ -1050,8 +1055,8 @@ void parseAssociation(std::list<std::string> &values)
 
     std::string v = values.front();
     values.clear(); // prepare for new value
-    std::vector<std::string> issueIds = split(v, " ,;");
-    std::vector<std::string>::const_iterator associatedIssue;
+    std::list<std::string> issueIds = split(v, " ,;");
+    std::list<std::string>::const_iterator associatedIssue;
     FOREACH(associatedIssue, issueIds) {
         if (associatedIssue->empty()) continue; // because split may return empty tokens
         values.push_back(*associatedIssue);

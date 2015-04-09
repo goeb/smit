@@ -69,6 +69,7 @@ public:
 
     inline void setConfig(ProjectConfig pconfig) { config = pconfig; }
     int modifyConfig(std::list<std::list<std::string> > &tokens, const std::string &author);
+    int modifyConfig(ProjectConfig newConfig, const std::string &author);
     static int createProjectFiles(const std::string &repositoryPath, const std::string &projectName,
                                   std::string &resultingPath);
     int reload(); // reload a project from disk storage

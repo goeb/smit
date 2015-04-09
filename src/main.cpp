@@ -213,19 +213,17 @@ int cmdProject(int argc, char **argv)
         path = argv[optind];
         optind++;
     }
-    std::list<std::string> updateActions;
+    std::list<std::pair<std::string, std::string> > updateActions;
     while (optind < argc) {
         // actions go by pair
         std::string verb = argv[optind];
         optind++;
 
-        if (verb == "addProperty" || verb == "tag" ||
-                verb == "numberIssues" || verb == "setPropertyLabel" ||
-                verb == "delProperty") {
+        if (verb == "addProperty") {
             // ok
         } else {
             printf("Invalid action '%s'. Allowed values are: \n"
-                   "  addProperty\n  setPropertyLabel\n  numberIssues\n  setPropertyLabel\n  delProperty"
+                   "  addProperty"
                    "\n\n", verb.c_str());
             return helpProject();
         }
@@ -238,8 +236,7 @@ int cmdProject(int argc, char **argv)
         std::string arg = argv[optind];
         optind++;
 
-        updateActions.push_back(verb);
-        updateActions.push_back(arg);
+        updateActions.push_back(std::make_pair(verb, arg));
     }
 
     // set log level to hide INFO logs
@@ -267,8 +264,33 @@ int cmdProject(int argc, char **argv)
             printf("Project created: %s\n", resultingPath.c_str());
         }
         Database::loadProjects(path, false); // do not recurse in sub directories
+
         if (updateActions.size() > 0) {
-            // TODO
+            Project *p = Database::Db.getNextProject(0);
+            if (!p) {
+                printf("Cannot update project '%s': no project found\n", path);
+                return 1;
+            }
+
+            ProjectConfig config = p->getConfig();
+
+            std::list<std::pair<std::string, std::string> >::iterator action;
+            FOREACH(action, updateActions) {
+                if (action->first == "addProperty") {
+                    std::list<std::string> tokens = split(action->second, " \t");
+                    int r = config.addProperty(tokens);
+                    if (r != 0) {
+                        printf("Cannot addProperty: check the syntax\n");
+                        return 1;
+                    }
+                }
+            }
+
+            int r = p->modifyConfig(config, "");
+            if (r != 0) {
+                printf("Cannot modify project config\n");
+                return 1;
+            }
         }
     }
 

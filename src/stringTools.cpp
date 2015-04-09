@@ -267,10 +267,10 @@ std::string toJavascriptArray(const std::list<std::string> &items)
 
 }
 
-std::vector<std::string> split(const std::string &s, const char *c, int limit)
+std::list<std::string> split(const std::string &s, const char *c, int limit)
 {
     // use limit = -1 for no limit (almost)
-    std::vector<std::string> tokens;
+    std::list<std::string> tokens;
     size_t found;
 
     int index = 0;
@@ -287,7 +287,6 @@ std::vector<std::string> split(const std::string &s, const char *c, int limit)
 
     return tokens;
 }
-
 
 std::list<std::string> splitLinesAndTrimBlanks(const std::string &s)
 {

@@ -77,7 +77,7 @@ struct ProjectConfig {
     std::string getReverseLabelOfProperty(const std::string &propertyName) const;
     bool isValidPropertyName(const std::string &name) const;
     static bool isValidProjectName(const std::string &name);
-    static std::string getDefaultConfig();
+    static ProjectConfig getDefaultConfig();
 };
 
 

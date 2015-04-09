@@ -160,15 +160,29 @@ bool ProjectConfig::isValidProjectName(const std::string &name)
     return true;
 }
 
-std::string ProjectConfig::getDefaultConfig()
+ProjectConfig ProjectConfig::getDefaultConfig()
 {
-    std::string defaultConfig =
-            K_SMIT_VERSION " " VERSION "\n"
-            KEY_SET_PROPERTY_LABEL " id \"#\"\n"
-            KEY_ADD_PROPERTY " status select open closed deleted\n"
-            KEY_ADD_PROPERTY " owner selectUser\n"
-            ;
-    return defaultConfig;
+    ProjectConfig pconfig;
+    pconfig.propertyLabels["id"] = "#";
+
+    PropertySpec pspec;
+    pspec.name = "status";
+    pspec.type = F_SELECT;
+    pspec.selectOptions.push_back("open");
+    pspec.selectOptions.push_back("closed");
+    pspec.selectOptions.push_back("deleted");
+    pconfig.properties.push_back(pspec);
+
+    pspec.name = "owner";
+    pspec.type = F_SELECT_USER;
+    pspec.selectOptions.clear();
+    pconfig.properties.push_back(pspec);
+
+    pconfig.author = "";
+    pconfig.ctime = time(0);
+    pconfig.parent = K_PARENT_NULL;
+
+    return pconfig;
 }
 
 
