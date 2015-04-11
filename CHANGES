@@ -1,4 +1,8 @@
 
+v2.4.0
+
+    - [To Be Confirmed] kerberos/GSSAPI authentication (single sign-on)
+
 v2.3.0, 1 Apr 2015
     - keep old values of select, multiselect, selectUser until deliberately
       changed by the user

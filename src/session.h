@@ -10,7 +10,13 @@
 
 #define SESSION_DURATION (60*60*24) // 1 day
 #define COOKIE_VIEW_DURATION (60*60*24) // 1 day
+// authentication schemes
 #define HASH_SHA1 "sha1"
+
+#ifdef KERBEROS_ENABLED
+  #define KERBEROS_AUTH "-krb-realm"
+#endif
+
 
 enum Role {
     ROLE_ADMIN,
@@ -28,15 +34,19 @@ std::list<std::string> getAvailableRoles();
 
 struct User {
     std::string username;
-    std::string hashType;
-    std::string hashValue;
-    std::string hashSalt;
+    std::string authenticationType; // sha1 or other
+    std::string hashValue; // for sha1 auth type
+    std::string hashSalt; // for sha1 auth type
+#ifdef KERBEROS_ENABLED
+    std::string kerberosRealm; // for kerberos auth type
+#endif
     std::map<std::string, enum Role> rolesOnProjects;
     enum Role getRole(const std::string &project) const;
     std::list<std::pair<std::string, std::string> >  getProjects() const;
     bool superadmin;
     User();
     std::string serialize();
+    int load(std::list<std::string> &tokens, bool checkProject);
     void setPasswd(const std::string &passwd);
     int authenticate(const std::string &passwd);
 

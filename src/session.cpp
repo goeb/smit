@@ -43,14 +43,19 @@ std::string User::serialize()
     result += "addUser ";
     result += serializeSimpleToken(username) + " ";
     if (superadmin) result += "superadmin \\\n";
-    if (!hashType.empty()) {
-        result += "    " + serializeSimpleToken(hashType) + " ";
+    if (authenticationType == "sha1") {
+        result += "    " + serializeSimpleToken(authenticationType) + " ";
         result += serializeSimpleToken(hashValue);
         if (!hashSalt.empty()) {
             result += " -salt " ;
             result += serializeSimpleToken(hashSalt);
         }
         result += " \\\n";
+#ifdef KERBEROS_ENABLED
+    } else if (authenticationType == "-krb-realm") {
+        result += "    " + serializeSimpleToken(authenticationType) + " ";
+        result += "    " + serializeSimpleToken(kerberosRealm) + " \\\n";
+#endif
     }
 
     std::map<std::string, enum Role>::const_iterator role;
@@ -63,6 +68,73 @@ std::string User::serialize()
     return result;
 }
 
+/** Load a configuration for a user
+  *
+  * The tokens are those found after the verb "addUser".
+  * The verb "addUser" must not be included.
+  */
+int User::load(std::list<std::string> &tokens, bool checkProject)
+{
+    username = popListToken(tokens);
+    if (username.empty()) {
+        LOG_ERROR("Incomplete 'addUser' (missing username)");
+        return -1;
+    }
+
+    while (! tokens.empty()) {
+        std::string token = popListToken(tokens);
+        if (token == "project") {
+            // get project name and access right
+            std::string project = popListToken(tokens);
+            std::string role = popListToken(tokens);
+            if (project.empty() || role.empty()) {
+                LOG_ERROR("Incomplete project access %s/%s", project.c_str(), role.c_str());
+                return -1;
+            }
+            // check if project exists
+            if (checkProject) {
+                const Project *p = Database::getProject(project);
+                if (!p) {
+                    LOG_ERROR("Invalid project name '%s' for user %s",
+                              project.c_str(), username.c_str());
+                    return -1;
+                }
+            }
+
+            Role r = stringToRole(role);
+            if (r == ROLE_NONE) {
+                LOG_ERROR("Invalid role '%s'", role.c_str());
+                return -1;
+            }
+            rolesOnProjects[project] = r;
+
+        } else if (token == "sha1") {
+            authenticationType = token;
+            hashValue = popListToken(tokens);
+            if (hashValue.empty()) {
+                LOG_ERROR("Empty hash for user %s", username.c_str());
+                return -1;
+            }
+#ifdef KERBEROS_ENABLED
+        } else if (token == "-krb-realm") {
+            // single sign-on authentication via a kerberos server
+            authenticationType = token;
+            kerberosRealm = popListToken(tokens);
+            if (kerberosRealm.empty()) {
+                LOG_ERROR("Empty kerberos realm for user %s", username.c_str());
+                return -1;
+            }
+#endif
+        } else if (token == "-salt") {
+            // meaningful only with sha1 authentication type
+            hashSalt = popListToken(tokens);
+
+        } else if (token == "superadmin") superadmin = true;
+    }
+
+}
+
+
 
 std::string getNewSalt()
 {
@@ -73,7 +145,7 @@ std::string getNewSalt()
 
 void User::setPasswd(const std::string &password)
 {
-    hashType = HASH_SHA1;
+    authenticationType = HASH_SHA1;
     hashSalt = getNewSalt();
     hashValue = getSha1(password + hashSalt);
 }
@@ -85,18 +157,22 @@ void User::setPasswd(const std::string &password)
   */
 int User::authenticate(const std::string &passwd)
 {
-    if (hashType == HASH_SHA1) {
+    if (authenticationType == HASH_SHA1) {
         LOG_DEBUG("salt=%s", hashSalt.c_str());
         std::string sha1 = getSha1(passwd + hashSalt);
         if (sha1 != hashValue) {
             LOG_DEBUG("Sha1 do not match %s <> %s", sha1.c_str(), hashValue.c_str());
             LOG_INFO("Sha1 authentication failure for user '%s'", username.c_str());
             return -1;
-
         } else {
             return 0;
         }
+#ifdef KERBEROS_ENABLED
+    } else if (authenticationType == KERBEROS_AUTH) {
+// TODO
+#endif
     }
+
     LOG_ERROR("Unknown authentication scheme for user '%s'", username.c_str());
     return -1;
 }
@@ -142,16 +218,14 @@ int UserBase::init(const char *path, bool checkProject)
     std::string file = Repository;
     file += "/";
     file += FILE_USERS;
-    const char *data;
-    int n = loadFile(file.c_str(), &data);
-    if (n < 0) {
+    std::string data;
+    int n = loadFile(file.c_str(), data);
+    if (n != 0) {
         LOG_ERROR("Could not load user file.");
         return -1;
     }
 
-    std::list<std::list<std::string> > lines = parseConfigTokens(data, n);
-
-    free((void*)data);
+    std::list<std::list<std::string> > lines = parseConfigTokens(data.c_str(), data.size());
 
     std::list<std::list<std::string> >::iterator line;
     for (line = lines.begin(); line != lines.end(); line++) {
@@ -162,54 +236,12 @@ int UserBase::init(const char *path, bool checkProject)
 
         } else if (verb == "addUser") {
             User u;
-            u.username = popListToken(*line);
-            if (u.username.empty()) {
-                LOG_ERROR("Incomplete 'addUser'");
-                continue;
+            int r = u.load(*line, checkProject);
+            if (r == 0) {
+                // add user in database
+                LOG_DEBUG("Loaded user: %s on %lu projects", u.username.c_str(), L(u.rolesOnProjects.size()));
+                UserBase::addUserInArray(u);
             }
-
-            while (! line->empty()) {
-                std::string token = popListToken(*line);
-                if (token == "project") {
-                    // get project name and access right
-                    std::string project = popListToken(*line);
-                    std::string role = popListToken(*line);
-                    if (project.empty() || role.empty()) {
-                        LOG_ERROR("Incomplete project access %s/%s", project.c_str(), role.c_str());
-                        continue;
-                    }
-                    // check if project exists
-                    if (checkProject) {
-                        const Project *p = Database::getProject(project);
-                        if (!p) {
-                            LOG_ERROR("Invalid project name '%s' for user %s", project.c_str(), u.username.c_str());
-                            continue;
-                        }
-                    }
-
-                    Role r = stringToRole(role);
-                    if (r == ROLE_NONE) {
-                        LOG_ERROR("Invalid role '%s'", role.c_str());
-                        continue;
-                    }
-                    u.rolesOnProjects[project] = r;
-
-                } else if (token == "sha1") {
-                    std::string hash = popListToken(*line);
-                    if (hash.empty()) {
-                        LOG_ERROR("Empty hash for user %s", u.username.c_str());
-                        continue;
-                    }
-                    u.hashType = token;
-                    u.hashValue = hash;
-                } else if (token == "-salt") {
-                    u.hashSalt = popListToken(*line);
-
-                } else if (token == "superadmin") u.superadmin = true;
-            }
-            // add user in database
-            LOG_DEBUG("Loaded user: %s on %lu projects", u.username.c_str(), L(u.rolesOnProjects.size()));
-            UserBase::addUserInArray(u);
         }
     }
     return 0;
@@ -371,9 +403,12 @@ int UserBase::updateUser(const std::string &username, User newConfig)
 
     if (newConfig.hashValue.empty()) {
         // keep the same as before
-        newConfig.hashType = u->second->hashType;
+        newConfig.authenticationType = u->second->authenticationType;
         newConfig.hashValue = u->second->hashValue;
         newConfig.hashSalt = u->second->hashSalt;
+#ifdef KERBEROS_ENABLE
+        newConfig.kerberosRealm = u->second->kerberosRealm;
+#endif
     }
     *(u->second) = newConfig;
 

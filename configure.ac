@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.63])
-AC_INIT([Smit], [2.3.0], [], [smit], [http://goeb.github.io/smit])
+AC_INIT([Smit], [2.4.0], [], [smit], [http://goeb.github.io/smit])
 AC_CONFIG_HEADERS([src/config.h])
 AC_CANONICAL_TARGET
 AM_INIT_AUTOMAKE([-Wall -Werror subdir-objects])
@@ -34,11 +34,15 @@ AM_CONDITIONAL(WINDOWS, test x$WINDOWS = xyes)
 AM_CONDITIONAL(CYGWIN, test x$MINGW = xyes)
 AM_CONDITIONAL(MINGW, test x$MINGW = xyes)
 
-# 
-#AC_ARG_WITH([libcurl], [AS_HELP_STRING([--with-libcurl],
-#                          [build with libcurl, needed for smit-clone])],
-#                          [],
-#                          [with_libcurl=yes])
+# kerberos
+AC_ARG_ENABLE([kerberos],
+  [AS_HELP_STRING([--enable-kerberos],
+    [Enable Kerberos for single sign-on])])
+AM_CONDITIONAL([KERBEROS_ENABLED],[test x$enable_kerberos = xyes])
+
+if test x$enable_kerberos = xyes; then
+    PKG_CHECK_MODULES(KRB5, libkrb5)
+fi
 
 # Checks for programs.
 AC_PROG_CXX
@@ -58,10 +62,12 @@ AC_ARG_ENABLE([gcov],
   [AS_HELP_STRING([--enable-gcov],
     [Enable test suite code coverage])])
 AM_CONDITIONAL([GCOV_ENABLED],[test x$enable_gcov = xyes])
+
 AC_ARG_ENABLE([gprof],
   [AS_HELP_STRING([--enable-gprof],
     [Enable test suite code profiling])])
 AM_CONDITIONAL([GPROF_ENABLED],[test x$enable_gprof = xyes])
+
 if test x$WINDOWS = xyes; then
     AC_ARG_VAR([WINE],     [Wine translator, used to run Inno Setup])
     AC_CHECK_PROG(WINE, wine, wine)

@@ -42,12 +42,15 @@ target_triplet = @target@
 @GPROF_ENABLED_TRUE@am__append_4 = -O0 -g3 -pg -fprofile-arcs
 @GPROF_ENABLED_TRUE@am__append_5 = -O0 -g3 -pg -fprofile-arcs
 @GPROF_ENABLED_TRUE@am__append_6 = -pg -lgcov
-@WINDOWS_TRUE@am__append_7 = -static -static-libgcc -Dopenssl_EXPORTS
-@WINDOWS_TRUE@am__append_8 = -static -static-libgcc -Dopenssl_EXPORTS
-@WINDOWS_FALSE@am__append_9 = -pthread
+@KERBEROS_ENABLED_TRUE@am__append_7 = -lkrb5
+@KERBEROS_ENABLED_TRUE@am__append_8 = -DKERBEROS_ENABLED
+@WINDOWS_TRUE@am__append_9 = -static -static-libgcc -Dopenssl_EXPORTS
+@WINDOWS_TRUE@am__append_10 = -static -static-libgcc -Dopenssl_EXPORTS
+@WINDOWS_FALSE@am__append_11 = -pthread
 bin_PROGRAMS = smit$(EXEEXT)
-@WINDOWS_TRUE@am__append_10 = -lws2_32 -lgdi32
-@WINDOWS_FALSE@am__append_11 = -ldl
+@KERBEROS_ENABLED_TRUE@am__append_12 = ssoKerberos.cpp
+@WINDOWS_TRUE@am__append_13 = -lws2_32 -lgdi32
+@WINDOWS_FALSE@am__append_14 = -ldl
 subdir = .
 DIST_COMMON = README $(am__configure_deps) $(dist_pkgdata_DATA) \
 	$(srcdir)/Makefile.am $(srcdir)/Makefile.in \
@@ -67,7 +70,16 @@ CONFIG_CLEAN_FILES = smit.iss
 CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)" "$(DESTDIR)$(pkgdatadir)"
 PROGRAMS = $(bin_PROGRAMS)
+am__smit_SOURCES_DIST = src/db.cpp src/parseConfig.cpp \
+	src/identifiers.cpp src/main.cpp src/httpdHandlers.cpp \
+	src/renderingText.cpp src/renderingCsv.cpp \
+	src/renderingHtml.cpp src/cpio.cpp src/stringTools.cpp \
+	src/mutexTools.cpp src/session.cpp src/dateTools.cpp \
+	src/logging.cpp src/Trigger.cpp src/filesystem.cpp \
+	src/clone.cpp src/console.cpp src/HttpContext.cpp \
+	mongoose/mongoose.c ssoKerberos.cpp
 am__dirstamp = $(am__leading_dot)dirstamp
+@KERBEROS_ENABLED_TRUE@am__objects_1 = smit-ssoKerberos.$(OBJEXT)
 am_smit_OBJECTS = src/smit-db.$(OBJEXT) src/smit-parseConfig.$(OBJEXT) \
 	src/smit-identifiers.$(OBJEXT) src/smit-main.$(OBJEXT) \
 	src/smit-httpdHandlers.$(OBJEXT) \
@@ -79,7 +91,7 @@ am_smit_OBJECTS = src/smit-db.$(OBJEXT) src/smit-parseConfig.$(OBJEXT) \
 	src/smit-logging.$(OBJEXT) src/smit-Trigger.$(OBJEXT) \
 	src/smit-filesystem.$(OBJEXT) src/smit-clone.$(OBJEXT) \
 	src/smit-console.$(OBJEXT) src/smit-HttpContext.$(OBJEXT) \
-	mongoose/smit-mongoose.$(OBJEXT)
+	mongoose/smit-mongoose.$(OBJEXT) $(am__objects_1)
 nodist_smit_OBJECTS = smit-embedcpio.$(OBJEXT)
 smit_OBJECTS = $(am_smit_OBJECTS) $(nodist_smit_OBJECTS)
 am__DEPENDENCIES_1 =
@@ -119,7 +131,7 @@ AM_V_GEN = $(am__v_GEN_@AM_V@)
 am__v_GEN_ = $(am__v_GEN_@AM_DEFAULT_V@)
 am__v_GEN_0 = @echo "  GEN   " $@;
 SOURCES = $(smit_SOURCES) $(nodist_smit_SOURCES)
-DIST_SOURCES = $(smit_SOURCES)
+DIST_SOURCES = $(am__smit_SOURCES_DIST)
 RECURSIVE_TARGETS = all-recursive check-recursive dvi-recursive \
 	html-recursive info-recursive install-data-recursive \
 	install-dvi-recursive install-exec-recursive \
@@ -235,6 +247,8 @@ INSTALL_PROGRAM = @INSTALL_PROGRAM@
 INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
 ISCC = @ISCC@
+KRB5_CFLAGS = @KRB5_CFLAGS@
+KRB5_LIBS = @KRB5_LIBS@
 LDFLAGS = @LDFLAGS@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
@@ -318,39 +332,26 @@ top_srcdir = @top_srcdir@
 
 # Manage configure options
 AM_CPPFLAGS = -Wall
-AM_CFLAGS = -Wall $(am__append_1) $(am__append_4) $(am__append_7)
-AM_CXXFLAGS = -Wall $(am__append_2) $(am__append_5) $(am__append_8)
-AM_LDFLAGS = $(am__append_3) $(am__append_6) $(am__append_9)
-smit_SOURCES = \
-			   src/db.cpp  \
-			   src/parseConfig.cpp \
-			   src/identifiers.cpp \
-			   src/main.cpp \
-			   src/httpdHandlers.cpp \
-			   src/renderingText.cpp \
-			   src/renderingCsv.cpp \
-			   src/renderingHtml.cpp \
-			   src/cpio.cpp \
-			   src/stringTools.cpp \
-			   src/mutexTools.cpp \
-			   src/session.cpp \
-			   src/dateTools.cpp \
-			   src/logging.cpp \
-			   src/Trigger.cpp \
-			   src/filesystem.cpp \
-			   src/clone.cpp \
-			   src/console.cpp \
-			   src/HttpContext.cpp \
-			   mongoose/mongoose.c 
-
+AM_CFLAGS = -Wall $(am__append_1) $(am__append_4) $(am__append_9)
+AM_CXXFLAGS = -Wall $(am__append_2) $(am__append_5) $(am__append_8) \
+	$(am__append_10)
+AM_LDFLAGS = $(am__append_3) $(am__append_6) $(am__append_7) \
+	$(am__append_11)
+smit_SOURCES = src/db.cpp src/parseConfig.cpp src/identifiers.cpp \
+	src/main.cpp src/httpdHandlers.cpp src/renderingText.cpp \
+	src/renderingCsv.cpp src/renderingHtml.cpp src/cpio.cpp \
+	src/stringTools.cpp src/mutexTools.cpp src/session.cpp \
+	src/dateTools.cpp src/logging.cpp src/Trigger.cpp \
+	src/filesystem.cpp src/clone.cpp src/console.cpp \
+	src/HttpContext.cpp mongoose/mongoose.c $(am__append_12)
 nodist_smit_SOURCES = embedcpio.c embedcpio.h 
 BUILT_SOURCES = embedcpio.c embedcpio.h
 CLEANFILES = embedcpio.c embedcpio.h convertToC
 X = embedded_data
 SM_VERSION = $(X)/sm/version
 smit_CPPFLAGS = -I @srcdir@/mongoose @OPENSSL_CFLAGS@ @CURL_CFLAGS@
-smit_LDADD = @OPENSSL_LIBS@ @CURL_LIBS@ $(am__append_10) \
-	$(am__append_11)
+smit_LDADD = @OPENSSL_LIBS@ @CURL_LIBS@ $(am__append_13) \
+	$(am__append_14)
 
 # specific subdirs
 SUBDIRS = test
@@ -533,6 +534,7 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/smit-embedcpio.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/smit-ssoKerberos.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@mongoose/$(DEPDIR)/smit-mongoose.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-HttpContext.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-Trigger.Po@am__quote@
@@ -879,6 +881,20 @@ src/smit-HttpContext.obj: src/HttpContext.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/HttpContext.cpp' object='src/smit-HttpContext.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/smit-HttpContext.obj `if test -f 'src/HttpContext.cpp'; then $(CYGPATH_W) 'src/HttpContext.cpp'; else $(CYGPATH_W) '$(srcdir)/src/HttpContext.cpp'; fi`
+
+smit-ssoKerberos.o: ssoKerberos.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT smit-ssoKerberos.o -MD -MP -MF $(DEPDIR)/smit-ssoKerberos.Tpo -c -o smit-ssoKerberos.o `test -f 'ssoKerberos.cpp' || echo '$(srcdir)/'`ssoKerberos.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/smit-ssoKerberos.Tpo $(DEPDIR)/smit-ssoKerberos.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='ssoKerberos.cpp' object='smit-ssoKerberos.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o smit-ssoKerberos.o `test -f 'ssoKerberos.cpp' || echo '$(srcdir)/'`ssoKerberos.cpp
+
+smit-ssoKerberos.obj: ssoKerberos.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT smit-ssoKerberos.obj -MD -MP -MF $(DEPDIR)/smit-ssoKerberos.Tpo -c -o smit-ssoKerberos.obj `if test -f 'ssoKerberos.cpp'; then $(CYGPATH_W) 'ssoKerberos.cpp'; else $(CYGPATH_W) '$(srcdir)/ssoKerberos.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/smit-ssoKerberos.Tpo $(DEPDIR)/smit-ssoKerberos.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='ssoKerberos.cpp' object='smit-ssoKerberos.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o smit-ssoKerberos.obj `if test -f 'ssoKerberos.cpp'; then $(CYGPATH_W) 'ssoKerberos.cpp'; else $(CYGPATH_W) '$(srcdir)/ssoKerberos.cpp'; fi`
 install-dist_pkgdataDATA: $(dist_pkgdata_DATA)
 	@$(NORMAL_INSTALL)
 	test -z "$(pkgdatadir)" || $(MKDIR_P) "$(DESTDIR)$(pkgdatadir)"

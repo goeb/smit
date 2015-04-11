@@ -16,6 +16,11 @@ AM_CXXFLAGS += -O0 -g3 -pg -fprofile-arcs
 AM_LDFLAGS += -pg -lgcov
 endif
 
+if KERBEROS_ENABLED
+AM_LDFLAGS += -lkrb5
+AM_CXXFLAGS += -DKERBEROS_ENABLED
+endif
+
 if WINDOWS
 AM_CFLAGS += -static -static-libgcc
 AM_CFLAGS += -Dopenssl_EXPORTS
@@ -50,6 +55,10 @@ smit_SOURCES = \
 			   src/console.cpp \
 			   src/HttpContext.cpp \
 			   mongoose/mongoose.c 
+
+if KERBEROS_ENABLED
+smit_SOURCES += ssoKerberos.cpp
+endif
 
 nodist_smit_SOURCES = embedcpio.c embedcpio.h 
 BUILT_SOURCES = embedcpio.c embedcpio.h

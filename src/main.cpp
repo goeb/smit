@@ -383,10 +383,10 @@ int cmdUser(int argc, char **argv)
         if (old) {
             if (!superadmin.empty()) old->superadmin = u.superadmin;
             if (deletePasswd) {
-                old->hashType.clear();
+                old->authenticationType.clear();
                 old->hashValue.clear();
-            } else if (!u.hashType.empty()) {
-                old->hashType = u.hashType;
+            } else if (!u.authenticationType.empty()) {
+                old->authenticationType = u.authenticationType;
                 old->hashValue = u.hashValue;
             }
             // update modified roles (and keep the others unchanged)

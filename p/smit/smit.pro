@@ -24,7 +24,8 @@ SOURCES += \
     ../../src/filesystem.cpp \
     ../../src/clone.cpp \
     ../../src/console.cpp \
-    ../../src/HttpContext.cpp
+    ../../src/HttpContext.cpp \
+    ../../src/ssoKerberos.cpp
 
 HEADERS += \
     ../../mongoose/mongoose.h \
@@ -48,5 +49,6 @@ HEADERS += \
     ../../src/filesystem.h \
     ../../src/clone.h \
     ../../src/console.h \
-    ../../src/HttpContext.h
+    ../../src/HttpContext.h \
+    ../../src/ssoKerberos.h
 
