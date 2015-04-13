@@ -76,6 +76,10 @@ std::string User::serialize()
   *
   * The tokens are those found after the verb "addUser".
   * The verb "addUser" must not be included.
+  *
+  * @return
+  *     0 success
+  *    -1 error
   */
 int User::load(std::list<std::string> &tokens, bool checkProject)
 {
@@ -135,7 +139,7 @@ int User::load(std::list<std::string> &tokens, bool checkProject)
 
         } else if (token == "superadmin") superadmin = true;
     }
-
+    return 0; // success
 }
 
 
