@@ -302,16 +302,30 @@ std::string popListToken(std::list<std::string> &tokens)
     return token;
 }
 
+/** Serialize a list of tokens
+  *
+  */
+std::string serializeTokens(const std::list<std::string> &tokens)
+{
+    std::string result;
+    std::list<std::string>::const_iterator token;
+    FOREACH(token, tokens) {
+        result += serializeSimpleToken(*token);
+        result += ' '; // separator on the same line
+    }
+    return result;
+}
+
+/** Serialize a list of list of tokens
+  *
+  * Each sub-list is serialized as a line.
+  */
 std::string serializeTokens(const std::list<std::list<std::string> > &linesOfTokens)
 {
     std::string result;
     std::list<std::list<std::string> >::const_iterator line;
     FOREACH(line, linesOfTokens) {
-        std::list<std::string>::const_iterator token;
-        FOREACH(token, (*line)) {
-            result += serializeSimpleToken(*token);
-            result += ' '; // separator on the same line
-        }
+        result += serializeTokens(*line);
         result += '\n'; // line separator
     }
     return result;

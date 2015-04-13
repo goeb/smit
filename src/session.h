@@ -14,7 +14,7 @@
 #define HASH_SHA1 "sha1"
 
 #ifdef KERBEROS_ENABLED
-  #define KERBEROS_AUTH "-krb-realm"
+  #define KERBEROS_AUTH "kerberos"
 #endif
 
 

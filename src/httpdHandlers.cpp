@@ -308,6 +308,7 @@ int httpPostSignin(const RequestContext *request)
 
         // check credentials
         std::string sessionId = SessionBase::requestSession(username, password);
+        password.assign(password.size(), 0xFF);
 
         if (sessionId.size() == 0) {
             LOG_DEBUG("Authentication refused");

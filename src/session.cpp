@@ -24,6 +24,10 @@
 #include "parseConfig.h"
 #include "db.h"
 
+#ifdef KERBEROS_ENABLED
+  #include "kerberos.h"
+#endif
+
 // static members
 SessionBase SessionBase::SessionDb;
 UserBase UserBase::UserDb;
@@ -52,7 +56,7 @@ std::string User::serialize()
         }
         result += " \\\n";
 #ifdef KERBEROS_ENABLED
-    } else if (authenticationType == "-krb-realm") {
+    } else if (authenticationType == KERBEROS_AUTH) {
         result += "    " + serializeSimpleToken(authenticationType) + " ";
         result += "    " + serializeSimpleToken(kerberosRealm) + " \\\n";
 #endif
@@ -116,7 +120,7 @@ int User::load(std::list<std::string> &tokens, bool checkProject)
                 return -1;
             }
 #ifdef KERBEROS_ENABLED
-        } else if (token == "-krb-realm") {
+        } else if (token == KERBEROS_AUTH) {
             // single sign-on authentication via a kerberos server
             authenticationType = token;
             kerberosRealm = popListToken(tokens);
@@ -154,6 +158,7 @@ void User::setPasswd(const std::string &password)
   * @return
   *     0 success
   *    -1 failure
+  *    -2 failure, password expired
   */
 int User::authenticate(const std::string &passwd)
 {
@@ -169,7 +174,7 @@ int User::authenticate(const std::string &passwd)
         }
 #ifdef KERBEROS_ENABLED
     } else if (authenticationType == KERBEROS_AUTH) {
-// TODO
+        return krbAuthenticate(username, kerberosRealm, passwd);
 #endif
     }
 

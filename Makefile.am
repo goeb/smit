@@ -57,8 +57,9 @@ smit_SOURCES = \
 			   mongoose/mongoose.c 
 
 if KERBEROS_ENABLED
-smit_SOURCES += ssoKerberos.cpp
+smit_SOURCES += src/kerberos.cpp
 endif
+
 
 nodist_smit_SOURCES = embedcpio.c embedcpio.h 
 BUILT_SOURCES = embedcpio.c embedcpio.h

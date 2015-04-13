@@ -48,7 +48,7 @@ target_triplet = @target@
 @WINDOWS_TRUE@am__append_10 = -static -static-libgcc -Dopenssl_EXPORTS
 @WINDOWS_FALSE@am__append_11 = -pthread
 bin_PROGRAMS = smit$(EXEEXT)
-@KERBEROS_ENABLED_TRUE@am__append_12 = ssoKerberos.cpp
+@KERBEROS_ENABLED_TRUE@am__append_12 = src/kerberos.cpp
 @WINDOWS_TRUE@am__append_13 = -lws2_32 -lgdi32
 @WINDOWS_FALSE@am__append_14 = -ldl
 subdir = .
@@ -77,9 +77,9 @@ am__smit_SOURCES_DIST = src/db.cpp src/parseConfig.cpp \
 	src/mutexTools.cpp src/session.cpp src/dateTools.cpp \
 	src/logging.cpp src/Trigger.cpp src/filesystem.cpp \
 	src/clone.cpp src/console.cpp src/HttpContext.cpp \
-	mongoose/mongoose.c ssoKerberos.cpp
+	mongoose/mongoose.c src/kerberos.cpp
 am__dirstamp = $(am__leading_dot)dirstamp
-@KERBEROS_ENABLED_TRUE@am__objects_1 = smit-ssoKerberos.$(OBJEXT)
+@KERBEROS_ENABLED_TRUE@am__objects_1 = src/smit-kerberos.$(OBJEXT)
 am_smit_OBJECTS = src/smit-db.$(OBJEXT) src/smit-parseConfig.$(OBJEXT) \
 	src/smit-identifiers.$(OBJEXT) src/smit-main.$(OBJEXT) \
 	src/smit-httpdHandlers.$(OBJEXT) \
@@ -503,6 +503,8 @@ mongoose/$(DEPDIR)/$(am__dirstamp):
 	@: > mongoose/$(DEPDIR)/$(am__dirstamp)
 mongoose/smit-mongoose.$(OBJEXT): mongoose/$(am__dirstamp) \
 	mongoose/$(DEPDIR)/$(am__dirstamp)
+src/smit-kerberos.$(OBJEXT): src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
 smit$(EXEEXT): $(smit_OBJECTS) $(smit_DEPENDENCIES) $(EXTRA_smit_DEPENDENCIES) 
 	@rm -f smit$(EXEEXT)
 	$(AM_V_CXXLD)$(CXXLINK) $(smit_OBJECTS) $(smit_LDADD) $(LIBS)
@@ -520,6 +522,7 @@ mostlyclean-compile:
 	-rm -f src/smit-filesystem.$(OBJEXT)
 	-rm -f src/smit-httpdHandlers.$(OBJEXT)
 	-rm -f src/smit-identifiers.$(OBJEXT)
+	-rm -f src/smit-kerberos.$(OBJEXT)
 	-rm -f src/smit-logging.$(OBJEXT)
 	-rm -f src/smit-main.$(OBJEXT)
 	-rm -f src/smit-mutexTools.$(OBJEXT)
@@ -534,7 +537,6 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/smit-embedcpio.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/smit-ssoKerberos.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@mongoose/$(DEPDIR)/smit-mongoose.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-HttpContext.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-Trigger.Po@am__quote@
@@ -546,6 +548,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-filesystem.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-httpdHandlers.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-identifiers.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-kerberos.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-logging.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-main.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-mutexTools.Po@am__quote@
@@ -882,19 +885,19 @@ src/smit-HttpContext.obj: src/HttpContext.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/smit-HttpContext.obj `if test -f 'src/HttpContext.cpp'; then $(CYGPATH_W) 'src/HttpContext.cpp'; else $(CYGPATH_W) '$(srcdir)/src/HttpContext.cpp'; fi`
 
-smit-ssoKerberos.o: ssoKerberos.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT smit-ssoKerberos.o -MD -MP -MF $(DEPDIR)/smit-ssoKerberos.Tpo -c -o smit-ssoKerberos.o `test -f 'ssoKerberos.cpp' || echo '$(srcdir)/'`ssoKerberos.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/smit-ssoKerberos.Tpo $(DEPDIR)/smit-ssoKerberos.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='ssoKerberos.cpp' object='smit-ssoKerberos.o' libtool=no @AMDEPBACKSLASH@
+src/smit-kerberos.o: src/kerberos.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/smit-kerberos.o -MD -MP -MF src/$(DEPDIR)/smit-kerberos.Tpo -c -o src/smit-kerberos.o `test -f 'src/kerberos.cpp' || echo '$(srcdir)/'`src/kerberos.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/smit-kerberos.Tpo src/$(DEPDIR)/smit-kerberos.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/kerberos.cpp' object='src/smit-kerberos.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o smit-ssoKerberos.o `test -f 'ssoKerberos.cpp' || echo '$(srcdir)/'`ssoKerberos.cpp
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/smit-kerberos.o `test -f 'src/kerberos.cpp' || echo '$(srcdir)/'`src/kerberos.cpp
 
-smit-ssoKerberos.obj: ssoKerberos.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT smit-ssoKerberos.obj -MD -MP -MF $(DEPDIR)/smit-ssoKerberos.Tpo -c -o smit-ssoKerberos.obj `if test -f 'ssoKerberos.cpp'; then $(CYGPATH_W) 'ssoKerberos.cpp'; else $(CYGPATH_W) '$(srcdir)/ssoKerberos.cpp'; fi`
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/smit-ssoKerberos.Tpo $(DEPDIR)/smit-ssoKerberos.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='ssoKerberos.cpp' object='smit-ssoKerberos.obj' libtool=no @AMDEPBACKSLASH@
+src/smit-kerberos.obj: src/kerberos.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/smit-kerberos.obj -MD -MP -MF src/$(DEPDIR)/smit-kerberos.Tpo -c -o src/smit-kerberos.obj `if test -f 'src/kerberos.cpp'; then $(CYGPATH_W) 'src/kerberos.cpp'; else $(CYGPATH_W) '$(srcdir)/src/kerberos.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/smit-kerberos.Tpo src/$(DEPDIR)/smit-kerberos.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/kerberos.cpp' object='src/smit-kerberos.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o smit-ssoKerberos.obj `if test -f 'ssoKerberos.cpp'; then $(CYGPATH_W) 'ssoKerberos.cpp'; else $(CYGPATH_W) '$(srcdir)/ssoKerberos.cpp'; fi`
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/smit-kerberos.obj `if test -f 'src/kerberos.cpp'; then $(CYGPATH_W) 'src/kerberos.cpp'; else $(CYGPATH_W) '$(srcdir)/src/kerberos.cpp'; fi`
 install-dist_pkgdataDATA: $(dist_pkgdata_DATA)
 	@$(NORMAL_INSTALL)
 	test -z "$(pkgdatadir)" || $(MKDIR_P) "$(DESTDIR)$(pkgdatadir)"
