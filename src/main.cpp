@@ -456,6 +456,7 @@ int serveRepository(int argc, char **argv)
             break;
         case 'd':
             setLoggingLevel(LL_DEBUG);
+            LOG_DIAG("setLoggingLevel(LL_DEBUG)");
             break;
         case '?': // incorrect syntax, a message is printed by getopt_long
             return helpServe();

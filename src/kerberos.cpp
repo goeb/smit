@@ -17,6 +17,7 @@
   */
 int krbAuthenticate(const std::string &username, const std::string &realm, const std::string password)
 {
+    LOG_DIAG("krbAuthenticate(%s@%s)", username.c_str(), realm.c_str());
     krb5_context ctx;
     memset(&ctx, 0, sizeof(ctx));
 
@@ -75,13 +76,13 @@ int krbAuthenticate(const std::string &username, const std::string &realm, const
                      username.c_str());
             result = -2;
         } else {
-            LOG_ERROR("krb5_get_init_creds_opt_alloc: %d for user %s", code, username.c_str());
+            LOG_ERROR("Kerberos authentication failed for user '%s': %d", username.c_str(), code);
             result = -1;
         }
     } else {
         // success
         result = 0;
-        LOG_DIAG("Kerberos authentication success expired for user %s", username.c_str());
+        LOG_DIAG("Kerberos authentication success for user '%s'", username.c_str());
     }
 
     memset(pw, 0, sizeof(pw));

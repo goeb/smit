@@ -105,7 +105,7 @@ int User::load(std::list<std::string> &tokens, bool checkProject)
                 if (!p) {
                     LOG_ERROR("Invalid project name '%s' for user %s",
                               project.c_str(), username.c_str());
-                    return -1;
+                    continue; // ignore this project
                 }
             }
 
@@ -166,6 +166,7 @@ void User::setPasswd(const std::string &password)
   */
 int User::authenticate(const std::string &passwd)
 {
+    LOG_DIAG("authenticate '%s': %s", username.c_str(), authenticationType.c_str());
     if (authenticationType == HASH_SHA1) {
         LOG_DEBUG("salt=%s", hashSalt.c_str());
         std::string sha1 = getSha1(passwd + hashSalt);
@@ -248,7 +249,7 @@ int UserBase::init(const char *path, bool checkProject)
             int r = u.load(*line, checkProject);
             if (r == 0) {
                 // add user in database
-                LOG_DEBUG("Loaded user: %s on %lu projects", u.username.c_str(), L(u.rolesOnProjects.size()));
+                LOG_DIAG("Loaded user: '%s' on %lu projects", u.username.c_str(), L(u.rolesOnProjects.size()));
                 UserBase::addUserInArray(u);
             }
         }
@@ -491,7 +492,7 @@ std::string SessionBase::requestSession(const std::string &username, const std::
 {
     if (UserBase::isLocalUserInterface()) return "local";
 
-    LOG_DEBUG("Requesting session: username=%s, password=%s", username.c_str(), passwd.c_str());
+    LOG_DEBUG("Requesting session: username=%s, password=****", username.c_str());
     std::string sessid = ""; // empty session id indicates that no session is on
     User *u = UserBase::getUser(username);
 
