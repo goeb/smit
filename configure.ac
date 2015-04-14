@@ -34,10 +34,20 @@ AM_CONDITIONAL(WINDOWS, test x$WINDOWS = xyes)
 AM_CONDITIONAL(CYGWIN, test x$MINGW = xyes)
 AM_CONDITIONAL(MINGW, test x$MINGW = xyes)
 
+# ldap 
+AC_ARG_ENABLE([ldap],
+  [AS_HELP_STRING([--enable-ldap],
+    [Enable LDAP authentication])])
+AM_CONDITIONAL([LDAP_ENABLED],[test x$enable_ldap = xyes])
+
+if test x$enable_ldap = xyes; then
+    PKG_CHECK_MODULES(LDAP, libldap)
+fi
+
 # kerberos
 AC_ARG_ENABLE([kerberos],
   [AS_HELP_STRING([--enable-kerberos],
-    [Enable Kerberos for single sign-on])])
+    [Enable Kerberos authentication])])
 AM_CONDITIONAL([KERBEROS_ENABLED],[test x$enable_kerberos = xyes])
 
 if test x$enable_kerberos = xyes; then

@@ -28,6 +28,11 @@
   #include "kerberos.h"
 #endif
 
+#ifdef LDAP_ENABLED
+  #include "authLdap.h"
+#endif
+
+
 // static members
 SessionBase SessionBase::SessionDb;
 UserBase UserBase::UserDb;
@@ -56,9 +61,14 @@ std::string User::serialize()
         }
         result += " \\\n";
 #ifdef KERBEROS_ENABLED
-    } else if (authenticationType == KERBEROS_AUTH) {
+    } else if (authenticationType == AUTH_KERBEROS) {
         result += "    " + serializeSimpleToken(authenticationType) + " ";
         result += "    " + serializeSimpleToken(kerberosRealm) + " \\\n";
+#endif
+#ifdef LDAP_ENABLED
+    } else if (authenticationType == AUTH_LDAP) {
+        result += "    " + serializeSimpleToken(authenticationType) + " ";
+        result += "    " + serializeSimpleToken(ldapServer) + " \\\n";
 #endif
     }
 
@@ -124,12 +134,22 @@ int User::load(std::list<std::string> &tokens, bool checkProject)
                 return -1;
             }
 #ifdef KERBEROS_ENABLED
-        } else if (token == KERBEROS_AUTH) {
+        } else if (token == AUTH_KERBEROS) {
             // single sign-on authentication via a kerberos server
             authenticationType = token;
             kerberosRealm = popListToken(tokens);
             if (kerberosRealm.empty()) {
                 LOG_ERROR("Empty kerberos realm for user %s", username.c_str());
+                return -1;
+            }
+#endif
+#ifdef LDAP_ENABLED
+        } else if (token == AUTH_LDAP) {
+            // single sign-on authentication via a ldap server
+            authenticationType = token;
+            ldapServer = popListToken(tokens);
+            if (ldapServer.empty()) {
+                LOG_ERROR("Empty ldap server for user %s", username.c_str());
                 return -1;
             }
 #endif
@@ -178,8 +198,12 @@ int User::authenticate(const std::string &passwd)
             return 0;
         }
 #ifdef KERBEROS_ENABLED
-    } else if (authenticationType == KERBEROS_AUTH) {
+    } else if (authenticationType == AUTH_KERBEROS) {
         return krbAuthenticate(username, kerberosRealm, passwd);
+#endif
+#ifdef LDAP_ENABLED
+    } else if (authenticationType == AUTH_LDAP) {
+        return ldapAuthenticate(username, ldapServer, passwd);
 #endif
     }
 

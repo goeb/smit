@@ -14,7 +14,11 @@
 #define HASH_SHA1 "sha1"
 
 #ifdef KERBEROS_ENABLED
-  #define KERBEROS_AUTH "kerberos"
+  #define AUTH_KERBEROS "kerberos"
+#endif
+
+#ifdef LDAP_ENABLED
+  #define AUTH_LDAP "ldap"
 #endif
 
 
@@ -39,6 +43,9 @@ struct User {
     std::string hashSalt; // for sha1 auth type
 #ifdef KERBEROS_ENABLED
     std::string kerberosRealm; // for kerberos auth type
+#endif
+#ifdef LDAP_ENABLED
+    std::string ldapServer; // for kerberos auth type
 #endif
     std::map<std::string, enum Role> rolesOnProjects;
     enum Role getRole(const std::string &project) const;

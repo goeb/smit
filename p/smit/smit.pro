@@ -26,7 +26,8 @@ SOURCES += \
     ../../src/console.cpp \
     ../../src/HttpContext.cpp \
     ../../src/ssoKerberos.cpp \
-    ../../src/kerberos.cpp
+    ../../src/kerberos.cpp \
+    ../../src/authLdap.cpp
 
 HEADERS += \
     ../../mongoose/mongoose.h \
@@ -52,5 +53,6 @@ HEADERS += \
     ../../src/console.h \
     ../../src/HttpContext.h \
     ../../src/ssoKerberos.h \
-    ../../src/kerberos.h
+    ../../src/kerberos.h \
+    ../../src/authLdap.h
 

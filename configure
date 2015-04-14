@@ -640,11 +640,15 @@ CXXFLAGS
 CXX
 KRB5_LIBS
 KRB5_CFLAGS
+KERBEROS_ENABLED_FALSE
+KERBEROS_ENABLED_TRUE
+LDAP_LIBS
+LDAP_CFLAGS
 PKG_CONFIG_LIBDIR
 PKG_CONFIG_PATH
 PKG_CONFIG
-KERBEROS_ENABLED_FALSE
-KERBEROS_ENABLED_TRUE
+LDAP_ENABLED_FALSE
+LDAP_ENABLED_TRUE
 MINGW_FALSE
 MINGW_TRUE
 CYGWIN_FALSE
@@ -732,6 +736,7 @@ ac_subst_files=''
 ac_user_opts='
 enable_option_checking
 enable_silent_rules
+enable_ldap
 enable_kerberos
 enable_dependency_tracking
 enable_gcov
@@ -743,6 +748,8 @@ target_alias
 PKG_CONFIG
 PKG_CONFIG_PATH
 PKG_CONFIG_LIBDIR
+LDAP_CFLAGS
+LDAP_LIBS
 KRB5_CFLAGS
 KRB5_LIBS
 CXX
@@ -1382,7 +1389,8 @@ Optional Features:
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
   --enable-silent-rules          less verbose build output (undo: `make V=1')
   --disable-silent-rules         verbose build output (undo: `make V=0')
-  --enable-kerberos       Enable Kerberos for single sign-on
+  --enable-ldap           Enable LDAP authentication
+  --enable-kerberos       Enable Kerberos authentication
   --disable-dependency-tracking  speeds up one-time build
   --enable-dependency-tracking   do not reject slow dependency extractors
   --enable-gcov           Enable test suite code coverage
@@ -1394,6 +1402,8 @@ Some influential environment variables:
               directories to add to pkg-config's search path
   PKG_CONFIG_LIBDIR
               path overriding pkg-config's built-in search path
+  LDAP_CFLAGS C compiler flags for LDAP, overriding pkg-config
+  LDAP_LIBS   linker flags for LDAP, overriding pkg-config
   KRB5_CFLAGS C compiler flags for KRB5, overriding pkg-config
   KRB5_LIBS   linker flags for KRB5, overriding pkg-config
   CXX         C++ compiler command
@@ -2992,22 +3002,22 @@ else
 fi
 
 
-# kerberos
-# Check whether --enable-kerberos was given.
-if test "${enable_kerberos+set}" = set; then :
-  enableval=$enable_kerberos;
+# ldap
+# Check whether --enable-ldap was given.
+if test "${enable_ldap+set}" = set; then :
+  enableval=$enable_ldap;
 fi
 
- if test x$enable_kerberos = xyes; then
-  KERBEROS_ENABLED_TRUE=
-  KERBEROS_ENABLED_FALSE='#'
+ if test x$enable_ldap = xyes; then
+  LDAP_ENABLED_TRUE=
+  LDAP_ENABLED_FALSE='#'
 else
-  KERBEROS_ENABLED_TRUE='#'
-  KERBEROS_ENABLED_FALSE=
+  LDAP_ENABLED_TRUE='#'
+  LDAP_ENABLED_FALSE=
 fi
 
 
-if test x$enable_kerberos = xyes; then
+if test x$enable_ldap = xyes; then
 
 
 
@@ -3128,6 +3138,115 @@ $as_echo "no" >&6; }
 		PKG_CONFIG=""
 	fi
 fi
+
+pkg_failed=no
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for LDAP" >&5
+$as_echo_n "checking for LDAP... " >&6; }
+
+if test -n "$LDAP_CFLAGS"; then
+    pkg_cv_LDAP_CFLAGS="$LDAP_CFLAGS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libldap\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "libldap") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_LDAP_CFLAGS=`$PKG_CONFIG --cflags "libldap" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+if test -n "$LDAP_LIBS"; then
+    pkg_cv_LDAP_LIBS="$LDAP_LIBS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libldap\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "libldap") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_LDAP_LIBS=`$PKG_CONFIG --libs "libldap" 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+
+
+
+if test $pkg_failed = yes; then
+   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+
+if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
+        _pkg_short_errors_supported=yes
+else
+        _pkg_short_errors_supported=no
+fi
+        if test $_pkg_short_errors_supported = yes; then
+	        LDAP_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "libldap" 2>&1`
+        else
+	        LDAP_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "libldap" 2>&1`
+        fi
+	# Put the nasty error message in config.log where it belongs
+	echo "$LDAP_PKG_ERRORS" >&5
+
+	as_fn_error $? "Package requirements (libldap) were not met:
+
+$LDAP_PKG_ERRORS
+
+Consider adjusting the PKG_CONFIG_PATH environment variable if you
+installed software in a non-standard prefix.
+
+Alternatively, you may set the environment variables LDAP_CFLAGS
+and LDAP_LIBS to avoid the need to call pkg-config.
+See the pkg-config man page for more details." "$LINENO" 5
+elif test $pkg_failed = untried; then
+     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+	{ { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
+as_fn_error $? "The pkg-config script could not be found or is too old.  Make sure it
+is in your PATH or set the PKG_CONFIG environment variable to the full
+path to pkg-config.
+
+Alternatively, you may set the environment variables LDAP_CFLAGS
+and LDAP_LIBS to avoid the need to call pkg-config.
+See the pkg-config man page for more details.
+
+To get pkg-config, see <http://pkg-config.freedesktop.org/>.
+See \`config.log' for more details" "$LINENO" 5; }
+else
+	LDAP_CFLAGS=$pkg_cv_LDAP_CFLAGS
+	LDAP_LIBS=$pkg_cv_LDAP_LIBS
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+
+fi
+fi
+
+# kerberos
+# Check whether --enable-kerberos was given.
+if test "${enable_kerberos+set}" = set; then :
+  enableval=$enable_kerberos;
+fi
+
+ if test x$enable_kerberos = xyes; then
+  KERBEROS_ENABLED_TRUE=
+  KERBEROS_ENABLED_FALSE='#'
+else
+  KERBEROS_ENABLED_TRUE='#'
+  KERBEROS_ENABLED_FALSE=
+fi
+
+
+if test x$enable_kerberos = xyes; then
 
 pkg_failed=no
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for KRB5" >&5
@@ -5723,6 +5842,10 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${MINGW_TRUE}" && test -z "${MINGW_FALSE}"; then
   as_fn_error $? "conditional \"MINGW\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${LDAP_ENABLED_TRUE}" && test -z "${LDAP_ENABLED_FALSE}"; then
+  as_fn_error $? "conditional \"LDAP_ENABLED\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${KERBEROS_ENABLED_TRUE}" && test -z "${KERBEROS_ENABLED_FALSE}"; then

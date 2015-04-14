@@ -42,15 +42,18 @@ target_triplet = @target@
 @GPROF_ENABLED_TRUE@am__append_4 = -O0 -g3 -pg -fprofile-arcs
 @GPROF_ENABLED_TRUE@am__append_5 = -O0 -g3 -pg -fprofile-arcs
 @GPROF_ENABLED_TRUE@am__append_6 = -pg -lgcov
-@KERBEROS_ENABLED_TRUE@am__append_7 = -lkrb5
-@KERBEROS_ENABLED_TRUE@am__append_8 = -DKERBEROS_ENABLED
-@WINDOWS_TRUE@am__append_9 = -static -static-libgcc -Dopenssl_EXPORTS
-@WINDOWS_TRUE@am__append_10 = -static -static-libgcc -Dopenssl_EXPORTS
-@WINDOWS_FALSE@am__append_11 = -pthread
+@WINDOWS_TRUE@am__append_7 = -static -static-libgcc -Dopenssl_EXPORTS
+@WINDOWS_TRUE@am__append_8 = -static -static-libgcc -Dopenssl_EXPORTS
+@WINDOWS_FALSE@am__append_9 = -pthread
 bin_PROGRAMS = smit$(EXEEXT)
-@KERBEROS_ENABLED_TRUE@am__append_12 = src/kerberos.cpp
-@WINDOWS_TRUE@am__append_13 = -lws2_32 -lgdi32
-@WINDOWS_FALSE@am__append_14 = -ldl
+@KERBEROS_ENABLED_TRUE@am__append_10 = src/kerberos.cpp
+@LDAP_ENABLED_TRUE@am__append_11 = src/authLdap.cpp
+@KERBEROS_ENABLED_TRUE@am__append_12 = @KRB5_LIBS@
+@KERBEROS_ENABLED_TRUE@am__append_13 = @KRB5_CFLAGS@ -DKERBEROS_ENABLED
+@LDAP_ENABLED_TRUE@am__append_14 = @LDAP_LIBS@
+@LDAP_ENABLED_TRUE@am__append_15 = @LDAP_CFLAGS@ -DLDAP_ENABLED
+@WINDOWS_TRUE@am__append_16 = -lws2_32 -lgdi32
+@WINDOWS_FALSE@am__append_17 = -ldl
 subdir = .
 DIST_COMMON = README $(am__configure_deps) $(dist_pkgdata_DATA) \
 	$(srcdir)/Makefile.am $(srcdir)/Makefile.in \
@@ -77,9 +80,10 @@ am__smit_SOURCES_DIST = src/db.cpp src/parseConfig.cpp \
 	src/mutexTools.cpp src/session.cpp src/dateTools.cpp \
 	src/logging.cpp src/Trigger.cpp src/filesystem.cpp \
 	src/clone.cpp src/console.cpp src/HttpContext.cpp \
-	mongoose/mongoose.c src/kerberos.cpp
+	mongoose/mongoose.c src/kerberos.cpp src/authLdap.cpp
 am__dirstamp = $(am__leading_dot)dirstamp
 @KERBEROS_ENABLED_TRUE@am__objects_1 = src/smit-kerberos.$(OBJEXT)
+@LDAP_ENABLED_TRUE@am__objects_2 = src/smit-authLdap.$(OBJEXT)
 am_smit_OBJECTS = src/smit-db.$(OBJEXT) src/smit-parseConfig.$(OBJEXT) \
 	src/smit-identifiers.$(OBJEXT) src/smit-main.$(OBJEXT) \
 	src/smit-httpdHandlers.$(OBJEXT) \
@@ -91,11 +95,13 @@ am_smit_OBJECTS = src/smit-db.$(OBJEXT) src/smit-parseConfig.$(OBJEXT) \
 	src/smit-logging.$(OBJEXT) src/smit-Trigger.$(OBJEXT) \
 	src/smit-filesystem.$(OBJEXT) src/smit-clone.$(OBJEXT) \
 	src/smit-console.$(OBJEXT) src/smit-HttpContext.$(OBJEXT) \
-	mongoose/smit-mongoose.$(OBJEXT) $(am__objects_1)
+	mongoose/smit-mongoose.$(OBJEXT) $(am__objects_1) \
+	$(am__objects_2)
 nodist_smit_OBJECTS = smit-embedcpio.$(OBJEXT)
 smit_OBJECTS = $(am_smit_OBJECTS) $(nodist_smit_OBJECTS)
 am__DEPENDENCIES_1 =
-smit_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+smit_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)/src
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -249,6 +255,8 @@ INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
 ISCC = @ISCC@
 KRB5_CFLAGS = @KRB5_CFLAGS@
 KRB5_LIBS = @KRB5_LIBS@
+LDAP_CFLAGS = @LDAP_CFLAGS@
+LDAP_LIBS = @LDAP_LIBS@
 LDFLAGS = @LDFLAGS@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
@@ -332,26 +340,26 @@ top_srcdir = @top_srcdir@
 
 # Manage configure options
 AM_CPPFLAGS = -Wall
-AM_CFLAGS = -Wall $(am__append_1) $(am__append_4) $(am__append_9)
-AM_CXXFLAGS = -Wall $(am__append_2) $(am__append_5) $(am__append_8) \
-	$(am__append_10)
-AM_LDFLAGS = $(am__append_3) $(am__append_6) $(am__append_7) \
-	$(am__append_11)
+AM_CFLAGS = -Wall $(am__append_1) $(am__append_4) $(am__append_7)
+AM_CXXFLAGS = -Wall $(am__append_2) $(am__append_5) $(am__append_8)
+AM_LDFLAGS = $(am__append_3) $(am__append_6) $(am__append_9)
 smit_SOURCES = src/db.cpp src/parseConfig.cpp src/identifiers.cpp \
 	src/main.cpp src/httpdHandlers.cpp src/renderingText.cpp \
 	src/renderingCsv.cpp src/renderingHtml.cpp src/cpio.cpp \
 	src/stringTools.cpp src/mutexTools.cpp src/session.cpp \
 	src/dateTools.cpp src/logging.cpp src/Trigger.cpp \
 	src/filesystem.cpp src/clone.cpp src/console.cpp \
-	src/HttpContext.cpp mongoose/mongoose.c $(am__append_12)
+	src/HttpContext.cpp mongoose/mongoose.c $(am__append_10) \
+	$(am__append_11)
 nodist_smit_SOURCES = embedcpio.c embedcpio.h 
 BUILT_SOURCES = embedcpio.c embedcpio.h
 CLEANFILES = embedcpio.c embedcpio.h convertToC
 X = embedded_data
 SM_VERSION = $(X)/sm/version
-smit_CPPFLAGS = -I @srcdir@/mongoose @OPENSSL_CFLAGS@ @CURL_CFLAGS@
-smit_LDADD = @OPENSSL_LIBS@ @CURL_LIBS@ $(am__append_13) \
-	$(am__append_14)
+smit_CPPFLAGS = -I @srcdir@/mongoose @OPENSSL_CFLAGS@ @CURL_CFLAGS@ \
+	$(am__append_13) $(am__append_15)
+smit_LDADD = @OPENSSL_LIBS@ @CURL_LIBS@ $(am__append_12) \
+	$(am__append_14) $(am__append_16) $(am__append_17)
 
 # specific subdirs
 SUBDIRS = test
@@ -505,6 +513,8 @@ mongoose/smit-mongoose.$(OBJEXT): mongoose/$(am__dirstamp) \
 	mongoose/$(DEPDIR)/$(am__dirstamp)
 src/smit-kerberos.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
+src/smit-authLdap.$(OBJEXT): src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
 smit$(EXEEXT): $(smit_OBJECTS) $(smit_DEPENDENCIES) $(EXTRA_smit_DEPENDENCIES) 
 	@rm -f smit$(EXEEXT)
 	$(AM_V_CXXLD)$(CXXLINK) $(smit_OBJECTS) $(smit_LDADD) $(LIBS)
@@ -514,6 +524,7 @@ mostlyclean-compile:
 	-rm -f mongoose/smit-mongoose.$(OBJEXT)
 	-rm -f src/smit-HttpContext.$(OBJEXT)
 	-rm -f src/smit-Trigger.$(OBJEXT)
+	-rm -f src/smit-authLdap.$(OBJEXT)
 	-rm -f src/smit-clone.$(OBJEXT)
 	-rm -f src/smit-console.$(OBJEXT)
 	-rm -f src/smit-cpio.$(OBJEXT)
@@ -540,6 +551,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@mongoose/$(DEPDIR)/smit-mongoose.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-HttpContext.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-Trigger.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-authLdap.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-clone.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-console.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-cpio.Po@am__quote@
@@ -898,6 +910,20 @@ src/smit-kerberos.obj: src/kerberos.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/kerberos.cpp' object='src/smit-kerberos.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/smit-kerberos.obj `if test -f 'src/kerberos.cpp'; then $(CYGPATH_W) 'src/kerberos.cpp'; else $(CYGPATH_W) '$(srcdir)/src/kerberos.cpp'; fi`
+
+src/smit-authLdap.o: src/authLdap.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/smit-authLdap.o -MD -MP -MF src/$(DEPDIR)/smit-authLdap.Tpo -c -o src/smit-authLdap.o `test -f 'src/authLdap.cpp' || echo '$(srcdir)/'`src/authLdap.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/smit-authLdap.Tpo src/$(DEPDIR)/smit-authLdap.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/authLdap.cpp' object='src/smit-authLdap.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/smit-authLdap.o `test -f 'src/authLdap.cpp' || echo '$(srcdir)/'`src/authLdap.cpp
+
+src/smit-authLdap.obj: src/authLdap.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/smit-authLdap.obj -MD -MP -MF src/$(DEPDIR)/smit-authLdap.Tpo -c -o src/smit-authLdap.obj `if test -f 'src/authLdap.cpp'; then $(CYGPATH_W) 'src/authLdap.cpp'; else $(CYGPATH_W) '$(srcdir)/src/authLdap.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/smit-authLdap.Tpo src/$(DEPDIR)/smit-authLdap.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/authLdap.cpp' object='src/smit-authLdap.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/smit-authLdap.obj `if test -f 'src/authLdap.cpp'; then $(CYGPATH_W) 'src/authLdap.cpp'; else $(CYGPATH_W) '$(srcdir)/src/authLdap.cpp'; fi`
 install-dist_pkgdataDATA: $(dist_pkgdata_DATA)
 	@$(NORMAL_INSTALL)
 	test -z "$(pkgdatadir)" || $(MKDIR_P) "$(DESTDIR)$(pkgdatadir)"
