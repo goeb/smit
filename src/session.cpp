@@ -68,6 +68,7 @@ std::string User::serialize()
 #ifdef LDAP_ENABLED
     } else if (authenticationType == AUTH_LDAP) {
         result += "    " + serializeSimpleToken(authenticationType) + " ";
+        result += "    " + serializeSimpleToken(ldapDistinguishedName) + " \\\n";
         result += "    " + serializeSimpleToken(ldapServer) + " \\\n";
 #endif
     }
@@ -147,6 +148,7 @@ int User::load(std::list<std::string> &tokens, bool checkProject)
         } else if (token == AUTH_LDAP) {
             // single sign-on authentication via a ldap server
             authenticationType = token;
+            ldapDistinguishedName = popListToken(tokens);
             ldapServer = popListToken(tokens);
             if (ldapServer.empty()) {
                 LOG_ERROR("Empty ldap server for user %s", username.c_str());
@@ -158,6 +160,9 @@ int User::load(std::list<std::string> &tokens, bool checkProject)
             hashSalt = popListToken(tokens);
 
         } else if (token == "superadmin") superadmin = true;
+        else {
+            LOG_ERROR("Unexpected token '%s' for user '%s'", token.c_str(), username.c_str());
+        }
     }
     return 0; // success
 }
@@ -203,7 +208,7 @@ int User::authenticate(const std::string &passwd)
 #endif
 #ifdef LDAP_ENABLED
     } else if (authenticationType == AUTH_LDAP) {
-        return ldapAuthenticate(username, ldapServer, passwd);
+        return ldapAuthenticate(ldapDistinguishedName, ldapServer, passwd);
 #endif
     }
 

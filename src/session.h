@@ -46,6 +46,7 @@ struct User {
 #endif
 #ifdef LDAP_ENABLED
     std::string ldapServer; // for kerberos auth type
+    std::string ldapDistinguishedName; // "uid=John Doo,ou=people,dc=example,dc=com"
 #endif
     std::map<std::string, enum Role> rolesOnProjects;
     enum Role getRole(const std::string &project) const;
