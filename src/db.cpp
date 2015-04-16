@@ -251,7 +251,7 @@ int Project::load()
 
     loadTags();
 
-    LOG_INFO("Project %s loaded: %d issues", path.c_str(), issues.size());
+    LOG_INFO("Project %s loaded: %ld issues", path.c_str(), L(issues.size()));
 
     consolidateIssues();
     computeAssociations();

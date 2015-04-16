@@ -4,6 +4,8 @@
 
 #include "authLdap.h"
 #include "logging.h"
+#include "stringTools.h"
+
 
 /** Authenticate against a Kerberos server
   *
@@ -21,7 +23,7 @@
 int ldapAuthenticate(const std::string &dname, const std::string &server,
                      const std::string password)
 {
-    LOG_DIAG("ldapAuthenticate(%s@%s)", dname.c_str(), server.c_str());
+    LOG_DIAG("ldapAuthenticate(dn=%s, server=%s)", dname.c_str(), server.c_str());
 
     LDAP *ld;
     int result;
@@ -43,7 +45,7 @@ int ldapAuthenticate(const std::string &dname, const std::string &server,
     // copy password in a mutable buffer (ldap API constraint)
     const size_t PASSWD_MAX_SIZE = 512;
     if (password.size() > PASSWD_MAX_SIZE) {
-        LOG_ERROR("password too long: %d characters", password.size());
+        LOG_ERROR("password too long: %ld characters", L(password.size()));
         ldap_unbind_ext(ld, 0, 0);
         return -1;
     }
