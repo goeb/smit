@@ -383,7 +383,6 @@ int cmpContents(const char *contents, size_t size, const std::string &file)
 {
     std::string data;
     int r = loadFile(file.c_str(), data);
-    LOG_ERROR("cmpContents: loadFile failed: %s => %s", file.c_str(), strerror(errno));
     if (r != 0) return r;
 
     if (contents == data) return 0;
