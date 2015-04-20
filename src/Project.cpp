@@ -365,12 +365,16 @@ int Project::storeViewsToFile()
     std::string fileContents;
     fileContents = K_SMIT_VERSION " " VERSION "\n";
 
-    std::map<std::string, PredefinedView>::const_iterator i;
-    FOREACH(i, predefinedViews) {
-        fileContents += i->second.serialize() + "\n";
-    }
-    std::string path = getPath() + '/' + VIEWS_FILE;
-    return writeToFile(path, fileContents);
+    fileContents += PredefinedView::serializeViews(predefinedViews);
+
+    std::string id;
+    int r = Object::write(getObjectsDir(), fileContents, id);
+    if (r < 0) return r;
+
+    std::string subpath = path  + "/" + VIEWS_FILE;
+    r = writeToFile(subpath, id);
+
+    return r;
 }
 
 int Project::deletePredefinedView(const std::string &name)
