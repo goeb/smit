@@ -197,6 +197,17 @@ std::string PredefinedView::serialize() const
     return out;
 }
 
+std::string PredefinedView::serializeViews(const std::map<std::string, PredefinedView> &views)
+{
+    std::string out;
+    std::map<std::string, PredefinedView>::const_iterator v;
+    FOREACH(v, views) {
+        out += v->second.serialize();
+        out += "\n";
+    }
+    return out;
+}
+
 /** Load views from a file
   *
   * @param[out] views
@@ -214,4 +225,22 @@ int PredefinedView::loadViews(const std::string &path, std::map<std::string, Pre
     PredefinedView::parsePredefinedViews(lines, views);
 
     return 0;
+}
+
+std::map<std::string, PredefinedView> PredefinedView::getDefaultViews()
+{
+    std::map<std::string, PredefinedView> defaultViews;
+    PredefinedView v;
+    // view "All issues"
+    v.name = _("All Issues");
+    v.sort = "status-mtime+id";
+    defaultViews[v.name] = v;
+
+    // view "My issues"
+    v.name = _("My Issues");
+    v.sort = "status-mtime+id";
+    v.filterin["owner"].push_back("me");
+    defaultViews[v.name] = v;
+
+    return defaultViews;
 }

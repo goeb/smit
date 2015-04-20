@@ -467,12 +467,12 @@ int Project::createProjectFiles(const std::string &repositoryPath, const std::st
     }
 
     // create file 'views'
-    const char* views =
-            "addView \"All Issues\" sort status-mtime+id\n"
-            "addView \"My Issues\" filterin owner me sort status-mtime+id\n"
-            ;
+    std::map<std::string, PredefinedView> defaultViews = PredefinedView::getDefaultViews();
+    std::string viewsStr = PredefinedView::serializeViews(defaultViews);
+    r = Object::write(objectsDir, viewsStr, id);
+
     subpath = path  + "/" + VIEWS_FILE;
-    r = writeToFile(subpath, views);
+    r = writeToFile(subpath, id);
     if (r != 0) {
         LOG_ERROR("Could not create file '%s': %s", subpath.c_str(), strerror(errno));
         return r;
