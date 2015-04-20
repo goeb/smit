@@ -35,6 +35,9 @@ SOURCES += \
     ../../src/Tag.cpp \
     ../../src/ProjectConfig.cpp \
     ../../src/Object.cpp
+    ../../src/ssoKerberos.cpp \
+    ../../src/kerberos.cpp \
+    ../../src/authLdap.cpp
 
 HEADERS += \
     ../../mongoose/mongoose.h \
@@ -69,4 +72,7 @@ HEADERS += \
     ../../src/Object.h \
     ../../src/restApi.h \
     ../../src/ProjectConfig.h
+    ../../src/ssoKerberos.h \
+    ../../src/kerberos.h \
+    ../../src/authLdap.h
 

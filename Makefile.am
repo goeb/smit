@@ -61,6 +61,15 @@ smit_SOURCES = \
 			   src/Object.cpp \
 			   mongoose/mongoose.c 
 
+if KERBEROS_ENABLED
+smit_SOURCES += src/kerberos.cpp
+endif
+
+if LDAP_ENABLED
+smit_SOURCES += src/authLdap.cpp
+endif
+
+
 nodist_smit_SOURCES = embedcpio.c embedcpio.h 
 BUILT_SOURCES = embedcpio.c embedcpio.h
 CLEANFILES = embedcpio.c embedcpio.h convertToC
@@ -87,6 +96,18 @@ clean-local-embedded-data:
 
 smit_CPPFLAGS = -I @srcdir@/mongoose @OPENSSL_CFLAGS@ @CURL_CFLAGS@
 smit_LDADD = @OPENSSL_LIBS@ @CURL_LIBS@
+
+if KERBEROS_ENABLED
+smit_LDADD += @KRB5_LIBS@
+smit_CPPFLAGS += @KRB5_CFLAGS@ -DKERBEROS_ENABLED
+endif
+
+if LDAP_ENABLED
+smit_LDADD += @LDAP_LIBS@
+smit_CPPFLAGS += @LDAP_CFLAGS@ -DLDAP_ENABLED
+endif
+
+
 
 if WINDOWS
 smit_LDADD += -lws2_32 -lgdi32

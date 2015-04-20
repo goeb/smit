@@ -459,10 +459,10 @@ int cmdUser(int argc, char **argv)
         if (old) {
             if (!superadmin.empty()) old->superadmin = u.superadmin;
             if (deletePasswd) {
-                old->hashType.clear();
+                old->authenticationType.clear();
                 old->hashValue.clear();
-            } else if (!u.hashType.empty()) {
-                old->hashType = u.hashType;
+            } else if (!u.authenticationType.empty()) {
+                old->authenticationType = u.authenticationType;
                 old->hashValue = u.hashValue;
             }
             // update modified roles (and keep the others unchanged)
@@ -532,7 +532,8 @@ int serveRepository(int argc, char **argv)
             else if (0 == strcmp(longOptions[optionIndex].name, "url-rewrite-root")) urlRewritingRoot = optarg;
             break;
         case 'd':
-            loglevel++;
+            setLoggingLevel(LL_DEBUG);
+            LOG_DIAG("setLoggingLevel(LL_DEBUG)");
             break;
         case '?': // incorrect syntax, a message is printed by getopt_long
             return helpServe();

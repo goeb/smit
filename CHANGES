@@ -1,5 +1,10 @@
 
-v2.3.0
+v2.4.0
+
+    - kerberos authentication (single sign-on)
+    - [To Be Confirmed] LDAP authentication (single sign-on)
+
+v2.3.0, 1 Apr 2015
     - keep old values of select, multiselect, selectUser until deliberately
       changed by the user
     - fix in-memory residual property after deleted entry
