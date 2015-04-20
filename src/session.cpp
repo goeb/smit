@@ -474,12 +474,19 @@ std::list<User> UserBase::getAllUsers()
 {
     std::list<User> result;
 
-    if (localUserInterface) return result;
 
     ScopeLocker scopeLocker(UserDb.locker, LOCK_READ_ONLY);
     std::map<std::string, User*>::const_iterator u;
     FOREACH(u, UserDb.configuredUsers) {
         result.push_back(*(u->second));
+
+        if (localUserInterface) {
+            // Case of 'smit ui' command: the users are supposed
+            // to contain only one user.
+            // So we return after the first user encountered.
+            return result;
+        }
+
     }
     return result;
 }
