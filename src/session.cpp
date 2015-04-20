@@ -444,12 +444,13 @@ std::string SessionBase::requestSession(const std::string &username, const std::
 
 /** Return a user object
   *
-  * If no valid user if found, then the returned object has an empty username.
+  * @return
+  *     If no valid user if found, then the returned object has an empty username.
   */
 User SessionBase::getLoggedInUser(const std::string &sessionId)
 {
     if (UserBase::isLocalUserInterface()) {
-        // case of a command smit ui
+        // case of a command 'smit ui'
         // return the first user in database (there should be only one when the repo is a clone)
         std::list<User> users = UserBase::getAllUsers();
 
