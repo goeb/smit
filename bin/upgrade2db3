@@ -103,6 +103,19 @@ migrateFileRefs() {
     fi
 }
 
+# migrate the 'views' file
+# $1 : project dir
+migrateViews() {
+    local pDir="$1"
+    local views="$pDir/views"
+    chmod u+w "$views"
+
+    objectId=$(sha1sum "$views" | sed -e "s/ .*//")
+    mv "$views" "$pDir/$objectId"
+    migrateObject "$pDir/$objectId" "$pDir/objects"
+    echo $objectId > "$pDir/refs/views"
+}
+
 # migrate the 'project' configuration file
 # $1 : project dir
 migrateProjectConfig() {
@@ -196,6 +209,8 @@ find "$dstDir" -name project | while read p; do
     done
 
     migrateProjectConfig "$pDir"
+
+    migrateViews "$pDir"
 
     # remove old directories files, issues, tags
     rm -rf "$pDir/files"

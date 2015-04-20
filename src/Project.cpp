@@ -667,16 +667,12 @@ void Project::loadPredefinedViews()
 
     std::string viewsPath = path + '/' + VIEWS_FILE;
 
-    const char *buf = 0;
-    int n = loadFile(viewsPath.c_str(), &buf);
-
-    if (n > 0) {
-
-        std::list<std::list<std::string> > lines = parseConfigTokens(buf, n);
-
-        free((void*)buf); // not needed any longer
-
-        predefinedViews = PredefinedView::parsePredefinedViews(lines);
+    std::string id;
+    int n = loadFile(viewsPath.c_str(), id);
+    if (n == 0) {
+        trim(id); // remove possible \n
+        std::string path = getObjectsDir() + "/" + Object::getSubpath(id);
+        PredefinedView::loadViews(path, predefinedViews);
     } // else error of empty file
 
     LOG_DEBUG("predefined views loaded: %ld", L(predefinedViews.size()));

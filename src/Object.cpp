@@ -58,3 +58,8 @@ int Object::write(const std::string &objectsDir, const std::string &data, std::s
     return write(objectsDir, data.data(), data.size(), id);
 }
 
+int Object::load(const std::string &objectsDir, std::string &id, std::string &data)
+{
+    std::string path = objectsDir + "/" + getSubpath(id);
+    return loadFile(path.c_str(), data);
+}

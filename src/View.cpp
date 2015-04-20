@@ -16,7 +16,7 @@
 #include "global.h"
 #include "logging.h"
 #include "parseConfig.h"
-
+#include "filesystem.h"
 
 /** @param filter
   *     [ "version:v1.0", "version:1.0", "owner:John Doe" ]
@@ -39,9 +39,13 @@ std::map<std::string, std::list<std::string> > parseFilter(const std::list<std::
 
     return result;
 }
-std::map<std::string, PredefinedView> PredefinedView::parsePredefinedViews(std::list<std::list<std::string> > lines)
+
+/** Parse tokens into a list of views
+  *
+  * @param[out] views
+  */
+void PredefinedView::parsePredefinedViews(std::list<std::list<std::string> > lines, std::map<std::string, PredefinedView> &views)
 {
-    std::map<std::string, PredefinedView> pvs;
     std::list<std::list<std::string> >::iterator line;
     std::string token;
     FOREACH(line, lines) {
@@ -95,14 +99,12 @@ std::map<std::string, PredefinedView> PredefinedView::parsePredefinedViews(std::
                     pv.name.clear();
                 }
             }
-            if (! pv.name.empty()) pvs[pv.name] = pv;
+            if (! pv.name.empty()) views[pv.name] = pv;
 
         } else {
             LOG_ERROR("parsePredefinedViews: Unexpected token %s", token.c_str());
         }
     }
-
-    return pvs;
 }
 
 std::string PredefinedView::getDirectionName(bool d)
@@ -193,4 +195,23 @@ std::string PredefinedView::serialize() const
     if (!search.empty()) out += "    search " + serializeSimpleToken(search) + "\n";
 
     return out;
+}
+
+/** Load views from a file
+  *
+  * @param[out] views
+  */
+int PredefinedView::loadViews(const std::string &path, std::map<std::string, PredefinedView> &views)
+{
+    std::string contents;
+    int n = loadFile(path.c_str(), contents);
+    if (n != 0) {
+        LOG_ERROR("Cannot load views '%s': %s", path.c_str(), strerror(errno));
+        return -1;
+    }
+
+    std::list<std::list<std::string> > lines = parseConfigTokens(contents.c_str(), contents.size());
+    PredefinedView::parsePredefinedViews(lines, views);
+
+    return 0;
 }

@@ -29,7 +29,10 @@ struct PredefinedView {
     std::string generateQueryString() const;
     static PredefinedView loadFromQueryString(const std::string &q);
     std::string serialize() const;
-    static std::map<std::string, PredefinedView> parsePredefinedViews(std::list<std::list<std::string> > lines);
+    static void parsePredefinedViews(std::list<std::list<std::string> > lines,
+                                     std::map<std::string, PredefinedView> &views);
+
+    static int loadViews(const std::string &path, std::map<std::string, PredefinedView> &views);
 
 };
 
