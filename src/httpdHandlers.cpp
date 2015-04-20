@@ -2080,7 +2080,7 @@ void httpPostEntry(const RequestContext *req, Project &pro, const std::string & 
 #if !defined(_WIN32)
         // launch the trigger, if any
         // launch the trigger only if a new entry was actually created
-        if (entry) Trigger::notifyEntry(pro, entry, isNewIssue);
+        if (entry && ! UserBase::isLocalUserInterface()) Trigger::notifyEntry(pro, entry, isNewIssue);
 #endif
 
         if (getFormat(req) == RENDERING_HTML) {
