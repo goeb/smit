@@ -24,6 +24,7 @@
 #include <sys/types.h>
 #include <errno.h>
 #include <getopt.h>
+#include <fstream>
 
 #include "clone.h"
 #include "global.h"
@@ -569,6 +570,15 @@ int pullProject(const PullContext &pullCtx, Project &p)
 
         pullIssue(pullCtx, p, remoteIssueId);
     }
+
+    // pull project configuration
+    LOG_ERROR("Pull project config not implemented yet");
+
+    // pull predefined views
+    LOG_ERROR("Pull project views not implemented yet");
+
+    // pull tags
+    LOG_ERROR("Pull project tags not implemented yet");
 
     return 0; // ok
 }

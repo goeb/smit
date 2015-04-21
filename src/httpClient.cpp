@@ -57,6 +57,13 @@ void HttpRequest::getFileStdout()
 
 }
 
+/** Dowload a file
+  *
+  * @return
+  *     0, regular file downloaded successfully
+  *     1, directory listing downloaded successfully
+  *    -1, error, file not downloaded
+  */
 int HttpRequest::downloadFile(const std::string &localPath)
 {
     LOG_DEBUG("downloadFile: resourcePath=%s", resourcePath.c_str());
@@ -88,7 +95,8 @@ int HttpRequest::downloadFile(const std::string &localPath)
                       tmp.c_str(), localPath.c_str(), strerror(errno));
             exit(1);
         }
-        return 0;
+        if (isDirectory) return 1;
+        else return 0;
 
     } else {
         return -1;
