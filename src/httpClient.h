@@ -32,6 +32,7 @@ public:
     void closeCurl(); // close libcurl resources
     void handleReceivedLines(const char *contents, size_t size);
     void handleReceivedRaw(void *data, size_t size);
+    void setUrl(const std::string &url);
     void setUrl(const std::string &root, const std::string &path);
     void getRequestLines();
     void getRequestRaw();
@@ -44,6 +45,8 @@ public:
     std::list<std::string> lines; // fulfilled after calling getRequestLines()
     int doCloning(bool recursive, int recursionLevel);
     void getFileStdout();
+    static int downloadFile(const HttpClientContext &ctx,
+                            const std::string &url, const std::string &localPath);
     int downloadFile(const std::string &localPath);
 
     int test();

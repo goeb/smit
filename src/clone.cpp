@@ -551,10 +551,91 @@ int pullIssue(const PullContext &pullCtx, Project &p, const std::string &remoteI
 }
 
 
+int pullProjectConfig(const PullContext &pullCtx, Project &p)
+{
+    // TODO
+    return -1;
+}
+
+/** Recursively pull files
+  *
+  *
+  */
+int pullFiles(const PullContext &ctx, Project &p, const std::string &srcResource,
+              const std::string &destLocal)
+{
+    // Download the resource locally in a temporary location
+    // and determine if it is a directory or a regular file
+
+    LOG_DEBUG("pullFiles %s/%s", p.getUrlName().c_str(), srcResource.c_str());
+
+    if (fileExists(destLocal) && !isDir(destLocal)) {
+        // File already there. Skip this download.
+        LOG_DEBUG("File already there, skip this download");
+        return 0;
+    }
+
+    std::string localTmp = p.getTmpDir() + "/download";
+    std::string url = ctx.rooturl + "/" + p.getUrlName() + "/" + srcResource;
+    int r = HttpRequest::downloadFile(ctx.httpCtx, url, localTmp);
+
+    if (r == 0) {
+        // Regular file downloaded successfully
+        // move it to the right place
+        r = rename(localTmp.c_str(), destLocal.c_str());
+        if (r != 0) {
+            LOG_ERROR("Could not rename %s -> %s: %s", localTmp.c_str(),
+                      destLocal.c_str(), strerror(errno));
+            return -1;
+        }
+        printf("  < %s\n", getBasename(srcResource).c_str()); // indicate progress
+    } else if (r == 1) {
+        // Directory listing
+        std::string line;
+        std::ifstream listing;
+        listing.open(localTmp.c_str()); // open file
+        if (listing) {
+            while (getline(listing, line)) {
+                trim(line);
+                if (line.empty()) continue;
+                std::string rsrc = srcResource + "/" + line;
+                std::string dlocal = destLocal + "/" + line;
+                r = pullFiles(ctx, p, rsrc, dlocal);
+                if (r != 0) {
+                    LOG_ERROR("Abort pulling.");
+                    return r;
+                }
+            }
+            if (listing.bad()) {
+                LOG_ERROR("Error loading listing of objects '%s': %s", localTmp.c_str(), strerror(errno));
+                return -1;
+            }
+
+        } else {
+            LOG_ERROR("Cannot load listing of objects '%s': %s", localTmp.c_str(), strerror(errno));
+            return -1;
+        }
+
+    } else {
+        // error
+        LOG_ERROR("Could not download %s/%s", p.getUrlName().c_str(), srcResource.c_str());
+        return -1;
+    }
+
+    return 0;
+
+}
 
 int pullProject(const PullContext &pullCtx, Project &p)
 {
     LOG_CLI("Pulling project %s\n", p.getName().c_str());
+
+
+    // TODO instead of pulling objects of issues, of attached files, of config, tags, views
+    // it would be simpler to pull all objects at first
+    LOG_DEBUG("Pulling objects of %s", p.getName().c_str());
+    int r = pullFiles(pullCtx, p, RESOURCE_OBJECTS, p.getObjectsDir());
+    if (r < 0) return r;
 
     // get the remote issues
     HttpRequest hr(pullCtx.httpCtx);
@@ -572,13 +653,13 @@ int pullProject(const PullContext &pullCtx, Project &p)
     }
 
     // pull project configuration
-    LOG_ERROR("Pull project config not implemented yet");
+    //LOG_ERROR("Pull project config not implemented yet");
 
     // pull predefined views
-    LOG_ERROR("Pull project views not implemented yet");
+    //LOG_ERROR("Pull project views not implemented yet");
 
     // pull tags
-    LOG_ERROR("Pull project tags not implemented yet");
+    //LOG_ERROR("Pull project tags not implemented yet");
 
     return 0; // ok
 }

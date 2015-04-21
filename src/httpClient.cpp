@@ -36,6 +36,11 @@ HttpClientContext::HttpClientContext()
     tlsInsecure = false;
 }
 
+void HttpRequest::setUrl(const std::string &url)
+{
+    curl_easy_setopt(curlHandle, CURLOPT_URL, url.c_str());
+}
+
 void HttpRequest::setUrl(const std::string &root, const std::string &path)
 {
     if (path.empty() || path[0] != '/') {
@@ -45,8 +50,10 @@ void HttpRequest::setUrl(const std::string &root, const std::string &path)
     rooturl = root;
     trimRight(rooturl, "/");
     resourcePath = path;
+    // legacy code. check if still necessary
     std::string url = rooturl + urlEncode(resourcePath, '%', "/"); // do not url-encode /
-    curl_easy_setopt(curlHandle, CURLOPT_URL, url.c_str());
+
+    setUrl(url);
 }
 
 void HttpRequest::getFileStdout()
@@ -55,6 +62,22 @@ void HttpRequest::getFileStdout()
     curl_easy_setopt(curlHandle, CURLOPT_WRITEFUNCTION, getStdoutCallback);
     performRequest();
 
+}
+
+/** Dowload a file
+  *
+  * @return
+  *     0, regular file downloaded successfully
+  *     1, directory listing downloaded successfully
+  *    -1, error, file not downloaded
+  */
+int HttpRequest::downloadFile(const HttpClientContext &ctx,
+                              const std::string &url, const std::string &localPath)
+{
+    HttpRequest hr(ctx);
+    hr.setUrl(url);
+    int r = hr.downloadFile(localPath);
+    return r;
 }
 
 /** Dowload a file
@@ -375,7 +398,8 @@ void HttpRequest::performRequest()
     res = curl_easy_perform(curlHandle);
 
     if (res != CURLE_OK) {
-        fprintf(stderr, "curl_easy_perform() failed: %s (%s%s)\n", curl_easy_strerror(res), rooturl.c_str(), resourcePath.c_str());
+        fprintf(stderr, "curl_easy_perform() failed: %s (%s%s)\n", curl_easy_strerror(res),
+                rooturl.c_str(), resourcePath.c_str());
         exit(1);
     }
 
