@@ -532,8 +532,7 @@ int serveRepository(int argc, char **argv)
             else if (0 == strcmp(longOptions[optionIndex].name, "url-rewrite-root")) urlRewritingRoot = optarg;
             break;
         case 'd':
-            setLoggingLevel(LL_DEBUG);
-            LOG_DIAG("setLoggingLevel(LL_DEBUG)");
+            loglevel++;
             break;
         case '?': // incorrect syntax, a message is printed by getopt_long
             return helpServe();
