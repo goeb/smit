@@ -279,21 +279,22 @@ int Project::modifyConfig(ProjectConfig newConfig, const std::string &author)
     std::string data = newConfig.serialize();
 
     // write into objects database
-    std::string id;
-    int r = Object::write(getObjectsDir(), data, id);
+    std::string newid;
+    int r = Object::write(getObjectsDir(), data, newid);
     if (r < 0) {
-        LOG_ERROR("Cannot write new config of project: id=%s", id.c_str());
+        LOG_ERROR("Cannot write new config of project: id=%s", newid.c_str());
         return -1;
     }
     // write ref
     std::string newProjectRef = path + "/" PATH_PROJECT_CONFIG;
-    r = writeToFile(newProjectRef, id);
+    r = writeToFile(newProjectRef, newid);
     if (r != 0) {
         LOG_ERROR("Cannot write new config of project: %s", newProjectRef.c_str());
         return -1;
     }
 
     config = newConfig;
+    config.id = newid;
 
     return 0;
 }
