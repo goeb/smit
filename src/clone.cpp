@@ -25,6 +25,8 @@
 #include <errno.h>
 #include <getopt.h>
 #include <fstream>
+#include <sstream>
+#include <iostream>
 
 #include "clone.h"
 #include "global.h"
@@ -335,41 +337,6 @@ int getEntriesOfRemoteIssue(const PullContext &pullCtx, const Project &p, const 
     return 0;
 }
 
-/** Pull the attached files of an issue
-  */
-void pullAttachedFiles(const PullContext &pullCtx, const Project &p, const Issue &i)
-{
-    LOG_FUNC();
-    LOG_DEBUG("Pulling attached files of %s/issues/%s", p.getName().c_str(), i.id.c_str());
-    // get the remote files attached to a issue
-    Entry *e = i.first;
-    while (e) {
-        PropertiesIt files = e->properties.find(K_FILE);
-        if (files != e->properties.end()) {
-            LOG_DEBUG("Entry %s has files: %s", e->id.c_str(), toString(files->second).c_str());
-            std::list<std::string>::const_iterator f;
-            FOREACH(f, files->second) {
-                // file is like: <object-id>/<basename>
-                std::string fid = *f;
-                std::string id = popToken(fid, '/');
-                std::string localPath = p.getObjectsDir() + "/" + Object::getSubpath(id);
-                if (!fileExists(localPath)) {
-                    // download the file
-                    LOG_CLI("Pulling file %s...\n", f->c_str());
-                    HttpRequest hr(pullCtx.httpCtx);
-                    std::string resource = "/" + p.getUrlName() + "/" RESOURCE_FILES "/" + *f;
-                    hr.setUrl(pullCtx.rooturl, resource);
-                    int r = hr.downloadFile(localPath);
-                    if (r!=0) LOG_ERROR("Cannot get file: %s", resource.c_str());
-                } else {
-                    LOG_DEBUG("Remote file already exists locally: %s", f->c_str());
-
-                }
-            }
-        }
-        e = e->next;
-    }
-}
 /** Clone a remote issue
   *
   * Download all entries of the remote that do not exist locally.
@@ -378,38 +345,25 @@ Issue *cloneIssue(const PullContext &pullCtx, Project &p, const std::string &iss
 {
     LOG_DEBUG("Cloning %s/issues/%s", p.getName().c_str(), issueId.c_str());
 
-    // get the entries of the remote issue
-    std::list<std::string> remoteEntries;
-    int r = getEntriesOfRemoteIssue(pullCtx, p, issueId, remoteEntries);
+    // Get the ref the remote issue (its latest entry)
+    std::string localTmp = p.getTmpDir() + "/download";
+    std::string url = pullCtx.rooturl + "/" + p.getUrlName() + "/" RSRC_REF_ISSUES "/" + issueId;
+    int r = HttpRequest::downloadFile(pullCtx.httpCtx, url, localTmp);
     if (r != 0) {
-        fprintf(stderr, "Cannot get entries of remote issue %s\n", issueId.c_str());
-        exit(1);
-    }
-    if (remoteEntries.empty()) {
-        fprintf(stderr, "Cannot clone remote issue that has no entry: %s\n", issueId.c_str());
-        exit(1);
+        LOG_ERROR("Cannot dowload '%s': r=%d", url.c_str(), r);
+        return 0;
     }
 
-    // download all remote entries
-    std::list<std::string>::const_iterator remoteEntry;
     std::string latest;
-    FOREACH(remoteEntry, remoteEntries) {
-        std::string localfile = p.getObjectsDir() + "/" + Entry::getSubpath(*remoteEntry);
-        if (!fileExists(localfile)) {
-            // file not existing locally: do download
-            LOG_CLI("Pulling entry: %s\n", remoteEntry->c_str());
-
-            HttpRequest hr(pullCtx.httpCtx);
-            std::string resource = "/" + p.getUrlName() + "/" RESOURCE_FILES "/" + (*remoteEntry);
-            hr.setUrl(pullCtx.rooturl, resource);
-            int r = hr.downloadFile(localfile);
-            if (r!=0) LOG_ERROR("Cannot get file: %s", resource.c_str());
-
-        }
-        latest = *remoteEntry;
+    r = loadFile(localTmp.c_str(), latest);
+    if (r != 0) {
+        LOG_ERROR("Cannot read file '%s': %s", localTmp.c_str(), strerror((errno)));
+        return 0;
     }
+    unlink(localTmp.c_str());
 
-    // Load the remote issue from its latest entry
+    trim(latest);
+
     Issue *remoteIssue = Issue::load(p.getObjectsDir(), latest);
     if (!remoteIssue) {
         fprintf(stderr, "Cannot load remote issue from latest %s\n", latest.c_str());
@@ -546,7 +500,6 @@ int pullIssue(const PullContext &pullCtx, Project &p, const std::string &remoteI
         }
     }
 
-    pullAttachedFiles(pullCtx, p, *remoteIssue);
     return 0; // ok
 }
 
@@ -589,30 +542,34 @@ int pullFiles(const PullContext &ctx, Project &p, const std::string &srcResource
             return -1;
         }
         printf("  < %s\n", getBasename(srcResource).c_str()); // indicate progress
+        unlink(localTmp.c_str());
+
     } else if (r == 1) {
         // Directory listing
+        // Load in memory
+        std::string listing;
+        r = loadFile(localTmp, listing);
+        if (r != 0) {
+            LOG_ERROR("Could not load file '%s': %s", localTmp.c_str(), strerror(errno));
+            return -1;
+        }
+        unlink(localTmp.c_str());
+        std::istringstream flisting(listing);
         std::string line;
-        std::ifstream listing;
-        listing.open(localTmp.c_str()); // open file
-        if (listing) {
-            while (getline(listing, line)) {
-                trim(line);
-                if (line.empty()) continue;
-                std::string rsrc = srcResource + "/" + line;
-                std::string dlocal = destLocal + "/" + line;
-                r = pullFiles(ctx, p, rsrc, dlocal);
-                if (r != 0) {
-                    LOG_ERROR("Abort pulling.");
-                    return r;
-                }
+        while (getline(flisting, line)) {
+            trim(line);
+            if (line.empty()) continue;
+            std::string rsrc = srcResource + "/" + line;
+            std::string dlocal = destLocal + "/" + line;
+            mkdirs(destLocal);
+            r = pullFiles(ctx, p, rsrc, dlocal);
+            if (r != 0) {
+                LOG_ERROR("Abort pulling.");
+                return r;
             }
-            if (listing.bad()) {
-                LOG_ERROR("Error loading listing of objects '%s': %s", localTmp.c_str(), strerror(errno));
-                return -1;
-            }
-
-        } else {
-            LOG_ERROR("Cannot load listing of objects '%s': %s", localTmp.c_str(), strerror(errno));
+        }
+        if (flisting.bad()) {
+            LOG_ERROR("Error loading listing of objects '%s': %s", localTmp.c_str(), strerror(errno));
             return -1;
         }
 
@@ -623,16 +580,12 @@ int pullFiles(const PullContext &ctx, Project &p, const std::string &srcResource
     }
 
     return 0;
-
 }
 
 int pullProject(const PullContext &pullCtx, Project &p)
 {
     LOG_CLI("Pulling project %s\n", p.getName().c_str());
 
-
-    // TODO instead of pulling objects of issues, of attached files, of config, tags, views
-    // it would be simpler to pull all objects at first
     LOG_DEBUG("Pulling objects of %s", p.getName().c_str());
     int r = pullFiles(pullCtx, p, RESOURCE_OBJECTS, p.getObjectsDir());
     if (r < 0) return r;

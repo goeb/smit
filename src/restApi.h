@@ -8,8 +8,9 @@
 #define RESOURCE_OBJECTS "objects"
 #define RESOURCE_FILES "files"
 #define RSRC_PROJECT_CONFIG "refs/project"
-#define RSRC_VIEWS "refs/views"
-#define RSRC_TAGS "refs/tags"
+#define RSRC_REF_VIEWS "refs/views"
+#define RSRC_REF_TAGS "refs/tags"
+#define RSRC_REF_ISSUES "refs/issues"
 
 
 
