@@ -38,7 +38,7 @@ HttpClientContext::HttpClientContext()
 
 void HttpRequest::setUrl(const std::string &url)
 {
-    curl_easy_setopt(curlHandle, CURLOPT_URL, url.c_str());
+     curl_easy_setopt(curlHandle, CURLOPT_URL, url.c_str());
 }
 
 void HttpRequest::setUrl(const std::string &root, const std::string &path)
@@ -89,7 +89,6 @@ int HttpRequest::downloadFile(const HttpClientContext &ctx,
   */
 int HttpRequest::downloadFile(const std::string &localPath)
 {
-    LOG_DEBUG("downloadFile: resourcePath=%s", resourcePath.c_str());
     curl_easy_setopt(curlHandle, CURLOPT_WRITEDATA, (void *)this);
     curl_easy_setopt(curlHandle, CURLOPT_WRITEFUNCTION, downloadCallback);
 

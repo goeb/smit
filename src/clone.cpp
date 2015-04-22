@@ -75,6 +75,17 @@
   *
   */
 
+// resolve strategies for pulling conflicts
+enum MergeStrategy { MERGE_KEEP_LOCAL, MERGE_DROP_LOCAL, MERGE_INTERACTIVE};
+struct PullContext {
+    std::string rooturl; // eg: http://example.com:8090/
+    std::string localRepo; // path to local repository
+    HttpClientContext httpCtx; // session identifier
+    MergeStrategy mergeStrategy; // for pulling only, not cloning
+};
+
+
+
 int helpClone()
 {
     LOG_CLI("Usage: smit clone [options] <url> <directory>\n"
@@ -119,28 +130,106 @@ int testSessid(const std::string url, const HttpClientContext &ctx)
 
 }
 
+
+/** Recursively pull files
+  *
+  * Files that already exist locally are not pulled.
+  *
+  * @return
+  *     0 success
+  *    -1 an error occurred and the recursive pulling aborted
+  */
+int pullFiles(const PullContext &ctx, const std::string &srcResource,
+              const std::string &destLocal)
+{
+    // Download the resource locally in a temporary location
+    // and determine if it is a directory or a regular file
+
+    LOG_DIAG("pullFiles %s", srcResource.c_str());
+
+    if (fileExists(destLocal) && !isDir(destLocal)) {
+        // File already there. Skip this download.
+        LOG_DEBUG("File already there, skip this download");
+        return 0;
+    }
+
+    std::string localTmp = ctx.localRepo + "/.download";
+    std::string url = ctx.rooturl + "/" + srcResource;
+
+
+    int r = HttpRequest::downloadFile(ctx.httpCtx, url, localTmp);
+
+    if (r == 0) {
+        // Regular file downloaded successfully
+        // move it to the right place
+        r = rename(localTmp.c_str(), destLocal.c_str());
+        if (r != 0) {
+            LOG_ERROR("Could not rename %s -> %s: %s", localTmp.c_str(),
+                      destLocal.c_str(), strerror(errno));
+            return -1;
+        }
+        printf("  < %s\n", getBasename(srcResource).c_str()); // indicate progress
+        unlink(localTmp.c_str());
+
+    } else if (r == 1) {
+        // Directory listing
+        // Create the directory locally
+        mkdirs(destLocal);
+        // Load in memory
+        std::string listing;
+        r = loadFile(localTmp, listing);
+        if (r != 0) {
+            LOG_ERROR("Could not load file '%s': %s", localTmp.c_str(), strerror(errno));
+            return -1;
+        }
+        unlink(localTmp.c_str());
+        std::istringstream flisting(listing);
+        std::string filename;
+        while (getline(flisting, filename)) {
+            trim(filename);
+            if (filename.empty()) continue;
+
+            // manage special characters in filename that must be escaped in URL
+            // eg: spaces
+            std::string urlFilename = urlEncode(filename);
+            std::string rsrc = srcResource + "/" + urlFilename;
+            std::string dlocal = destLocal + "/" + filename;
+            r = pullFiles(ctx, rsrc, dlocal);
+            if (r != 0) {
+                LOG_ERROR("Abort pulling.");
+                return r;
+            }
+        }
+        if (flisting.bad()) {
+            LOG_ERROR("Error loading listing of objects '%s': %s", localTmp.c_str(), strerror(errno));
+            return -1;
+        }
+
+    } else {
+        // error
+        LOG_ERROR("Could not download %s", srcResource.c_str());
+        return -1;
+    }
+
+    return 0;
+}
+
+
 /** Get all the projects that we have read-access to.
   */
 int getProjects(const std::string &rooturl, const std::string &destdir, const HttpClientContext &ctx)
 {
     LOG_DEBUG("getProjects(%s, %s, %s)", rooturl.c_str(), destdir.c_str(), ctx.sessid.c_str());
 
-    HttpRequest hr(ctx);
-    hr.setUrl(rooturl, "/");
-    hr.setRepository(destdir);
-    int r = hr.doCloning(true, 0);
+    PullContext cloneCtx;
+    cloneCtx.httpCtx = ctx;
+    cloneCtx.rooturl = rooturl;
+    cloneCtx.localRepo = destdir;
+    cloneCtx.mergeStrategy = MERGE_KEEP_LOCAL; // not used here (brut cloning)
+    int r = pullFiles(cloneCtx, "/", destdir);
 
     return r;
 }
-
-// resolve strategies for pulling conflicts
-enum MergeStrategy { MERGE_KEEP_LOCAL, MERGE_DROP_LOCAL, MERGE_INTERACTIVE};
-struct PullContext {
-    std::string rooturl; // eg: http://example.com:8090/
-    std::string localRepo; // path to local repository
-    HttpClientContext httpCtx; // session identifier
-    MergeStrategy mergeStrategy; // for pulling only, not cloning
-};
 
 /** Merge a local entry into a remote branch (downloaded locally)
   *
@@ -510,89 +599,18 @@ int pullProjectConfig(const PullContext &pullCtx, Project &p)
     return -1;
 }
 
-/** Recursively pull files
-  *
-  *
-  */
-int pullFiles(const PullContext &ctx, Project &p, const std::string &srcResource,
-              const std::string &destLocal)
-{
-    // Download the resource locally in a temporary location
-    // and determine if it is a directory or a regular file
-
-    LOG_DEBUG("pullFiles %s/%s", p.getUrlName().c_str(), srcResource.c_str());
-
-    if (fileExists(destLocal) && !isDir(destLocal)) {
-        // File already there. Skip this download.
-        LOG_DEBUG("File already there, skip this download");
-        return 0;
-    }
-
-    std::string localTmp = p.getTmpDir() + "/download";
-    std::string url = ctx.rooturl + "/" + p.getUrlName() + "/" + srcResource;
-    int r = HttpRequest::downloadFile(ctx.httpCtx, url, localTmp);
-
-    if (r == 0) {
-        // Regular file downloaded successfully
-        // move it to the right place
-        r = rename(localTmp.c_str(), destLocal.c_str());
-        if (r != 0) {
-            LOG_ERROR("Could not rename %s -> %s: %s", localTmp.c_str(),
-                      destLocal.c_str(), strerror(errno));
-            return -1;
-        }
-        printf("  < %s\n", getBasename(srcResource).c_str()); // indicate progress
-        unlink(localTmp.c_str());
-
-    } else if (r == 1) {
-        // Directory listing
-        // Load in memory
-        std::string listing;
-        r = loadFile(localTmp, listing);
-        if (r != 0) {
-            LOG_ERROR("Could not load file '%s': %s", localTmp.c_str(), strerror(errno));
-            return -1;
-        }
-        unlink(localTmp.c_str());
-        std::istringstream flisting(listing);
-        std::string line;
-        while (getline(flisting, line)) {
-            trim(line);
-            if (line.empty()) continue;
-            std::string rsrc = srcResource + "/" + line;
-            std::string dlocal = destLocal + "/" + line;
-            mkdirs(destLocal);
-            r = pullFiles(ctx, p, rsrc, dlocal);
-            if (r != 0) {
-                LOG_ERROR("Abort pulling.");
-                return r;
-            }
-        }
-        if (flisting.bad()) {
-            LOG_ERROR("Error loading listing of objects '%s': %s", localTmp.c_str(), strerror(errno));
-            return -1;
-        }
-
-    } else {
-        // error
-        LOG_ERROR("Could not download %s/%s", p.getUrlName().c_str(), srcResource.c_str());
-        return -1;
-    }
-
-    return 0;
-}
-
 int pullProject(const PullContext &pullCtx, Project &p)
 {
     LOG_CLI("Pulling project %s\n", p.getName().c_str());
 
     LOG_DEBUG("Pulling objects of %s", p.getName().c_str());
-    int r = pullFiles(pullCtx, p, RESOURCE_OBJECTS, p.getObjectsDir());
+    std::string resource = p.getUrlName() + "/" RESOURCE_OBJECTS;
+    int r = pullFiles(pullCtx, resource, p.getObjectsDir());
     if (r < 0) return r;
 
     // get the remote issues
     HttpRequest hr(pullCtx.httpCtx);
-    std::string resource = "/" + p.getUrlName() + "/issues/";
+    resource = "/" + p.getUrlName() + "/" RESOURCE_ISSUES "/";
     hr.setUrl(pullCtx.rooturl, resource);
     hr.getRequestLines();
     hr.closeCurl(); // free the resource
@@ -613,6 +631,8 @@ int pullProject(const PullContext &pullCtx, Project &p)
 
     // pull tags
     //LOG_ERROR("Pull project tags not implemented yet");
+
+    // TODO pull 'public', 'templates' and other static files
 
     return 0; // ok
 }
