@@ -36,24 +36,10 @@ HttpClientContext::HttpClientContext()
     tlsInsecure = false;
 }
 
-void HttpRequest::setUrl(const std::string &url)
+void HttpRequest::setUrl(const std::string &_url)
 {
-     curl_easy_setopt(curlHandle, CURLOPT_URL, url.c_str());
-}
-
-void HttpRequest::setUrl(const std::string &root, const std::string &path)
-{
-    if (path.empty() || path[0] != '/') {
-        fprintf(stderr, "setUrl: Malformed internal path '%s'\n", path.c_str());
-        exit(1);
-    }
-    rooturl = root;
-    trimRight(rooturl, "/");
-    resourcePath = path;
-    // legacy code. check if still necessary
-    std::string url = rooturl + urlEncode(resourcePath, '%', "/"); // do not url-encode /
-
-    setUrl(url);
+    url = _url;
+    curl_easy_setopt(curlHandle, CURLOPT_URL, url.c_str());
 }
 
 void HttpRequest::getFileStdout()
@@ -123,75 +109,6 @@ int HttpRequest::downloadFile(const std::string &localPath)
     } else {
         return -1;
     }
-}
-
-
-
-/** Get files recursively through sub-directories
-  *
-  * @param recursionLevel
-  *    used to track the depth in the sub-directories
-  */
-int HttpRequest::doCloning(bool recursive, int recursionLevel)
-{
-    LOG_DEBUG("Entering doCloning: resourcePath=%s", resourcePath.c_str());
-    curl_easy_setopt(curlHandle, CURLOPT_WRITEDATA, (void *)this);
-    curl_easy_setopt(curlHandle, CURLOPT_WRITEFUNCTION, writeToFileOrDirCallback);
-
-    if (recursionLevel < 2) printf("%s\n", resourcePath.c_str());
-    performRequest();
-
-    if (httpStatusCode < 200 || httpStatusCode >= 300) {
-        LOG_ERROR("GET %s: failed with HTTP %d", resourcePath.c_str(), httpStatusCode);
-        return -1;
-    }
-
-    if (isDirectory && recursive) {
-        // finalize received lines
-        handleReceivedLines(0, 0);
-
-        // free some resource before going recursive
-        // force this cleanup before destructor of this HttpRequest instance
-        closeCurl();
-
-        std::string localPath = repository + resourcePath;
-        trimRight(localPath, "/");
-
-        // make current directory locally
-        LOG_DEBUG("mkdir %s...", localPath.c_str());
-        int r = mkdir(localPath);
-        if (r != 0) {
-            fprintf(stderr, "Cannot create directory '%s': %s\n", localPath.c_str(), strerror(errno));
-            fprintf(stderr, "Abort.\n");
-            exit(1);
-        }
-
-        std::list<std::string>::iterator file;
-        FOREACH(file, lines) {
-
-            if (file->empty()) continue;
-            if ((*file) == ".") continue;
-            if ((*file) == "..") continue;
-
-            std::string subpath = resourcePath;
-            if (resourcePath != "/")  subpath += '/';
-            subpath += (*file);
-
-            HttpRequest hr(httpCtx);
-            hr.setUrl(rooturl, subpath);
-            hr.setRepository(repository);
-            int r = hr.doCloning(true, recursionLevel+1);
-            if (r < 0) return r;
-        }
-    }
-    if (!isDirectory) {
-        // make sure that even an empty file gets created as well
-        handleReceiveFileOrDirectory(0, 0);
-        if (!fd) { // defensive programming
-            fprintf(stderr, "unexpected null file descriptor\n");
-        } else closeFile();
-    }
-    return 0;
 }
 
 void HttpRequest::post(const std::string &params)
@@ -393,12 +310,12 @@ void HttpRequest::performRequest()
 {
     CURLcode res;
 
-    LOG_DEBUG("resource: %s%s", rooturl.c_str(), resourcePath.c_str());
+    LOG_DEBUG("resource: %s", url.c_str());
     res = curl_easy_perform(curlHandle);
 
     if (res != CURLE_OK) {
-        fprintf(stderr, "curl_easy_perform() failed: %s (%s%s)\n", curl_easy_strerror(res),
-                rooturl.c_str(), resourcePath.c_str());
+        fprintf(stderr, "curl_easy_perform() failed: %s (%s)\n", curl_easy_strerror(res),
+                url.c_str());
         exit(1);
     }
 
@@ -439,7 +356,7 @@ size_t HttpRequest::headerCallback(void *contents, size_t size, size_t nmemb, vo
         hr->httpStatusCode = atoi(reponseCode.c_str());
 
         if (hr->httpStatusCode < 200 && hr->httpStatusCode > 299) {
-            fprintf(stderr, "%s: HTTP status code %d. Exiting.\n", hr->resourcePath.c_str(), hr->httpStatusCode);
+            fprintf(stderr, "%s: HTTP status code %d. Exiting.\n", hr->url.c_str(), hr->httpStatusCode);
             exit(1);
         }
     }
@@ -482,12 +399,8 @@ void HttpRequest::handleReceivedRaw(void *data, size_t size)
 void HttpRequest::openFile()
 {
     if (filename.empty()) {
-        if (repository.size() > 0) filename = repository + resourcePath; // resourcePath has a starting '/'
-        else if (downloadDir.size() > 0) filename = downloadDir + "/" + getBasename(resourcePath);
-        else {
-            fprintf(stderr, "Error: repository and downloadDir are both empty strings\n");
-            exit(1);
-        }
+        fprintf(stderr, "Error: filename empty\n");
+        exit(1);
     }
     LOG_DEBUG("Opening file: %s", filename.c_str());
     fd = fopen(filename.c_str(), "wb");

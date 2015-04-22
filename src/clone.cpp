@@ -50,10 +50,10 @@
   *
   * 1. Conflicts on existing issues
   *
-  * These conflicts occur typically when a user modifies an issue on the server and
-  * another user modifies the same issue on his/her local clone.
+  * These conflicts occur typically when a user modified an issue on the server and
+  * another user modified the same issue on his/her local clone.
   * These conflicts are detected during a pushing, but they can be resolved only
-  * during a pulling.
+  * by a pulling.
   * These conflicts are resolved either automatically or interactively.
   *
   *
@@ -62,7 +62,7 @@
   * another user creates a new issue on his/her local clone, and both new issues get
   * the same issue id.
   *
-  * These conflicts are resolved during a pulling. The local issue of the clone is
+  * These conflicts are resolved by pulling. The local issue of the clone is
   * renamed. For example issue 123 will be renamed issue 124.
   *
   * These conflicts are also resolved when pushing. New local issues may
@@ -121,7 +121,7 @@ int testSessid(const std::string url, const HttpClientContext &ctx)
     LOG_DEBUG("testSessid(%s, %s)", url.c_str(), ctx.sessid.c_str());
 
     HttpRequest hr(ctx);
-    hr.setUrl(url, "/");
+    hr.setUrl(url + "/");
     int status = hr.test();
     LOG_DEBUG("status = %d", status);
 
@@ -410,9 +410,9 @@ void handleConflictOnEntries(const PullContext &pullCtx, Project &p,
 int getEntriesOfRemoteIssue(const PullContext &pullCtx, const Project &p, const std::string &issueId,
                       std::list<std::string> &entries)
 {
-    std::string resource = "/" + p.getUrlName() + "/" RESOURCE_ISSUES "/" + issueId;
+    std::string url = pullCtx.rooturl + "/" + p.getUrlName() + "/" RESOURCE_ISSUES "/" + issueId;
     HttpRequest hr(pullCtx.httpCtx);
-    hr.setUrl(pullCtx.rooturl, resource);
+    hr.setUrl(url);
     hr.getRequestLines();
     hr.closeCurl(); // free the curl resource
 
@@ -601,7 +601,7 @@ int pullProjectConfig(const PullContext &pullCtx, Project &p)
 
 int pullProject(const PullContext &pullCtx, Project &p)
 {
-    LOG_CLI("Pulling project %s\n", p.getName().c_str());
+    LOG_CLI("Pulling project: %s\n", p.getName().c_str());
 
     LOG_DEBUG("Pulling objects of %s", p.getName().c_str());
     std::string resource = p.getUrlName() + "/" RESOURCE_OBJECTS;
@@ -610,8 +610,8 @@ int pullProject(const PullContext &pullCtx, Project &p)
 
     // get the remote issues
     HttpRequest hr(pullCtx.httpCtx);
-    resource = "/" + p.getUrlName() + "/" RESOURCE_ISSUES "/";
-    hr.setUrl(pullCtx.rooturl, resource);
+    std::string url =pullCtx.rooturl + "/" + p.getUrlName() + "/" RESOURCE_ISSUES "/";
+    hr.setUrl(url);
     hr.getRequestLines();
     hr.closeCurl(); // free the resource
 
@@ -655,7 +655,7 @@ int pullProjects(const PullContext &pullCtx)
 
     // get the list of remote projects
     HttpRequest hr(pullCtx.httpCtx);
-    hr.setUrl(pullCtx.rooturl, "/");
+    hr.setUrl(pullCtx.rooturl + "/");
     hr.getRequestLines();
 
     std::list<std::string>::iterator projectName;
@@ -670,13 +670,11 @@ int pullProjects(const PullContext &pullCtx)
         if (!p) {
             // the remote project was not locally cloned
             // do cloning now
-            LOG_CLI("Cloning project: %s\n", unmangledName.c_str());
-            HttpRequest hr(pullCtx.httpCtx);
-            std::string resource = *projectName;
-            resource = "/" + resource;
-            hr.setUrl(pullCtx.rooturl, resource);
-            hr.setRepository(pullCtx.localRepo);
-            int r = hr.doCloning(true, 0);
+            std::string resource = "/" + (*projectName);
+            std::string destLocal = pullCtx.localRepo + "/" + *projectName;
+            LOG_CLI("Pulling new project: %s\n", unmangledName.c_str());
+
+            int r = pullFiles(pullCtx, resource, destLocal);
             if (r < 0) return r;
         } else {
             pullProject(pullCtx, *p);
@@ -776,7 +774,7 @@ std::string signin(const std::string &rooturl, const std::string &user,
 {
     HttpRequest hr(ctx);
 
-    hr.setUrl(rooturl, "/signin");
+    hr.setUrl(rooturl + "/signin");
 
     // specify the POST data
     std::string params;
@@ -1004,7 +1002,7 @@ int cmdGet(int argc, char * const *argv)
 
     // pull new entries and new attached files of all projects
     HttpRequest hr(ctx);
-    hr.setUrl(rooturl, resource);
+    hr.setUrl(rooturl + resource);
     hr.getFileStdout();
 
     curl_global_cleanup();

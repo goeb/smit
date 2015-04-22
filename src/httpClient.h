@@ -33,7 +33,6 @@ public:
     void handleReceivedLines(const char *contents, size_t size);
     void handleReceivedRaw(void *data, size_t size);
     void setUrl(const std::string &url);
-    void setUrl(const std::string &root, const std::string &path);
     void getRequestLines();
     void getRequestRaw();
     void post(const std::string &params);
@@ -43,7 +42,6 @@ public:
 
     std::map<std::string, Cookie> cookies;
     std::list<std::string> lines; // fulfilled after calling getRequestLines()
-    int doCloning(bool recursive, int recursionLevel);
     void getFileStdout();
     static int downloadFile(const HttpClientContext &ctx,
                             const std::string &url, const std::string &localPath);
@@ -75,15 +73,14 @@ public:
 
 private:
     void performRequest();
-    std::string rooturl;
-    std::string resourcePath;
+    std::string url;
     std::string response;
     std::string sessionId;
     HttpClientContext httpCtx;
     std::string currentLine;
     CURL *curlHandle;
     struct curl_slist *headerList;
-    std::string filename; // name of the file to write into
+    std::string filename; // name of the file for storing the download data
     FILE *fd; // file descriptor of the file
     bool isDirectory;
     std::string repository; // base path for storage of files
