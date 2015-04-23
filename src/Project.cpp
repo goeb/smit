@@ -250,7 +250,7 @@ int Project::loadConfig()
 
     std::string pathToProjectConfig = getObjectsDir() + "/" + Object::getSubpath(objectid);
 
-    r = ProjectConfig::load(pathToProjectConfig, config);
+    r = ProjectConfig::load(pathToProjectConfig, config, objectid);
     return r;
 }
 
@@ -372,7 +372,7 @@ int Project::storeViewsToFile()
     int r = Object::write(getObjectsDir(), fileContents, id);
     if (r < 0) return r;
 
-    std::string subpath = path  + "/" + VIEWS_FILE;
+    std::string subpath = path  + "/" + PATH_VIEWS;
     r = writeToFile(subpath, id);
 
     return r;
@@ -476,7 +476,7 @@ int Project::createProjectFiles(const std::string &repositoryPath, const std::st
     std::string viewsStr = PredefinedView::serializeViews(defaultViews);
     r = Object::write(objectsDir, viewsStr, id);
 
-    subpath = path  + "/" + VIEWS_FILE;
+    subpath = path  + "/" + PATH_VIEWS;
     r = writeToFile(subpath, id);
     if (r != 0) {
         LOG_ERROR("Could not create file '%s': %s", subpath.c_str(), strerror(errno));
@@ -670,7 +670,7 @@ void Project::loadPredefinedViews()
 {
     LOG_FUNC();
 
-    std::string viewsPath = path + '/' + VIEWS_FILE;
+    std::string viewsPath = path + '/' + PATH_VIEWS;
 
     std::string id;
     int n = loadFile(viewsPath.c_str(), id);

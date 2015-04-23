@@ -592,11 +592,94 @@ int pullIssue(const PullContext &pullCtx, Project &p, const std::string &remoteI
     return 0; // ok
 }
 
-
-int pullProjectConfig(const PullContext &pullCtx, Project &p)
+int pullProjectViews(const PullContext &ctx, Project &p)
 {
-    // TODO
-    return -1;
+    // The object of the config itself is supposed already pulled.
+    // Now pull the refs/views.
+
+    // First, download the ref
+    std::string localTmp = p.getTmpDir() + "/.download";
+    std::string url = ctx.rooturl + "/" + p.getUrlName() + "/" + RSRC_REF_VIEWS;
+    int r = HttpRequest::downloadFile(ctx.httpCtx, url, localTmp);
+    if (r != 0) {
+        LOG_ERROR("Cannot dowload project config: r=%d", r);
+        return -1;
+    }
+
+    // Load the ref of the new 'views'
+    std::string newid;
+    r = loadFile(localTmp, newid);
+    if (r != 0) {
+        LOG_ERROR("Cannot load downloaded views '%s': %s", localTmp.c_str(), strerror(errno));
+        return -1;
+    }
+    trim(newid);
+
+    // get the ref of the old 'views'
+    std::string oldid;
+    std::string localViews = p.getPath() + "/" PATH_VIEWS;
+    r = loadFile(localViews , oldid);
+    if (r != 0) {
+        LOG_ERROR("Cannot load views '%s': %s", localViews.c_str(), strerror(errno));
+        return -1;
+    }
+    trim(oldid);
+
+    if (oldid == newid) return 0; // no change
+
+    LOG_CLI("  new views: %s\n", newid.c_str());
+
+    // Officialize the new 'views'
+    r = writeToFile(localViews, newid);
+    if (r != 0) {
+        LOG_ERROR("Cannot write views ref '%s': %s", localViews.c_str(), strerror(errno));
+    }
+
+    return r;
+}
+
+int pullProjectConfig(const PullContext &ctx, Project &p)
+{
+    // The object of the config itself is supposed already pulled.
+    // Now pull the refs/project.
+
+    // First, download the ref
+    std::string localTmp = p.getTmpDir() + "/.download";
+    std::string url = ctx.rooturl + "/" + p.getUrlName() + "/" + RSRC_PROJECT_CONFIG;
+    int r = HttpRequest::downloadFile(ctx.httpCtx, url, localTmp);
+    if (r != 0) {
+        LOG_ERROR("Cannot dowload project config: r=%d", r);
+        return -1;
+    }
+
+    std::string id;
+    r = loadFile(localTmp, id);
+    if (r != 0) {
+        LOG_ERROR("Cannot load downloaded project config '%s': %s", localTmp.c_str(), strerror(errno));
+        return -1;
+    }
+
+    trim(id);
+
+    // Check if it is different from the present config
+    if (id == p.getConfig().id) return 0; // no change
+
+    LOG_CLI("  new project config: %s\n", id.c_str());
+
+    // Check that the project config is valid.
+    std::string configPath = p.getObjectsDir() + "/" + Object::getSubpath(id);
+    ProjectConfig dlConfig;
+    r = ProjectConfig::load(localTmp, dlConfig, id);
+    if (r != 0) return -1;
+
+    // Officialize the project config of the remote end
+    std::string configRef = p.getPath() + "/" + PATH_PROJECT_CONFIG;
+    r = writeToFile(configRef, id);
+    if (r != 0) {
+        LOG_ERROR("Cannot write project ref '%s': %s", configRef.c_str(), strerror(errno));
+    }
+
+    return r;
 }
 
 int pullProject(const PullContext &pullCtx, Project &p)
@@ -624,10 +707,10 @@ int pullProject(const PullContext &pullCtx, Project &p)
     }
 
     // pull project configuration
-    //LOG_ERROR("Pull project config not implemented yet");
+    pullProjectConfig(pullCtx, p);
 
     // pull predefined views
-    //LOG_ERROR("Pull project views not implemented yet");
+    pullProjectViews(pullCtx, p);
 
     // pull tags
     //LOG_ERROR("Pull project tags not implemented yet");

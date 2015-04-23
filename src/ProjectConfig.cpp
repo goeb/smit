@@ -269,7 +269,7 @@ PropertySpec PropertySpec::parsePropertySpec(std::list<std::string> & tokens)
   *
   * @param[out] config
   */
-int ProjectConfig::load(const std::string &path, ProjectConfig &config)
+int ProjectConfig::load(const std::string &path, ProjectConfig &config, const std::string &objid)
 {
     std::string data;
     int r = loadFile(path, data);
@@ -281,7 +281,7 @@ int ProjectConfig::load(const std::string &path, ProjectConfig &config)
     std::list<std::list<std::string> > lines = parseConfigTokens(data.c_str(), data.size());
 
     config = ProjectConfig::parseProjectConfig(lines);
-    config.id = getBasename(path);
+    config.id = objid;
 
     return 0;
 }

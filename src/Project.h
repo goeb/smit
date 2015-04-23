@@ -17,7 +17,7 @@
 
 #define PATH_ISSUES "refs/issues" // sub-directory of a project where the entries are stored
 #define PATH_PROJECT_CONFIG "refs/project"
-#define VIEWS_FILE "refs/views"
+#define PATH_VIEWS "refs/views"
 #define PATH_TAGS "refs/tags"
 #define PATH_OBJECTS "objects"
 
