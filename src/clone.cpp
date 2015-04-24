@@ -671,6 +671,10 @@ int pullProjectConfig(const PullContext &ctx, Project &p)
     ProjectConfig dlConfig;
     r = ProjectConfig::load(localTmp, dlConfig, id);
     if (r != 0) return -1;
+    if (dlConfig.properties.empty()) {
+        LOG_ERROR("Invalid remote project config: no properties");
+        return -1;
+    }
 
     // Officialize the project config of the remote end
     std::string configRef = p.getPath() + "/" + PATH_PROJECT_CONFIG;
@@ -714,8 +718,6 @@ int pullProject(const PullContext &pullCtx, Project &p)
 
     // pull tags
     //LOG_ERROR("Pull project tags not implemented yet");
-
-    // TODO pull 'public', 'templates' and other static files
 
     return 0; // ok
 }
