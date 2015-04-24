@@ -17,8 +17,6 @@
 
 #define K_PARENT_NULL "null"
 
-#define K_PROJECT_TMP "tmp"
-
 #define DELETE_DELAY_S (10*60) // seconds
 
 enum PropertyType {

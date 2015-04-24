@@ -769,7 +769,7 @@ void httpGetRoot(const RequestContext *req, User u)
         req->printf("Content-Type: text/directory\r\n\r\n");
         std::list<std::pair<std::string, std::string> >::iterator p;
         FOREACH(p, pList) {
-           req->printf("%s\n", Project::urlNameEncode(p->first).c_str());
+           req->printf("%s\n", p->first.c_str());
         }
         req->printf("public\n");
         req->printf("users\n");
@@ -889,11 +889,9 @@ void httpPostProjectConfig(const RequestContext *req, Project &p, User u)
 
         int rc = readMgreq(req, postData, 4096);
         if (rc < 0) {
-            std::ostringstream s;
             sendHttpHeader413(req, "You tried to upload too much data. Max is 4096 bytes.");
             return;
         }
-
 
         LOG_DEBUG("postData=%s", postData.c_str());
         // parse the posted data
@@ -2184,16 +2182,34 @@ int begin_request_handler(const RequestContext *req)
     else if ( (resource == "_") && (method == "POST") ) httpPostNewProject(req, user);
     else if ( (resource == "*") && (method == "GET") ) httpIssuesAccrossProjects(req, user, uri);
     else {
-        // check if it is a valid project resource such as /myp/issues, /myp/users, /myp/config
+        // Check if the resource indicates a known project such as:
+        // /myp
+        // /myp/sub1
+        // /myp/sub1/sub2
+        // etc.
         std::string projectUrl = resource;
-        std::string project = Project::urlNameDecode(projectUrl);
-        Project *p = Database::Db.getProject(project);
-        if (!p) return handleUnauthorizedAccess(req, true);
+        Project *p = 0;
+        while (!p) {
+            // Try sub-project
+            std::string projectName = Project::urlNameDecode(projectUrl);
+            p = Database::Db.getProject(projectName);
 
-        LOG_DEBUG("project %s, %p", project.c_str(), p);
+            if (p) break; // got it
+
+            if (uri.empty()) {
+                // Bad request
+                LOG_DIAG("Unknown project '%s'", projectUrl.c_str());
+                sendHttpHeader404(req);
+                return REQUEST_COMPLETED;
+            }
+            // else, try sub projects
+            projectUrl += "/" + popToken(uri, '/');
+        }
+
+        LOG_DEBUG("project %s, %p", p->getName().c_str(), p);
 
         // check if user has at least read access
-        enum Role r = user.getRole(project);
+        enum Role r = user.getRole(p->getName());
         if (r != ROLE_ADMIN && r != ROLE_RW && r != ROLE_RO && ! user.superadmin) {
             // no access granted for this user to this project
             return handleUnauthorizedAccess(req, true);

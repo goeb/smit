@@ -50,26 +50,41 @@
   * @param path
   *    Full path where the project is stored
   *
+  * @param repo
+  *     Path of the repository where the project lies, if known.
+  *     If empty string, then the project name is the basename of 'path'.
+  *     Else, the project name is 'path' - 'repo' (ie: the relative path
+  *     from the repository path)
+  *
   * @return
   *    A pointer to the newly created project instance
   *    Null pointer if error
   *
-  * Project names are encoded on the filesystem because we we want to
-  * allow / and any other characters in project names.
-  * We use a modified url-encoding, because:
-  *   - url-encoding principle is simple
-  *   - but with standard url-encoding, some browsers (eg: firefox)
-  *     do a url-decoding when clicking on a href, and servers do another
-  *     url-decoding, so that a double url-encoding would not be enough.
   */
 
-Project *Project::init(const std::string &path)
+Project *Project::init(const std::string &path, const std::string &repo)
 {
     Project *p = new Project;
     LOG_DEBUG("Loading project %s (%p)...", path.c_str(), p);
 
-    std::string bname = getBasename(path);
-    p->name = urlNameDecode(bname);
+    if (repo.empty()) {
+        p->name = path;
+    } else {
+        // Substract the repository path, that must be starting at index 0
+        if (0 == path.compare(0, repo.size(), repo)) {
+            if (path.size() <= repo.size()) {
+                LOG_ERROR("Cannot compute project name: too short (path=%s, repo=%s)",
+                          path.c_str(), repo.c_str());
+                return 0;
+            }
+            p->name = path.substr(repo.size()); // remove the leading repo part
+            trimLeft(p->name, "/");
+        } else {
+            LOG_ERROR("Unexpected project path: path=%s, repo=%s",
+                      path.c_str(), repo.c_str());
+            p->name = path;
+        }
+    }
     LOG_DEBUG("Project name: '%s'", p->name.c_str());
 
     p->path = path;
@@ -406,9 +421,11 @@ PredefinedView Project::getDefaultView() const
 }
 
 /** Create the directory and files for a new project
+  *
+  * @param[out] newProjectPath
   */
 int Project::createProjectFiles(const std::string &repositoryPath, const std::string &projectName,
-                                std::string &resultingPath)
+                                std::string &newProjectPath)
 {
     if (projectName.empty()) {
         LOG_ERROR("Cannot create project with empty name");
@@ -420,16 +437,20 @@ int Project::createProjectFiles(const std::string &repositoryPath, const std::st
     }
 
 
-    resultingPath = std::string(repositoryPath) + "/" + Project::urlNameEncode(projectName);
-    std::string path = resultingPath;
-    int r = mkdir(path);
+    newProjectPath = std::string(repositoryPath) + "/" + projectName;
+    if (fileExists(newProjectPath)) {
+        // File already exists
+        LOG_ERROR("Cannot create project over existing path: %s", newProjectPath.c_str());
+        return -1;
+    }
+    int r = mkdirs(newProjectPath);
     if (r != 0) {
-        LOG_ERROR("Could not create directory '%s': %s", path.c_str(), strerror(errno));
+        LOG_ERROR("Could not create directory '%s': %s", newProjectPath.c_str(), strerror(errno));
         return -1;
     }
 
     // create directory 'refs'
-    std::string subpath = path + "/refs";
+    std::string subpath = newProjectPath + "/refs";
     r = mkdir(subpath);
     if (r != 0) {
         LOG_ERROR("Could not create directory '%s': %s", subpath.c_str(), strerror(errno));
@@ -437,7 +458,7 @@ int Project::createProjectFiles(const std::string &repositoryPath, const std::st
     }
 
     // create directory 'issues'
-    subpath = path + '/' + PATH_ISSUES;
+    subpath = newProjectPath + '/' + PATH_ISSUES;
     r = mkdir(subpath);
     if (r != 0) {
         LOG_ERROR("Could not create directory '%s': %s", subpath.c_str(), strerror(errno));
@@ -445,7 +466,7 @@ int Project::createProjectFiles(const std::string &repositoryPath, const std::st
     }
 
     // create directory 'tags'
-    subpath = path + '/' + PATH_TAGS;
+    subpath = newProjectPath + '/' + PATH_TAGS;
     r = mkdir(subpath);
     if (r != 0) {
         LOG_ERROR("Could not create directory '%s': %s", subpath.c_str(), strerror(errno));
@@ -457,14 +478,14 @@ int Project::createProjectFiles(const std::string &repositoryPath, const std::st
     std::string id;
     // Create object in database
     // This also creates the directory 'objects'
-    std::string objectsDir = path + "/" + PATH_OBJECTS;
+    std::string objectsDir = newProjectPath + "/" + PATH_OBJECTS;
     r = Object::write(objectsDir, config, id);
     if (r < 0) {
         LOG_ERROR("Could not create project config");
         return r;
     }
     // Store the reference 'id'
-    subpath = path  + "/" + PATH_PROJECT_CONFIG;
+    subpath = newProjectPath  + "/" + PATH_PROJECT_CONFIG;
     r = writeToFile(subpath, id);
     if (r != 0) {
         LOG_ERROR("Could not create file '%s': %s", subpath.c_str(), strerror(errno));
@@ -476,7 +497,7 @@ int Project::createProjectFiles(const std::string &repositoryPath, const std::st
     std::string viewsStr = PredefinedView::serializeViews(defaultViews);
     r = Object::write(objectsDir, viewsStr, id);
 
-    subpath = path  + "/" + PATH_VIEWS;
+    subpath = newProjectPath  + "/" + PATH_VIEWS;
     r = writeToFile(subpath, id);
     if (r != 0) {
         LOG_ERROR("Could not create file '%s': %s", subpath.c_str(), strerror(errno));
@@ -484,7 +505,7 @@ int Project::createProjectFiles(const std::string &repositoryPath, const std::st
     }
 
     // create directory 'html'
-    subpath = path + "/html";
+    subpath = newProjectPath + "/html";
     r = mkdir(subpath);
     if (r != 0) {
         LOG_ERROR("Could not create directory '%s': %s", subpath.c_str(), strerror(errno));
@@ -492,7 +513,7 @@ int Project::createProjectFiles(const std::string &repositoryPath, const std::st
     }
 
     // create directory 'tmp'
-    subpath = path + "/" K_PROJECT_TMP;
+    subpath = newProjectPath + "/" K_PROJECT_TMP;
     r = mkdir(subpath);
     if (r != 0) {
         LOG_ERROR("Could not create directory '%s': %s", subpath.c_str(), strerror(errno));

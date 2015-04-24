@@ -24,7 +24,7 @@ void RText::printProjectList(const RequestContext *req, const std::list<std::pai
 
     std::list<std::pair<std::string, std::string> >::const_iterator p;
     for (p=pList.begin(); p!=pList.end(); p++) {
-        req->printf("%s %s %s\n", Project::urlNameEncode(p->first).c_str(),
+        req->printf("%s %s %s\n", p->first.c_str(),
                     p->second.c_str(), p->first.c_str());
 
     }

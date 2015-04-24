@@ -255,7 +255,7 @@ int cmdIssue(int argc, char * const *argv)
     else setLoggingLevel(LL_ERROR);
 
     // load the project
-    Project *p = Project::init(projectPath);
+    Project *p = Project::init(projectPath, "");
     if (!p) {
         fprintf(stderr, "Cannot load project '%s'\n", projectPath);
         exit(1);

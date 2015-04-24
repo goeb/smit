@@ -410,7 +410,7 @@ void handleConflictOnEntries(const PullContext &pullCtx, Project &p,
 int getEntriesOfRemoteIssue(const PullContext &pullCtx, const Project &p, const std::string &issueId,
                       std::list<std::string> &entries)
 {
-    std::string url = pullCtx.rooturl + "/" + p.getUrlName() + "/" RESOURCE_ISSUES "/" + issueId;
+    std::string url = pullCtx.rooturl + "/" + p.getName() + "/" RESOURCE_ISSUES "/" + issueId;
     HttpRequest hr(pullCtx.httpCtx);
     hr.setUrl(url);
     hr.getRequestLines();
@@ -697,7 +697,7 @@ int pullProject(const PullContext &pullCtx, Project &p)
 
     // get the remote issues
     HttpRequest hr(pullCtx.httpCtx);
-    std::string url =pullCtx.rooturl + "/" + p.getUrlName() + "/" RESOURCE_ISSUES "/";
+    std::string url = pullCtx.rooturl + "/" + p.getUrlName() + "/" RESOURCE_ISSUES "/";
     hr.setUrl(url);
     hr.getRequestLines();
     hr.closeCurl(); // free the resource
@@ -750,14 +750,13 @@ int pullProjects(const PullContext &pullCtx)
         if (projectName->empty()) continue;
 
         // project name is mangled
-        std::string unmangledName = Project::urlNameDecode(*projectName);
-        Project *p = Database::Db.getProject(unmangledName);
+        Project *p = Database::Db.getProject(*projectName);
         if (!p) {
             // the remote project was not locally cloned
             // do cloning now
-            std::string resource = "/" + (*projectName);
+            std::string resource = "/" + p->getUrlName();
             std::string destLocal = pullCtx.localRepo + "/" + *projectName;
-            LOG_CLI("Pulling new project: %s\n", unmangledName.c_str());
+            LOG_CLI("Pulling new project: %s\n", projectName->c_str());
 
             int r = pullFiles(pullCtx, resource, destLocal);
             if (r < 0) return r;

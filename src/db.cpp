@@ -95,7 +95,7 @@ Project *Database::createProject(const std::string &name)
 
 Project *Database::loadProject(const std::string &path)
 {
-    Project *p = Project::init(path);
+    Project *p = Project::init(path, Db.pathToRepository);
     if (!p) return 0;
 
     {

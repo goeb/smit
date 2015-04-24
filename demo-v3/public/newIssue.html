@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>New Issue</title>
+        <link rel="stylesheet" type="text/css" href="../../public/style.css">
+        <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/>
+        <script src="../../sm/smit.js"></script>
+    <style>
+        table#memo td {
+            border-bottom: 1px solid grey;
+            padding-left: 1em;
+            font-size: small;
+        }
+        table#memo { border-collapse:collapse; }
+    </style>
+    </head>
+    <body>
+        <div style="position: fixed; top: 0; padding-top: 15px; width: 100%; background: white;">
+            <table><tr><td><img src="../../public/logo.png" class="logo" alt="Logo"></td>
+                    <td>SM_DIV_NAVIGATION_GLOBAL SM_DIV_NAVIGATION_ISSUES</td></tr></table>
+        </div>
+        <br>
+        <h1 style="margin-top: 90px;">New issue of project <span class="tag">SM_HTML_PROJECT_NAME</span></h1>
+
+SM_DIV_ISSUE_FORM
+Message Preview:
+SM_DIV_ISSUE_MSG_PREVIEW
+    <hr>
+    Memo for rich text syntax:
+    <br>
+    <br>
+
+    <table id="memo">
+        <tr><td>**bold text**</td><td><strong>bold text</strong></td></tr>
+        <tr><td>++highlighted text++</td><td><em>highlighted text</em></td></tr>
+        <tr><td>__underlined text__</td><td><span class="sm_underline">underlined text</span></td></tr>
+        <tr><td>&gt; quoted text </td><td><span class="sm_quote">&gt; quoted text</span></td></tr>
+        <tr><td>[[http://example.com]]</td><td><a href="http://example.com" class="sm_hyperlink">http://example.com</a></td></tr>
+        <tr><td>"string in double quotes"</td><td><span class="sm_double_quote">"string in double quotes"</span></td></tr>
+        <tr><td>{{{ **verbatim text **<br>}}}</td><td><span class="sm_block"> **verbatim text **<br></span></td></tr>
+    </table>
+    <br>
+    <br>
+    </body>
+</html>

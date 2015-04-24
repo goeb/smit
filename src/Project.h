@@ -28,7 +28,7 @@
 #define K_AMEND "+amend"
 
 
-#define K_PROJECT_TMP "tmp"
+#define K_PROJECT_TMP ".tmp"
 
 #define DELETE_DELAY_S (10*60) // seconds
 
@@ -36,13 +36,13 @@
 
 class Project {
 public:
-    static Project *init(const std::string &path); // init and load a project
+    static Project *init(const std::string &path, const std::string &repo);
     static bool isProject(const std::string &path);
     // methods for handling issues
     std::vector<const Issue*> search(const char *fulltextSearch,
-                               const std::map<std::string, std::list<std::string> > &filterIn,
-                               const std::map<std::string, std::list<std::string> > &filterOut,
-                               const char *sortingSpec) const;
+                                     const std::map<std::string, std::list<std::string> > &filterIn,
+                                     const std::map<std::string, std::list<std::string> > &filterOut,
+                                     const char *sortingSpec) const;
     int get(const std::string &issueId, Issue &issue) const;
     void getAllIssues(std::vector<Issue*> &issuesList);
     std::map<std::string, std::set<std::string> > getReverseAssociations(const std::string &issue) const;
@@ -59,8 +59,8 @@ public:
     // methods for handling project
     inline std::string getName() const { return name; }
     inline std::string getUrlName() const { return urlNameEncode(name); }
-    inline static std::string urlNameEncode(const std::string &name) { return urlEncode(name, '=', "._-"); }
-    inline static std::string urlNameDecode(const std::string &name) { return urlDecode(name, false, '='); }
+    inline static std::string urlNameEncode(const std::string &name) { return urlEncode(name, '%', "/"); }
+    inline static std::string urlNameDecode(const std::string &name) { return urlDecode(name, false, '%'); }
     inline std::string getPath() const { return path; }
     inline std::string getTmpDir() const { return path + "/" K_PROJECT_TMP; }
 
@@ -101,7 +101,7 @@ public:
 
 private:
     // private member variables
-    std::string name; //< name of the project, plain text
+    std::string name; //< name of the project, plain text, UTF-8 encoded
     std::string path; //< path to the project, in which the basename is the urlencoded name
     uint32_t maxIssueId;
     std::map<std::string, Entry*> entries;

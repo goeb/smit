@@ -155,6 +155,22 @@ std::string urlDecode(const std::string &src, int is_form_url_encoded, char mark
     return dst;
 }
 
+/** Characters reserved by rfc3986 (Uniform Resource Identifier (URI): Generic Syntax)
+  *
+  *   reserved    = gen-delims / sub-delims
+  *
+  *   gen-delims  = ":" / "/" / "?" / "#" / "[" / "]" / "@"
+  *
+  *   sub-delims  = "!" / "$" / "&" / "'" / "(" / ")"
+  *               / "*" / "+" / "," / ";" / "="
+  *
+  *  "%" is also added.
+  */
+const char *getReservedUriCharacters()
+{
+    return ":/?#[]@!$&'()*+,;=%";
+}
+
 /** Encode a string for URL
   *
   * Used typically for a parameter in the query string.
@@ -167,12 +183,18 @@ std::string urlEncode(const std::string &src, char mark, const char *dontEscape)
     size_t n = src.size();
     size_t i;
     for (i = 0; i < n; i++) {
-        if (isalnum((unsigned char) src[i]) ||
-                strchr(dontEscape, (unsigned char) src[i]) != NULL) dst += src[i];
-        else {
+        char c = src[i];
+        if (strchr(dontEscape, c)) dst += src[i]; // do not escape
+        else if (strchr(getReservedUriCharacters(), c)) {
+            // Do escape reserved characters
+            // 'c' is a supposed to have a value 0 <= c < 128
             dst += mark;
-            dst += hex[((const unsigned char) src[i]) >> 4];
-            dst += hex[((const unsigned char) src[i]) & 0xf];
+            dst += hex[c >> 4];
+            dst += hex[c & 0xf];
+        } else {
+            // Do not escape other characters.
+            // UTF-8 characters fall into this category.
+            dst += src[i];
         }
     }
     return dst;
