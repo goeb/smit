@@ -103,6 +103,15 @@ migrateFileRefs() {
     fi
 }
 
+# migrate the 'trigger' file
+# $1 : project dir
+migrateTrigger() {
+    local pDir="$1"
+    if [ -f "$pDir/trigger" ]; then 
+        mv "$pDir/trigger" "$pDir/refs/trigger"
+    fi
+}
+
 # migrate the 'views' file
 # $1 : project dir
 migrateViews() {
@@ -204,13 +213,16 @@ find "$dstDir" -name project | while read p; do
     done
 
     # change tags
-    find "$pDir/tags" -type f | while read file; do
-        migrateObject $file "$pDir/refs/tags"
-    done
+    if [ -d "$pDir/tags" ]; then
+        find "$pDir/tags" -type f | while read file; do
+            migrateObject $file "$pDir/refs/tags"
+        done
+    fi
 
     migrateProjectConfig "$pDir"
 
     migrateViews "$pDir"
+    migrateTrigger "$pDir"
 
     # remove old directories files, issues, tags
     rm -rf "$pDir/files"

@@ -28,7 +28,6 @@
 #include "global.h"
 #include "session.h"
 
-#define K_TRIGGER "trigger"
 
 std::string toJson(const std::string &text)
 {
@@ -157,7 +156,7 @@ void Trigger::notifyEntry(const Project &project, const Entry *entry, bool isNew
 
     // load the 'trigger' file, in order to get the path of the external program
     std::string programPath;
-    std::string trigger = project.getPath() + "/" + K_TRIGGER;
+    std::string trigger = project.getPath() + "/" + PATH_TRIGGER;
     std::ifstream triggerFile(trigger.c_str());
     std::getline(triggerFile, programPath);
 

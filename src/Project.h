@@ -20,6 +20,7 @@
 #define PATH_VIEWS "refs/views"
 #define PATH_TAGS "refs/tags"
 #define PATH_OBJECTS "objects"
+#define PATH_TRIGGER "refs/trigger"
 
 #define K_MESSAGE "+message" // keyword used for the message
 #define K_FILE "+file" // keyword used for uploaded files
