@@ -106,7 +106,8 @@ Modify the `$REPO/public/logo.png`, or modify the HTML templates to point to ano
 
 In order to let a maximum customization freedom, Smit lets the user define the global structure of the HTML pages, and inserts the dynamic contents at users' defined places, indicated by SM variables:
 
-`SM_DIV_NAVIGATION_GLOBAL`
+    SM_DIV_NAVIGATION_GLOBAL
+    SM_URL_ROOT
 
 Insert a navigation bar, that gives links to project list, project configuration (when relevant), predefined views (when relevant), signing-out and user's profile.
 
@@ -119,7 +120,7 @@ Insert a navigation bar for browsing through the issues of a project.
 
 ```
 SM_HTML_PROJECT_NAME
-SM_URL_PROJECT_NAME
+SM_URL_PROJECT
 ```
 
 Insert the name of the project, either for printing on the screen, or for an hyperlink.
