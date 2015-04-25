@@ -38,6 +38,8 @@ class Project {
 public:
     static Project *init(const std::string &path, const std::string &repo);
     static bool isProject(const std::string &path);
+    static bool containsReservedName(std::string name);
+    static bool isReservedName(const std::string &name);
     // methods for handling issues
     std::vector<const Issue*> search(const char *fulltextSearch,
                                      const std::map<std::string, std::list<std::string> > &filterIn,
@@ -121,6 +123,7 @@ private:
     // views
     std::map<std::string, PredefinedView> predefinedViews;
 
+    static const char *reservedNames[];
 
     // private member methods
     Issue *createNewIssue();

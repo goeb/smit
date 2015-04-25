@@ -2122,9 +2122,9 @@ void httpPostEntry(const RequestContext *req, Project &pro, const std::string & 
   * /<p>/tags/x/y           POST       user              tag / untag an entry
   * /<p>/reload             POST       admin             reload project from disk storage
   * /<p>/files/0102/t.pdf   GET        user              get an attached file
+  * /<p>/files/123          POST       user              push a file
+  * /<p>/other/file         GET        user              any existing file (in the repository)
   * / * /issues             GET        user              issues of all projects
-  * /any/other/file         GET        user              any existing file (in the repository)
-  * /myp/files/123          POST       user              push a file
   */
 
 int begin_request_handler(const RequestContext *req)

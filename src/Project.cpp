@@ -44,6 +44,15 @@
 #define K_CTIME "+ctime"
 #define K_PARENT_NULL "null"
 
+const char *Project::reservedNames[] = {
+    "public", // reserved because 'public' is an existing folder
+    "views",  // reserved for REST interface
+    "issues", // reserved for REST interface
+    "files",  // reserved for REST interface
+    "reload", // reserved for REST interface
+    "tags",   // reserved for REST interface
+    0
+};
 
 /** init and load in memory the given project
   *
@@ -103,6 +112,29 @@ Project *Project::init(const std::string &path, const std::string &repo)
 bool Project::isProject(const std::string &path)
 {
     return fileExists(path + "/" + PATH_PROJECT_CONFIG);
+}
+
+/** Tell if a name contains a reserved part
+  *
+  * For example: 'a/b/issues/c/d' does contain 'issues', that is reserved.
+  */
+bool Project::containsReservedName(std::string name)
+{
+    while (!name.empty()) {
+        std::string part = popToken(name, '/');
+        if (isReservedName(part)) return true;
+    }
+    return false;
+}
+
+bool Project::isReservedName(const std::string &name)
+{
+    const char **ptr = reservedNames;
+    while (*ptr) {
+        if (name == *ptr) return true;
+        ptr++;
+    }
+    return false;
 }
 
 
@@ -436,6 +468,10 @@ int Project::createProjectFiles(const std::string &repositoryPath, const std::st
         return -1;
     }
 
+    if (containsReservedName(projectName)) {
+        LOG_ERROR("Cannot create project with name '%s': reserved", projectName.c_str());
+        return -1;
+    }
 
     newProjectPath = std::string(repositoryPath) + "/" + projectName;
     if (fileExists(newProjectPath)) {
