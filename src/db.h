@@ -18,6 +18,7 @@ class Database {
 public:
     static Database Db;
     Database() : maxIssueId(0) {}
+    static Project *lookupProject(std::string &resource);
     static Project *getProject(const std::string &projectName);
     std::string pathToRepository;
     inline static std::string getRootDir() { return Db.pathToRepository; }

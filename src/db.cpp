@@ -106,6 +106,45 @@ Project *Database::loadProject(const std::string &path)
     return p;
 }
 
+/** Look a project up after a uri resource
+  *
+  * @param resource[out]
+  *    The part of the resource that indicates the project name
+  *    is consumed by the method.
+  *
+  * When the URI is like 'a/b/c/issues/'
+  *   (in parenthesis an example of response)
+  *   - first look if 'a' is a known project (yes)
+  *   - then 'a/b'                           (no)
+  *   - then 'a/b/c'                         (yes)
+  *   - then 'a/b/c/issues/'                 (no)
+  * In this example, the project found is 'a/b/c'.
+  */
+Project *Database::lookupProject(std::string &resource)
+{
+    ScopeLocker scopeLocker(Db.locker, LOCK_READ_ONLY);
+
+    std::string localResource = resource;
+    std::string projectUrl;
+    Project *foundProject = 0;
+
+    while (!localResource.empty()) {
+        projectUrl += popToken(localResource, '/');
+        std::string projectName = Project::urlNameDecode(projectUrl);
+
+        std::map<std::string, Project*>::iterator p = Database::Db.projects.find(projectName);
+        if (p == Database::Db.projects.end()) {
+            // not found
+        } else {
+            foundProject = p->second;
+            resource = localResource;
+        }
+
+        projectUrl += "/"; // prepare for next iteration
+    }
+
+    return foundProject;
+}
 
 Project *Database::getProject(const std::string & projectName)
 {

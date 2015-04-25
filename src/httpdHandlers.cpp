@@ -2182,31 +2182,19 @@ int begin_request_handler(const RequestContext *req)
     else if ( (resource == "_") && (method == "POST") ) httpPostNewProject(req, user);
     else if ( (resource == "*") && (method == "GET") ) httpIssuesAccrossProjects(req, user, uri);
     else {
-        // Check if the resource indicates a known project such as:
-        // /myp
-        // /myp/sub1
-        // /myp/sub1/sub2
-        // etc.
-        std::string projectUrl = resource;
-        Project *p = 0;
-        while (!p) {
-            // Try sub-project
-            std::string projectName = Project::urlNameDecode(projectUrl);
-            p = Database::Db.getProject(projectName);
+        // Get the project given by the uri.
+        // We need to concatenate back 'resource' and 'uri', as resource was
+        // previously popped from the URI.
+        uri = resource + "/" + uri;
+        Project *p = Database::Db.lookupProject(uri);
 
-            if (p) break; // got it
-
-            if (uri.empty()) {
-                // Bad request
-                LOG_DIAG("Unknown project '%s'", projectUrl.c_str());
-                sendHttpHeader404(req);
-                return REQUEST_COMPLETED;
-            }
-            // else, try sub projects
-            projectUrl += "/" + popToken(uri, '/');
+        if (!p) {
+            // No such project. Bad request
+            LOG_DIAG("Unknown project for URI '%s'", uri.c_str());
+            sendHttpHeader404(req);
+            return REQUEST_COMPLETED;
         }
-
-        LOG_DEBUG("project %s, %p", p->getName().c_str(), p);
+        LOG_DIAG("project %s, %p", p->getName().c_str(), p);
 
         // check if user has at least read access
         enum Role r = user.getRole(p->getName());
@@ -2216,6 +2204,8 @@ int begin_request_handler(const RequestContext *req)
         }
 
         // at this point the user has read access to the resource inside the project
+        LOG_DIAG("user '%s' has role '%s' on project '%s'", user.username.c_str(),
+                 roleToString(r).c_str(), p->getName().c_str());
 
         bool isdir = false;
         if (!uri.empty() && uri[uri.size()-1] == '/') isdir = true;
