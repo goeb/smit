@@ -3,6 +3,7 @@
 ## 1 April 2015
 
 Smit v2.3.0 is released.
+
 Major changes since v2.0:
 
 - keep old values of select, multiselect, selectUser until deliberately changed by the user

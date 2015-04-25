@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Customize HTML</title>
+        <link rel="stylesheet" type="text/css" href="../style.css">
+        <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/>
+    </head>
+
+    <body>
+        <div class="header">
+            <img src="../logo.png" alt="Logo" width="150">
+            <span class="header_text">The Small Issue Tracker - Documentation Smit v2.x</span>
+        </div>
+        <div class="page">
+<aside class='menu'>
+<ul>
+<li><a href='index.html'>Inroduction</a></li>
+<li><a href='install.html'>Installation</a></li>
+<li><a href='admin.html'>Administration</a></li>
+<li><a href='user_guide.html'>User Guide</a></li>
+<li class='active'>Customize HTML
+<ul class=menu_level2>
+<li><a href='#introduction'>Introduction</a></li>
+<li><a href='#overview-of-the-web-pages'>Overview of the Web Pages</a></li>
+<li><a href='#file-access'>File Access</a></li>
+<li><a href='#css-customization'>CSS Customization</a></li>
+<li><a href='#html-customization'>HTML Customization</a></li>
+<li><a href='#sm-variables'>SM variables</a></li>
+<li><a href='#project-with-dedicated-html-pages'>Project with dedicated HTML pages</a></li>
+</ul>
+</li>
+<li><a href='api.html'>Smit API</a></li>
+<li><a href='developers.html'>Developer Guide</a></li>
+</ul>
+</aside>
+<div class='contents'>
+<h1 id="customize-html">Customize HTML</h1>
+<h2 id="introduction">Introduction</h2>
+<p>This page deals with the look and feel of the web interface, and how the HTML pages may be customized.</p>
+<p>To customize the HTML look and feel, the administrator needs:</p>
+<ul>
+<li>some knowledge about HTML and CSS</li>
+<li>write access to the files of the smit repository</li>
+</ul>
+<h2 id="overview-of-the-web-pages">Overview of the Web Pages</h2>
+<p>The HTML pages, Javascript and CSS served by Smit are of 3 types:</p>
+<ul>
+<li>dynamic page</li>
+<li>static file</li>
+<li>static embedded file</li>
+</ul>
+<h3 id="dynamic-page">Dynamic Page</h3>
+<p>Smit serves 9 types of dynamic pages, and each of these has a HTML template:</p>
+<ul>
+<li>Signin: <code>signin.html</code></li>
+<li>Create an issue: <code>newIssue.html</code></li>
+<li>View an issue: <code>issue.html</code></li>
+<li>List issues: <code>issues.html</code></li>
+<li>Configuration of a project: <code>project.html</code></li>
+<li>List projects: <code>projects.html</code></li>
+<li>Profile of a user: <code>user.html</code></li>
+<li>Configuration of a view: <code>view.html</code></li>
+<li>List of predefined views: <code>views.html</code></li>
+</ul>
+<p><em>Example:</em></p>
+<pre><code>/
+/&lt;project&gt;/issues/
+/&lt;project&gt;/issues/234</code></pre>
+<h3 id="static-embedded-file">Static Embedded File</h3>
+<p>Static embedded files are embedded in the smit executable. They are served as is, and cannot be customized by the administrator.</p>
+<p>They are located in <code>/sm/</code> (in the URL).</p>
+<p><em>Example:</em></p>
+<pre><code>/sm/version
+/sm/smit.js</code></pre>
+<h3 id="static-file">Static File</h3>
+<p>Static files are served as is. They may be anywhere in the repository, however see file access below.</p>
+<p>These are typically the logos, uploaded files,...</p>
+<p><em>Example:</em></p>
+<pre><code>/public/log.png
+/public/style.css</code></pre>
+<h2 id="file-access">File Access</h2>
+<p>Read access to files in folder <code>$REPO/public</code> is granted to everybody. Do not put confidential data here.</p>
+<p>Read access to files in a project folder is granted to the users of the project that have read access to the project.</p>
+<p>Other files cannot be read via the web interface.</p>
+<h2 id="css-customization">CSS Customization</h2>
+<p><em>Files:</em></p>
+<pre><code>public/style.css
+public/print.css</code></pre>
+<p>These files define styles that are used in the dynamic pages. You may customize them, provided that you keep the same names of the styles.</p>
+<h2 id="html-customization">HTML Customization</h2>
+<p>By default the templates for the dynamic HTML pages are the same for all projects. It is possible to have templates dedicated to a project (see below).</p>
+<p>When modifying a template, be sure to keep the following items, as Smit needs them:</p>
+<ul>
+<li>inclusion of <code>/sm/smit.js</code>: Smit uses this to update dynamic contents</li>
+<li>the SM variables (see description below)</li>
+<li>the <code>id=&quot;sm_...&quot;</code></li>
+<li>the <code>class=&quot;sm_...&quot;</code></li>
+</ul>
+<p><em>Example of customizing the logo</em></p>
+<p>Modify the <code>$REPO/public/logo.png</code>, or modify the HTML templates to point to another image.</p>
+<h2 id="sm-variables">SM variables</h2>
+<p>In order to let a maximum customization freedom, Smit lets the user define the global structure of the HTML pages, and inserts the dynamic contents at users' defined places, indicated by SM variables:</p>
+<p><code>SM_DIV_NAVIGATION_GLOBAL</code></p>
+<p>Insert a navigation bar, that gives links to project list, project configuration (when relevant), predefined views (when relevant), signing-out and user's profile.</p>
+<h3 id="inside-a-project">Inside a project</h3>
+<p><code>SM_DIV_NAVIGATION_ISSUES</code></p>
+<p>Insert a navigation bar for browsing through the issues of a project.</p>
+<pre><code>SM_HTML_PROJECT_NAME
+SM_URL_PROJECT_NAME</code></pre>
+<p>Insert the name of the project, either for printing on the screen, or for an hyperlink.</p>
+<h3 id="page-issue">Page Issue</h3>
+<pre><code>SM_RAW_ISSUE_ID
+SM_HTML_ISSUE_SUMMARY
+SM_DIV_ISSUE
+SM_DIV_ISSUE_MSG_PREVIEW
+SM_DIV_ISSUE_FORM</code></pre>
+<h3 id="other-sm-variables">Other SM variables</h3>
+<pre><code>SM_DIV_ISSUES
+SM_DIV_PREDEFINED_VIEWS
+SM_DIV_PROJECTS
+SM_DIV_USERS
+SM_SCRIPT_PROJECT_CONFIG_UPDATE</code></pre>
+<h2 id="project-with-dedicated-html-pages">Project with dedicated HTML pages</h2>
+<p>The dynamic HTML templates are first looked after in <code>$REPO/&lt;project&gt;/html/</code> and, if not present, Smit looks in the <code>$REPO/public</code> directory.</p>
+<p>Therefore, if you want to customize - for example - the 'issues' page for a project:</p>
+<ul>
+<li>copy <code>$REPO/public/issues.html</code> to <code>$REPO/&lt;project&gt;/html/issues.html</code></li>
+<li>modify <code>$REPO/&lt;project&gt;/html/issues.html</code></li>
+</ul>
+</div>
+        </div> <!-- div class page -->
+        <div class="footer">
+            Page updated on 25 Apr 2015
+        </div>
+    </body>
+</html>

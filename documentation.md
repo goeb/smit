@@ -1,3 +1,4 @@
 # Documentation
 
-Visit the [Documentation Page](doc/index.html).
+- [Documentation Smit-v2.x](doc-v2/index.html)
+- [Documentation Smit-v3.x](doc-v2/index.html) (work in progress)

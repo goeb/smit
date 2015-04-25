@@ -9,7 +9,7 @@
     <body>
         <div class="header">
             <img src="../logo.png" alt="Logo" width="150">
-            <span class="header_text">The Small Issue Tracker - Documentation</span>
+            <span class="header_text">The Small Issue Tracker - Documentation Smit v3.x</span>
         </div>
         <div class="page">
 <aside class='menu'>
@@ -23,6 +23,7 @@
 <li><a href='#start-a-smit-web-server'>Start a smit web server</a></li>
 <li><a href='#setup-a-smit-web-server-over-ssltls'>Setup a smit web server over SSL/TLS</a></li>
 <li><a href='#command-line-usage'>Command Line Usage</a></li>
+<li><a href='#smit-repository-layout'>Smit Repository Layout</a></li>
 <li><a href='#project-configuration'>Project Configuration</a></li>
 <li><a href='#set-up-a-trigger'>Set up a trigger</a></li>
 <li><a href='#make-a-backup'>Make a Backup</a></li>
@@ -47,7 +48,7 @@ smit init $REPO</code></pre>
 <pre><code>cd $REPO
 smit project -c &lt;project-name&gt;
 smit user &lt;user-name&gt; --passwd &lt;pass&gt;
-smit user &lt;user-name&gt; --project &lt;project-name&gt; admin</code></pre>
+smit user &lt;user-name&gt; --project &lt;project-name&gt;:admin</code></pre>
 <h2 id="start-a-smit-web-server">Start a smit web server</h2>
 <pre><code>smit serve</code></pre>
 <h2 id="setup-a-smit-web-server-over-ssltls">Setup a smit web server over SSL/TLS</h2>
@@ -58,6 +59,7 @@ cat privkey.pem cacert.pub.pem &gt; cacert.pem</code></pre>
 <p>Start smit:</p>
 <pre><code>smit serve --ssl-cert cacert.pem</code></pre>
 <h2 id="command-line-usage">Command Line Usage</h2>
+<p>(TODO)</p>
 <pre><code>Usage: smit &lt;command&gt; [&lt;args&gt;]
 
 The smit commands are:
@@ -72,8 +74,9 @@ The smit commands are:
   help
 
 See &#39;smit help &lt;command&gt;&#39; for more information on a specific command.</code></pre>
+<h2 id="smit-repository-layout">Smit Repository Layout</h2>
+<p>(TODO)</p>
 <h2 id="project-configuration">Project Configuration</h2>
-<p>At the moment some configuration parameters are not driven by the web interface. Thus this paragraph explains how to set them.</p>
 <p>The project configuration defines:</p>
 <ul>
 <li>the properties of the issues</li>
@@ -112,13 +115,11 @@ See &#39;smit help &lt;command&gt;&#39; for more information on a specific comma
 <pre><code>setPropertyLabel &lt;propety-id&gt; &lt;label&gt;</code></pre>
 <p><code>setPropertyLabel</code> defines the label for a property. This is used for mandatory properties that are not defined by <code>addProperty</code>: id, ctime, mtime, summary.</p>
 <h3 id="numberissues">numberIssues</h3>
-<p>(smit version &gt;= 1.4, no web interface)</p>
 <pre><code>numberIssues global</code></pre>
 <p><code>numberIssues</code> defines the numbering policy of the issues.</p>
 <p>If not defined, the issues are numbered reletively to their project: 1, 2, 3,...</p>
 <p>If <code>global</code> is set, then the numbering is shared by all the projects that have this policy.</p>
 <h3 id="tag">tag</h3>
-<p>(smit version &gt;= 1.3, no web interface)</p>
 <p>Entries may be tagged.</p>
 <pre><code>tag &lt;id&gt; -label &lt;text&gt; [-display]</code></pre>
 <ul>
@@ -201,15 +202,15 @@ $SERVER[&quot;socket&quot;] == &quot;:8092&quot; {
 <p>The reserve keywords that cannot be used as project names are:</p>
 <pre><code>public
 sm
-users</code></pre>
-<h3 id="how-do-i-delete-an-issue">How do I delete an issue?</h3>
-<p>This can be achieved by an administrator as follows (but be careful, and make a backup first):</p>
-<pre><code>rm -rf $REPO/&lt;project&gt;/issues/&lt;issue-id&gt;</code></pre>
-<p>And hot-reload the project.</p>
+users
+views
+.*
+issues
+files</code></pre>
 </div>
         </div> <!-- div class page -->
         <div class="footer">
-            Page updated on 23 Nov 2014
+            Page updated on 25 Apr 2015
         </div>
     </body>
 </html>

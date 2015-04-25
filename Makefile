@@ -14,14 +14,14 @@ HTMLS = $(SRCS:%.md=%.html)
 
 DEPENDS = header.html footer.html gen_menu.sh
 
-all: $(HTMLS) doc
+all: $(HTMLS) doc-v2 doc-v3
 
 %.html: %.md $(DEPENDS) $(SRCS)
 	sh gen_menu.sh --header header.html --footer footer.html --page $< -- $(SRCS) > $@
 
-.PHONY: doc
-doc:
-	$(MAKE) -C doc
+.PHONY: doc-v2 doc-v3
+doc-v2 doc-v3:
+	$(MAKE) -C $@
 
 clean:
 	rm -f $(HTMLS)

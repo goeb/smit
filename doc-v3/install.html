@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <title>Inroduction</title>
+        <title>Installation</title>
         <link rel="stylesheet" type="text/css" href="../style.css">
         <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/>
     </head>
@@ -9,17 +9,18 @@
     <body>
         <div class="header">
             <img src="../logo.png" alt="Logo" width="150">
-            <span class="header_text">The Small Issue Tracker - Documentation</span>
+            <span class="header_text">The Small Issue Tracker - Documentation Smit v3.x</span>
         </div>
         <div class="page">
 <aside class='menu'>
 <ul>
-<li class='active'>Inroduction
+<li><a href='index.html'>Inroduction</a></li>
+<li class='active'>Installation
 <ul class=menu_level2>
-<li><a href='#'></a></li>
+<li><a href='#windows-platform'>Windows Platform</a></li>
+<li><a href='#linux'>Linux</a></li>
 </ul>
 </li>
-<li><a href='install.html'>Installation</a></li>
 <li><a href='admin.html'>Administration</a></li>
 <li><a href='user_guide.html'>User Guide</a></li>
 <li><a href='html.html'>Customize HTML</a></li>
@@ -28,13 +29,26 @@
 </ul>
 </aside>
 <div class='contents'>
-<h1 id="inroduction">Inroduction</h1>
-<p>This is the documentation of Smit, the Small Issue Tracker.</p>
-<p>More general information and download are available in the <a href="../index.html">Overview Page</a>.</p>
+<h1 id="installation">Installation</h1>
+<h2 id="windows-platform">Windows Platform</h2>
+<ul>
+<li>Unzip</li>
+<li><code>smit.exe</code> is ready to use</li>
+</ul>
+<h2 id="linux">Linux</h2>
+<p>Requirements:</p>
+<ul>
+<li>OpenSSL</li>
+</ul>
+<p>Installation instructions:</p>
+<pre><code>git clone http://github.com/goeb/smit
+cd smit
+make</code></pre>
+<p>And copy the compiled executable <code>smit</code> to your PATH (for example /usr/bin).</p>
 </div>
         </div> <!-- div class page -->
         <div class="footer">
-            Page updated on 23 Nov 2014
+            Page updated on 25 Apr 2015
         </div>
     </body>
 </html>

@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Developer Guide</title>
+        <link rel="stylesheet" type="text/css" href="../style.css">
+        <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/>
+    </head>
+
+    <body>
+        <div class="header">
+            <img src="../logo.png" alt="Logo" width="150">
+            <span class="header_text">The Small Issue Tracker - Documentation Smit v3.x</span>
+        </div>
+        <div class="page">
+<aside class='menu'>
+<ul>
+<li><a href='index.html'>Inroduction</a></li>
+<li><a href='install.html'>Installation</a></li>
+<li><a href='admin.html'>Administration</a></li>
+<li><a href='user_guide.html'>User Guide</a></li>
+<li><a href='html.html'>Customize HTML</a></li>
+<li><a href='api.html'>Smit API</a></li>
+<li class='active'>Developer Guide
+<ul class=menu_level2>
+<li><a href='#software-architecture'>Software Architecture</a></li>
+<li><a href='#directories-and-files'>Directories and files</a></li>
+<li><a href='#roadmap'>Roadmap</a></li>
+</ul>
+</li>
+</ul>
+</aside>
+<div class='contents'>
+<h1 id="developer-guide">Developer Guide</h1>
+<h2 id="software-architecture">Software Architecture</h2>
+<p>Smit:</p>
+<ul>
+<li>is built on top of <a href="http://code.google.com/p/mongoose/">Mongoose HTTP server</a></li>
+<li>relies on OpenSSL for TLS authentication and encryption</li>
+</ul>
+<h2 id="directories-and-files">Directories and files</h2>
+<p>The database is made of directories and files. The layout is as follows:</p>
+<pre><code>$REPO
+ ├── users
+ │
+ ├── project-A
+ │   ├── files   : uploaded files
+ │   ├── issues  : issues
+ │   ├── html    : cutomized HTML pages
+ │   ├── project : plain text project description
+ │   ├── tmp     : temporary dir for uploaded files
+ │   └── views   : plain text description of predefined views
+ │
+ ├── project-B
+ │
+ ├── project-C
+ │
+ └── public
+     ├── javascript files
+     ├── css files
+     ├── HTML files
+     └── logo</code></pre>
+<p>The issues are organized as follow:</p>
+<pre><code>issues
+├── 1
+│   ├── lEf-tTqa7wWoX-sJVnu-1U_4ADI
+│   ├── 4M6CY0RqvL4L7ZrDe1r0FQY-tE8
+│   ...
+│   ├── lEf-tTqa7wWoX-sJVnu-1U_4ADI
+│   └── _del : directory where deleted entries are moved
+│
+├── 2
+├── 3
+...</code></pre>
+<p>An issue is made up of successive immutable entries.</p>
+<p>The first entry is the one that has a null parent. The last entry is the one that is referenced as the parent of no other entry.</p>
+<h3 id="sample-entry-of-an-issue">Sample entry of an issue</h3>
+<p>Entries are text files with straightforward key-value syntax.</p>
+<pre><code>+parent null
++author Fred
++ctime 1379878590
++message &lt; -----------endofmsg---
+This page will allow the user to select the search parameters.
+The output will use the parameters of the querystring: 
+search, filterin, filterout, sort
+-----------endofmsg---
+status open
+target_version v1.0
+summary &quot;HTML page (form) for advanced search&quot;</code></pre>
+<p>Keys with a <code>+</code> sign are specific to the entry and are not taken for the consolidation of the issue properties.</p>
+<h3 id="sample-project-file">Sample <code>project</code> file</h3>
+<p>This file describes the structure of the properties.</p>
+<pre><code>setPropertyLabel id &quot;#&quot;
+setPropertyLabel ctime Created
+setPropertyLabel mtime Modified
+setPropertyLabel summary Description
+addProperty status -label &quot;The status&quot; select open closed deleted
+addProperty target_version select v1.1 v1.2 v2.0 other
+addProperty owner selectUser</code></pre>
+<h3 id="sample-users-file">Sample <code>users</code> file</h3>
+<p>This file describes the users and their priviledges.</p>
+<pre><code>addUser &quot;John Smith&quot; sha1 e61a3587b3f7a142b8c7b9263c82f8119398ecb7 \
+    project things_to_do rw 
+
+addUser alice sha1 522b276a356bdf39013dfabea2cd43e141ecc9e8 \
+    project things_to_do ro </code></pre>
+<h2 id="roadmap">Roadmap</h2>
+<ul>
+<li>v2.0
+<ul>
+<li>i18n (gettext)</li>
+<li>branch and merge repositories</li>
+</ul></li>
+</ul>
+</div>
+        </div> <!-- div class page -->
+        <div class="footer">
+            Page updated on 25 Apr 2015
+        </div>
+    </body>
+</html>
