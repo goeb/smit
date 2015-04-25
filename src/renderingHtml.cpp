@@ -70,8 +70,8 @@ const Project &ContextParameters::getProject() const
 
 #define K_SM_DIV_NAVIGATION_GLOBAL "SM_DIV_NAVIGATION_GLOBAL"
 #define K_SM_DIV_NAVIGATION_ISSUES "SM_DIV_NAVIGATION_ISSUES"
-#define K_SM_HTML_PROJECT_NAME "SM_HTML_PROJECT_NAME"
-#define K_SM_URL_PROJECT_NAME "SM_URL_PROJECT_NAME"
+#define K_SM_HTML_PROJECT "SM_HTML_PROJECT"
+#define K_SM_URL_PROJECT "SM_URL_PROJECT"
 #define K_SM_RAW_ISSUE_ID "SM_RAW_ISSUE_ID"
 #define K_SM_SCRIPT_PROJECT_CONFIG_UPDATE "SM_SCRIPT_PROJECT_CONFIG_UPDATE"
 #define K_SM_DIV_PREDEFINED_VIEWS "SM_DIV_PREDEFINED_VIEWS"
@@ -79,11 +79,10 @@ const Project &ContextParameters::getProject() const
 #define K_SM_DIV_USERS "SM_DIV_USERS"
 #define K_SM_DIV_ISSUES "SM_DIV_ISSUES"
 #define K_SM_DIV_ISSUE "SM_DIV_ISSUE"
-#define K_SM_DIV_ISSUE_SUMMARY "SM_DIV_ISSUE_SUMMARY" // deprecated
 #define K_SM_HTML_ISSUE_SUMMARY "SM_HTML_ISSUE_SUMMARY"
 #define K_SM_DIV_ISSUE_FORM "SM_DIV_ISSUE_FORM"
 #define K_SM_DIV_ISSUE_MSG_PREVIEW "SM_DIV_ISSUE_MSG_PREVIEW"
-#define K_SM_REWRITE_ROOT "SM_REWRITE_ROOT"
+#define K_SM_URL_ROOT "SM_URL_ROOT"
 
 
 /** Load a page for a specific project
@@ -201,12 +200,14 @@ public:
             dumpPrevious(ctx.req);
             if (varname.empty()) break;
 
-            if (varname == K_SM_HTML_PROJECT_NAME && ctx.project) {
+            if (varname == K_SM_HTML_PROJECT && ctx.project) {
                 if (ctx.getProject().getName().empty()) ctx.req->printf("(new)");
                 else ctx.req->printf("%s", htmlEscape(ctx.getProject().getName()).c_str());
 
-            } else if (varname == K_SM_URL_PROJECT_NAME && ctx.project) {
-                ctx.req->printf("%s", ctx.getProject().getUrlName().c_str());
+            } else if (varname == K_SM_URL_PROJECT && ctx.project) {
+                MongooseServerContext &mc = MongooseServerContext::getInstance();
+                ctx.req->printf("%s/%s", mc.getUrlRewritingRoot().c_str(),
+                                ctx.getProject().getUrlName().c_str());
 
             } else if (varname == K_SM_DIV_NAVIGATION_GLOBAL) {
                 RHtml::printNavigationGlobal(ctx);
@@ -242,9 +243,6 @@ public:
             } else if (varname == K_SM_DIV_ISSUE && currentIssue) {
                 RHtml::printIssue(ctx, *currentIssue);
 
-            } else if (varname == K_SM_DIV_ISSUE_SUMMARY && currentIssue) {
-                RHtml::printIssueSummary(ctx, *currentIssue);
-
             } else if (varname == K_SM_DIV_ISSUE_FORM) {
                 Issue issue;
                 if (!currentIssue)  currentIssue = &issue;
@@ -253,7 +251,7 @@ public:
             } else if (varname == K_SM_DIV_PREDEFINED_VIEWS) {
                 RHtml::printLinksToPredefinedViews(ctx);
 
-            } else if (varname == K_SM_REWRITE_ROOT) {
+            } else if (varname == K_SM_URL_ROOT) {
                 // url-rewriting
                 MongooseServerContext &mc = MongooseServerContext::getInstance();
                 ctx.req->printf("%s", mc.getUrlRewritingRoot().c_str());
