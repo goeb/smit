@@ -15,6 +15,7 @@
 #include <openssl/sha.h>
 #include <stdlib.h>
 #include <sstream>
+#include <fnmatch.h>
 
 #include "session.h"
 #include "logging.h"
@@ -200,6 +201,41 @@ int User::authenticate(char *passwd)
         return -1;
     }
 }
+
+
+/** Consolidate roles on projects after the permissions
+  *
+  * The for each known project, examine the permissions
+  * of the users on this project.
+  *
+  * If several wildcard expressions match for a given project,
+  * then the most restrictive permission is chosen.
+  */
+void User::consolidateRoles()
+{
+    //std::list<Permission> permissions;
+    Project *p = Database::Db.getNextProject(0);
+    while (p) {
+        std::list<Permission>::iterator perm;
+        Role roleOnThisProject = ROLE_NONE;
+        FOREACH(perm, permissions) {
+            int r = fnmatch(perm->projectWildcard.c_str(), p->getName().c_str(), 0);
+            if (r == 0) {
+                // match
+                if (roleOnThisProject == ROLE_NONE) roleOnThisProject = perm->role;
+                else if (perm->role > roleOnThisProject) roleOnThisProject = perm->role;
+            }
+        }
+        if (roleOnThisProject != ROLE_NONE) {
+            LOG_DIAG("Role of user '%s' on project '%s': %s", username.c_str(),
+                     p->getName().c_str(), roleToString(roleOnThisProject).c_str());
+            rolesOnProjects[p->getName()] = roleOnThisProject;
+        }
+
+        p = Database::Db.getNextProject(p);
+    }
+}
+
 
 std::string roleToString(Role r)
 {

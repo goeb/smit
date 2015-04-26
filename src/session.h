@@ -21,6 +21,11 @@ enum Role {
     ROLE_NONE
 };
 
+struct Permission {
+    std::string projectWildcard;
+    Role role;
+};
+
 std::string roleToString(Role r);
 Role stringToRole(const std::string &s);
 std::list<std::string> getAvailableRoles();
@@ -37,6 +42,8 @@ struct User {
     int load(std::list<std::string> &tokens, bool checkProject);
     void setPasswd(const std::string &passwd);
     int authenticate(char *passwd);
+    std::list<Permission> permissions;
+    void consolidateRoles();
 
 };
 
@@ -48,7 +55,6 @@ public:
     static int initUsersFile(const char *repository);
     static User* getUser(const std::string &username);
     static int addUser(User u);
-    static void addUserByProject(std::string project, std::string username);
     static std::set<std::string> getUsersOfProject(const std::string &project);
     static std::map<std::string, Role> getUsersRolesOfProject(const std::string &project);
     static std::map<Role, std::set<std::string> > getUsersByRole(const std::string &project);
