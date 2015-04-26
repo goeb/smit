@@ -2,20 +2,18 @@
 #include <krb5.h>
 #include <string.h>
 
-#include "kerberos.h"
+#include "AuthKrb5.h"
 #include "logging.h"
+#include "parseConfig.h"
 
 /** Authenticate against a Kerberos server
-  *
-  * @param realm
-  *     must generally be upper case
   *
   * @return
   *    0, success
   *   -2, error, password expired
   *   -1, other authentication error
   */
-int krbAuthenticate(const std::string &username, const std::string &realm, const std::string password)
+int AuthKrb5::authenticate(char *password)
 {
     LOG_DIAG("krbAuthenticate(%s@%s)", username.c_str(), realm.c_str());
     krb5_context ctx;
@@ -58,15 +56,7 @@ int krbAuthenticate(const std::string &username, const std::string &realm, const
     krb5_get_init_creds_opt_set_proxiable(options, 0);
     krb5_get_init_creds_opt_set_change_password_prompt(options, 0);
 
-    // copy password in a mutable buffer (krb5 API constraint)
-    const size_t PASSWD_MAX_SIZE = 512;
-    if (password.size() > PASSWD_MAX_SIZE) {
-        LOG_ERROR("password too long: %d characters", password.size());
-        return -1;
-    }
-    char pw[PASSWD_MAX_SIZE+1];
-    strncpy(pw, password.c_str(), PASSWD_MAX_SIZE+1);
-    code = krb5_get_init_creds_password(ctx, &credentials, user, pw,
+    code = krb5_get_init_creds_password(ctx, &credentials, user, password,
                                         0, 0, 0, 0, options);
     int result = -1;
     if (code) {
@@ -85,9 +75,16 @@ int krbAuthenticate(const std::string &username, const std::string &realm, const
         LOG_DIAG("Kerberos authentication success for user '%s'", username.c_str());
     }
 
-    memset(pw, 0, sizeof(pw));
     krb5_get_init_creds_opt_free(ctx, options);
     krb5_free_principal(ctx, user);
     krb5_free_context(ctx);
+    return result;
+}
+
+std::string AuthKrb5::serialize()
+{
+    std::string result;
+    result += serializeSimpleToken(AUTH_KRB5) + " ";
+    result += serializeSimpleToken(realm);
     return result;
 }

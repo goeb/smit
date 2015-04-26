@@ -23,13 +23,14 @@
 #include "global.h"
 #include "parseConfig.h"
 #include "db.h"
+#include "AuthSha1.h"
 
 #ifdef KERBEROS_ENABLED
-  #include "kerberos.h"
+  #include "AuthKrb5.h"
 #endif
 
 #ifdef LDAP_ENABLED
-  #include "authLdap.h"
+  #include "AuthLdap.h"
 #endif
 
 
@@ -44,7 +45,9 @@ const char *FILE_USERS = "users";
 User::User()
 {
     superadmin = false;
+    authHandler = 0;
 }
+
 std::string User::serialize()
 {
     std::string result;
@@ -52,25 +55,9 @@ std::string User::serialize()
     result += "addUser ";
     result += serializeSimpleToken(username) + " ";
     if (superadmin) result += "superadmin \\\n";
-    if (authenticationType == "sha1") {
-        result += "    " + serializeSimpleToken(authenticationType) + " ";
-        result += serializeSimpleToken(hashValue);
-        if (!hashSalt.empty()) {
-            result += " -salt " ;
-            result += serializeSimpleToken(hashSalt);
-        }
+    if (authHandler) {
+        result += "    " + authHandler->serialize();
         result += " \\\n";
-#ifdef KERBEROS_ENABLED
-    } else if (authenticationType == AUTH_KERBEROS) {
-        result += "    " + serializeSimpleToken(authenticationType) + " ";
-        result += "    " + serializeSimpleToken(kerberosRealm) + " \\\n";
-#endif
-#ifdef LDAP_ENABLED
-    } else if (authenticationType == AUTH_LDAP) {
-        result += "    " + serializeSimpleToken(authenticationType) + " ";
-        result += "    " + serializeSimpleToken(ldapDistinguishedName) + " \\\n";
-        result += "    " + serializeSimpleToken(ldapServer) + " \\\n";
-#endif
     }
 
     std::map<std::string, enum Role>::const_iterator role;
@@ -127,37 +114,52 @@ int User::load(std::list<std::string> &tokens, bool checkProject)
             }
             rolesOnProjects[project] = r;
 
-        } else if (token == "sha1") {
-            authenticationType = token;
-            hashValue = popListToken(tokens);
-            if (hashValue.empty()) {
+        } else if (token == AUTH_SHA1) {
+            AuthSha1 *ah = new AuthSha1();
+            ah->type = AUTH_SHA1;
+            ah->hash = popListToken(tokens);
+            if (ah->hash.empty()) {
                 LOG_ERROR("Empty hash for user %s", username.c_str());
+                delete ah;
                 return -1;
             }
+            authHandler = ah;
+
 #ifdef KERBEROS_ENABLED
-        } else if (token == AUTH_KERBEROS) {
+        } else if (token == AUTH_KRB5) {
+            AuthKrb5 *ah = new AuthKrb5();
+            ah->type = AUTH_KRB5;
             // single sign-on authentication via a kerberos server
-            authenticationType = token;
-            kerberosRealm = popListToken(tokens);
-            if (kerberosRealm.empty()) {
-                LOG_ERROR("Empty kerberos realm for user %s", username.c_str());
+            ah->realm = popListToken(tokens);
+            if (ah->realm.empty()) {
+                LOG_ERROR("Empty kerberos realm for user '%s'", username.c_str());
+                delete ah;
                 return -1;
             }
+            authHandler = ah;
 #endif
 #ifdef LDAP_ENABLED
         } else if (token == AUTH_LDAP) {
             // single sign-on authentication via a ldap server
-            authenticationType = token;
-            ldapDistinguishedName = popListToken(tokens);
-            ldapServer = popListToken(tokens);
-            if (ldapServer.empty()) {
+            AuthLdap *ah = new AuthLdap();
+            ah->type = token;
+            ah->dname = popListToken(tokens);
+            ah->uri = popListToken(tokens);
+            if (ah->uri.empty()) {
                 LOG_ERROR("Empty ldap server for user %s", username.c_str());
+                delete ah;
                 return -1;
             }
+            authHandler = ah;
 #endif
         } else if (token == "-salt") {
             // meaningful only with sha1 authentication type
-            hashSalt = popListToken(tokens);
+            if (authHandler && authHandler->type == AUTH_SHA1) {
+                AuthSha1 *ah = dynamic_cast<AuthSha1*>(authHandler);
+                ah->salt = popListToken(tokens);
+            } else {
+                LOG_ERROR("Invalid option '%s' for user '%s'", token.c_str(), username.c_str());
+            }
 
         } else if (token == "superadmin") superadmin = true;
         else {
@@ -166,8 +168,6 @@ int User::load(std::list<std::string> &tokens, bool checkProject)
     }
     return 0; // success
 }
-
-
 
 std::string getNewSalt()
 {
@@ -178,9 +178,11 @@ std::string getNewSalt()
 
 void User::setPasswd(const std::string &password)
 {
-    authenticationType = HASH_SHA1;
-    hashSalt = getNewSalt();
-    hashValue = getSha1(password + hashSalt);
+    AuthSha1 *ah = new AuthSha1();
+    ah->type = AUTH_SHA1;
+    ah->salt = getNewSalt();
+    ah->hash = getSha1(password + ah->salt);
+    authHandler = ah;
 }
 
 /** Authenticate a user after his/her password
@@ -189,33 +191,15 @@ void User::setPasswd(const std::string &password)
   *    -1 failure
   *    -2 failure, password expired
   */
-int User::authenticate(const std::string &passwd)
+int User::authenticate(char *passwd)
 {
-    LOG_DIAG("authenticate '%s': %s", username.c_str(), authenticationType.c_str());
-    if (authenticationType == HASH_SHA1) {
-        LOG_DEBUG("salt=%s", hashSalt.c_str());
-        std::string sha1 = getSha1(passwd + hashSalt);
-        if (sha1 != hashValue) {
-            LOG_DEBUG("Sha1 do not match %s <> %s", sha1.c_str(), hashValue.c_str());
-            LOG_INFO("Sha1 authentication failure for user '%s'", username.c_str());
-            return -1;
-        } else {
-            return 0;
-        }
-#ifdef KERBEROS_ENABLED
-    } else if (authenticationType == AUTH_KERBEROS) {
-        return krbAuthenticate(username, kerberosRealm, passwd);
-#endif
-#ifdef LDAP_ENABLED
-    } else if (authenticationType == AUTH_LDAP) {
-        return ldapAuthenticate(ldapDistinguishedName, ldapServer, passwd);
-#endif
+    if (authHandler) {
+        return authHandler->authenticate(passwd);
+    } else {
+        LOG_ERROR("Unknown authentication scheme for user '%s'", username.c_str());
+        return -1;
     }
-
-    LOG_ERROR("Unknown authentication scheme for user '%s'", username.c_str());
-    return -1;
 }
-
 
 std::string roleToString(Role r)
 {
@@ -440,14 +424,12 @@ int UserBase::updateUser(const std::string &username, User newConfig)
     u = UserDb.configuredUsers.find(username);
     if (u == UserDb.configuredUsers.end()) return -3;
 
-    if (newConfig.hashValue.empty()) {
+    if (newConfig.authHandler) {
         // keep the same as before
-        newConfig.authenticationType = u->second->authenticationType;
-        newConfig.hashValue = u->second->hashValue;
-        newConfig.hashSalt = u->second->hashSalt;
-#ifdef KERBEROS_ENABLE
-        newConfig.kerberosRealm = u->second->kerberosRealm;
-#endif
+        newConfig.authHandler = u->second->authHandler;
+    } else if (u->second->authHandler) {
+        // delete old
+        delete u->second->authHandler;
     }
     *(u->second) = newConfig;
 
@@ -517,7 +499,7 @@ std::list<std::pair<std::string, std::string> > User::getProjects() const
 /** Check user credentials and initiate a session
   *
   */
-std::string SessionBase::requestSession(const std::string &username, const std::string &passwd)
+std::string SessionBase::requestSession(const std::string &username, char *passwd)
 {
     if (UserBase::isLocalUserInterface()) return "local";
 

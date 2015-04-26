@@ -25,9 +25,9 @@ SOURCES += \
     ../../src/clone.cpp \
     ../../src/console.cpp \
     ../../src/HttpContext.cpp \
-    ../../src/ssoKerberos.cpp \
-    ../../src/kerberos.cpp \
-    ../../src/authLdap.cpp
+    ../../src/AuthKrb5.cpp \
+    ../../src/AuthSha1.cpp \
+    ../../src/AuthLdap.cpp
 
 HEADERS += \
     ../../mongoose/mongoose.h \
@@ -52,7 +52,8 @@ HEADERS += \
     ../../src/clone.h \
     ../../src/console.h \
     ../../src/HttpContext.h \
-    ../../src/ssoKerberos.h \
-    ../../src/kerberos.h \
-    ../../src/authLdap.h
+    ../../src/Auth.h \
+    ../../src/AuthKrb5.h \
+    ../../src/AuthSha1.h \
+    ../../src/AuthLdap.h
 

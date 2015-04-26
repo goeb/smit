@@ -7,20 +7,11 @@
 #include <set>
 
 #include "mutexTools.h"
+#include "Auth.h"
 
 #define SESSION_DURATION (60*60*24) // 1 day
 #define COOKIE_VIEW_DURATION (60*60*24) // 1 day
 // authentication schemes
-#define HASH_SHA1 "sha1"
-
-#ifdef KERBEROS_ENABLED
-  #define AUTH_KERBEROS "kerberos"
-#endif
-
-#ifdef LDAP_ENABLED
-  #define AUTH_LDAP "ldap"
-#endif
-
 
 enum Role {
     ROLE_ADMIN,
@@ -34,20 +25,9 @@ std::string roleToString(Role r);
 Role stringToRole(const std::string &s);
 std::list<std::string> getAvailableRoles();
 
-
-
 struct User {
     std::string username;
-    std::string authenticationType; // sha1 or other
-    std::string hashValue; // for sha1 auth type
-    std::string hashSalt; // for sha1 auth type
-#ifdef KERBEROS_ENABLED
-    std::string kerberosRealm; // for kerberos auth type
-#endif
-#ifdef LDAP_ENABLED
-    std::string ldapServer; // for kerberos auth type
-    std::string ldapDistinguishedName; // "uid=John Doo,ou=people,dc=example,dc=com"
-#endif
+    Auth *authHandler;
     std::map<std::string, enum Role> rolesOnProjects;
     enum Role getRole(const std::string &project) const;
     std::list<std::pair<std::string, std::string> >  getProjects() const;
@@ -56,7 +36,7 @@ struct User {
     std::string serialize();
     int load(std::list<std::string> &tokens, bool checkProject);
     void setPasswd(const std::string &passwd);
-    int authenticate(const std::string &passwd);
+    int authenticate(char *passwd);
 
 };
 
@@ -98,7 +78,7 @@ struct Session {
 
 class SessionBase {
 public:
-    static std::string requestSession(const std::string &username, const std::string &passwd); // return session id
+    static std::string requestSession(const std::string &username, char *passwd); // return session id
 
     static User getLoggedInUser(const std::string &sessionId); // return user name
     static int destroySession(const std::string &sessionId);

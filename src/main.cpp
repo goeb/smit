@@ -242,7 +242,8 @@ int cmdProject(int argc, char **argv)
 int showUser(const User &u)
 {
     printf("%s", u.username.c_str());
-    if (u.hashValue.empty()) printf(", no password");
+    if (!u.authHandler) printf(", no password");
+    else printf(", %s", u.authHandler->serialize().c_str());
     if (u.superadmin) printf(", superadmin");
     printf("\n");
 
@@ -365,6 +366,7 @@ int cmdUser(int argc, char **argv)
         std::list<User> users = UserBase::getAllUsers();
         std::list<User>::const_iterator u;
         FOREACH(u, users) showUser(*u);
+        printf("%ld user(s)\n", L(users.size()));
 
     } else {
         if (action == GET_CONFIG) {
@@ -383,11 +385,12 @@ int cmdUser(int argc, char **argv)
         if (old) {
             if (!superadmin.empty()) old->superadmin = u.superadmin;
             if (deletePasswd) {
-                old->authenticationType.clear();
-                old->hashValue.clear();
-            } else if (!u.authenticationType.empty()) {
-                old->authenticationType = u.authenticationType;
-                old->hashValue = u.hashValue;
+                if (old->authHandler) delete old->authHandler;
+                old->authHandler = 0;
+
+            } else if (u.authHandler) {
+                // keep existing auth scheme
+                old->authHandler = u.authHandler;
             }
             // update modified roles (and keep the others unchanged)
             std::map<std::string, enum Role>::iterator newRole;
