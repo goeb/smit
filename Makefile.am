@@ -59,14 +59,15 @@ smit_SOURCES = \
 			   src/Args.cpp \
 			   src/ProjectConfig.cpp \
 			   src/Object.cpp \
+			   src/AuthSha1.cpp \
 			   mongoose/mongoose.c 
 
 if KERBEROS_ENABLED
-smit_SOURCES += src/kerberos.cpp
+smit_SOURCES += src/AuthKrb5.cpp
 endif
 
 if LDAP_ENABLED
-smit_SOURCES += src/authLdap.cpp
+smit_SOURCES += src/AuthLdap.cpp
 endif
 
 

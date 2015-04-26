@@ -278,6 +278,7 @@ int httpPostSignin(const RequestContext *request)
 
         const int SIZ = 1024;
         char buffer[SIZ+1];
+        char password[SIZ+1];
         int n; // number of bytes read
         n = request->read(buffer, SIZ);
         if (n == SIZ) {
@@ -300,14 +301,13 @@ int httpPostSignin(const RequestContext *request)
 
         // get the password
         r = mg_get_var(postData.c_str(), postData.size(),
-                       "password", buffer, SIZ);
+                       "password", password, SIZ);
 
         if (r<0) {
             // error: empty, or too long, or not present
             LOG_DEBUG("Cannot get password. r=%d, postData=%s", r, postData.c_str());
             return sendHttpHeader400(request, "Missing password");
         }
-        std::string password = buffer;
 
         std::string redirect;
         enum RenderingFormat format = getFormat(request);
@@ -331,7 +331,7 @@ int httpPostSignin(const RequestContext *request)
         // check credentials
         std::string sessionId = SessionBase::requestSession(username, password);
         LOG_DIAG("User %s got sessid: %s", username.c_str(), sessionId.c_str());
-        password.assign(password.size(), 0xFF);
+        memset(password, 0xFF, SIZ+1); // erase password
 
         if (sessionId.size() == 0) {
             LOG_DEBUG("Authentication refused");

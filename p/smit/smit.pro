@@ -34,10 +34,11 @@ SOURCES += \
     ../../src/View.cpp \
     ../../src/Tag.cpp \
     ../../src/ProjectConfig.cpp \
-    ../../src/Object.cpp
-    ../../src/ssoKerberos.cpp \
-    ../../src/kerberos.cpp \
-    ../../src/authLdap.cpp
+    ../../src/Object.cpp \
+    ../../src/AuthKrb5.cpp \
+    ../../src/AuthSha1.cpp \
+    ../../src/AuthLdap.cpp
+    ../../src/ssoKerberos.cpp
 
 HEADERS += \
     ../../mongoose/mongoose.h \
@@ -71,8 +72,10 @@ HEADERS += \
     ../../src/View.h \
     ../../src/Object.h \
     ../../src/restApi.h \
-    ../../src/ProjectConfig.h
-    ../../src/ssoKerberos.h \
-    ../../src/kerberos.h \
-    ../../src/authLdap.h
+    ../../src/ProjectConfig.h \
+    ../../src/Auth.h \
+    ../../src/AuthKrb5.h \
+    ../../src/AuthSha1.h \
+    ../../src/AuthLdap.h
+    ../../src/ssoKerberos.h
 
