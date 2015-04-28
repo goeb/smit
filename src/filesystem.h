@@ -36,6 +36,9 @@ int cmpContents(const char *contents, size_t size, const std::string &file);
 int cmpContents(const std::string &contents, const std::string &file);
 
 int mkdir(const std::string &path);
+#if defined(_WIN32)
+int mkdir(const char *path, int mode);
+#endif
 
 
 #endif

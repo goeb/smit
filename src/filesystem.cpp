@@ -195,17 +195,25 @@ bool isDir(const std::string &path)
     else return false;
 }
 
+
+
 #if defined(_WIN32)
-int mg_mkdir(const char *path, int mode); // defined in mongoose.c
+
+#define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
+
+int mkdir(const char *path, int mode) {
+    wchar_t wbuf[PATH_MAX];
+    MultiByteToWideChar(CP_UTF8, 0, path, -1, wbuf, ARRAY_SIZE(wbuf));
+
+    BOOL r = CreateDirectoryW(wbuf, NULL);
+    errno = GetLastError();
+    return  r ? 0 : -1;
+}
 #endif
 
 int mkdir(const std::string &path)
 {
-#if defined(_WIN32)
-    return mg_mkdir(path.c_str(), 0777);
-#else
     return mkdir(path.c_str(), 0777);
-#endif
 }
 
 /** Create the given directory (create all intermediate directories if needed)
