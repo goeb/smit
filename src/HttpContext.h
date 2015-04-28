@@ -3,7 +3,6 @@
 
 #include <string>
 #include "mongoose.h"
-#include <string>
 
 // functions not officially exposed by mongoose
 extern "C" {

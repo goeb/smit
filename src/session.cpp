@@ -15,7 +15,6 @@
 #include <openssl/sha.h>
 #include <stdlib.h>
 #include <sstream>
-#include <fnmatch.h>
 
 #include "session.h"
 #include "logging.h"
@@ -25,6 +24,7 @@
 #include "parseConfig.h"
 #include "db.h"
 #include "AuthSha1.h"
+#include "fnmatch.h"
 
 #ifdef KERBEROS_ENABLED
   #include "AuthKrb5.h"

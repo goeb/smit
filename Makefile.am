@@ -60,7 +60,8 @@ smit_SOURCES = \
 			   src/ProjectConfig.cpp \
 			   src/Object.cpp \
 			   src/AuthSha1.cpp \
-			   mongoose/mongoose.c 
+			   src/third-party/mongoose.c \
+			   src/third-party/fnmatch.c
 
 if KERBEROS_ENABLED
 smit_SOURCES += src/AuthKrb5.cpp
@@ -95,7 +96,7 @@ embedcpio.c embedcpio.h: @srcdir@/tools/convertToC.cpp
 clean-local-embedded-data:
 	rm -rf $(X)
 
-smit_CPPFLAGS = -I @srcdir@/mongoose @OPENSSL_CFLAGS@ @CURL_CFLAGS@
+smit_CPPFLAGS = -I@srcdir@/src/third-party @OPENSSL_CFLAGS@ @CURL_CFLAGS@
 smit_LDADD = @OPENSSL_LIBS@ @CURL_LIBS@
 
 if KERBEROS_ENABLED

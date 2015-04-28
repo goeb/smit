@@ -83,7 +83,8 @@ am__smit_SOURCES_DIST = src/db.cpp src/Entry.cpp src/Issue.cpp \
 	src/clone.cpp src/httpClient.cpp src/console.cpp \
 	src/HttpContext.cpp src/localClient.cpp src/Args.cpp \
 	src/ProjectConfig.cpp src/Object.cpp src/AuthSha1.cpp \
-	mongoose/mongoose.c src/AuthKrb5.cpp src/AuthLdap.cpp
+	src/third-party/mongoose.c src/third-party/fnmatch.c \
+	src/AuthKrb5.cpp src/AuthLdap.cpp
 am__dirstamp = $(am__leading_dot)dirstamp
 @KERBEROS_ENABLED_TRUE@am__objects_1 = src/smit-AuthKrb5.$(OBJEXT)
 @LDAP_ENABLED_TRUE@am__objects_2 = src/smit-AuthLdap.$(OBJEXT)
@@ -103,7 +104,8 @@ am_smit_OBJECTS = src/smit-db.$(OBJEXT) src/smit-Entry.$(OBJEXT) \
 	src/smit-HttpContext.$(OBJEXT) src/smit-localClient.$(OBJEXT) \
 	src/smit-Args.$(OBJEXT) src/smit-ProjectConfig.$(OBJEXT) \
 	src/smit-Object.$(OBJEXT) src/smit-AuthSha1.$(OBJEXT) \
-	mongoose/smit-mongoose.$(OBJEXT) $(am__objects_1) \
+	src/third-party/smit-mongoose.$(OBJEXT) \
+	src/third-party/smit-fnmatch.$(OBJEXT) $(am__objects_1) \
 	$(am__objects_2)
 nodist_smit_OBJECTS = smit-embedcpio.$(OBJEXT)
 smit_OBJECTS = $(am_smit_OBJECTS) $(nodist_smit_OBJECTS)
@@ -361,14 +363,15 @@ smit_SOURCES = src/db.cpp src/Entry.cpp src/Issue.cpp src/Project.cpp \
 	src/clone.cpp src/httpClient.cpp src/console.cpp \
 	src/HttpContext.cpp src/localClient.cpp src/Args.cpp \
 	src/ProjectConfig.cpp src/Object.cpp src/AuthSha1.cpp \
-	mongoose/mongoose.c $(am__append_10) $(am__append_11)
+	src/third-party/mongoose.c src/third-party/fnmatch.c \
+	$(am__append_10) $(am__append_11)
 nodist_smit_SOURCES = embedcpio.c embedcpio.h 
 BUILT_SOURCES = embedcpio.c embedcpio.h
 CLEANFILES = embedcpio.c embedcpio.h convertToC
 X = embedded_data
 SM_VERSION = $(X)/sm/version
-smit_CPPFLAGS = -I @srcdir@/mongoose @OPENSSL_CFLAGS@ @CURL_CFLAGS@ \
-	$(am__append_13) $(am__append_15)
+smit_CPPFLAGS = -I@srcdir@/src/third-party @OPENSSL_CFLAGS@ \
+	@CURL_CFLAGS@ $(am__append_13) $(am__append_15)
 smit_LDADD = @OPENSSL_LIBS@ @CURL_LIBS@ $(am__append_12) \
 	$(am__append_14) $(am__append_16) $(am__append_17)
 
@@ -536,14 +539,18 @@ src/smit-Object.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/smit-AuthSha1.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
-mongoose/$(am__dirstamp):
-	@$(MKDIR_P) mongoose
-	@: > mongoose/$(am__dirstamp)
-mongoose/$(DEPDIR)/$(am__dirstamp):
-	@$(MKDIR_P) mongoose/$(DEPDIR)
-	@: > mongoose/$(DEPDIR)/$(am__dirstamp)
-mongoose/smit-mongoose.$(OBJEXT): mongoose/$(am__dirstamp) \
-	mongoose/$(DEPDIR)/$(am__dirstamp)
+src/third-party/$(am__dirstamp):
+	@$(MKDIR_P) src/third-party
+	@: > src/third-party/$(am__dirstamp)
+src/third-party/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) src/third-party/$(DEPDIR)
+	@: > src/third-party/$(DEPDIR)/$(am__dirstamp)
+src/third-party/smit-mongoose.$(OBJEXT):  \
+	src/third-party/$(am__dirstamp) \
+	src/third-party/$(DEPDIR)/$(am__dirstamp)
+src/third-party/smit-fnmatch.$(OBJEXT):  \
+	src/third-party/$(am__dirstamp) \
+	src/third-party/$(DEPDIR)/$(am__dirstamp)
 src/smit-AuthKrb5.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/smit-AuthLdap.$(OBJEXT): src/$(am__dirstamp) \
@@ -554,7 +561,6 @@ smit$(EXEEXT): $(smit_OBJECTS) $(smit_DEPENDENCIES) $(EXTRA_smit_DEPENDENCIES)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
-	-rm -f mongoose/smit-mongoose.$(OBJEXT)
 	-rm -f src/smit-Args.$(OBJEXT)
 	-rm -f src/smit-AuthKrb5.$(OBJEXT)
 	-rm -f src/smit-AuthLdap.$(OBJEXT)
@@ -587,12 +593,13 @@ mostlyclean-compile:
 	-rm -f src/smit-renderingText.$(OBJEXT)
 	-rm -f src/smit-session.$(OBJEXT)
 	-rm -f src/smit-stringTools.$(OBJEXT)
+	-rm -f src/third-party/smit-fnmatch.$(OBJEXT)
+	-rm -f src/third-party/smit-mongoose.$(OBJEXT)
 
 distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/smit-embedcpio.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@mongoose/$(DEPDIR)/smit-mongoose.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-Args.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-AuthKrb5.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-AuthLdap.Po@am__quote@
@@ -625,6 +632,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-renderingText.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-session.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-stringTools.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/third-party/$(DEPDIR)/smit-fnmatch.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/third-party/$(DEPDIR)/smit-mongoose.Po@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(AM_V_CC)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.o$$||'`;\
@@ -642,19 +651,33 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(COMPILE) -c -o $@ `$(CYGPATH_W) '$<'`
 
-mongoose/smit-mongoose.o: mongoose/mongoose.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT mongoose/smit-mongoose.o -MD -MP -MF mongoose/$(DEPDIR)/smit-mongoose.Tpo -c -o mongoose/smit-mongoose.o `test -f 'mongoose/mongoose.c' || echo '$(srcdir)/'`mongoose/mongoose.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) mongoose/$(DEPDIR)/smit-mongoose.Tpo mongoose/$(DEPDIR)/smit-mongoose.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='mongoose/mongoose.c' object='mongoose/smit-mongoose.o' libtool=no @AMDEPBACKSLASH@
+src/third-party/smit-mongoose.o: src/third-party/mongoose.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT src/third-party/smit-mongoose.o -MD -MP -MF src/third-party/$(DEPDIR)/smit-mongoose.Tpo -c -o src/third-party/smit-mongoose.o `test -f 'src/third-party/mongoose.c' || echo '$(srcdir)/'`src/third-party/mongoose.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/third-party/$(DEPDIR)/smit-mongoose.Tpo src/third-party/$(DEPDIR)/smit-mongoose.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='src/third-party/mongoose.c' object='src/third-party/smit-mongoose.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o mongoose/smit-mongoose.o `test -f 'mongoose/mongoose.c' || echo '$(srcdir)/'`mongoose/mongoose.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o src/third-party/smit-mongoose.o `test -f 'src/third-party/mongoose.c' || echo '$(srcdir)/'`src/third-party/mongoose.c
 
-mongoose/smit-mongoose.obj: mongoose/mongoose.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT mongoose/smit-mongoose.obj -MD -MP -MF mongoose/$(DEPDIR)/smit-mongoose.Tpo -c -o mongoose/smit-mongoose.obj `if test -f 'mongoose/mongoose.c'; then $(CYGPATH_W) 'mongoose/mongoose.c'; else $(CYGPATH_W) '$(srcdir)/mongoose/mongoose.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) mongoose/$(DEPDIR)/smit-mongoose.Tpo mongoose/$(DEPDIR)/smit-mongoose.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='mongoose/mongoose.c' object='mongoose/smit-mongoose.obj' libtool=no @AMDEPBACKSLASH@
+src/third-party/smit-mongoose.obj: src/third-party/mongoose.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT src/third-party/smit-mongoose.obj -MD -MP -MF src/third-party/$(DEPDIR)/smit-mongoose.Tpo -c -o src/third-party/smit-mongoose.obj `if test -f 'src/third-party/mongoose.c'; then $(CYGPATH_W) 'src/third-party/mongoose.c'; else $(CYGPATH_W) '$(srcdir)/src/third-party/mongoose.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/third-party/$(DEPDIR)/smit-mongoose.Tpo src/third-party/$(DEPDIR)/smit-mongoose.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='src/third-party/mongoose.c' object='src/third-party/smit-mongoose.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o mongoose/smit-mongoose.obj `if test -f 'mongoose/mongoose.c'; then $(CYGPATH_W) 'mongoose/mongoose.c'; else $(CYGPATH_W) '$(srcdir)/mongoose/mongoose.c'; fi`
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o src/third-party/smit-mongoose.obj `if test -f 'src/third-party/mongoose.c'; then $(CYGPATH_W) 'src/third-party/mongoose.c'; else $(CYGPATH_W) '$(srcdir)/src/third-party/mongoose.c'; fi`
+
+src/third-party/smit-fnmatch.o: src/third-party/fnmatch.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT src/third-party/smit-fnmatch.o -MD -MP -MF src/third-party/$(DEPDIR)/smit-fnmatch.Tpo -c -o src/third-party/smit-fnmatch.o `test -f 'src/third-party/fnmatch.c' || echo '$(srcdir)/'`src/third-party/fnmatch.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/third-party/$(DEPDIR)/smit-fnmatch.Tpo src/third-party/$(DEPDIR)/smit-fnmatch.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='src/third-party/fnmatch.c' object='src/third-party/smit-fnmatch.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o src/third-party/smit-fnmatch.o `test -f 'src/third-party/fnmatch.c' || echo '$(srcdir)/'`src/third-party/fnmatch.c
+
+src/third-party/smit-fnmatch.obj: src/third-party/fnmatch.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT src/third-party/smit-fnmatch.obj -MD -MP -MF src/third-party/$(DEPDIR)/smit-fnmatch.Tpo -c -o src/third-party/smit-fnmatch.obj `if test -f 'src/third-party/fnmatch.c'; then $(CYGPATH_W) 'src/third-party/fnmatch.c'; else $(CYGPATH_W) '$(srcdir)/src/third-party/fnmatch.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/third-party/$(DEPDIR)/smit-fnmatch.Tpo src/third-party/$(DEPDIR)/smit-fnmatch.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='src/third-party/fnmatch.c' object='src/third-party/smit-fnmatch.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o src/third-party/smit-fnmatch.obj `if test -f 'src/third-party/fnmatch.c'; then $(CYGPATH_W) 'src/third-party/fnmatch.c'; else $(CYGPATH_W) '$(srcdir)/src/third-party/fnmatch.c'; fi`
 
 smit-embedcpio.o: embedcpio.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT smit-embedcpio.o -MD -MP -MF $(DEPDIR)/smit-embedcpio.Tpo -c -o smit-embedcpio.o `test -f 'embedcpio.c' || echo '$(srcdir)/'`embedcpio.c
@@ -1515,10 +1538,10 @@ clean-generic:
 distclean-generic:
 	-test -z "$(CONFIG_CLEAN_FILES)" || rm -f $(CONFIG_CLEAN_FILES)
 	-test . = "$(srcdir)" || test -z "$(CONFIG_CLEAN_VPATH_FILES)" || rm -f $(CONFIG_CLEAN_VPATH_FILES)
-	-rm -f mongoose/$(DEPDIR)/$(am__dirstamp)
-	-rm -f mongoose/$(am__dirstamp)
 	-rm -f src/$(DEPDIR)/$(am__dirstamp)
 	-rm -f src/$(am__dirstamp)
+	-rm -f src/third-party/$(DEPDIR)/$(am__dirstamp)
+	-rm -f src/third-party/$(am__dirstamp)
 
 maintainer-clean-generic:
 	@echo "This command is intended for maintainers to use"
@@ -1530,7 +1553,7 @@ clean-am: clean-binPROGRAMS clean-generic clean-local mostlyclean-am
 
 distclean: distclean-recursive
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
-	-rm -rf ./$(DEPDIR) mongoose/$(DEPDIR) src/$(DEPDIR)
+	-rm -rf ./$(DEPDIR) src/$(DEPDIR) src/third-party/$(DEPDIR)
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-hdr distclean-tags
@@ -1578,7 +1601,7 @@ installcheck-am:
 maintainer-clean: maintainer-clean-recursive
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
 	-rm -rf $(top_srcdir)/autom4te.cache
-	-rm -rf ./$(DEPDIR) mongoose/$(DEPDIR) src/$(DEPDIR)
+	-rm -rf ./$(DEPDIR) src/$(DEPDIR) src/third-party/$(DEPDIR)
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 
