@@ -173,9 +173,12 @@ migrateUsers() {
             fi
             read username
             echo username=$username
+            superadmin=""
 
         elif [ "$token" = "sha1" ]; then read sha1
         elif [ "$token" = "-salt" ]; then read salt
+        elif [ "$token" = "superadmin" ]; then
+            echo "setperm -user \"$username\" -superadmin" >> "$repo/users/permissions"
         elif [ "$token" = "project" ]; then
             read projectname
             read role
