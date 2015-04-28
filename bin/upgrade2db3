@@ -142,6 +142,60 @@ migrateProjectConfig() {
     migrateObject "$pDir/$objectId" "$pDir/objects"
     echo $objectId > "$pDir/refs/project"
 }
+# Migrate file "users" to users/auth and users/permissions
+# $1 : smit repository to be modified
+migrateUsers() {
+    repo="$1"
+    # smparser output is like:
+    # smp.14.1 addUser
+    # smp.14.2 toto
+    # smp.14.3 sha1
+    # smp.14.4 308392258c55acae06b3a1afffe2a78e690f743e
+    # smp.14.5 -salt
+    # smp.14.6 b8cc575242c2b4c
+    # smp.14.7 project
+    # smp.14.8 a b c
+    # smp.14.9 ro
+
+    mv "$repo/users" "$repo/users.old"
+    mkdir "$repo/users"
+
+    $SMPARSER "$repo/users.old" | sed -e "s/^smp[^ ]* //" > "$repo/users.tokens"
+    while read token; do
+        echo "token=$token"
+        if [ "$token" = "addUser" ]; then
+            # purge previous user details, if any
+            if [ -n "$username" ]; then
+                echo -n "adduser \"$username\"" >> "$repo/users/auth"
+                if [ -n "$sha1" ]; then echo -n " -type sha1 -hash $sha1" >> "$repo/users/auth"; fi
+                if [ -n "$salt" ]; then echo -n " -salt $salt" >> "$repo/users/auth"; fi
+                echo >> "$repo/users/auth"
+            fi
+            read username
+            echo username=$username
+
+        elif [ "$token" = "sha1" ]; then read sha1
+        elif [ "$token" = "-salt" ]; then read salt
+        elif [ "$token" = "project" ]; then
+            read projectname
+            read role
+            echo "setperm -user \"$username\" -project \"$projectname\" -role $role" >> "$repo/users/permissions"
+
+        elif [ "$token" = "+smv" ]; then
+            read smv # ignored
+        fi
+        
+    done <  "$repo/users.tokens"
+    # purge last user
+    if [ -n "$username" ]; then
+        echo -n "adduser \"$username\"" >> "$repo/users/auth"
+        if [ -n "$sha1" ]; then echo -n " -type sha1 -hash $sha1" >> "$repo/users/auth"; fi
+        if [ -n "$salt" ]; then echo -n " -salt $salt" >> "$repo/users/auth"; fi
+        echo >> "$repo/users/auth"
+    fi
+    #rm  "$repo/users.tokens"
+    rm "$repo/users.old"
+}
 
 # main -------------------------------------------------------------------------
 
@@ -166,6 +220,9 @@ fi
 # first copy everything
 cp -a "$srcDir" "$dstDir"
 
+migrateUsers "$dstDir"
+echo toooooooooooooooooooo
+exit
 # then upgrade each project
 find "$dstDir" -name project | while read p; do
 
