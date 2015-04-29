@@ -142,6 +142,7 @@ migrateProjectConfig() {
     migrateObject "$pDir/$objectId" "$pDir/objects"
     echo $objectId > "$pDir/refs/project"
 }
+
 # Migrate file "users" to users/auth and users/permissions
 # $1 : smit repository to be modified
 migrateUsers() {
@@ -157,32 +158,30 @@ migrateUsers() {
     # smp.14.8 a b c
     # smp.14.9 ro
 
-    mv "$repo/users" "$repo/users.old"
-    mkdir "$repo/users"
+    local usersdir="$repo/.smit/users"
+    mkdir -p "$usersdir"
 
-    $SMPARSER "$repo/users.old" | sed -e "s/^smp[^ ]* //" > "$repo/users.tokens"
+    $SMPARSER "$repo/users" | sed -e "s/^smp[^ ]* //" > "$repo/users.tokens"
     while read token; do
-        echo "token=$token"
         if [ "$token" = "addUser" ]; then
             # purge previous user details, if any
             if [ -n "$username" ]; then
-                echo -n "adduser \"$username\"" >> "$repo/users/auth"
-                if [ -n "$sha1" ]; then echo -n " -type sha1 -hash $sha1" >> "$repo/users/auth"; fi
-                if [ -n "$salt" ]; then echo -n " -salt $salt" >> "$repo/users/auth"; fi
-                echo >> "$repo/users/auth"
+                echo -n "adduser \"$username\"" >> "$usersdir/auth"
+                if [ -n "$sha1" ]; then echo -n " -type sha1 -hash $sha1" >> "$usersdir/auth"; fi
+                if [ -n "$salt" ]; then echo -n " -salt $salt" >> "$usersdir/auth"; fi
+                echo >> "$usersdir/auth"
             fi
             read username
-            echo username=$username
             superadmin=""
 
         elif [ "$token" = "sha1" ]; then read sha1
         elif [ "$token" = "-salt" ]; then read salt
         elif [ "$token" = "superadmin" ]; then
-            echo "setperm -user \"$username\" -superadmin" >> "$repo/users/permissions"
+            echo "setperm \"$username\" superadmin" >> "$usersdir/permissions"
         elif [ "$token" = "project" ]; then
             read projectname
             read role
-            echo "setperm -user \"$username\" -project \"$projectname\" -role $role" >> "$repo/users/permissions"
+            echo "setperm \"$username\" $role \"$projectname\"" >> "$usersdir/permissions"
 
         elif [ "$token" = "+smv" ]; then
             read smv # ignored
@@ -191,13 +190,13 @@ migrateUsers() {
     done <  "$repo/users.tokens"
     # purge last user
     if [ -n "$username" ]; then
-        echo -n "adduser \"$username\"" >> "$repo/users/auth"
-        if [ -n "$sha1" ]; then echo -n " -type sha1 -hash $sha1" >> "$repo/users/auth"; fi
-        if [ -n "$salt" ]; then echo -n " -salt $salt" >> "$repo/users/auth"; fi
-        echo >> "$repo/users/auth"
+        echo -n "adduser \"$username\"" >> "$usersdir/auth"
+        if [ -n "$sha1" ]; then echo -n " -type sha1 -hash $sha1" >> "$usersdir/auth"; fi
+        if [ -n "$salt" ]; then echo -n " -salt $salt" >> "$usersdir/auth"; fi
+        echo >> "$usersdir/auth"
     fi
     #rm  "$repo/users.tokens"
-    rm "$repo/users.old"
+    rm "$repo/users"
 }
 
 # main -------------------------------------------------------------------------
@@ -224,8 +223,7 @@ fi
 cp -a "$srcDir" "$dstDir"
 
 migrateUsers "$dstDir"
-echo toooooooooooooooooooo
-exit
+
 # then upgrade each project
 find "$dstDir" -name project | while read p; do
 

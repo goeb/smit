@@ -71,16 +71,16 @@ std::string User::serialize()
     return result;
 }
 
-/** Load a configuration for a user
+/** Load a authentication config for a user
   *
-  * The tokens are those found after the verb "addUser".
-  * The verb "addUser" must not be included.
+  * The tokens are those found after the verb "adduser".
+  * The verb "adduser" must not be included.
   *
   * @return
   *     0 success
   *    -1 error
   */
-int User::load(std::list<std::string> &tokens, bool checkProject)
+int User::loadAuth(std::list<std::string> &tokens)
 {
     username = popListToken(tokens);
     if (username.empty()) {
@@ -90,80 +90,73 @@ int User::load(std::list<std::string> &tokens, bool checkProject)
 
     while (! tokens.empty()) {
         std::string token = popListToken(tokens);
-        if (token == "project") {
-            // get project name and access right
-            std::string project = popListToken(tokens);
-            std::string role = popListToken(tokens);
-            if (project.empty() || role.empty()) {
-                LOG_ERROR("Incomplete project access %s/%s", project.c_str(), role.c_str());
-                return -1;
-            }
-            // check if project exists
-            if (checkProject) {
-                const Project *p = Database::getProject(project);
-                if (!p) {
-                    LOG_ERROR("Invalid project name '%s' for user %s",
-                              project.c_str(), username.c_str());
-                    continue; // ignore this project
+        if (token == "-type") {
+            token = popListToken(tokens);
+
+            if (token == AUTH_SHA1) {
+                AuthSha1 *ah = new AuthSha1();
+                ah->type = AUTH_SHA1;
+                while (!tokens.empty()) {
+                    token = popListToken(tokens);
+                    if (token == "-hash") ah->hash = popListToken(tokens);
+                    else if (token == "-salt") ah->salt = popListToken(tokens);
+                    else {
+                        LOG_ERROR("Invalid token '%s' for user '%s'",
+                                  token.c_str(), username.c_str());
+                        delete ah;
+                        return -1;
+                    }
                 }
-            }
 
-            Role r = stringToRole(role);
-            if (r == ROLE_NONE) {
-                LOG_ERROR("Invalid role '%s'", role.c_str());
-                return -1;
-            }
-            rolesOnProjects[project] = r;
-
-        } else if (token == AUTH_SHA1) {
-            AuthSha1 *ah = new AuthSha1();
-            ah->type = AUTH_SHA1;
-            ah->hash = popListToken(tokens);
-            if (ah->hash.empty()) {
-                LOG_ERROR("Empty hash for user %s", username.c_str());
-                delete ah;
-                return -1;
-            }
-            authHandler = ah;
+                if (ah->hash.empty()) {
+                    LOG_ERROR("Empty hash for user '%s'", username.c_str());
+                    delete ah;
+                    return -1;
+                }
+                authHandler = ah;
 
 #ifdef KERBEROS_ENABLED
-        } else if (token == AUTH_KRB5) {
-            AuthKrb5 *ah = new AuthKrb5();
-            ah->type = AUTH_KRB5;
-            // single sign-on authentication via a kerberos server
-            ah->realm = popListToken(tokens);
-            if (ah->realm.empty()) {
-                LOG_ERROR("Empty kerberos realm for user '%s'", username.c_str());
-                delete ah;
-                return -1;
-            }
-            authHandler = ah;
+            } else if (token == AUTH_KRB5) {
+                AuthKrb5 *ah = new AuthKrb5();
+                ah->type = AUTH_KRB5;
+                // single sign-on authentication via a kerberos server
+
+                popListToken(tokens); // consume the -realm (TODO check it)
+                ah->realm = popListToken(tokens);
+                if (ah->realm.empty()) {
+                    LOG_ERROR("Empty kerberos realm for user '%s'", username.c_str());
+                    delete ah;
+                    return -1;
+                }
+                // TODO add -alias option
+                authHandler = ah;
 #endif
 #ifdef LDAP_ENABLED
-        } else if (token == AUTH_LDAP) {
-            // single sign-on authentication via a ldap server
-            AuthLdap *ah = new AuthLdap();
-            ah->type = token;
-            ah->dname = popListToken(tokens);
-            ah->uri = popListToken(tokens);
-            if (ah->uri.empty()) {
-                LOG_ERROR("Empty ldap server for user %s", username.c_str());
-                delete ah;
-                return -1;
-            }
-            authHandler = ah;
-#endif
-        } else if (token == "-salt") {
-            // meaningful only with sha1 authentication type
-            if (authHandler && authHandler->type == AUTH_SHA1) {
-                AuthSha1 *ah = dynamic_cast<AuthSha1*>(authHandler);
-                ah->salt = popListToken(tokens);
-            } else {
-                LOG_ERROR("Invalid option '%s' for user '%s'", token.c_str(), username.c_str());
-            }
+            } else if (token == AUTH_LDAP) {
+                // single sign-on authentication via a ldap server
+                AuthLdap *ah = new AuthLdap();
+                ah->type = token;
 
-        } else if (token == "superadmin") superadmin = true;
-        else {
+                while (!tokens.empty()) {
+                    token = popListToken(tokens);
+                    if (token == "-uri") ah->uri = popListToken(tokens);
+                    else if (token == "-dname") ah->dname = popListToken(tokens);
+                    else {
+                        LOG_ERROR("Invalid token '%s' for user '%s'",
+                                  token.c_str(), username.c_str());
+                        delete ah;
+                        return -1;
+                    }
+                }
+                if (ah->uri.empty()) {
+                    LOG_ERROR("Empty ldap server for user %s", username.c_str());
+                    delete ah;
+                    return -1;
+                }
+                authHandler = ah;
+#endif
+            }
+        } else {
             LOG_ERROR("Unexpected token '%s' for user '%s'", token.c_str(), username.c_str());
         }
     }
@@ -266,43 +259,87 @@ std::list<std::string> getAvailableRoles()
     return result;
 }
 
-/** Load the users from file storage
+
+/** Load the users of a repository
   */
 int UserBase::init(const char *path, bool checkProject)
 {
-    // init random seed
-    srand(time(0));
-
     Repository = path;
-    std::string file = Repository;
-    file += "/";
-    file += FILE_USERS;
+
+    // load the 'auth' file
+    std::string auth = std::string(path) + "/" PATH_REPO "/" PATH_AUTH;
+
     std::string data;
-    int n = loadFile(file.c_str(), data);
+    int n = loadFile(auth.c_str(), data);
     if (n != 0) {
-        LOG_ERROR("Could not load user file.");
+        LOG_ERROR("Could not load file '%s': %s", auth.c_str(), strerror(errno));
         return -1;
     }
 
     std::list<std::list<std::string> > lines = parseConfigTokens(data.c_str(), data.size());
 
     std::list<std::list<std::string> >::iterator line;
-    for (line = lines.begin(); line != lines.end(); line++) {
+    FOREACH(line, lines) {
         std::string verb = popListToken(*line);
-        if (verb == K_SMIT_VERSION) {
-            std::string v = popListToken(*line);
-            LOG_DEBUG("Smit version for user file: %s", v.c_str());
-
-        } else if (verb == "addUser") {
+        if (verb == "adduser") {
             User u;
-            int r = u.load(*line, checkProject);
+            int r = u.loadAuth(*line);
             if (r == 0) {
                 // add user in database
                 LOG_DIAG("Loaded user: '%s' on %lu projects", u.username.c_str(), L(u.rolesOnProjects.size()));
                 UserBase::addUserInArray(u);
             }
+        } else {
+            LOG_ERROR("Invalid token '%s' in %s", verb.c_str(), auth.c_str());
+            return -1;
         }
     }
+
+    // load the 'permissions' file
+    std::string filePermissions = std::string(path) + "/" PATH_REPO "/" PATH_PERMISSIONS;
+    n = loadFile(filePermissions.c_str(), data);
+    if (n != 0) {
+        LOG_ERROR("Could not load file '%s': %s", filePermissions.c_str(), strerror(errno));
+        return -1;
+    }
+    lines = parseConfigTokens(data.c_str(), data.size());
+    FOREACH(line, lines) {
+        std::string verb = popListToken(*line);
+        if (verb == "setperm") {
+            std::string username = popListToken(*line);
+            if (username.empty()) {
+                LOG_ERROR("Invalid 'setperm' with no username: %s", filePermissions.c_str());
+                continue;
+            }
+            User *u = UserBase::getUser(username);
+            if (!u) {
+                LOG_ERROR("Unknown user '%s' referenced from '%s'", username.c_str(),
+                          filePermissions.c_str());
+                continue;
+            }
+
+            std::string roleStr = popListToken(*line);
+            if (roleStr == "superadmin") {
+                u->superadmin = true;
+            } else {
+                Permission perm;
+                perm.role = stringToRole(roleStr);
+                perm.projectWildcard = popListToken(*line);
+                u->permissions.push_back(perm);
+            }
+
+        } else {
+            LOG_ERROR("Invalid token '%s' in %s", verb.c_str(), filePermissions.c_str());
+            return -1;
+        }
+    }
+
+    // for each user, consolidate its roles after the wildcarded permissions
+    std::map<std::string, User*>::iterator u;
+    FOREACH(u, UserDb.configuredUsers) {
+        u->second->consolidateRoles();
+    }
+
     return 0;
 }
 

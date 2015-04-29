@@ -11,6 +11,9 @@
 
 #define SESSION_DURATION (60*60*24) // 1 day
 #define COOKIE_VIEW_DURATION (60*60*24) // 1 day
+#define PATH_AUTH  "/users/auth"
+#define PATH_PERMISSIONS "/users/permissions"
+
 // authentication schemes
 
 enum Role {
@@ -39,12 +42,11 @@ struct User {
     bool superadmin;
     User();
     std::string serialize();
-    int load(std::list<std::string> &tokens, bool checkProject);
+    int loadAuth(std::list<std::string> &tokens);
     void setPasswd(const std::string &passwd);
     int authenticate(char *passwd);
     std::list<Permission> permissions;
     void consolidateRoles();
-
 };
 
 class UserBase {

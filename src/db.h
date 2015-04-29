@@ -13,6 +13,7 @@
 #include "stringTools.h"
 #include "Project.h"
 
+#define PATH_REPO ".smit"
 
 class Database {
 public:
