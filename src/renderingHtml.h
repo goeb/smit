@@ -56,7 +56,7 @@ public:
     static void printPageIssueList(const ContextParameters &ctx, std::vector<const Issue*> issueList,
                                    std::list<std::string> colspec);
     static void printPageIssueAccrossProjects(const ContextParameters &ctx,
-                                             std::map<std::string, std::vector<const Issue*> > issues,
+                                             std::vector<const Issue*> issues,
 											 std::list<std::string> colspec);
     static void printPageIssue(const ContextParameters &ctx, const Issue &issue);
     static void printPageNewIssue(const ContextParameters &ctx);
@@ -84,7 +84,7 @@ public:
     static void printIssueList(const ContextParameters &ctx, const std::vector<const Issue*> &issueList,
                                const std::list<std::string> &colspec, bool showOtherFormats);
     static void printIssuesAccrossProjects(ContextParameters ctx,
-                                           const std::map<std::string, std::vector<const Issue*> >&issues,
+                                           const std::vector<const Issue*> &issues,
                                            const std::list<std::string> &colspec);
 
 };

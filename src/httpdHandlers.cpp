@@ -1132,7 +1132,7 @@ void httpIssuesAccrossProjects(const RequestContext *req, User u, const std::str
     std::string q = req->getQueryString();
     PredefinedView v = PredefinedView::loadFromQueryString(q); // unamed view, used as handle on the viewing parameters
 
-    std::map<std::string, std::vector<const Issue*> > issues;
+    std::vector<const Issue*> issues;
 
     // foreach project, get list of issues
     std::list<std::pair<std::string, std::string> >::const_iterator p;
@@ -1148,10 +1148,15 @@ void httpIssuesAccrossProjects(const RequestContext *req, User u, const std::str
         replaceUserMe(vcopy.filterout, *p, u.username);
         if (vcopy.search == "me") vcopy.search = u.username;
 
+        // search, without sorting
         std::vector<const Issue*> issueList = p->search(vcopy.search.c_str(),
-                                                        vcopy.filterin, vcopy.filterout, vcopy.sort.c_str());
-        issues[project] = issueList;
+                                                        vcopy.filterin, vcopy.filterout, 0);
+        issues.insert(issues.end(), issueList.begin(), issueList.end());
     }
+
+    // sort
+    std::list<std::pair<bool, std::string> > sSpec = parseSortingSpec(v.sort.c_str());
+    Issue::sort(issues, sSpec);
 
     // get the colspec
     std::list<std::string> cols;

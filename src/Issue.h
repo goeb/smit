@@ -29,6 +29,7 @@ enum PropertyType {
     F_ASSOCIATION
 };
 
+class Project; // forward declaration
 
 // Issue
 // An issue is consolidated over all its entries
@@ -37,6 +38,7 @@ struct Issue {
     std::string path; // path of the directory where the issue is stored
     Entry *first; // the first entry
     Entry *latest; // the latest entry
+    std::string project; // name of the project
     int ctime; // creation time (the one of the first entry)
     int mtime; // modification time (the one of the last entry)
     std::map<std::string, std::list<std::string> > properties;
@@ -62,10 +64,9 @@ struct Issue {
     static Issue *load(const std::string &objectsDir, const std::string &latestEntryOfIssue);
     void insertEntry(Entry *e);
     Entry *amendEntry(const std::string &entryId, const std::string &newMsg, const std::string &username);
-
+    static void sort(std::vector<const Issue*> &inout, const std::list<std::pair<bool, std::string> > &sortingSpec);
 };
 
-void sort(std::vector<const Issue*> &inout, const std::list<std::pair<bool, std::string> > &sortingSpec);
 
 class IssueComparator {
 public:

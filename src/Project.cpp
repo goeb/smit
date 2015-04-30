@@ -221,6 +221,7 @@ int Project::loadIssues()
             LOG_ERROR("Cannot load issue %s", issueId.c_str());
             continue;
         }
+        issue->project = getName();
 
         // store the entries in the 'entries' table
         Entry *e = issue->latest;
@@ -889,7 +890,7 @@ std::vector<const Issue*> Project::search(const char *fulltextSearch,
     // 4. do the sorting
     if (sortingSpec) {
         std::list<std::pair<bool, std::string> > sSpec = parseSortingSpec(sortingSpec);
-        sort(result, sSpec);
+        Issue::sort(result, sSpec);
     }
     return result;
 }

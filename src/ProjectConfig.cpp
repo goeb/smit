@@ -95,6 +95,7 @@ std::list<std::string> ProjectConfig::getPropertiesNames() const
 std::list<std::string> ProjectConfig::getReservedProperties()
 {
     std::list<std::string> reserved;
+    reserved.push_back("p");
     reserved.push_back("id");
     reserved.push_back("ctime");
     reserved.push_back("mtime");

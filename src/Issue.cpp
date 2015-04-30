@@ -252,7 +252,7 @@ void Issue::consolidate()
   * sortingSpec: a list of pairs (ascending-order, property-name)
   *
   */
-void sort(std::vector<const Issue*> &inout, const std::list<std::pair<bool, std::string> > &sortingSpec)
+void Issue::sort(std::vector<const Issue*> &inout, const std::list<std::pair<bool, std::string> > &sortingSpec)
 {
     if (sortingSpec.size()==0) return;
 
@@ -403,6 +403,8 @@ bool Issue::lessThan(const Issue* other, const std::list<std::pair<bool, std::st
             if (mtime < other->mtime) result = -1;
             else if (mtime > other->mtime) result = +1;
             else result = 0;
+        } else if (s->second == "p") {
+            return project < other->project;
         } else {
             // the other properties
 

@@ -117,7 +117,7 @@ int loadProjectPage(const RequestContext *req, const std::string &projectPath, c
 class VariableNavigator {
 public:
     std::vector<const Issue*> *issueList;
-    std::map<std::string, std::vector<const Issue*> > *issuesOfAllProjects;
+    std::vector<const Issue*> *issuesOfAllProjects;
     std::vector<const Issue*> *issueListFullContents;
     std::list<std::string> *colspec;
     const ContextParameters &ctx;
@@ -1095,6 +1095,7 @@ void RHtml::printIssueList(const ContextParameters &ctx, const std::vector<const
             if (column == "id") text << (*i)->id.c_str();
             else if (column == "ctime") text << epochToStringDelta((*i)->ctime);
             else if (column == "mtime") text << epochToStringDelta((*i)->mtime);
+            else if (column == "p") text << (*i)->project;
             else {
                 std::map<std::string, std::list<std::string> >::const_iterator p;
                 const std::map<std::string, std::list<std::string> > & properties = (*i)->properties;
@@ -1108,7 +1109,7 @@ void RHtml::printIssueList(const ContextParameters &ctx, const std::vector<const
             if ( (column == "id") || (column == "summary") ) {
                 href_lhs = "<a href=\"";
                 std::string href = MongooseServerContext::getInstance().getUrlRewritingRoot() + "/";
-                href += ctx.getProject().getUrlName() + "/issues/";
+                href += Project::urlNameEncode((*i)->project) + "/issues/";
                 href += urlEncode((*i)->id);
                 href_lhs = href_lhs + href;
                 href_lhs = href_lhs +  + "\">";
@@ -1126,20 +1127,10 @@ void RHtml::printIssueList(const ContextParameters &ctx, const std::vector<const
 }
 
 void RHtml::printIssuesAccrossProjects(ContextParameters ctx,
-                                       const std::map<std::string, std::vector<const Issue*> >&issues,
+                                       const std::vector<const Issue*> &issues,
                                        const std::list<std::string> &colspec)
 {
-    ctx.req->printf("<div class=\"sm_accross_issues\">");
-    std::map<std::string, std::vector<const Issue*> >::const_iterator i;
-    FOREACH(i, issues) {
-        const Project *p = Database::Db.getProject(i->first);
-        if (!p) continue;
-        ctx.project = p;
-        ctx.projectConfig = p->getConfig();
-        ctx.req->printf("<div class=\"sm_accross_project\">%s</div>\n", htmlEscape(p->getName()).c_str());
-        printIssueList(ctx, i->second, colspec, false);
-    }
-    ctx.req->printf("</div>");
+    printIssueList(ctx, issues, colspec, false);
 }
 
 
@@ -1162,7 +1153,7 @@ void RHtml::printPageIssueList(const ContextParameters &ctx,
     vn.printPage();
 }
 void RHtml::printPageIssueAccrossProjects(const ContextParameters &ctx,
-                                          std::map<std::string, std::vector<const Issue*> > issues,
+                                          std::vector<const Issue*> issues,
                                           std::list<std::string> colspec)
 {
     VariableNavigator vn("issuesAccross.html", ctx);
