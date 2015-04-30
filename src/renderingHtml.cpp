@@ -955,6 +955,8 @@ std::string getPropertyForGrouping(const ProjectConfig &pconfig, const std::stri
     else property = sortingSpec.substr(i, n-i);
 
     // check the type of this property
+    if (property == "p") return property; // enable grouping by project name
+
     const PropertySpec *propertySpec = pconfig.getPropertySpec(property);
     if (!propertySpec) return "";
     enum PropertyType type = propertySpec->type;
@@ -1075,10 +1077,10 @@ void RHtml::printIssueList(const ContextParameters &ctx, const std::vector<const
     for (i=issueList.begin(); i!=issueList.end(); i++) {
 
         if (! group.empty() &&
-                (i == issueList.begin() || getProperty((*i)->properties, group) != currentGroup) ) {
+                (i == issueList.begin() || (*i)->getProperty(group) != currentGroup) ) {
             // insert group bar if relevant
             ctx.req->printf("<tr class=\"sm_issues_group\">\n");
-            currentGroup = getProperty((*i)->properties, group);
+            currentGroup = (*i)->getProperty(group);
             ctx.req->printf("<td class=\"sm_group\" colspan=\"%lu\"><span class=\"sm_issues_group_label\">%s: </span>",
                             L(colspec.size()), htmlEscape(ctx.projectConfig.getLabelOfProperty(group)).c_str());
             ctx.req->printf("<span class=\"sm_issues_group\">%s</span></td>\n", htmlEscape(currentGroup).c_str());

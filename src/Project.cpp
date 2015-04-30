@@ -1277,6 +1277,7 @@ int Project::addEntry(PropertiesMap properties, const std::string &issueId,
         newIssueCreated = true;
         i = createNewIssue();
         if (!i) return -1;
+        i->project = getName();
     }
 
     // create the new entry object
@@ -1381,6 +1382,7 @@ int Project::pushEntry(std::string &issueId, const std::string &entryId,
         newI = createNewIssue();
         i = newI;
         issueId = newI->id; // update the IN/OUT parameter
+        newI->project = getName();
 
     } else {
         i = getIssue(issueId);

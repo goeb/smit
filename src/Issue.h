@@ -65,6 +65,8 @@ struct Issue {
     void insertEntry(Entry *e);
     Entry *amendEntry(const std::string &entryId, const std::string &newMsg, const std::string &username);
     static void sort(std::vector<const Issue*> &inout, const std::list<std::pair<bool, std::string> > &sortingSpec);
+    std::string getProperty(const std::string &propertyName) const;
+
 };
 
 

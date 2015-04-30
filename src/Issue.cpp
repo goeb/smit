@@ -45,7 +45,7 @@
 
 std::string Issue::getSummary() const
 {
-    return getProperty(properties, "summary");
+    return ::getProperty(properties, "summary");
 }
 
 /** Add an entry at the end
@@ -260,6 +260,15 @@ void Issue::sort(std::vector<const Issue*> &inout, const std::list<std::pair<boo
     std::sort(inout.begin(), inout.end(), ic);
 }
 
+std::string Issue::getProperty(const std::string &propertyName) const
+{
+    if (propertyName == "p") return project;
+
+    // TODO handle the other reserved properties (id, mtime, ctime, ...)
+    return ::getProperty(properties, propertyName);
+}
+
+
 /** Look if the given multi-valued property is present in the given list
   *
   * The match may occur on a part of the value, and in a case insensitive manner.
@@ -399,12 +408,17 @@ bool Issue::lessThan(const Issue* other, const std::list<std::pair<bool, std::st
             if (ctime < other->ctime) result = -1;
             else if (ctime > other->ctime) result = +1;
             else result = 0;
+
         } else if (s->second == "mtime") {
             if (mtime < other->mtime) result = -1;
             else if (mtime > other->mtime) result = +1;
             else result = 0;
+
         } else if (s->second == "p") {
-            return project < other->project;
+            if (project < other->project) result = -1;
+            else if (project == other->project) result = 0;
+            else result = +1;
+
         } else {
             // the other properties
 
