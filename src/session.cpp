@@ -170,6 +170,8 @@ std::string getNewSalt()
     return randomStr.str();
 }
 
+/** Set authentication scheme SHA1 and set password
+  */
 void User::setPasswd(const std::string &password)
 {
     AuthSha1 *ah = new AuthSha1();
@@ -209,14 +211,15 @@ void User::consolidateRoles()
     //std::list<Permission> permissions;
     Project *p = Database::Db.getNextProject(0);
     while (p) {
-        std::list<Permission>::iterator perm;
+        std::map<std::string, Role>::iterator perm;
         Role roleOnThisProject = ROLE_NONE;
         FOREACH(perm, permissions) {
-            int r = fnmatch(perm->projectWildcard.c_str(), p->getName().c_str(), 0);
+            int r = fnmatch(perm->first.c_str(), p->getName().c_str(), 0);
             if (r == 0) {
                 // match
-                if (roleOnThisProject == ROLE_NONE) roleOnThisProject = perm->role;
-                else if (perm->role > roleOnThisProject) roleOnThisProject = perm->role;
+                // keep the most restrictive permission if several wildcard match
+                if (roleOnThisProject == ROLE_NONE) roleOnThisProject = perm->second;
+                else if (perm->second > roleOnThisProject) roleOnThisProject = perm->second;
             }
         }
         if (roleOnThisProject != ROLE_NONE) {
@@ -322,10 +325,9 @@ int UserBase::init(const char *path, bool checkProject)
             if (roleStr == "superadmin") {
                 u->superadmin = true;
             } else {
-                Permission perm;
-                perm.role = stringToRole(roleStr);
-                perm.projectWildcard = popListToken(*line);
-                u->permissions.push_back(perm);
+                Role role = stringToRole(roleStr);
+                std::string projectWildcard = popListToken(*line);
+                u->permissions[projectWildcard] = role;
             }
 
         } else {

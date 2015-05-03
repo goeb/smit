@@ -24,10 +24,6 @@ enum Role {
     ROLE_NONE
 };
 
-struct Permission {
-    std::string projectWildcard;
-    Role role;
-};
 
 std::string roleToString(Role r);
 Role stringToRole(const std::string &s);
@@ -45,7 +41,7 @@ struct User {
     int loadAuth(std::list<std::string> &tokens);
     void setPasswd(const std::string &passwd);
     int authenticate(char *passwd);
-    std::list<Permission> permissions;
+    std::map<std::string, Role> permissions; // map of projectWildcard => role
     void consolidateRoles();
 };
 

@@ -318,9 +318,9 @@ int cmdProject(int argc, char **argv)
 int showUser(const User &u)
 {
     printf("%s", u.username.c_str());
+    if (u.superadmin) printf(" (superadmin)");
     if (!u.authHandler) printf(", no password");
     else printf(", %s", u.authHandler->serialize().c_str());
-    if (u.superadmin) printf(", superadmin");
     printf("\n");
 
     std::map<std::string, enum Role>::const_iterator project;
@@ -367,7 +367,7 @@ int cmdUser(int argc, char **argv)
     std::string superadmin;
     enum UserConfigAction { GET_CONFIG, SET_CONFIG };
     UserConfigAction action = GET_CONFIG;
-    User u;
+    User newUser;
 
     int c;
     int optionIndex = 0;
@@ -386,7 +386,7 @@ int cmdUser(int argc, char **argv)
                 deletePasswd = true;
                 action = SET_CONFIG;
             } else if (0 == strcmp(longOptions[optionIndex].name, "passwd")) {
-                u.setPasswd(optarg);
+                newUser.setPasswd(optarg);
                 action = SET_CONFIG;
             } else if (0 == strcmp(longOptions[optionIndex].name, "superadmin")) {
                 superadmin = "yes";
@@ -403,7 +403,7 @@ int cmdUser(int argc, char **argv)
                 }
                 std::string project = arg.substr(0, i);
                 std::string role = arg.substr(i+1);
-                u.rolesOnProjects[project] = stringToRole(role);
+                newUser.permissions[project] = stringToRole(role);
                 action = SET_CONFIG;
             }
             break;
@@ -445,39 +445,60 @@ int cmdUser(int argc, char **argv)
         printf("%ld user(s)\n", L(users.size()));
 
     } else {
+        User *existingUser = UserBase::getUser(username);
         if (action == GET_CONFIG) {
-            const User *u = UserBase::getUser(username);
-            if (!u) {
+            // list a specific user configuration
+            if (!existingUser) {
                 printf("No such user: %s\n", username);
                 return 1;
-            } else return showUser(*u);
+            } else return showUser(*existingUser);
         }
 
         // create or update user
-        u.username = username;
-        if (superadmin == "no") u.superadmin = false;
-        else if (superadmin == "yes") u.superadmin = true;
-        User *old = UserBase::getUser(username);
-        if (old) {
-            if (!superadmin.empty()) old->superadmin = u.superadmin;
-            if (deletePasswd) {
-                if (old->authHandler) delete old->authHandler;
-                old->authHandler = 0;
 
-            } else if (u.authHandler) {
+        newUser.username = username;
+        if (superadmin == "no") newUser.superadmin = false;
+        else if (superadmin == "yes") newUser.superadmin = true;
+
+        if (existingUser) {
+            // update the existing user
+            if (!superadmin.empty()) existingUser->superadmin = newUser.superadmin;
+            if (deletePasswd) {
+                if (existingUser->authHandler) delete existingUser->authHandler;
+                existingUser->authHandler = 0;
+
+            } else if (newUser.authHandler) {
                 // keep existing auth scheme
-                old->authHandler = u.authHandler;
+                existingUser->authHandler = newUser.authHandler;
+            } else {
+                // keep authentication and password unchanged
             }
-            // update modified roles (and keep the others unchanged)
-            std::map<std::string, enum Role>::iterator newRole;
-            FOREACH(newRole, u.rolesOnProjects) {
-                if (newRole->second == ROLE_NONE) old->rolesOnProjects.erase(newRole->first);
-                else old->rolesOnProjects[newRole->first] = newRole->second;
+
+            // update permissions (keep the others unchanged)
+            std::map<std::string, Role>::iterator newPermission;
+            FOREACH(newPermission, newUser.permissions) {
+                if (newPermission->second == ROLE_NONE) {
+                    // erase if same wildcard in existingUser
+                    std::map<std::string, Role>::iterator existingPerm;
+                    existingPerm = existingUser->permissions.find(newPermission->first);
+                    if (existingPerm == existingUser->permissions.end()) {
+                        // no such existing permission
+                        // simlpy add the new wildcard and associated role
+                        existingUser->permissions[newPermission->first] = newPermission->second;
+                    } else {
+                        // remove existing wildcard
+                        existingUser->permissions.erase(newPermission->first);
+                    }
+                } else {
+                    // add permission
+                    existingUser->permissions[newPermission->first] = newPermission->second;
+                }
             }
-            r = UserBase::updateUser(username, *old);
+            // store the user (the existing user that has been updated)
+            r = UserBase::updateUser(username, *existingUser);
 
         } else {
-            r = UserBase::addUser(u);
+            r = UserBase::addUser(newUser);
         }
         if (r < 0) {
             LOG_ERROR("Abort.");
