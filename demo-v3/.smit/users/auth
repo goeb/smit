@@ -1,0 +1,15 @@
+adduser "John Smith" -type sha1 -hash e61a3587b3f7a142b8c7b9263c82f8119398ecb7
+adduser "John the ripper" -type sha1 -hash e61a3587b3f7a142b8c7b9263c82f8119398ecb7
+adduser "Mister Myster" -type sha1 -hash e61a3587b3f7a142b8c7b9263c82f8119398ecb7
+adduser alexia -type sha1 -hash e61a3587b3f7a142b8c7b9263c82f8119398ecb7
+adduser alice -type sha1 -hash 522b276a356bdf39013dfabea2cd43e141ecc9e8
+adduser fred -type sha1 -hash 74508d96c26b89d9f48422c33b811c0c69df8032 -salt 5429ce173830c845
+adduser homer -type sha1 -hash 9c38e24cb7d4f0b73f8b9cdf4f6a3612f989ce2b -salt 6cc8be554574aa67
+adduser john1 -type sha1 -hash 9c38e24cb7d4f0b73f8b9cdf4f6a3612f989ce2b -salt 6cc8be554574aa67
+adduser john2 -type sha1 -hash 9c38e24cb7d4f0b73f8b9cdf4f6a3612f989ce2b -salt 6cc8be554574aa67
+adduser ldapToto -type sha1 -hash e61a3587b3f7a142b8c7b9263c82f8119398ecb7
+adduser "not assigned" -type sha1 -hash 9c38e24cb7d4f0b73f8b9cdf4f6a3612f989ce2b -salt 6cc8be554574aa67
+adduser olivia -type sha1 -hash 9c38e24cb7d4f0b73f8b9cdf4f6a3612f989ce2b -salt 6cc8be554574aa67
+adduser toto -type sha1 -hash 979b733dec43f76255f18e5b98df2783433433a0 -salt 67c7ab4865e371be
+adduser tyty -type sha1 -hash 308392258c55acae06b3a1afffe2a78e690f743e -salt b8cc575242c2b4c
+adduser xxxt -type sha1 -hash 0b9c2625dc21ef05f6ad4ddf47c5f203837aa32c -salt b8cc575242c2b4c

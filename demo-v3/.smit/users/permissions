@@ -1,0 +1,4 @@
+setperm fred superadmin
+setperm homer superadmin
+setperm fred admin *
+setperm fred rw x/y/z
