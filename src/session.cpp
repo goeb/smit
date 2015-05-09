@@ -91,11 +91,11 @@ std::string User::serializePermissions()
         result += "setperm " + serializeSimpleToken(username) + " superadmin\n";
     }
 
-    std::map<std::string, enum Role>::const_iterator role;
-    FOREACH(role, rolesOnProjects) {
+    std::map<std::string, enum Role>::const_iterator perm;
+    FOREACH(perm, permissions) {
         std::string p = "setperm " + serializeSimpleToken(username);
-        p += roleToString(role->second) + " ";
-        p += serializeSimpleToken(role->first) + "\n";
+        p += " " + roleToString(perm->second) + " ";
+        p += serializeSimpleToken(perm->first) + "\n";
         result += p;
     }
     return result;
@@ -393,7 +393,6 @@ int UserBase::store(const std::string &repository)
 
     std::map<std::string, User*>::iterator uit;
     FOREACH(uit, UserDb.configuredUsers) {
-        LOG_DIAG("store user: '%s'", uit->second->username.c_str());
         permissions += uit->second->serializePermissions();
         auth += uit->second->serializeAuth();
     }
