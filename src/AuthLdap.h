@@ -13,6 +13,7 @@ struct AuthLdap : public Auth {
     std::string uri; // eg: ldaps://example.com:389
     virtual int authenticate(char *password);
     virtual std::string serialize();
+    virtual Auth *createCopy();
 };
 
 #endif

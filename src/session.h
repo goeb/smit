@@ -29,19 +29,25 @@ std::string roleToString(Role r);
 Role stringToRole(const std::string &s);
 std::list<std::string> getAvailableRoles();
 
-struct User {
+class User {
+public:
     std::string username;
     Auth *authHandler;
     std::map<std::string, enum Role> rolesOnProjects;
+    bool superadmin;
+    std::map<std::string, Role> permissions; // map of projectWildcard => role
+
+    User();
+    User(const User &other);
+    User& operator=(const User &rhs);
+    ~User();
     enum Role getRole(const std::string &project) const;
     std::list<std::pair<std::string, std::string> >  getProjects() const;
-    bool superadmin;
-    User();
-    std::string serialize();
+    std::string serializePermissions();
+    std::string serializeAuth();
     int loadAuth(std::list<std::string> &tokens);
     void setPasswd(const std::string &passwd);
     int authenticate(char *passwd);
-    std::map<std::string, Role> permissions; // map of projectWildcard => role
     void consolidateRoles();
 };
 

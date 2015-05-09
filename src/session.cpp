@@ -49,25 +49,55 @@ User::User()
     authHandler = 0;
 }
 
-std::string User::serialize()
+User::User(const User &other)
+{
+    *this = other;
+}
+User& User::operator=(const User &rhs)
+{
+    username = rhs.username;
+    if (rhs.authHandler) authHandler = rhs.authHandler->createCopy();
+    else authHandler = 0;
+    rolesOnProjects = rhs.rolesOnProjects;
+    superadmin = rhs.superadmin;
+    permissions = rhs.permissions;
+    return *this;
+}
+User::~User()
+{
+    if (authHandler) delete authHandler;
+    authHandler = 0;
+}
+
+
+std::string User::serializeAuth()
+{
+    std::string auth = "adduser " + serializeSimpleToken(username);
+
+    if (authHandler) {
+        auth += " -type ";
+        std::string s = authHandler->serialize();
+        auth += s;
+    }
+    auth += "\n";
+    return auth;
+}
+
+std::string User::serializePermissions()
 {
     std::string result;
 
-    result += "addUser ";
-    result += serializeSimpleToken(username) + " ";
-    if (superadmin) result += "superadmin \\\n";
-    if (authHandler) {
-        result += "    " + authHandler->serialize();
-        result += " \\\n";
+    if (superadmin) {
+        result += "setperm " + serializeSimpleToken(username) + " superadmin\n";
     }
 
     std::map<std::string, enum Role>::const_iterator role;
     FOREACH(role, rolesOnProjects) {
-        std::string p = "    project " + serializeSimpleToken(role->first) + " ";
-        p += roleToString(role->second);
-        result += p + " \\\n";
+        std::string p = "setperm " + serializeSimpleToken(username);
+        p += roleToString(role->second) + " ";
+        p += serializeSimpleToken(role->first) + "\n";
+        result += p;
     }
-    result += "\n\n";
     return result;
 }
 
@@ -94,24 +124,9 @@ int User::loadAuth(std::list<std::string> &tokens)
             token = popListToken(tokens);
 
             if (token == AUTH_SHA1) {
-                AuthSha1 *ah = new AuthSha1();
-                ah->type = AUTH_SHA1;
-                while (!tokens.empty()) {
-                    token = popListToken(tokens);
-                    if (token == "-hash") ah->hash = popListToken(tokens);
-                    else if (token == "-salt") ah->salt = popListToken(tokens);
-                    else {
-                        LOG_ERROR("Invalid token '%s' for user '%s'",
-                                  token.c_str(), username.c_str());
-                        delete ah;
-                        return -1;
-                    }
-                }
-
-                if (ah->hash.empty()) {
-                    LOG_ERROR("Empty hash for user '%s'", username.c_str());
-                    delete ah;
-                    return -1;
+                Auth *ah = AuthSha1::load(tokens);
+                if (!ah) {
+                    LOG_ERROR("Cannot load auth for user '%s'", username.c_str());
                 }
                 authHandler = ah;
 
@@ -160,6 +175,7 @@ int User::loadAuth(std::list<std::string> &tokens)
             LOG_ERROR("Unexpected token '%s' for user '%s'", token.c_str(), username.c_str());
         }
     }
+    if (authHandler) authHandler->username = username;
     return 0; // success
 }
 
@@ -178,6 +194,7 @@ void User::setPasswd(const std::string &password)
     ah->type = AUTH_SHA1;
     ah->salt = getNewSalt();
     ah->hash = getSha1(password + ah->salt);
+    if (authHandler) delete authHandler;
     authHandler = ah;
 }
 
@@ -289,7 +306,7 @@ int UserBase::init(const char *path, bool checkProject)
             int r = u.loadAuth(*line);
             if (r == 0) {
                 // add user in database
-                LOG_DIAG("Loaded user: '%s' on %lu projects", u.username.c_str(), L(u.rolesOnProjects.size()));
+                LOG_DIAG("Loaded user: '%s'", u.username.c_str());
                 UserBase::addUserInArray(u);
             }
         } else {
@@ -359,20 +376,28 @@ int UserBase::initUsersFile(const char *repository)
     return writeToFile(path, "");
 }
 
-
+/** Store the user configuration to the filesystem
+  *
+  */
 int UserBase::store(const std::string &repository)
 {
-    std::string result;
-    result = K_SMIT_VERSION " " VERSION "\n";
+    std::string permissions; // this will be stored into file 'permissions'
+    std::string auth; // and this will be stored into file 'auth'
 
     std::map<std::string, User*>::iterator uit;
     FOREACH(uit, UserDb.configuredUsers) {
-        result += uit->second->serialize();
+        LOG_DIAG("store user: '%s'", uit->second->username.c_str());
+        permissions += uit->second->serializePermissions();
+        auth += uit->second->serializeAuth();
     }
-    std::string path = repository;
-    path += "/";
-    path += FILE_USERS;
-    return writeToFile(path, result);
+    std::string pathPermissions = repository + "/" PATH_REPO "/" PATH_PERMISSIONS;
+    int r = writeToFile(pathPermissions, permissions);
+    if (r < 0) return r;
+
+    std::string pathAuth = repository + "/" PATH_REPO "/" PATH_AUTH;
+    r = writeToFile(pathAuth, auth);
+    if (r < 0) return r;
+
 }
 
 
@@ -487,30 +512,32 @@ int UserBase::updateUser(const std::string &username, User newConfig)
 
     ScopeLocker scopeLocker(UserDb.locker, LOCK_READ_WRITE);
 
-    std::map<std::string, User*>::iterator u;
+    std::map<std::string, User*>::iterator existingUser;
 
-    // if modified name, check that the new name does not exist
     if (newConfig.username != username) {
-        u = UserDb.configuredUsers.find(newConfig.username);
-        if (u != UserDb.configuredUsers.end()) return -2;
+        // Case of a renaming
+        // Check that the new name does not exist
+        existingUser = UserDb.configuredUsers.find(newConfig.username);
+        if (existingUser != UserDb.configuredUsers.end()) return -2;
     }
 
     // check that modified user exists
-    u = UserDb.configuredUsers.find(username);
-    if (u == UserDb.configuredUsers.end()) return -3;
+    existingUser = UserDb.configuredUsers.find(username);
+    if (existingUser == UserDb.configuredUsers.end()) return -3;
 
-    if (newConfig.authHandler) {
-        // keep the same as before
-        newConfig.authHandler = u->second->authHandler;
-    } else if (u->second->authHandler) {
-        // delete old
-        delete u->second->authHandler;
+    if (!newConfig.authHandler) {
+        // keep same authentication parameters as before
+        newConfig.authHandler = existingUser->second->authHandler;
+    } else if (existingUser->second->authHandler) {
+        // delete old authentication parameters, that will be replaced by the new ones
+        delete existingUser->second->authHandler;
+        existingUser->second->authHandler = 0;
     }
-    *(u->second) = newConfig;
+    *(existingUser->second) = newConfig;
 
     // change the key in the map if name of user was modified
     if (username != newConfig.username) {
-        UserDb.configuredUsers[newConfig.username] = u->second;
+        UserDb.configuredUsers[newConfig.username] = existingUser->second;
         UserDb.configuredUsers.erase(username);
     }
 

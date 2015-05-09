@@ -349,6 +349,7 @@ int helpUser()
            "                    projects and manage users via the web interface)\n"
            "  --no-superadmin   remove the superadmin priviledge\n"
            "  -d <repo>         select a repository by its path (by default . is used)\n"
+           "  -v                be verbose (debug)"
            "\n"
            "Roles:\n"
            "    admin       able to modify an existing project\n"
@@ -379,7 +380,7 @@ int cmdUser(int argc, char **argv)
         {"project", 1, 0, 0},
         {NULL, 0, NULL, 0}
     };
-    while ((c = getopt_long(argc, argv, "d:", longOptions, &optionIndex)) != -1) {
+    while ((c = getopt_long(argc, argv, "vd:", longOptions, &optionIndex)) != -1) {
         switch (c) {
         case 0: // manage long options
             if (0 == strcmp(longOptions[optionIndex].name, "no-passwd")) {
@@ -406,6 +407,9 @@ int cmdUser(int argc, char **argv)
                 newUser.permissions[project] = stringToRole(role);
                 action = SET_CONFIG;
             }
+            break;
+        case 'v':
+            setLoggingLevel(LL_DIAG);
             break;
         case 'd':
             repo = optarg;

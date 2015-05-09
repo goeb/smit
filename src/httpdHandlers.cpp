@@ -511,10 +511,10 @@ void httpGetUsers(const RequestContext *request, User signedInUser, const std::s
     enum RenderingFormat format = getFormat(request);
 
     if (format == X_SMIT) {
-        // print the list of the projects (for cloning tool)
+        // print the permissions of the signed-in user
         sendHttpHeader200(request);
         request->printf("Content-Type: text/plain\r\n\r\n");
-        request->printf("%s\n", signedInUser.serialize().c_str());
+        request->printf("%s\n", signedInUser.serializePermissions().c_str());
         return;
     }
     // else serve page for normal HTML client

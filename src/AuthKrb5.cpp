@@ -88,3 +88,11 @@ std::string AuthKrb5::serialize()
     result += serializeSimpleToken(realm);
     return result;
 }
+
+Auth *AuthKrb5::createCopy()
+{
+    AuthKrb5 *ah = new AuthKrb5(*this);
+    return ah;
+}
+
+

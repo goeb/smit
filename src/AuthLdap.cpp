@@ -75,3 +75,10 @@ std::string AuthLdap::serialize()
     result += serializeSimpleToken(uri);
     return result;
 }
+
+Auth *AuthLdap::createCopy()
+{
+    AuthLdap *ah = new AuthLdap(*this);
+    return ah;
+}
+
