@@ -131,7 +131,8 @@ int writeToFile(const char *filepath, const char *data, size_t len)
 #endif
 
     std::string tmp = getTmpPath(filepath);
-
+    // TODO flags and mode inverted
+    // TODO add O_CLOEXEC
     int f = open(tmp.c_str(), mode, flags);
     if (-1 == f) {
         LOG_ERROR("Could not create file '%s', (%d) %s", tmp.c_str(), errno, strerror(errno));

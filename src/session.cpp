@@ -369,10 +369,17 @@ void UserBase::setLocalUserInterface()
 
 int UserBase::initUsersFile(const char *repository)
 {
+    // init file 'auth'
     std::string path = repository;
-    path += "/";
-    path += FILE_USERS;
+    path += "/" PATH_REPO "/" PATH_AUTH;
+    mkdirs(getDirname(path));
+    int r = writeToFile(path, "");
+    if (r < 0) return r;
 
+    // init file 'permissions'
+    path = repository;
+    path += "/" PATH_REPO "/" PATH_PERMISSIONS;
+    mkdirs(getDirname(path));
     return writeToFile(path, "");
 }
 
