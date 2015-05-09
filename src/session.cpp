@@ -417,7 +417,7 @@ User* UserBase::getUser(const std::string &username)
 
 /** Add a new user in database
   */
-void UserBase::addUserInArray(User newUser)
+User *UserBase::addUserInArray(User newUser)
 {
     User *u = new User;
     *u = newUser;
@@ -427,6 +427,7 @@ void UserBase::addUserInArray(User newUser)
     if (uit != UserDb.configuredUsers.end()) delete uit->second;
 
     UserDb.configuredUsers[u->username] = u;
+    return u;
 }
 
 /** Add a new user in database and store it.
@@ -443,8 +444,12 @@ int UserBase::addUser(User newUser)
     }
 
     ScopeLocker scopeLocker(UserDb.locker, LOCK_READ_WRITE);
-    addUserInArray(newUser);
-    return store(Repository);
+    User *u = addUserInArray(newUser);
+    int r = store(Repository);
+    if (r < 0) return r;
+
+    u->consolidateRoles();
+    return 0;
 }
 
 /** Get the list of users that are at stake in the given project
@@ -547,7 +552,11 @@ int UserBase::updateUser(const std::string &username, User newConfig)
         UserDb.configuredUsers.erase(username);
     }
 
-    return store(Repository);
+    int r = store(Repository);
+    if (r < 0) return r;
+
+    existingUser->second->consolidateRoles();
+    return 0;
 }
 
 int UserBase::updatePassword(const std::string &username, const std::string &password)

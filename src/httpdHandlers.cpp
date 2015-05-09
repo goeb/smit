@@ -576,7 +576,7 @@ void httpPostUsers(const RequestContext *request, User signedInUser, const std::
 
         User newUserConfig;
         std::string passwd1, passwd2;
-        std::string project, role;
+        std::string projectWildcard, role;
 
         while (postData.size() > 0) {
             std::string tokenPair = popToken(postData, '&');
@@ -587,17 +587,17 @@ void httpPostUsers(const RequestContext *request, User signedInUser, const std::
             else if (key == "superadmin" && value == "on") newUserConfig.superadmin = true;
             else if (key == "passwd1") passwd1 = value;
             else if (key == "passwd2") passwd2 = value;
-            else if (key == "project") project = value;
+            else if (key == "project_wildcard") projectWildcard = value;
             else if (key == "role") role = value;
             else {
                 LOG_ERROR("httpPostUsers: unexpected parameter '%s'", key.c_str());
             }
 
             // look if the pair project/role is complete
-            if (!project.empty() && !role.empty()) {
+            if (!projectWildcard.empty() && !role.empty()) {
                 Role r = stringToRole(role);
-                if (r != ROLE_NONE) newUserConfig.rolesOnProjects[project] = r;
-                project.clear();
+                if (r != ROLE_NONE) newUserConfig.permissions[projectWildcard] = r;
+                projectWildcard.clear();
                 role.clear();
             }
         }

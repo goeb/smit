@@ -74,6 +74,7 @@ public:
                               const std::list<std::pair<std::string, std::string> > &pList,
                               const std::map<std::string, std::map<Role, std::set<std::string> > > *userRolesByProject);
     static void printUsers(const RequestContext *req, const std::list<User> &usersList);
+    static void printUserPermissions(const RequestContext *req, const User &u);
     static void printScriptUpdateConfig(const ContextParameters &ctx);
     static std::string convertToRichText(const std::string &raw);
     static void printIssueSummary(const ContextParameters &ctx, const Issue &issue);

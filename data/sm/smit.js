@@ -104,6 +104,19 @@ function updateFileInput(classname) {
         }
     }
 }
+function createDatalist(id, items) {
+    var datalist = document.createElement('datalist');
+    datalist.id = id;
+    var length = items.length;
+    for (var i = 0; i < length; i++) {
+        var opt = document.createElement('option');
+        opt.innerHTML = items[i];
+        opt.value = items[i];
+        opt.text = items[i];
+        datalist.appendChild(opt);
+    }
+    return datalist;
+}
 function createSelect(items, selected, allowVoid) {
     var select = document.createElement('select');
     var items2 = items.slice(0); // copy the array
@@ -267,12 +280,25 @@ function setProjectName(value) {
     input.value = value;
 }
 
-function addProject(divname, selectedProject, selectedRole) {
+function addProjectDatalist(divname) {
     var div = document.getElementById(divname);
+    var datalist = createDatalist('datalist_projects', Projects);
+    div.appendChild(datalist);
 
-    var select = createSelect(Projects, selectedProject, true);
-    select.name = 'project';
-    div.appendChild(select);
+}
+function addPermission(divname, selectedProject, selectedRole) {
+    var div = document.getElementById(divname);
+    var datalist = document.getElementById('datalist_projects');
+
+    // input for the project name or wildcard
+    var input = document.createElement('input');
+    input.type = 'text';
+    input.value = selectedProject;
+    input.setAttribute('list', 'datalist_projects');
+    input.name = 'project_wildcard';
+    div.appendChild(input);
+
+    // input for the role (ref, ro, rw,...)
     var i = createSelect(Roles, selectedRole, true);
     i.name = 'role';
     div.appendChild(i);

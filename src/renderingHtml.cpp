@@ -83,7 +83,7 @@ const Project &ContextParameters::getProject() const
 #define K_SM_DIV_ISSUE_FORM "SM_DIV_ISSUE_FORM"
 #define K_SM_DIV_ISSUE_MSG_PREVIEW "SM_DIV_ISSUE_MSG_PREVIEW"
 #define K_SM_URL_ROOT "SM_URL_ROOT"
-
+#define K_SM_TABLE_USER_PERMISSIONS "SM_TABLE_USER_PERMISSIONS"
 
 /** Load a page for a specific project
   *
@@ -124,6 +124,7 @@ public:
     const std::list<std::pair<std::string, std::string> > *projectList;
     const std::list<User> *usersList;
     const Issue *currentIssue;
+    const User *concernedUser;
     const std::map<std::string, std::map<Role, std::set<std::string> > > *userRolesByProject;
 
     VariableNavigator(const std::string basename, const ContextParameters &context) : ctx(context) {
@@ -136,6 +137,7 @@ public:
         usersList = 0;
         currentIssue = 0;
         userRolesByProject = 0;
+        concernedUser = 0;
 
         int n;
         if (ctx.project) n = loadProjectPage(ctx.req, ctx.getProject().getPath(), basename, &buffer);
@@ -222,6 +224,9 @@ public:
             } else if (varname == K_SM_DIV_USERS && usersList) {
                 RHtml::printUsers(ctx.req, *usersList);
 
+            } else if (varname == K_SM_TABLE_USER_PERMISSIONS && concernedUser) {
+                RHtml::printUserPermissions(ctx.req, *concernedUser);
+
             } else if (varname == K_SM_SCRIPT_PROJECT_CONFIG_UPDATE) {
                 RHtml::printScriptUpdateConfig(ctx);
 
@@ -297,6 +302,7 @@ void RHtml::printPageSignin(const ContextParameters &ctx, const char *redirect)
 void RHtml::printPageUser(const ContextParameters &ctx, const User *u)
 {
     VariableNavigator vn("user.html", ctx);
+    vn.concernedUser = u;
     vn.printPage();
 
     // add javascript for updating the inputs
@@ -318,15 +324,18 @@ void RHtml::printPageUser(const ContextParameters &ctx, const User *u)
     std::list<std::string> roleList = getAvailableRoles();
     ctx.req->printf("Roles = %s;\n", toJavascriptArray(roleList).c_str());
 
+    ctx.req->printf("addProjectDatalist('roles_on_projects');\n");
+
     if (u) {
         std::map<std::string, enum Role>::const_iterator rop;
-        FOREACH(rop, u->rolesOnProjects) {
-            ctx.req->printf("addProject('roles_on_projects', '%s', '%s');\n",
+        FOREACH(rop, u->permissions) {
+            ctx.req->printf("addPermission('roles_on_projects', '%s', '%s');\n",
                             enquoteJs(rop->first).c_str(),
                             enquoteJs(roleToString(rop->second)).c_str());
         }
     }
-    ctx.req->printf("addProject('roles_on_projects', '', '');\n");
+    ctx.req->printf("addPermission('roles_on_projects', '', '');\n");
+    ctx.req->printf("addPermission('roles_on_projects', '', '');\n");
 
     ctx.req->printf("</script>\n");
 }
@@ -740,6 +749,20 @@ void RHtml::printUsers(const RequestContext *req, const std::list<User> &usersLi
                 htmlEscape(_("New User")).c_str());
 
 }
+
+void RHtml::printUserPermissions(const RequestContext *req, const User &u)
+{
+    req->printf("<table class=\"sm_users\">\n");
+    req->printf("<tr><th>%s</th><th>%s</th></tr>\n", _("Project"), _("Role"));
+    std::map<std::string, enum Role>::const_iterator rop;
+    FOREACH(rop, u.rolesOnProjects) {
+        req->printf("<tr><td>%s</td><td>%s</td></tr>\n", htmlEscape(rop->first).c_str(),
+                    roleToString(rop->second).c_str());
+    }
+
+    req->printf("</table>\n");
+}
+
 
 void RHtml::printPageProjectList(const ContextParameters &ctx,
                                  const std::list<std::pair<std::string, std::string> > &pList,

@@ -72,7 +72,7 @@ private:
     std::map<std::string, User*> configuredUsers;
     Locker locker; // mutex for configuredUsers
     static std::string Repository;
-    static void addUserInArray(User u);
+    static User *addUserInArray(User u);
 
     // localUserInterface enables anonymous read access
     // used for browsing a local clone of a smit repository

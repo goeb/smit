@@ -77,7 +77,7 @@ BUILT_SOURCES = embedcpio.c embedcpio.h
 CLEANFILES = embedcpio.c embedcpio.h convertToC
 X = embedded_data
 SM_VERSION = $(X)/sm/version
-embedcpio.c embedcpio.h: @srcdir@/tools/convertToC.cpp
+embedcpio.c embedcpio.h: @srcdir@/tools/convertToC.cpp @srcdir@/data/sm/smit.js
 	rm -rf $(X)
 	cp -r @srcdir@/data $(X)
 	@# generate sm/version

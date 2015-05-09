@@ -1,4 +1,7 @@
+setperm "John Smith" rw m*
+setperm "John Smith" ref myproject
+setperm "John Smith" ro t*
+setperm "John Smith" rw things_to_do
+setperm "John Smith" rw x/y/*
 setperm fred superadmin
 setperm homer superadmin
-setperm fred admin *
-setperm fred rw x/y/z
