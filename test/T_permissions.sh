@@ -50,16 +50,23 @@ done
 # test cloning
 rm -rf clone1
 $SMIT clone http://127.0.0.1:$PORT --user user1 --passwd user1 clone1
-
-# test pulling/pushing TODO
-
-stopServer
-
-
-# check results
+# Check contents of the clone 
 for p in 1 2 3 4 5; do
     echo "Issues of clone1/p$p:" >> $TEST_NAME.out
     $SMIT issue clone1/p$p -h | grep -v ^Date >> $TEST_NAME.out
 done
 
-diff $srcdir/$TEST_NAME.ref $TEST_NAME.out
+# test pulling/pushing TODO
+$SMIT pull clone1 >> $TEST_NAME.out 2>&1
+$SMIT issue clone1/p4 -a - "summary=issue-to-be-pushed / p4" >> $TEST_NAME.out
+$SMIT issue clone1/p5 -a - "summary=issue-to-be-pushed / p5" >> $TEST_NAME.out
+$SMIT push clone1 >> $TEST_NAME.out 2>&1
+# test pushing an issue with role read-only
+$SMIT issue clone1/p3 -a - "summary=issue that should not be pushed" >> $TEST_NAME.out
+$SMIT push clone1 >> $TEST_NAME.out 2>&1
+
+stopServer
+
+# 
+sed -e "s///" -e "s;/[0-9a-f]\{40\}$;/...;" $TEST_NAME.out > $TEST_NAME.out.fil
+diff $srcdir/$TEST_NAME.ref $TEST_NAME.out.fil
