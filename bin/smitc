@@ -1,6 +1,8 @@
 #!/bin/sh
 # SMIT client
 
+SMITC_COOKIE=.smitcCookie
+
 usage() {
     echo "Usage:"
     echo "    smitc <options> <command> <arguments>"
@@ -15,19 +17,6 @@ usage() {
     exit 1
 }
 
-SMITC_COOKIE=.smitcCookie
-
-command=""
-while [ "$1" != "" ]; do
-    case "$1" in
-        --*|-?) shift;; # no option yet
-        *) command="$1"; shift; break;
-        esac
-done
-
-args="$@"
- 
-if [ "$command" = "" ]; then usage; fi
 
 signin() {
     echo "signin... args=$@"
@@ -48,6 +37,7 @@ get() {
         else q="?"; fi
         q="${q}format=text"
     fi
+    #set -x
     curl -s -b $SMITC_COOKIE "$url$q"
 }
 
@@ -63,4 +53,17 @@ post() {
     curl -X POST -H Expect: -s $data -b $SMITC_COOKIE "$uri?format=text"
 }
 
-eval $command $args
+# main
+command=""
+while [ "$1" != "" ]; do
+    case "$1" in
+        --*|-?) shift;; # no option yet
+        *) command="$1"; shift; break;
+    esac
+done
+
+args="$@"
+ 
+if [ "$command" = "" ]; then usage; fi
+
+$command $args

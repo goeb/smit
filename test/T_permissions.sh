@@ -38,7 +38,14 @@ done
 startServer
 
 # test smitc client
-#TODO
+SMITC=$srcdir/../bin/smitc
+$SMITC signin http://127.0.0.1:$PORT user1 user1
+for p in 1 2 3 4 5; do
+    echo "smitc POST p$p" >> $TEST_NAME.out
+    $SMITC post "http://127.0.0.1:$PORT/p$p/issues/1" "+message=test-xxx-p$p" summary="new-summary/p$p" >> $TEST_NAME.out
+    echo "smitc GET p$p" >> $TEST_NAME.out
+    $SMITC get "http://127.0.0.1:$PORT/p$p/issues/?colspec=id+summary&sort=id&format=text" >> $TEST_NAME.out
+done
 
 # test cloning
 rm -rf clone1

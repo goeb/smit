@@ -2196,8 +2196,9 @@ int begin_request_handler(const RequestContext *req)
         if (!p) {
             // No such project. Bad request
             LOG_DIAG("Unknown project for URI '%s'", uri.c_str());
-            sendHttpHeader404(req);
-            return REQUEST_COMPLETED;
+            // Send same error as for existing project in order to prevent
+            // an attacker from deducing existing projects after the http status code
+            return handleUnauthorizedAccess(req, true);
         }
         LOG_DIAG("project %s, %p", p->getName().c_str(), p);
 
