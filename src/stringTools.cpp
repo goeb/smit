@@ -164,11 +164,11 @@ std::string urlDecode(const std::string &src, int is_form_url_encoded, char mark
   *   sub-delims  = "!" / "$" / "&" / "'" / "(" / ")"
   *               / "*" / "+" / "," / ";" / "="
   *
-  *  "%" is also added.
+  *  "%" and " " are also added.
   */
 const char *getReservedUriCharacters()
 {
-    return ":/?#[]@!$&'()*+,;=%";
+    return ":/?#[]@!$&'()*+,;=% ";
 }
 
 /** Encode a string for URL

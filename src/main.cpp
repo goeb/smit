@@ -717,7 +717,9 @@ int cmdUi(int argc, char **argv)
 
     if (!repo) repo = (char*)".";
 
-    UserBase::setLocalUserInterface();
+
+    std::string username = loadUsername(repo);
+    UserBase::setLocalUserInterface(username);
 
     listenPort = "127.0.0.1:" + listenPort;
 

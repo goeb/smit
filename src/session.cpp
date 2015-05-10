@@ -293,25 +293,25 @@ int UserBase::init(const char *path, bool checkProject)
     int n = loadFile(auth.c_str(), data);
     if (n != 0) {
         LOG_ERROR("Could not load file '%s': %s", auth.c_str(), strerror(errno));
-        return -1;
-    }
 
-    std::list<std::list<std::string> > lines = parseConfigTokens(data.c_str(), data.size());
+    } else {
+        std::list<std::list<std::string> > lines = parseConfigTokens(data.c_str(), data.size());
 
-    std::list<std::list<std::string> >::iterator line;
-    FOREACH(line, lines) {
-        std::string verb = popListToken(*line);
-        if (verb == "adduser") {
-            User u;
-            int r = u.loadAuth(*line);
-            if (r == 0) {
-                // add user in database
-                LOG_DIAG("Loaded user: '%s'", u.username.c_str());
-                UserBase::addUserInArray(u);
+        std::list<std::list<std::string> >::iterator line;
+        FOREACH(line, lines) {
+            std::string verb = popListToken(*line);
+            if (verb == "adduser") {
+                User u;
+                int r = u.loadAuth(*line);
+                if (r == 0) {
+                    // add user in database
+                    LOG_DIAG("Loaded user: '%s'", u.username.c_str());
+                    UserBase::addUserInArray(u);
+                }
+            } else {
+                LOG_ERROR("Invalid token '%s' in %s", verb.c_str(), auth.c_str());
+                return -1;
             }
-        } else {
-            LOG_ERROR("Invalid token '%s' in %s", verb.c_str(), auth.c_str());
-            return -1;
         }
     }
 
@@ -320,36 +320,38 @@ int UserBase::init(const char *path, bool checkProject)
     n = loadFile(filePermissions.c_str(), data);
     if (n != 0) {
         LOG_ERROR("Could not load file '%s': %s", filePermissions.c_str(), strerror(errno));
-        return -1;
-    }
-    lines = parseConfigTokens(data.c_str(), data.size());
-    FOREACH(line, lines) {
-        std::string verb = popListToken(*line);
-        if (verb == "setperm") {
-            std::string username = popListToken(*line);
-            if (username.empty()) {
-                LOG_ERROR("Invalid 'setperm' with no username: %s", filePermissions.c_str());
-                continue;
-            }
-            User *u = UserBase::getUser(username);
-            if (!u) {
-                LOG_ERROR("Unknown user '%s' referenced from '%s'", username.c_str(),
-                          filePermissions.c_str());
-                continue;
-            }
 
-            std::string roleStr = popListToken(*line);
-            if (roleStr == "superadmin") {
-                u->superadmin = true;
+    } else {
+        std::list<std::list<std::string> > lines = parseConfigTokens(data.c_str(), data.size());
+        std::list<std::list<std::string> >::iterator line;
+        FOREACH(line, lines) {
+            std::string verb = popListToken(*line);
+            if (verb == "setperm") {
+                std::string username = popListToken(*line);
+                if (username.empty()) {
+                    LOG_ERROR("Invalid 'setperm' with no username: %s", filePermissions.c_str());
+                    continue;
+                }
+                User *u = UserBase::getUser(username);
+                if (!u) {
+                    LOG_ERROR("Unknown user '%s' referenced from '%s'", username.c_str(),
+                              filePermissions.c_str());
+                    continue;
+                }
+
+                std::string roleStr = popListToken(*line);
+                if (roleStr == "superadmin") {
+                    u->superadmin = true;
+                } else {
+                    Role role = stringToRole(roleStr);
+                    std::string projectWildcard = popListToken(*line);
+                    u->permissions[projectWildcard] = role;
+                }
+
             } else {
-                Role role = stringToRole(roleStr);
-                std::string projectWildcard = popListToken(*line);
-                u->permissions[projectWildcard] = role;
+                LOG_ERROR("Invalid token '%s' in %s", verb.c_str(), filePermissions.c_str());
+                return -1;
             }
-
-        } else {
-            LOG_ERROR("Invalid token '%s' in %s", verb.c_str(), filePermissions.c_str());
-            return -1;
         }
     }
 
@@ -362,9 +364,14 @@ int UserBase::init(const char *path, bool checkProject)
     return 0;
 }
 
-void UserBase::setLocalUserInterface()
+void UserBase::setLocalUserInterface(const std::string username)
 {
     localUserInterface = true;
+    // create a user with all permissions
+    User u;
+    u.username = username;
+    u.permissions["*"] = ROLE_ADMIN;
+    addUser(u);
 }
 
 int UserBase::initUsersFile(const char *repository)

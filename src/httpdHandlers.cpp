@@ -772,8 +772,6 @@ void httpGetRoot(const RequestContext *req, User u)
            req->printf("%s\n", p->first.c_str());
         }
         req->printf("public\n");
-        req->printf("users\n");
-
 
     } else {
 

@@ -207,7 +207,7 @@ int pullFiles(const PullContext &ctx, const std::string &srcResource,
 
     } else {
         // error
-        LOG_ERROR("Could not download %s", srcResource.c_str());
+        LOG_ERROR("Could not download %s: r=%d", url.c_str(), r);
         return -1;
     }
 
@@ -746,7 +746,6 @@ int pullProjects(const PullContext &pullCtx)
     std::list<std::string>::iterator projectName;
     FOREACH(projectName, hr.lines) {
         if ((*projectName) == "public") continue;
-        if ((*projectName) == "users") continue;
         if (projectName->empty()) continue;
 
         // project name is mangled

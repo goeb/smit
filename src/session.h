@@ -54,7 +54,7 @@ public:
 class UserBase {
 public:
     static int init(const char *repository, bool checkProject = true);
-    static void setLocalUserInterface();
+    static void setLocalUserInterface(const std::string username);
     static int store(const std::string &repository);
     static int initUsersFile(const char *repository);
     static User* getUser(const std::string &username);

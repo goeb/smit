@@ -55,7 +55,7 @@ void HttpRequest::getFileStdout()
   * @return
   *     0, regular file downloaded successfully
   *     1, directory listing downloaded successfully
-  *    -1, error, file not downloaded
+  *    <0, error, file not downloaded
   */
 int HttpRequest::downloadFile(const HttpClientContext &ctx,
                               const std::string &url, const std::string &localPath)
@@ -63,7 +63,8 @@ int HttpRequest::downloadFile(const HttpClientContext &ctx,
     HttpRequest hr(ctx);
     hr.setUrl(url);
     int r = hr.downloadFile(localPath);
-    return r;
+    if (r >= 0) return r;
+    else return -hr.httpStatusCode;
 }
 
 /** Dowload a file
