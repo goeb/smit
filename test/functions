@@ -24,6 +24,7 @@ initTest() {
     exec > $TEST_NAME.log 2>&1
 }
 
+# create a smit repository with 1 project
 initRepo() {
     mkdir $REPO
     $SMIT init $REPO

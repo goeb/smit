@@ -748,10 +748,12 @@ void httpGetRoot(const RequestContext *req, User u)
     // print list of available projects
     std::list<std::pair<std::string, Role> > usersRoles;
     std::list<std::pair<std::string, std::string> > pList;
-    if (!UserBase::isLocalUserInterface() && !u.superadmin) pList = u.getProjects();
-    else {
-        // for a superadmin, get the list of all the projects
-        // or in the case of a local user interface
+    if (!UserBase::isLocalUserInterface() && !u.superadmin) {
+        // Get the list of the projects to which the user has permission
+        pList = u.getProjects();
+    } else {
+        // Get the list of all projects
+        // (case of a superadmin of a local user)
         std::list<std::string> allProjects = Database::getProjects();
         std::list<std::string>::iterator p;
         FOREACH(p, allProjects) {
