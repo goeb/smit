@@ -619,7 +619,9 @@ std::list<std::pair<std::string, std::string> > User::getProjects() const
     std::list<std::pair<std::string, std::string> > result;
     std::map<std::string, enum Role>::const_iterator r;
     for (r = rolesOnProjects.begin(); r != rolesOnProjects.end(); r++) {
-        result.push_back(std::make_pair(r->first, roleToString(r->second)));
+        if (r->second <= ROLE_RO) {
+            result.push_back(std::make_pair(r->first, roleToString(r->second)));
+        }
     }
     return result;
 }
