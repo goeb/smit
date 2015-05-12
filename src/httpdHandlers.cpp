@@ -531,15 +531,6 @@ void httpGetUser(const RequestContext *request, const User &signedInUser, const 
 
     enum RenderingFormat format = getFormat(request);
 
-    if (format == X_SMIT) {
-        // print the permissions of the signed-in user
-        sendHttpHeader200(request);
-        request->printf("Content-Type: text/plain\r\n\r\n");
-        request->printf("%s\n", signedInUser.serializePermissions().c_str());
-        return;
-    }
-    // else serve page for normal HTML client
-
     if (username == "_") {
         // display form for a new user
         // only a superadmin may do this
@@ -562,8 +553,17 @@ void httpGetUser(const RequestContext *request, const User &signedInUser, const 
 
             // handle an existing user
             // a user may only view his/her own user page
+
             sendHttpHeader200(request);
-            RHtml::printPageUser(ctx, editedUser);
+
+            if (format == X_SMIT) {
+                // print the permissions of the signed-in user
+                request->printf("Content-Type: text/plain\r\n\r\n");
+                request->printf("%s\n", editedUser->serializePermissions().c_str());
+
+            } else {
+                RHtml::printPageUser(ctx, editedUser);
+            }
 
         } else sendHttpHeader403(request);
     }
