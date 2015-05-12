@@ -5,7 +5,7 @@ TESTS = T_parseConfig \
 		T_smp_encode_decode.sh functest.sh \
 		T_clone.sh T_pull.sh T_pull_2.sh \
 		T_push.sh T_push2.sh T_push3.sh \
-		T_push_endurance.sh
+		T_push_endurance.sh T_permissions.sh
 
 check_PROGRAMS = T_parseConfig T_stringTools smparser get_random_value
 T_parseConfig_SOURCES = T_parseConfig.cpp ../src/parseConfig.cpp ../src/stringTools.cpp

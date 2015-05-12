@@ -33,7 +33,7 @@ start() {
 doreads() {
     n=$1
     for i in `seq 1 $n`; do
-        $SMITC get "http://127.0.0.1:$PORT/$PROJECT/issues?colspec=id+summary\&sort=id" |
+        $SMITC get "http://127.0.0.1:$PORT/$PROJECT/issues?colspec=id+summary&sort=id" |
         sed -e "s/,.*//" | (
         while read id; do
             if [ "$id" = "id" ]; then continue; fi
@@ -63,7 +63,7 @@ dowritesnew() {
 
 dowritesUpdateAllSummaries() {
     # set all summaries to 
-    $SMITC get "http://127.0.0.1:$PORT/$PROJECT/issues?colspec=id+summary\&sort=id" |
+    $SMITC get "http://127.0.0.1:$PORT/$PROJECT/issues?colspec=id+summary&sort=id" |
     sed -e "s/,.*//" | (
     while read id; do
         if [ "$id" = "id" ]; then continue; fi
@@ -93,7 +93,7 @@ sleep 2
 
 start
 
-$SMITC get "http://127.0.0.1:$PORT/$PROJECT/issues?colspec=id+summary\&sort=id" > $TEST_NAME.out
+$SMITC get "http://127.0.0.1:$PORT/$PROJECT/issues?colspec=id+summary&sort=id" > $TEST_NAME.out
 
 echo killing pid=$pid
 kill $pid
