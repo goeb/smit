@@ -8,7 +8,6 @@ usage() {
     exit 1
 }
 
-
 # migrateObject
 # $1 : source file
 # $2 : directory where the file is to be moved
@@ -261,13 +260,13 @@ find "$dstDir" -name project | while read p; do
 
     # change files
     find "$pDir/files" -type f | while read file; do
-        f=$(basename -- $file)
-        newId=$(echo $f | sed -e "s/\..*//")
-        prefix=$(echo $newId | sed -e "s/\(..\).*/\\1"/)
-        suffix=$(echo $newId | sed -e "s/^..//")
+        f=$(basename -- "$file")
+        newId=$(echo "$f" | sed -e "s/\..*//")
+        prefix=$(echo "$newId" | sed -e "s/\(..\).*/\\1"/)
+        suffix=$(echo "$newId" | sed -e "s/^..//")
 
         mkdir -p "$pDir/objects/$prefix"
-        mv $file "$pDir/objects/$prefix/$suffix"
+        mv "$file" "$pDir/objects/$prefix/$suffix"
     done
 
     # change tags
