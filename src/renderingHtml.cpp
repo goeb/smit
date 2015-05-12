@@ -763,15 +763,19 @@ void RHtml::printUserPermissions(const RequestContext *req, const User &u)
     req->printf("</table>\n");
 }
 
+void RHtml::printPageUserList(const ContextParameters &ctx, const std::list<User> &users)
+{
+    VariableNavigator vn("users.html", ctx);
+    vn.usersList = &users;
+    vn.printPage();
+}
 
 void RHtml::printPageProjectList(const ContextParameters &ctx,
                                  const std::list<std::pair<std::string, std::string> > &pList,
-                                 const std::map<std::string, std::map<Role, std::set<std::string> > > &userRolesByProject,
-                                 const std::list<User> &users)
+                                 const std::map<std::string, std::map<Role, std::set<std::string> > > &userRolesByProject)
 {
     VariableNavigator vn("projects.html", ctx);
     vn.projectList = &pList;
-    vn.usersList = &users;
     vn.userRolesByProject = &userRolesByProject;
     vn.printPage();
 }

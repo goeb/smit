@@ -495,6 +495,23 @@ int httpGetSm(const RequestContext *request, const std::string &file)
     return r;
 }
 
+void httpGetUsers(const RequestContext *req, const User &signedInUser)
+{
+    if (!signedInUser.superadmin) {
+        sendHttpHeader403(req);
+        return;
+    }
+
+    std::list<User> allUsers;
+    // get the list of all users
+    allUsers = UserBase::getAllUsers();
+
+    // only HTML supported at the moment
+    sendHttpHeader200(req);
+    ContextParameters ctx = ContextParameters(req, signedInUser);
+    RHtml::printPageUserList(ctx, allUsers);
+}
+
 /** Get the configuration page of a given user
   *
   * @param signedInUser
@@ -504,8 +521,12 @@ int httpGetSm(const RequestContext *request, const std::string &file)
   *     user whose configuration is requested
   *
   */
-void httpGetUsers(const RequestContext *request, User signedInUser, const std::string &username)
+void httpGetUser(const RequestContext *request, const User &signedInUser, const std::string &username)
 {
+    if (username.empty()) {
+        return httpGetUsers(request, signedInUser);
+    }
+
     ContextParameters ctx = ContextParameters(request, signedInUser);
 
     enum RenderingFormat format = getFormat(request);
@@ -519,7 +540,7 @@ void httpGetUsers(const RequestContext *request, User signedInUser, const std::s
     }
     // else serve page for normal HTML client
 
-    if (username.empty() || username == "_") {
+    if (username == "_") {
         // display form for a new user
         // only a superadmin may do this
         if (!signedInUser.superadmin) {
@@ -552,7 +573,7 @@ void httpGetUsers(const RequestContext *request, User signedInUser, const std::s
   *
   * Non-superadmin users may only post their password.
   */
-void httpPostUsers(const RequestContext *request, User signedInUser, const std::string &username)
+void httpPostUser(const RequestContext *request, User signedInUser, const std::string &username)
 {
     if (!signedInUser.superadmin && username != signedInUser.username) {
         sendHttpHeader403(request);
@@ -741,8 +762,7 @@ int httpGetFile(const RequestContext *request)
     return REQUEST_COMPLETED; // the request is completely handled
 }
 
-
-void httpGetRoot(const RequestContext *req, User u)
+void httpGetProjects(const RequestContext *req, User u)
 {
     sendHttpHeader200(req);
     // print list of available projects
@@ -785,14 +805,8 @@ void httpGetRoot(const RequestContext *req, User u)
             usersRolesByProject[p->first] = ur;
         }
 
-        std::list<User> allUsers;
-        if (u.superadmin) {
-            // get the list of all users
-            allUsers = UserBase::getAllUsers();
-        }
-
         ContextParameters ctx = ContextParameters(req, u);
-        RHtml::printPageProjectList(ctx, pList, usersRolesByProject, allUsers);
+        RHtml::printPageProjectList(ctx, pList, usersRolesByProject);
     }
 }
 
@@ -2111,11 +2125,11 @@ void httpPostEntry(const RequestContext *req, Project &pro, const std::string & 
   * /                       GET/POST   user              list of projects / management of projects (create, ...)
   * /public/...             GET        all               public pages, javascript, CSS, logo
   * /signin                 POST       all               sign-in
-  * /users                             superadmin        management of users for all projects
-  * /_                      GET/POST   superadmin        new project
+  * /users/                            superadmin        management of users for all projects
   * /users/<user>           GET/POST   user, superadmin  management of a single user
+  * /_                      GET/POST   superadmin        new project
   * /<p>/config             GET/POST   admin             configuration of the project
-  * /<p>/views              GET/POST   admin             list predefined views / create new view
+  * /<p>/views/             GET/POST   admin             list predefined views / create new view
   * /<p>/views/_            GET        admin             form for advanced search / new predefined view
   * /<p>/views/xyz          GET/POST   admin             display / update / rename predefined view
   * /<p>/views/xyz?delete=1 POST       admin             delete predefined view
@@ -2126,10 +2140,10 @@ void httpPostEntry(const RequestContext *req, Project &pro, const std::string & 
   * /<p>/issues/x/y         POST       user              push an entry
   * /<p>/tags/x/y           POST       user              tag / untag an entry
   * /<p>/reload             POST       admin             reload project from disk storage
-  * /<p>/files/0102/t.pdf   GET        user              get an attached file
+  * /<p>/files/<id>/<name>  GET        user              get an attached file
   * /<p>/files/123          POST       user              push a file
-  * /<p>/other/file         GET        user              any existing file (in the repository)
-  * / * /issues             GET        user              issues of all projects
+  * /<p>/other/file         GET        user              any static file
+  * / * /issues               GET        user              issues of all projects
   */
 
 int begin_request_handler(const RequestContext *req)
@@ -2179,10 +2193,10 @@ int begin_request_handler(const RequestContext *req)
     bool handled = true; // by default, do not let Mongoose handle the request
 
     if      ( (resource == "signout") && (method == "POST") ) httpPostSignout(req, sessionId);
-    else if ( (resource == "") && (method == "GET") ) httpGetRoot(req, user);
+    else if ( (resource == "") && (method == "GET") ) httpGetProjects(req, user);
     else if ( (resource == "") && (method == "POST") ) httpPostRoot(req, user);
-    else if ( (resource == "users") && (method == "GET") ) httpGetUsers(req, user, uri);
-    else if ( (resource == "users") && (method == "POST") ) httpPostUsers(req, user, uri);
+    else if ( (resource == "users") && (method == "GET") ) httpGetUser(req, user, uri);
+    else if ( (resource == "users") && (method == "POST") ) httpPostUser(req, user, uri);
     else if ( (resource == "_") && (method == "GET") ) httpGetNewProject(req, user);
     else if ( (resource == "_") && (method == "POST") ) httpPostNewProject(req, user);
     else if ( (resource == "*") && (method == "GET") ) httpIssuesAccrossProjects(req, user, uri);

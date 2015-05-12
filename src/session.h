@@ -43,7 +43,7 @@ public:
     ~User();
     enum Role getRole(const std::string &project) const;
     std::list<std::pair<std::string, std::string> >  getProjects() const;
-    std::string serializePermissions();
+    std::string serializePermissions() const;
     std::string serializeAuth();
     int loadAuth(std::list<std::string> &tokens);
     void setPasswd(const std::string &passwd);

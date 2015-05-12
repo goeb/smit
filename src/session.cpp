@@ -83,7 +83,7 @@ std::string User::serializeAuth()
     return auth;
 }
 
-std::string User::serializePermissions()
+std::string User::serializePermissions() const
 {
     std::string result;
 

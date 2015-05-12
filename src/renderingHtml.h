@@ -47,10 +47,12 @@ public:
     static void printNavigationGlobal(const ContextParameters &ctx);
     static void printNavigationIssues(const ContextParameters &ctx, bool autofocus);
 
+    static void printPageUserList(const ContextParameters &ctx, const std::list<User> &users);
+
     static void printPageProjectList(const ContextParameters &ctx,
                                      const std::list<std::pair<std::string, std::string> > &pList,
-                                     const std::map<std::string, std::map<Role, std::set<std::string> > > &userRolesByProject,
-                                     const std::list<User> &users);
+                                     const std::map<std::string, std::map<Role, std::set<std::string> > > &userRolesByProject);
+
     static void printProjectConfig(const ContextParameters &ctx);
     static void printPageIssuesFullContents(const ContextParameters &ctx, std::vector<const Issue*> issueList);
     static void printPageIssueList(const ContextParameters &ctx, std::vector<const Issue*> issueList,
