@@ -409,8 +409,7 @@ int UserBase::store(const std::string &repository)
 
     std::string pathAuth = repository + "/" PATH_REPO "/" PATH_AUTH;
     r = writeToFile(pathAuth, auth);
-    if (r < 0) return r;
-
+    return r;
 }
 
 

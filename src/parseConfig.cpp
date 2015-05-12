@@ -14,6 +14,7 @@
 
 #include <stdio.h>
 #include <errno.h>
+#include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
 #include <sstream>
@@ -261,7 +262,7 @@ std::string serializeSimpleToken(const std::string token)
 
 std::string getBoundary(const std::string &text)
 {
-    uint64_t x = 0x0b0b0b0b0a0a0a10;
+    uint64_t x = 0x0b0b0b0b0a0a0a10ULL;
     // The boundary must not be random, but deterministic and reproduceable
     std::string boundary = "0a0a0a0a0b0b0b0b";
     do {

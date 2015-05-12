@@ -656,7 +656,7 @@ void httpPostUsers(const RequestContext *request, User signedInUser, const std::
             if (r != 0) LOG_ERROR("Cannot update user '%s': %s", username.c_str(), error.c_str());
             else if (newUserConfig.username != username) {
                 LOG_INFO("User '%s' renamed '%s'", username.c_str(), newUserConfig.username.c_str());
-            } else LOG_INFO("Parameters updated for user '%s'", username.c_str());
+            } else LOG_INFO("Parameters of user '%s' updated by '%s'", username.c_str(), signedInUser.username.c_str());
         }
 
         if (r != 0) {
