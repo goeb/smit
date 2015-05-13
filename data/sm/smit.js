@@ -280,6 +280,11 @@ function setProjectName(value) {
     input.value = value;
 }
 
+function addFilterDatalist(divname, id, items) {
+    var div = document.getElementById(divname);
+    var datalist = createDatalist(id, items);
+    div.appendChild(datalist);
+}
 function addProjectDatalist(divname) {
     var div = document.getElementById(divname);
     var datalist = createDatalist('datalist_projects', Projects);
@@ -323,25 +328,19 @@ function updateFilterValue(divObject, value) {
     // remove the second one, and recalculate it
     removeElement(divObject.childNodes.item(1));
     var selectedKey = divObject.childNodes.item(0);
-    var values = PropertiesLists[selectedKey.value];
-    if (values) {
-        // build select
-        var select = createSelect(values, value, true);
-        select.name = 'filter_value';
-        divObject.appendChild(select);
-    } else {
-        // build text input
-        var i = document.createElement('input');
-        i.type = "text";
-        i.value = value;
-        i.name = 'filter_value';
-        divObject.appendChild(i);
-    }
+
+    // build text input
+    var i = document.createElement('input');
+    i.type = "text";
+    i.value = value;
+    i.name = 'filter_value';
+    i.setAttribute('list', 'datalist_'+selectedKey.value);
+    divObject.appendChild(i);
 }
 
-function addFilter(divname, selected, value) {
+function addFilter(divname, selectedProperty, value) {
     var div = document.getElementById(divname);
-    var select = createSelect(Properties, selected, true);
+    var select = createSelect(Properties, selectedProperty, true);
     select.name = divname;
 
     var container = document.createElement('div');

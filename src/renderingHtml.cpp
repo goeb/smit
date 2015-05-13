@@ -359,24 +359,28 @@ void RHtml::printPageView(const ContextParameters &ctx, const PredefinedView &pv
     std::list<std::string> properties = ctx.projectConfig.getPropertiesNames();
     ctx.req->printf("Properties = %s;\n", toJavascriptArray(properties).c_str());
 
-    // add PropertiesLists, for proposing the values in filterin/out
-    ctx.req->printf("PropertiesLists = {};\n");
+    // add datalists, for proposing the values in filterin/out
+    // datalists are name 'datalist_' + <property-name>
     std::list<PropertySpec>::const_iterator pspec;
     FOREACH(pspec, ctx.projectConfig.properties) {
         PropertyType t = pspec->type;
+        std::string propname = pspec->name;
+        std::list<std::string> proposedValues;
         if (t == F_SELECT || t == F_MULTISELECT) {
-            ctx.req->printf("PropertiesLists['%s'] = %s;\n", enquoteJs(pspec->name).c_str(),
-                            toJavascriptArray(pspec->selectOptions).c_str());
+            proposedValues = pspec->selectOptions;
 
         } else if (t == F_SELECT_USER) {
             std::set<std::string>::const_iterator u;
             std::set<std::string> users = UserBase::getUsersOfProject(ctx.getProject().getName());
-            // convert to std::list
-            std::list<std::string> userList;
-            userList.push_back("me");
-            FOREACH(u, users) { userList.push_back(*u); }
-            ctx.req->printf("PropertiesLists['%s'] = %s;\n", enquoteJs(pspec->name).c_str(),
-                            toJavascriptArray(userList).c_str());
+            // fulfill the list of proposed values
+            proposedValues.push_back("me");
+            FOREACH(u, users) { proposedValues.push_back(*u); }
+        }
+
+        if (!propname.empty()) {
+            ctx.req->printf("addFilterDatalist('filterin', 'datalist_%s', %s);\n",
+                            enquoteJs(propname).c_str(),
+                            toJavascriptArray(proposedValues).c_str());
         }
     }
 
@@ -385,6 +389,9 @@ void RHtml::printPageView(const ContextParameters &ctx, const PredefinedView &pv
                     MongooseServerContext::getInstance().getUrlRewritingRoot().c_str(),
                     ctx.getProject().getUrlName().c_str(),
                     pv.generateQueryString().c_str());
+
+    // add datalists for all types select, multiselect and selectuser
+
 
     // filter in and out
     std::map<std::string, std::list<std::string> >::const_iterator f;
