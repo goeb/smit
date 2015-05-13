@@ -269,9 +269,9 @@ std::string Issue::getProperty(const std::string &propertyName) const
 }
 
 
-/** Look if the given multi-valued property is present in the given list
+/** Look if any value of the given multi-valued property is present in the given list
   *
-  * The match may occur on a part of the value, and in a case insensitive manner.
+  * Exact match
   */
 bool isPropertyInFilter(const std::list<std::string> &propertyValue,
                         const std::list<std::string> &filteredValues)
@@ -281,11 +281,7 @@ bool isPropertyInFilter(const std::list<std::string> &propertyValue,
 
     FOREACH (fv, filteredValues) {
         FOREACH (v, propertyValue) {
-            if (mg_strcasestr(v->c_str(), fv->c_str())) return true;
-        }
-        if (fv->empty() && propertyValue.empty()) {
-            // allow filtering for empty values
-            return true;
+            if ((*v) == (*fv)) return true;
         }
     }
     return false; // not found
@@ -373,6 +369,7 @@ bool Issue::isInFilter(const std::map<std::string, std::list<std::string> > &fil
             p = properties.find(filteredProperty);
             bool fs;
             if (p == properties.end()) fs = isPropertyInFilter("", f->second);
+            else if (p->second.empty()) fs = isPropertyInFilter("", f->second);
             else fs = isPropertyInFilter(p->second, f->second);
 
             if (!fs) return false;

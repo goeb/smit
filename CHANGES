@@ -1,4 +1,9 @@
 
+v3.0.0
+    - Suggested values for search filters (filters in/out)
+      (filters with exact word matching)
+    - Clone / Pull / Push
+
 v2.4.0
 
     - kerberos authentication (single sign-on)
