@@ -725,7 +725,8 @@ void RHtml::printUsers(const RequestContext *req, const std::list<User> &usersLi
     req->printf("<table class=\"sm_users\">\n");
     req->printf("<tr class=\"sm_users\">");
     req->printf("<th class=\"sm_users\">%s</th>\n", _("Users"));
-    req->printf("<th class=\"sm_users\">%s</th></tr>\n", _("Capabilities"));
+    req->printf("<th class=\"sm_users\">%s</th>\n", _("Capabilities"));
+    req->printf("<th class=\"sm_users\">%s</th>\n", _("Authentication"));
     req->printf("</tr>");
 
     FOREACH(u, usersList) {
@@ -738,6 +739,15 @@ void RHtml::printUsers(const RequestContext *req, const std::list<User> &usersLi
         // capability
         if (u->superadmin) req->printf("<td class=\"sm_users\">%s</td>\n", _("superadmin"));
         else req->printf("<td class=\"sm_users\"> </td>\n");
+
+        // print authentication parameters
+        req->printf("<td class=\"sm_users\">\n");
+        if (u->authHandler) {
+            req->printf("%s", htmlEscape(u->authHandler->type).c_str());
+        } else {
+            req->printf("none");
+        }
+        req->printf("</td>\n");
 
         req->printf("</tr>\n");
 
