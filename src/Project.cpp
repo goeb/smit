@@ -486,8 +486,16 @@ int Project::createProjectFiles(const std::string &repositoryPath, const std::st
         return -1;
     }
 
+    // create directory 'objects'
+    std::string subpath = newProjectPath + "/" PATH_OBJECTS;
+    r = mkdir(subpath);
+    if (r != 0) {
+        LOG_ERROR("Could not create directory '%s': %s", subpath.c_str(), strerror(errno));
+        return -1;
+    }
+
     // create directory 'refs'
-    std::string subpath = newProjectPath + "/refs";
+    subpath = newProjectPath + "/refs";
     r = mkdir(subpath);
     if (r != 0) {
         LOG_ERROR("Could not create directory '%s': %s", subpath.c_str(), strerror(errno));
@@ -585,15 +593,10 @@ int Project::toggleTag(const std::string &entryId, const std::string &tagid)
         std::string tagDir = getPath() + "/" PATH_TAGS;
         std::string path = tagDir + "/" + Object::getSubpath(entryId) + "." + tagid;
         if (tag != e->tags.end()) {
-            std::string dir = getDirname(path);
-            int r = mkdirs(getDirname(path));
-            if (r != 0) {
-                LOG_ERROR("Cannot create dir '%s': %s", dir.c_str(), strerror(errno));
-                return -1;
-            }
-
+            std::string subdir = tagDir + "/" + Object::getSubdir(entryId);
+            mkdir(subdir);
             // create the empty file
-            r = writeToFile(path, "");
+            int r = writeToFile(path, "");
             if (r != 0) {
                 LOG_ERROR("Cannot create tag '%s': %s", path.c_str(), strerror(errno));
                 return -1;
@@ -668,7 +671,7 @@ int Project::reload()
 /** Insert a file in the directory of attached files
   *
   * @param basename
-  *     The file must be alredy present in the tmp directory of the project.
+  *     The file must be already present in the tmp directory of the project.
   *
   * @return
   *     0 : ok
@@ -706,7 +709,8 @@ int Project::addFile(const std::string &objectId)
     }
 
     // rename to final location
-    mkdirs(getDirname(destPath));
+    std::string subdir = getObjectsDir() + "/" + Object::getSubdir(objectId);
+    mkdir(subdir);
     int r = rename(srcPath.c_str(), destPath.c_str());
     if (r != 0) {
         LOG_ERROR("cannot rename %s -> %s: %s", srcPath.c_str(), destPath.c_str(), strerror(errno));

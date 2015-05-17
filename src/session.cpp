@@ -374,6 +374,12 @@ void UserBase::setLocalUserInterface(const std::string username)
     addUser(u);
 }
 
+/** Create the files of the user database
+  *
+  * The files are:
+  * - 'auth'
+  * - 'permissions'
+  */
 int UserBase::initUsersFile(const char *repository)
 {
     // init file 'auth'

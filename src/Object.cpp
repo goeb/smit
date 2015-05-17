@@ -15,6 +15,14 @@ std::string Object::getSubpath(const std::string &id) {
         return subpath;
     }
 }
+std::string Object::getSubdir(const std::string &id) {
+    if (id.size() <= 2) {
+        return "xx";
+    } else {
+        std::string subdir = id.substr(0, 2);
+        return subdir;
+    }
+}
 
 /** Write an object into a database
   *
@@ -44,7 +52,8 @@ int Object::write(const std::string &objectsDir, const char *data, size_t size, 
         LOG_DIAG("File already exists with same contents: %s", path.c_str());
         return 1; // file already exists with same contents
     }
-    mkdirs(getDirname(path));
+    std::string subdir = objectsDir + "/" + getSubdir(id);
+    mkdir(subdir);
     int r = writeToFile(path, data);
     if (r != 0) {
         LOG_ERROR("Cannot write to file '%s': %s", path.c_str(), strerror(errno));
