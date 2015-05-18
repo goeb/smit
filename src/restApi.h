@@ -11,7 +11,7 @@
 #define RSRC_REF_VIEWS "refs/views"
 #define RSRC_REF_TAGS "refs/tags"
 #define RSRC_REF_ISSUES "refs/issues"
-
+#define RSRC_USERS "users"
 
 
 #endif

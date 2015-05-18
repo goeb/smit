@@ -59,6 +59,7 @@ public:
     static int initUsersFile(const char *repository);
     static User* getUser(const std::string &username);
     static int addUser(User u);
+    static int deleteUser(const std::string &username);
     static std::set<std::string> getUsersOfProject(const std::string &project);
     static std::map<std::string, Role> getUsersRolesOfProject(const std::string &project);
     static std::map<Role, std::set<std::string> > getUsersByRole(const std::string &project);

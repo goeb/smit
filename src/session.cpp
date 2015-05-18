@@ -465,6 +465,33 @@ int UserBase::addUser(User newUser)
     return 0;
 }
 
+int UserBase::deleteUser(const std::string &username)
+{
+    LOG_INFO("Delete user: %s", username.c_str());
+    if (username.empty()) return -1;
+
+    LOCK_SCOPE(UserDb.locker, LOCK_READ_WRITE);
+
+    std::map<std::string, User*>::iterator uit = UserDb.configuredUsers.find(username);
+
+    if (uit == UserDb.configuredUsers.end()) {
+        LOG_ERROR("Cannot delete user '%s': no such user", username.c_str());
+        return -1;
+    }
+
+    UserDb.configuredUsers.erase(uit);
+
+    // store
+    int r = store(Repository);
+    if (r < 0) {
+        LOG_ERROR("Cannot store deletion of user '%s'", username.c_str());
+    }
+
+    return r;
+
+}
+
+
 /** Get the list of users that are at stake in the given project
   */
 std::set<std::string> UserBase::getUsersOfProject(const std::string &project)

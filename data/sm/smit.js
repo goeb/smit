@@ -28,6 +28,15 @@ function previewMessage() {
     request.send(null);
     divPreview.innerHTML = request.responseText;
 }
+
+function sm_deleteResource(redirect) {
+    var r = confirm("Confirm delete?");
+    if (r==true) {
+        r = ajaxSend('#', 'DELETE');
+        if (r != 'ok') alert(r);
+        else window.location.href = redirect;
+    }
+}
 function deleteEntry(urlPrefix, entryId) {
     var r = confirm("Confirm delete?");
     if (r==true) {

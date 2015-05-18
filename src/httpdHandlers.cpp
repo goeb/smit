@@ -577,6 +577,26 @@ void httpGetUser(const RequestContext *request, const User &signedInUser, const 
     }
 }
 
+/** Delete a user
+  */
+void httpDeleteUser(const RequestContext *request, User signedInUser, const std::string &username)
+{
+    if (!signedInUser.superadmin) {
+        sendHttpHeader403(request);
+        return;
+    }
+
+    int r = UserBase::deleteUser(username);
+
+    if (r != 0) {
+        sendHttpHeader400(request, "Cannot delete user");
+
+    } else {
+        // ok, redirect
+        sendHttpRedirect(request, "/" RSRC_USERS, 0);
+    }
+}
+
 /** Post configuration of a new or existing user
   *
   * Non-superadmin users may only post their password.
@@ -2160,9 +2180,9 @@ int begin_request_handler(const RequestContext *req)
 
     std::string uri = req->getUri();
     std::string method = req->getMethod();
-    std::string resource = popToken(uri, '/');
+    LOG_DIAG("%s %s", method.c_str(), uri.c_str());
 
-    LOG_DIAG("%s %s %s", method.c_str(), uri.c_str(), resource.c_str());
+    std::string resource = popToken(uri, '/');
 
     // increase statistics
     if (method == "GET") addHttpStat(H_GET);
@@ -2171,7 +2191,7 @@ int begin_request_handler(const RequestContext *req)
 
     // check method
     std::string m = method; // use a shorter name to have a shorter next line
-    if (m != "GET" && m != "POST" && m != "HEAD") return sendHttpHeader400(req, "invalid method");
+    if (m != "GET" && m != "POST" && m != "HEAD" && m != "DELETE") return sendHttpHeader400(req, "invalid method");
 
     // public access to /public and /sm
     if    ( (resource == "public") && (method == "GET")) return httpGetFile(req);
@@ -2205,6 +2225,7 @@ int begin_request_handler(const RequestContext *req)
     else if ( (resource == "") && (method == "POST") ) httpPostRoot(req, user);
     else if ( (resource == "users") && (method == "GET") ) httpGetUser(req, user, uri);
     else if ( (resource == "users") && (method == "POST") ) httpPostUser(req, user, uri);
+    else if ( (resource == "users") && (method == "DELETE") ) httpDeleteUser(req, user, uri);
     else if ( (resource == "_") && (method == "GET") ) httpGetNewProject(req, user);
     else if ( (resource == "_") && (method == "POST") ) httpPostNewProject(req, user);
     else if ( (resource == "*") && (method == "GET") ) httpIssuesAccrossProjects(req, user, uri);
