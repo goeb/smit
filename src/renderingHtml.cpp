@@ -224,8 +224,9 @@ public:
             } else if (varname == K_SM_DIV_USERS && usersList) {
                 RHtml::printUsers(ctx.req, *usersList);
 
-            } else if (varname == K_SM_TABLE_USER_PERMISSIONS && concernedUser) {
-                RHtml::printUserPermissions(ctx.req, *concernedUser);
+            } else if (varname == K_SM_TABLE_USER_PERMISSIONS) {
+                if (concernedUser) RHtml::printUserPermissions(ctx.req, *concernedUser);
+                // else, dont print the table
 
             } else if (varname == K_SM_SCRIPT_PROJECT_CONFIG_UPDATE) {
                 RHtml::printScriptUpdateConfig(ctx);
@@ -552,8 +553,18 @@ void RHtml::printNavigationGlobal(const ContextParameters &ctx)
     HtmlNode linkToProjects("a");
     linkToProjects.addAttribute("class", "sm_link_projects");
     linkToProjects.addAttribute("href", "/");
-    linkToProjects.addContents("%s", _("All projects"));
+    linkToProjects.addContents("%s", _("Projects"));
     div.addContents(linkToProjects);
+
+    if (ctx.user.superadmin) {
+        // link to all users
+        HtmlNode allUsers("a");
+        allUsers.addAttribute("class", "sm_link_users");
+        allUsers.addAttribute("href", "/users");
+        allUsers.addContents("%s", _("Users"));
+        div.addContents(" ");
+        div.addContents(allUsers);
+    }
 
     if (ctx.project && (ctx.userRole == ROLE_ADMIN || ctx.user.superadmin) ) {
         // link for modifying project structure
@@ -571,7 +582,6 @@ void RHtml::printNavigationGlobal(const ContextParameters &ctx)
         linkToViews.addContents("%s", _("Predefined Views"));
         div.addContents(" ");
         div.addContents(linkToViews);
-
     }
 
     // signed-in
@@ -1993,6 +2003,8 @@ void RHtml::printIssueForm(const ContextParameters &ctx, const Issue *issue, boo
         // add 2 empty cells
         ctx.req->printf("<td></td><td></td></tr>\n");
     }
+
+    // message
     ctx.req->printf("<tr>\n");
     ctx.req->printf("<td class=\"sm_issue_plabel sm_issue_plabel_message\" >%s: </td>\n",  htmlEscape(_("Message")).c_str());
     ctx.req->printf("<td colspan=\"3\">\n");
