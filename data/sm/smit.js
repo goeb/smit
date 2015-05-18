@@ -5,9 +5,9 @@ function changeWrapping() {
     else msg.wrap = "hard";
 }
 
-function ajaxPost(url) {
+function ajaxSend(url, method) {
     var request = new XMLHttpRequest();
-    request.open('POST', url, false); // synchronous
+    request.open(method, url, false); // synchronous
     request.send(null);
     var status = request.status;
     if (status == 200) return 'ok';
@@ -31,7 +31,7 @@ function previewMessage() {
 function deleteEntry(urlPrefix, entryId) {
     var r = confirm("Confirm delete?");
     if (r==true) {
-        r = ajaxPost(urlPrefix + '/' + entryId + '/delete');
+        r = ajaxSend(urlPrefix + '/' + entryId + '/delete', 'POST');
         if (r == 'ok') { // ok, remove entry from current HTML page
             location.reload();
         } else alert(r);
@@ -39,7 +39,7 @@ function deleteEntry(urlPrefix, entryId) {
 }
 
 function tagEntry(urlPrefix, entryId, tagId) {
-    var r = ajaxPost(urlPrefix + '/' + entryId + '/' + tagId);
+    var r = ajaxSend(urlPrefix + '/' + entryId + '/' + tagId, 'POST');
     if (r == 'ok') {
         var etag = document.getElementById('sm_tag_' + entryId + "_" + tagId);
         var doTag = false;
