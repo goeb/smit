@@ -98,7 +98,17 @@ int readMgreq(const RequestContext *request, std::string &data, size_t maxSize)
     return 0; // ok
 }
 
-
+/** Get the content type
+  *
+  * @return
+  *     If no content type, then return an empty string.
+  */
+const char *getContentType(const RequestContext *req)
+{
+    const char *ct = req->getHeader("Content-Type");
+    if (ct) return ct;
+    else return "";
+}
 
 void sendHttpHeader200(const RequestContext *request)
 {
@@ -250,10 +260,8 @@ enum RenderingFormat getFormat(const RequestContext *request)
     else {
         // look at the Accept header
         const char *contentType = request->getHeader("Accept");
-        LOG_DEBUG("Accept header=%s", contentType);
 
         if (!contentType) return RENDERING_HTML; // no such header, return default value
-
         if (0 == strcasecmp(contentType, "text/html")) return RENDERING_HTML;
         if (0 == strcasecmp(contentType, "text/plain")) return RENDERING_TEXT;
         if (0 == strcasecmp(contentType, APP_X_SMIT)) return X_SMIT;
@@ -270,7 +278,7 @@ int httpPostSignin(const RequestContext *request)
 {
     LOG_FUNC();
 
-    const char *contentType = request->getHeader("Content-Type");
+    const char *contentType = getContentType(request);
 
     if (0 == strcmp("application/x-www-form-urlencoded", contentType)) {
         // application/x-www-form-urlencoded
@@ -582,7 +590,7 @@ void httpPostUser(const RequestContext *request, User signedInUser, const std::s
     if (username.empty()) return sendHttpHeader403(request);
 
     // get the posted parameters
-    const char *contentType = request->getHeader("Content-Type");
+    const char *contentType = getContentType(request);
 
     if (0 == strcmp("application/x-www-form-urlencoded", contentType)) {
         // application/x-www-form-urlencoded
@@ -895,7 +903,7 @@ void httpPostProjectConfig(const RequestContext *req, Project &p, User u)
 
     std::string postData;
 
-    const char *contentType = req->getHeader("Content-Type");
+    const char *contentType = getContentType(req);
 
     if (0 == strcmp("application/x-www-form-urlencoded", contentType)) {
         // application/x-www-form-urlencoded
@@ -1481,7 +1489,7 @@ void httpPostView(const RequestContext *req, Project &p, const std::string &name
     LOG_FUNC();
 
     std::string postData;
-    const char *contentType = req->getHeader("Content-Type");
+    const char *contentType = getContentType(req);
     if (0 == strcmp("application/x-www-form-urlencoded", contentType)) {
         // application/x-www-form-urlencoded
         // post_data is "var1=val1&var2=val2...".
@@ -1861,7 +1869,7 @@ void httpPushEntry(const RequestContext *req, Project &p, const std::string &iss
         return;
     }
     const char *multipart = "application/octet-stream";
-    const char *contentType = req->getHeader("Content-Type");
+    const char *contentType = getContentType(req);
     if (0 == strncmp(multipart, contentType, strlen(multipart))) {
 
         std::string postData;
@@ -2040,7 +2048,7 @@ void httpPostEntry(const RequestContext *req, Project &pro, const std::string & 
     const char *multipart = "multipart/form-data";
     std::map<std::string, std::list<std::string> > vars;
 
-    const char *contentType = req->getHeader("Content-Type");
+    const char *contentType = getContentType(req);
     if (0 == strncmp(multipart, contentType, strlen(multipart))) {
 
         // extract the boundary

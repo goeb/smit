@@ -448,6 +448,8 @@ int UserBase::addUser(User newUser)
 {
     if (newUser.username.empty()) return -1;
 
+    ScopeLocker scopeLocker(UserDb.locker, LOCK_READ_WRITE);
+
     // check if user already exists
 
     std::map<std::string, User*>::iterator uit = UserDb.configuredUsers.find(newUser.username);
@@ -455,7 +457,6 @@ int UserBase::addUser(User newUser)
         return -2;
     }
 
-    ScopeLocker scopeLocker(UserDb.locker, LOCK_READ_WRITE);
     User *u = addUserInArray(newUser);
     int r = store(Repository);
     if (r < 0) return r;
