@@ -913,6 +913,56 @@ std::list<std::list<std::string> > convertPostToTokens(std::string &postData)
     return tokens;
 }
 
+void consolidatePropertyDescription(std::list<std::list<std::string> > &tokens, PropertySpec &pSpec)
+{
+    LOG_DEBUG("process propertyName=%s", pSpec.name.c_str());
+
+    if (ProjectConfig::isReservedProperty(pSpec.name)) {
+        // case of reserved properties (id, ctime, mtime, etc.)
+        if (pSpec.label != pSpec.name) {
+            std::list<std::string> line;
+            line.push_back(KEY_SET_PROPERTY_LABEL);
+            line.push_back(pSpec.name);
+            line.push_back(pSpec.label);
+            tokens.push_back(line);
+        }
+
+    } else {
+        // case of regular properties
+        std::list<std::string> line;
+        line.push_back(KEY_ADD_PROPERTY);
+        line.push_back(pSpec.name);
+        if (pSpec.label != pSpec.name) {
+            line.push_back("-label");
+            line.push_back(pSpec.label);
+        }
+        line.push_back(propertyTypeToStr(pSpec.type));
+        if (pSpec.type == F_SELECT || pSpec.type == F_MULTISELECT) {
+            // add options
+            line.insert(line.end(), pSpec.selectOptions.begin(), pSpec.selectOptions.end());
+
+        } else if  (pSpec.type == F_ASSOCIATION) {
+            line.push_back("-reverseLabel");
+            line.push_back(pSpec.reverseLabel);
+        }
+        tokens.push_back(line);
+    }
+
+}
+void consolidateTagDescription(std::list<std::list<std::string> > &tokens, const std::string &tagName,
+                                      const std::string &label, const std::string &tagDisplay)
+{
+    std::list<std::string> line;
+    line.push_back("tag");
+    line.push_back(tagName);
+    if (!label.empty()) {
+        line.push_back("-label");
+        line.push_back(label);
+    }
+    if (tagDisplay == "on") line.push_back("-display");
+    tokens.push_back(line);
+}
+
 /** Parse the form parameters
   *
   * @param postData
@@ -926,114 +976,84 @@ std::list<std::list<std::string> > convertPostToTokens(std::string &postData)
   *    0, success
   *   -1, error
   */
-int parsePostedProjectConfig(std::string &postData, std::list<std::list<std::string> > &tokens, std::string &projectName)
+void parsePostedProjectConfig(std::string &postData, std::list<std::list<std::string> > &tokens, std::string &projectName)
 {
     // parse the posted data
-    std::string propertyName;
+    PropertySpec pSpec;
     std::string tagName;
-    std::string type;
-    std::string label;
-    std::string selectOptions;
-    std::string reverseAssociationName;
+    std::string tagLabel;
     std::string tagDisplay;
 
     while (1) {
         std::string tokenPair = popToken(postData, '&');
         std::string key = popToken(tokenPair, '=');
         std::string value = urlDecode(tokenPair);
+        trimBlanks(value);
 
         LOG_DEBUG("key=%s, value=%s", key.c_str(), value.c_str());
         if (key == "projectName") {
             projectName = value;
 
-        } else if (key == "type") { type = value; trimBlanks(type); }
-        else if (key == "label") { label = value; trimBlanks(label); }
-        else if (key == "selectOptions") selectOptions = value;
-        else if (key == "reverseAssociation") reverseAssociationName = value;
-        else if (key == "tagDisplay") tagDisplay = value;
-        else if (key == "propertyName" || key == "tagName" || postData.empty()) {
-            // process previous row
-            bool doQuitLoop = false;
-            if (postData.empty()) doQuitLoop = true;
-
-            if (!propertyName.empty()) {
-                // the previous row was a property
-                LOG_DEBUG("process propertyName=%s", propertyName.c_str());
-
-                if (type.empty()) {
-                    // case of reserved properties (id, ctime, mtime, etc.)
-                    if (label != propertyName) {
-                        std::list<std::string> line;
-                        line.push_back(KEY_SET_PROPERTY_LABEL);
-                        line.push_back(propertyName);
-                        line.push_back(label);
-                        tokens.push_back(line);
-                    }
-                } else {
-                    // case of regular properties
-
-                    // check that it is not a reserved property
-                    if (ProjectConfig::isReservedProperty(propertyName)) {
-                        // error, cannot add reserved property
-                        LOG_INFO("Cannot add reserved property: %s", propertyName.c_str());
-                        return -1;
-                    }
-
-                    std::list<std::string> line;
-                    line.push_back(KEY_ADD_PROPERTY);
-                    line.push_back(propertyName);
-                    if (label != propertyName) {
-                        line.push_back("-label");
-                        line.push_back(label);
-                    }
-                    line.push_back(type);
-                    PropertyType ptype;
-                    int r = strToPropertyType(type, ptype);
-                    if (r == 0 && (ptype == F_SELECT || ptype == F_MULTISELECT) ) {
-                        // add options
-                        std::list<std::string> so = splitLinesAndTrimBlanks(selectOptions);
-                        line.insert(line.end(), so.begin(), so.end());
-                    } else if  (r== 0 && ptype == F_ASSOCIATION) {
-                        line.push_back("-reverseLabel");
-                        line.push_back(reverseAssociationName);
-                    }
-                    tokens.push_back(line);
-                }
-
-            } else if (!tagName.empty()) {
-                // the previous row was a tag
-                std::list<std::string> line;
-                line.push_back("tag");
-                line.push_back(tagName);
-                if (!label.empty()) {
-                    line.push_back("-label");
-                    line.push_back(label);
-                }
-                if (tagDisplay == "on") line.push_back("-display");
-                tokens.push_back(line);
+        } else if (key == "type") {
+            int r = strToPropertyType(value, pSpec.type);
+            if (r != 0) {
+                LOG_ERROR("Unknown property type: %s", value.c_str());
+                pSpec.type = F_TEXT;
             }
-            propertyName.clear();
-            tagName.clear();
-            if (key == "propertyName") propertyName = value;
-            else if (key == "tagName") tagName = value;
-            type.clear();
-            label.clear();
-            selectOptions.clear();
-            tagDisplay.clear();
 
-            if (doQuitLoop) break; // leave the loop
+        } else if (key == "label") {
+            // the same key "label" is used for properties and tags
+            pSpec.label = value;
+            tagLabel = value;
+
+        } else if (key == "selectOptions") {
+            pSpec.selectOptions = splitLinesAndTrimBlanks(value);
+        }
+        else if (key == "reverseAssociation") pSpec.reverseLabel = value;
+        else if (key == "tagDisplay") tagDisplay = value;
+        else if (key == "propertyName" || key == "tagName") {
+
+            // a starting property or tag description stops any other on-going
+            // property description or tag description
+
+            // commit previous propertyName if any
+            if (!pSpec.name.empty()) consolidatePropertyDescription(tokens, pSpec);
+            // commit previous tagName, if any
+            if (!tagName.empty()) consolidateTagDescription(tokens, tagName, tagLabel, tagDisplay);
+
+            // clear parameters
+            pSpec.type = F_TEXT;
+            pSpec.selectOptions.clear();
+            pSpec.label.clear();
+            tagName.clear();
+            pSpec.name.clear();
+            tagDisplay.clear();
+            tagLabel.clear();
+
+            if (key == "propertyName") pSpec.name = value; // start new property description
+            else if (key == "tagName") tagName = value; // start new tag description
 
         } else {
             LOG_ERROR("ProjectConfig: invalid posted parameter: '%s'", key.c_str());
         }
+
+        if (postData.empty()) {
+            // process last item (property or tag)
+
+            // commit previous propertyName if any
+            if (!pSpec.name.empty()) consolidatePropertyDescription(tokens, pSpec);
+            // commit previous tagName, if any
+            if (!tagName.empty()) consolidateTagDescription(tokens, tagName, tagLabel, tagDisplay);
+
+            break;
+        }
     }
-    return 0; // ok
 }
 
 void httpPostProjectConfig(const RequestContext *req, Project &p, User u)
 {
-    enum Role r = u.getRole(p.getName());
-    if (r != ROLE_ADMIN && ! u.superadmin) {
+    enum Role role = u.getRole(p.getName());
+    if (role != ROLE_ADMIN && ! u.superadmin) {
         sendHttpHeader403(req);
         return;
     }
@@ -1056,13 +1076,7 @@ void httpPostProjectConfig(const RequestContext *req, Project &p, User u)
         ProjectConfig pc;
         std::string projectName;
         std::list<std::list<std::string> > tokens;
-        int r = parsePostedProjectConfig(postData, tokens, projectName);
-
-        if (-1 == r) {
-            sendHttpHeader400(req, "Cannot add reserved property");
-            return;
-        }
-
+        parsePostedProjectConfig(postData, tokens, projectName);
 
         Project *ptr;
         // check if project name is valid
@@ -1092,7 +1106,7 @@ void httpPostProjectConfig(const RequestContext *req, Project &p, User u)
             }
             ptr = &p;
         }
-        r = ptr->modifyConfig(tokens, u.username);
+        int r = ptr->modifyConfig(tokens, u.username);
 
         if (r == 0) {
             // success, redirect to
