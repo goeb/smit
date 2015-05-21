@@ -143,11 +143,11 @@ int sendHttpHeader400(const RequestContext *request, const char *msg)
 
     return REQUEST_COMPLETED; // request completely handled
 }
-void sendHttpHeader403(const RequestContext *request)
+void sendHttpHeader403(const RequestContext *req)
 {
-    LOG_DIAG("HTTP 403 Forbidden");
-    request->printf("HTTP/1.1 403 Forbidden\r\n\r\n");
-    request->printf("403 Forbidden\r\n");
+    LOG_INFO("HTTP 403 Forbidden: %s %s?%s", req->getMethod(), req->getUri(), req->getQueryString());
+    req->printf("HTTP/1.1 403 Forbidden\r\n\r\n");
+    req->printf("403 Forbidden\r\n");
     addHttpStat(H_403);
 }
 
@@ -913,6 +913,123 @@ std::list<std::list<std::string> > convertPostToTokens(std::string &postData)
     return tokens;
 }
 
+/** Parse the form parameters
+  *
+  * @param postData
+  *    Eg: "projectName=apollo&propertyName=propx&type=text&propertyName=propy&type=text&tag=analysis"
+  *    This data is modified in-place.
+  *
+  * @param[out] tokens
+  * @param[out] projectName
+  *
+  * @return
+  *    0, success
+  *   -1, error
+  */
+int parsePostedProjectConfig(std::string &postData, std::list<std::list<std::string> > &tokens, std::string &projectName)
+{
+    // parse the posted data
+    std::string propertyName;
+    std::string tagName;
+    std::string type;
+    std::string label;
+    std::string selectOptions;
+    std::string reverseAssociationName;
+    std::string tagDisplay;
+
+    while (1) {
+        std::string tokenPair = popToken(postData, '&');
+        std::string key = popToken(tokenPair, '=');
+        std::string value = urlDecode(tokenPair);
+
+        LOG_DEBUG("key=%s, value=%s", key.c_str(), value.c_str());
+        if (key == "projectName") {
+            projectName = value;
+
+        } else if (key == "type") { type = value; trimBlanks(type); }
+        else if (key == "label") { label = value; trimBlanks(label); }
+        else if (key == "selectOptions") selectOptions = value;
+        else if (key == "reverseAssociation") reverseAssociationName = value;
+        else if (key == "tagDisplay") tagDisplay = value;
+        else if (key == "propertyName" || key == "tagName" || postData.empty()) {
+            // process previous row
+            bool doQuitLoop = false;
+            if (postData.empty()) doQuitLoop = true;
+
+            if (!propertyName.empty()) {
+                // the previous row was a property
+                LOG_DEBUG("process propertyName=%s", propertyName.c_str());
+
+                if (type.empty()) {
+                    // case of reserved properties (id, ctime, mtime, etc.)
+                    if (label != propertyName) {
+                        std::list<std::string> line;
+                        line.push_back(KEY_SET_PROPERTY_LABEL);
+                        line.push_back(propertyName);
+                        line.push_back(label);
+                        tokens.push_back(line);
+                    }
+                } else {
+                    // case of regular properties
+
+                    // check that it is not a reserved property
+                    if (ProjectConfig::isReservedProperty(propertyName)) {
+                        // error, cannot add reserved property
+                        LOG_INFO("Cannot add reserved property: %s", propertyName.c_str());
+                        return -1;
+                    }
+
+                    std::list<std::string> line;
+                    line.push_back(KEY_ADD_PROPERTY);
+                    line.push_back(propertyName);
+                    if (label != propertyName) {
+                        line.push_back("-label");
+                        line.push_back(label);
+                    }
+                    line.push_back(type);
+                    PropertyType ptype;
+                    int r = strToPropertyType(type, ptype);
+                    if (r == 0 && (ptype == F_SELECT || ptype == F_MULTISELECT) ) {
+                        // add options
+                        std::list<std::string> so = splitLinesAndTrimBlanks(selectOptions);
+                        line.insert(line.end(), so.begin(), so.end());
+                    } else if  (r== 0 && ptype == F_ASSOCIATION) {
+                        line.push_back("-reverseLabel");
+                        line.push_back(reverseAssociationName);
+                    }
+                    tokens.push_back(line);
+                }
+
+            } else if (!tagName.empty()) {
+                // the previous row was a tag
+                std::list<std::string> line;
+                line.push_back("tag");
+                line.push_back(tagName);
+                if (!label.empty()) {
+                    line.push_back("-label");
+                    line.push_back(label);
+                }
+                if (tagDisplay == "on") line.push_back("-display");
+                tokens.push_back(line);
+            }
+            propertyName.clear();
+            tagName.clear();
+            if (key == "propertyName") propertyName = value;
+            else if (key == "tagName") tagName = value;
+            type.clear();
+            label.clear();
+            selectOptions.clear();
+            tagDisplay.clear();
+
+            if (doQuitLoop) break; // leave the loop
+
+        } else {
+            LOG_ERROR("ProjectConfig: invalid posted parameter: '%s'", key.c_str());
+        }
+    }
+    return 0; // ok
+}
+
 void httpPostProjectConfig(const RequestContext *req, Project &p, User u)
 {
     enum Role r = u.getRole(p.getName());
@@ -936,103 +1053,16 @@ void httpPostProjectConfig(const RequestContext *req, Project &p, User u)
         }
 
         LOG_DEBUG("postData=%s", postData.c_str());
-        // parse the posted data
-        std::string propertyName;
-        std::string tagName;
-        std::string type;
-        std::string label;
-        std::string selectOptions;
-        std::string projectName;
-        std::string reverseAssociationName;
-        std::string tagDisplay;
         ProjectConfig pc;
+        std::string projectName;
         std::list<std::list<std::string> > tokens;
-        while (1) {
-            std::string tokenPair = popToken(postData, '&');
-            std::string key = popToken(tokenPair, '=');
-            std::string value = urlDecode(tokenPair);
+        int r = parsePostedProjectConfig(postData, tokens, projectName);
 
-            if (key == "projectName") {
-                projectName = value;
-
-            } else if (key == "propertyName" || key == "tagName" || postData.empty()) {
-                // process previous row
-                if (!propertyName.empty()) {
-                    // the previous row was a property
-
-                    if (type.empty()) {
-                        // case of reserved properties (id, ctime, mtime, etc.)
-                        if (label != propertyName) {
-                            std::list<std::string> line;
-                            line.push_back(KEY_SET_PROPERTY_LABEL);
-                            line.push_back(propertyName);
-                            line.push_back(label);
-                            tokens.push_back(line);
-                        }
-                    } else {
-                        // case of regular properties
-
-                        // check that it is not a reserved property
-                        if (ProjectConfig::isReservedProperty(propertyName)) {
-                            // error
-                            std::string msg = "Cannot add reserved property: ";
-                            msg += propertyName;
-                            sendHttpHeader400(req, msg.c_str());
-                            return;
-
-                        }
-
-                        std::list<std::string> line;
-                        line.push_back(KEY_ADD_PROPERTY);
-                        line.push_back(propertyName);
-                        if (label != propertyName) {
-                            line.push_back("-label");
-                            line.push_back(label);
-                        }
-                        line.push_back(type);
-                        PropertyType ptype;
-                        int r = strToPropertyType(type, ptype);
-                        if (r == 0 && (ptype == F_SELECT || ptype == F_MULTISELECT) ) {
-                            // add options
-                            std::list<std::string> so = splitLinesAndTrimBlanks(selectOptions);
-                            line.insert(line.end(), so.begin(), so.end());
-                        } else if  (r== 0 && ptype == F_ASSOCIATION) {
-                            line.push_back("-reverseLabel");
-                            line.push_back(reverseAssociationName);
-                        }
-                        tokens.push_back(line);
-                    }
-                } else if (!tagName.empty()) {
-                    // the previous row was a tag
-                    std::list<std::string> line;
-                    line.push_back("tag");
-                    line.push_back(tagName);
-                    if (!label.empty()) {
-                        line.push_back("-label");
-                        line.push_back(label);
-                    }
-                    if (tagDisplay == "on") line.push_back("-display");
-                    tokens.push_back(line);
-                }
-                propertyName.clear();
-                tagName.clear();
-                if (key == "propertyName") propertyName = value;
-                else if (key == "tagName") tagName = value;
-                type.clear();
-                label.clear();
-                selectOptions.clear();
-                tagDisplay.clear();
-
-            } else if (key == "type") { type = value; trimBlanks(type); }
-            else if (key == "label") { label = value; trimBlanks(label); }
-            else if (key == "selectOptions") selectOptions = value;
-            else if (key == "reverseAssociation") reverseAssociationName = value;
-            else if (key == "tagDisplay") tagDisplay = value;
-            else {
-                LOG_ERROR("ProjectConfig: invalid posted parameter: '%s'", key.c_str());
-            }
-            if (postData.empty()) break; // leave the loop
+        if (-1 == r) {
+            sendHttpHeader400(req, "Cannot add reserved property");
+            return;
         }
+
 
         Project *ptr;
         // check if project name is valid
@@ -1062,7 +1092,7 @@ void httpPostProjectConfig(const RequestContext *req, Project &p, User u)
             }
             ptr = &p;
         }
-        int r = ptr->modifyConfig(tokens, u.username);
+        r = ptr->modifyConfig(tokens, u.username);
 
         if (r == 0) {
             // success, redirect to
@@ -1073,6 +1103,8 @@ void httpPostProjectConfig(const RequestContext *req, Project &p, User u)
             LOG_ERROR("Cannot modify project config");
             sendHttpHeader500(req, "Cannot modify project config");
         }
+    } else {
+        LOG_ERROR("httpPostProjectConfig: invalid content-type '%s'", contentType);
     }
 }
 
