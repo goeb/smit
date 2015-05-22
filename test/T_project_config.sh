@@ -1,72 +1,75 @@
 #!/bin/sh
 
-# test smit permissions
-# - roles: none ref, ro, rw, admin
-# - superadmin
+# test project config modification
 
 . $srcdir/functions
 
 initTest
 rm -r $TEST_NAME.out
 
-# trepo/p1    user1    none
-# trepo/p2    user1    ref
-# trepo/p3    user1    ro
-# trepo/p4    user1    rw
-# trepo/p5    user1    admin
+# trepo/p1*    user1       rw
+# trepo/p1*    user2       admin
 if [ "$REPO" != "trepo" ]; then
     fail "REPO != trepo (REPO=$REPO)"
 fi
 rm -rf $REPO
 mkdir $REPO
 $SMIT init $REPO
-for p in 1 2 3 4 5; do
-    $SMIT project -c $REPO/p$p
-done
+$SMIT project -c $REPO/p1
+$SMIT project -c $REPO/p1/sub1
 $SMIT user user1 -d $REPO --passwd user1
-$SMIT user user1 -d $REPO --project p1:none
-$SMIT user user1 -d $REPO --project p2:ref
-$SMIT user user1 -d $REPO --project p3:ro
-$SMIT user user1 -d $REPO --project p4:rw
-$SMIT user user1 -d $REPO --project p5:admin
-# create 1 issue in each project
-for p in 1 2 3 4 5; do
-    $SMIT issue $REPO/p$p -a - "summary=p$p:first issue"
-done
+$SMIT user user1 -d $REPO --project "p1*:rw"
+$SMIT user user2 -d $REPO --passwd user2
+$SMIT user user2 -d $REPO --project "p1*:admin"
+
+# create some issues
+$SMIT issue $REPO/p1 -a - "summary=first issue of p1"
+$SMIT issue $REPO/p1/sub1 -a - "summary=first issue of p1/sub1"
 
 # start the smit server
 startServer
 
-# test smitc client
+# test modification of project config (nominal case)
+echo "Modification of project config by authorized user" >> $TEST_NAME.out
+SMITC=$srcdir/../bin/smitc
+$SMITC signin http://127.0.0.1:$PORT user2 user2
+$SMITC postconfig "http://127.0.0.1:$PORT/p1/config" \
+    projectName=p1 \
+    propertyName=propx \
+    type=text \
+    label="the label of propx" \
+    >> $TEST_NAME.out
+$SMITC postconfig "http://127.0.0.1:$PORT/p1/sub1/config" \
+    projectName=p1/sub1 \
+    propertyName=propx_sub1 \
+    type=select \
+    selectOptions="option-one" \
+    >> $TEST_NAME.out
+$SMIT project -al $REPO | \
+    sed -e "s/+parent .*/+parent .../" -e "s/+ctime .*/+ctime .../" \
+        >> $TEST_NAME.out
+
+# test modification of project config by unauthorized user1 (error case)
+echo "Modification of project config by unauthorized user" >> $TEST_NAME.out
 SMITC=$srcdir/../bin/smitc
 $SMITC signin http://127.0.0.1:$PORT user1 user1
-for p in 1 2 3 4 5; do
-    echo "smitc POST p$p" >> $TEST_NAME.out
-    $SMITC post "http://127.0.0.1:$PORT/p$p/issues/1" "+message=test-xxx-p$p" summary="new-summary/p$p" >> $TEST_NAME.out
-    echo "smitc GET p$p" >> $TEST_NAME.out
-    $SMITC get "http://127.0.0.1:$PORT/p$p/issues/?colspec=id+summary&sort=id&format=text" >> $TEST_NAME.out
-done
-
-# test cloning
-rm -rf clone1
-$SMIT clone http://127.0.0.1:$PORT --user user1 --passwd user1 clone1
-# Check contents of the clone 
-for p in 1 2 3 4 5; do
-    echo "Issues of clone1/p$p:" >> $TEST_NAME.out
-    $SMIT issue clone1/p$p -h | grep -v ^Date >> $TEST_NAME.out
-done
-
-# test pulling/pushing TODO
-$SMIT pull clone1 >> $TEST_NAME.out 2>&1
-$SMIT issue clone1/p4 -a - "summary=issue-to-be-pushed / p4" >> $TEST_NAME.out
-$SMIT issue clone1/p5 -a - "summary=issue-to-be-pushed / p5" >> $TEST_NAME.out
-$SMIT push clone1 >> $TEST_NAME.out 2>&1
-# test pushing an issue with role read-only
-$SMIT issue clone1/p3 -a - "summary=issue that should not be pushed" >> $TEST_NAME.out
-$SMIT push clone1 >> $TEST_NAME.out 2>&1
+$SMITC postconfig "http://127.0.0.1:$PORT/p1/config" \
+    projectName=p1 \
+    propertyName=prop-yy \
+    type=text \
+    label="the label of prop-yy" \
+    >> $TEST_NAME.out
+$SMITC postconfig "http://127.0.0.1:$PORT/p1/sub1/config" \
+    projectName=p1/sub1 \
+    propertyName=propx_sub1-yy \
+    type=select \
+    selectOptions="option-one-yy" \
+    >> $TEST_NAME.out
+$SMIT project -al $REPO | \
+    sed -e "s/+parent .*/+parent .../" -e "s/+ctime .*/+ctime .../" \
+        >> $TEST_NAME.out
+$SMITC get http://127.0.0.1:$PORT/p1/config
 
 stopServer
 
-# 
-sed -e "s///" -e "s;/[0-9a-f]\{40\}$;/...;" $TEST_NAME.out > $TEST_NAME.out.fil
-diff $srcdir/$TEST_NAME.ref $TEST_NAME.out.fil
+diff $srcdir/$TEST_NAME.ref $TEST_NAME.out

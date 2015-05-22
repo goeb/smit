@@ -2,7 +2,6 @@
 
 # test smit permissions
 # - roles: none ref, ro, rw, admin
-# - superadmin
 
 . $srcdir/functions
 

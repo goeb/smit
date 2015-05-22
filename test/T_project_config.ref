@@ -1,20 +1,34 @@
-Modification of project config with unauthorized user
+Modification of project config by authorized user
 Configuration of project 'trepo/p1':
 +smv 2.4.0
-+parent null
-+ctime 1432063395
-+author ""
-setPropertyLabel id "#"
-addProperty status select open closed deleted
-addProperty owner selectUser
++parent ...
++ctime ...
++author user2
+addProperty propx -label the text
 
 Configuration of project 'trepo/p1/sub1':
 +smv 2.4.0
-+parent null
-+ctime 1432063395
-+author ""
-setPropertyLabel id "#"
-addProperty status select open closed deleted
-addProperty owner selectUser
++parent ...
++ctime ...
++author user2
+addProperty propx_sub1 select option-one
+
+2 project(s)
+Modification of project config by unauthorized user
+403 Forbidden
+403 Forbidden
+Configuration of project 'trepo/p1':
++smv 2.4.0
++parent ...
++ctime ...
++author user2
+addProperty propx -label the text
+
+Configuration of project 'trepo/p1/sub1':
++smv 2.4.0
++parent ...
++ctime ...
++author user2
+addProperty propx_sub1 select option-one
 
 2 project(s)
