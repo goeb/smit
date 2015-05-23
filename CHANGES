@@ -1,6 +1,8 @@
 
 v2.4.0
 
+    - fix crash when missing content-type in POST request
+    - html: fix elapsed time "0 year" when > 1 year
     - kerberos authentication (single sign-on)
     - [To Be Confirmed] LDAP authentication (single sign-on)
 
