@@ -9,8 +9,9 @@
 #define RESOURCE_FILES "files"
 #define RSRC_PROJECT_CONFIG "refs/project"
 #define RSRC_REF_VIEWS "refs/views"
-#define RSRC_REF_TAGS "refs/tags"
 #define RSRC_REF_ISSUES "refs/issues"
+
+// resources under the root
 #define RSRC_USERS "users"
 
 

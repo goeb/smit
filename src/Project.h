@@ -15,20 +15,22 @@
 #include "Issue.h"
 #include "ProjectConfig.h"
 
-#define PATH_ISSUES "refs/issues" // sub-directory of a project where the entries are stored
-#define PATH_PROJECT_CONFIG "refs/project"
-#define PATH_VIEWS "refs/views"
-#define PATH_TAGS "refs/tags"
+#define PATH_REFS "refs"
+#define PATH_ISSUES         PATH_REFS "/issues" // sub-directory of a project where the entries are stored
+#define PATH_PROJECT_CONFIG PATH_REFS "/project"
+#define PATH_VIEWS          PATH_REFS "/views"
+#define PATH_TAGS           PATH_REFS "/tags"
+#define PATH_TRIGGER        PATH_REFS "/trigger"
 #define PATH_OBJECTS "objects"
-#define PATH_TRIGGER "refs/trigger"
 
-#define K_MESSAGE "+message" // keyword used for the message
-#define K_FILE "+file" // keyword used for uploaded files
-#define K_SUMMARY "summary"
-#define K_AMEND "+amend"
+#define K_MESSAGE  "+message" // keyword used for the message
+#define K_FILE     "+file" // keyword used for uploaded files
+#define K_SUMMARY  "summary"
+#define K_AMEND    "+amend"
+#define K_TAG      "+tag"
 
 
-#define K_PROJECT_TMP ".tmp"
+#define K_PROJECT_TMP "tmp"
 
 #define DELETE_DELAY_S (10*60) // seconds
 
