@@ -44,7 +44,7 @@ int Object::write(const std::string &objectsDir, const char *data, size_t size, 
 
     if (fileExists(path)) {
         // check if files are the same
-        int r = cmpContents(data, path);
+        int r = cmpContents(data, size, path);
         if (r != 0) {
             LOG_ERROR("SHA1 conflict on object %s", path.c_str());
             return -2;
@@ -54,7 +54,7 @@ int Object::write(const std::string &objectsDir, const char *data, size_t size, 
     }
     std::string subdir = objectsDir + "/" + getSubdir(id);
     mkdir(subdir);
-    int r = writeToFile(path, data);
+    int r = writeToFile(path.c_str(), data, size);
     if (r != 0) {
         LOG_ERROR("Cannot write to file '%s': %s", path.c_str(), strerror(errno));
         return -1;
