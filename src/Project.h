@@ -15,13 +15,15 @@
 #include "Issue.h"
 #include "ProjectConfig.h"
 
-#define PATH_REFS "refs"
+#define PATH_SMIP ".smip"
+#define PATH_REFS        PATH_SMIP "/refs"
+#define PATH_OBJECTS     PATH_SMIP "/objects"
+#define PATH_PROJECT_TMP PATH_SMIP "/tmp"
 #define PATH_ISSUES         PATH_REFS "/issues" // sub-directory of a project where the entries are stored
 #define PATH_PROJECT_CONFIG PATH_REFS "/project"
 #define PATH_VIEWS          PATH_REFS "/views"
 #define PATH_TAGS           PATH_REFS "/tags"
 #define PATH_TRIGGER        PATH_REFS "/trigger"
-#define PATH_OBJECTS "objects"
 
 #define K_MESSAGE  "+message" // keyword used for the message
 #define K_FILE     "+file" // keyword used for uploaded files
@@ -30,7 +32,6 @@
 #define K_TAG      "+tag"
 
 
-#define K_PROJECT_TMP "tmp"
 
 #define DELETE_DELAY_S (10*60) // seconds
 
@@ -66,7 +67,7 @@ public:
     inline static std::string urlNameEncode(const std::string &name) { return urlEncode(name, '%', "/"); }
     inline static std::string urlNameDecode(const std::string &name) { return urlDecode(name, false, '%'); }
     inline std::string getPath() const { return path; }
-    inline std::string getTmpDir() const { return path + "/" K_PROJECT_TMP; }
+    inline std::string getTmpDir() const { return path + "/" PATH_PROJECT_TMP; }
 
     // project config
     ProjectConfig getConfig() const;

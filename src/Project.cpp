@@ -558,7 +558,7 @@ int Project::createProjectFiles(const std::string &repositoryPath, const std::st
     }
 
     // create directory 'tmp'
-    subpath = newProjectPath + "/" K_PROJECT_TMP;
+    subpath = newProjectPath + "/" PATH_PROJECT_TMP;
     r = mkdir(subpath);
     if (r != 0) {
         LOG_ERROR("Could not create directory '%s': %s", subpath.c_str(), strerror(errno));

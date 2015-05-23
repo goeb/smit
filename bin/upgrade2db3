@@ -63,7 +63,7 @@ migrateIssue() {
     else
         # draw the link
         issueId=$(basename -- "$issue")
-        echo $latest > "$pDir/refs/issues/$issueId"
+        echo $latest > "$pDir/.smip/refs/issues/$issueId"
     fi
 }
 # migrateFileRefs
@@ -107,7 +107,7 @@ migrateFileRefs() {
 migrateTrigger() {
     local pDir="$1"
     if [ -f "$pDir/trigger" ]; then 
-        mv "$pDir/trigger" "$pDir/refs/trigger"
+        mv "$pDir/trigger" "$pDir/.smip/refs/trigger"
     fi
 }
 
@@ -120,8 +120,8 @@ migrateViews() {
 
     objectId=$(sha1sum "$views" | sed -e "s/ .*//")
     mv "$views" "$pDir/$objectId"
-    migrateObject "$pDir/$objectId" "$pDir/objects"
-    echo $objectId > "$pDir/refs/views"
+    migrateObject "$pDir/$objectId" "$pDir/.smip/objects"
+    echo $objectId > "$pDir/.smip/refs/views"
 }
 
 # migrate the 'project' configuration file
@@ -138,8 +138,8 @@ migrateProjectConfig() {
 
     objectId=$(sha1sum "$project" | sed -e "s/ .*//")
     mv "$project" "$pDir/$objectId"
-    migrateObject "$pDir/$objectId" "$pDir/objects"
-    echo $objectId > "$pDir/refs/project"
+    migrateObject "$pDir/$objectId" "$pDir/.smip/objects"
+    echo $objectId > "$pDir/.smip/refs/project"
 }
 
 # Migrate file "users" to users/auth and users/permissions
@@ -230,11 +230,11 @@ find "$dstDir" -name project | while read p; do
 
     pDir=$(dirname "$p")
     echo "project: $pDir..."
-    mkdir "$pDir/objects"
-    mkdir -p "$pDir/refs/issues"
-    mkdir -p "$pDir/refs/tags"
+    mkdir -p "$pDir/.smip/objects"
+    mkdir -p "$pDir/.smip/refs/issues"
+    mkdir -p "$pDir/.smip/refs/tags"
 
-    # change issues to .../<p>/refs/issues/1
+    # change issues to .../<p>/.smip/refs/issues/1
     find "$pDir/issues" -type d -maxdepth 1 | while read issue; do
 
         if [ "$issue" = "$pDir/issues" ]; then
@@ -245,15 +245,15 @@ find "$dstDir" -name project | while read p; do
         migrateIssue "$pDir" "$issue" 
     done
 
-    # change entries to .../<p>/objects/73/97ca1fb539d0ecff232eadb8a9e26f16049da2
+    # change entries to .../<p>/.smip/objects/73/97ca1fb539d0ecff232eadb8a9e26f16049da2
     find "$pDir/issues" -maxdepth 2 -type f | while read entry; do
-        migrateObject $entry "$pDir/objects"
+        migrateObject $entry "$pDir/.smip/objects"
     done
 
     # change files references in the entries
     # at this moment, the objects are all the entries
     # <sha1>.file.pdf => <sha1>/file.pdf
-    find "$pDir/objects" -type f | while read entry; do
+    find "$pDir/.smip/objects" -type f | while read entry; do
 
         migrateFileRefs "$entry"
     done
@@ -265,14 +265,14 @@ find "$dstDir" -name project | while read p; do
         prefix=$(echo "$newId" | sed -e "s/\(..\).*/\\1"/)
         suffix=$(echo "$newId" | sed -e "s/^..//")
 
-        mkdir -p "$pDir/objects/$prefix"
-        mv "$file" "$pDir/objects/$prefix/$suffix"
+        mkdir -p "$pDir/.smip/objects/$prefix"
+        mv "$file" "$pDir/.smip/objects/$prefix/$suffix"
     done
 
     # change tags
     if [ -d "$pDir/tags" ]; then
         find "$pDir/tags" -type f | while read file; do
-            migrateObject $file "$pDir/refs/tags"
+            migrateObject $file "$pDir/.smip/refs/tags"
         done
     fi
 
