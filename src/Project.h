@@ -19,6 +19,7 @@
 #define PATH_REFS        PATH_SMIP "/refs"
 #define PATH_OBJECTS     PATH_SMIP "/objects"
 #define PATH_PROJECT_TMP PATH_SMIP "/tmp"
+#define PATH_TEMPLATES   PATH_SMIP "/templates"
 #define PATH_ISSUES         PATH_REFS "/issues" // sub-directory of a project where the entries are stored
 #define PATH_PROJECT_CONFIG PATH_REFS "/project"
 #define PATH_VIEWS          PATH_REFS "/views"

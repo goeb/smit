@@ -85,23 +85,26 @@ const Project &ContextParameters::getProject() const
 #define K_SM_URL_ROOT "SM_URL_ROOT"
 #define K_SM_TABLE_USER_PERMISSIONS "SM_TABLE_USER_PERMISSIONS"
 
-/** Load a page for a specific project
+/** Load a page template of a specific project
   *
   * By default pages (typically HTML pages) are loaded from $REPO/public/ directory.
   * But the administrator may override this by pages located in $REPO/$PROJECT/html/ directory.
   *
   * The caller is responsible for calling 'free' on the returned pointer (if not null).
   */
-int loadProjectPage(const RequestContext *req, const std::string &projectPath, const std::string &page, const char **data)
+int loadProjectPage(const RequestContext *req, const Project *project, const std::string &page, const char **data)
 {
-    // first look for the page in $REPO/$PROJECT/html/
-    std::string path = projectPath + "/html/" + page;
-    int n = loadFile(path.c_str(), data);
-    if (n > 0) return n;
+    std::string path;
+    if (project) {
+        // first look in the templates of the project
+        path = project->getPath() + "/" PATH_TEMPLATES "/" + page;
+        int n = loadFile(path.c_str(), data);
+        if (n > 0) return n;
+    }
 
-    // secondly, look at $REPO/public/
-    path = Database::Db.getRootDir() + "/public/" + page;
-    n = loadFile(path.c_str(), data);
+    // secondly, look in the templates of the repository
+    path = Database::Db.getRootDir() + "/" PATH_REPO_TEMPLATES "/" + page;
+    int n = loadFile(path.c_str(), data);
 
     if (n > 0) return n;
 
@@ -139,12 +142,7 @@ public:
         userRolesByProject = 0;
         concernedUser = 0;
 
-        int n;
-        if (ctx.project) n = loadProjectPage(ctx.req, ctx.getProject().getPath(), basename, &buffer);
-        else {
-            std::string path = Database::Db.getRootDir() + "/public/" + basename;
-            n = loadFile(path.c_str(), &buffer);
-        }
+        int n = loadProjectPage(ctx.req, ctx.project, basename, &buffer);
 
         if (n > 0) {
             size = n;

@@ -467,7 +467,6 @@ int UserBase::addUser(User newUser)
 
 int UserBase::deleteUser(const std::string &username)
 {
-    LOG_INFO("Delete user: %s", username.c_str());
     if (username.empty()) return -1;
 
     LOCK_SCOPE(UserDb.locker, LOCK_READ_WRITE);

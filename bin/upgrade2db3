@@ -8,6 +8,7 @@ usage() {
     exit 1
 }
 
+
 # migrateObject
 # $1 : source file
 # $2 : directory where the file is to be moved
@@ -28,6 +29,31 @@ migrateObject() {
     mkdir -p "$dest/$prefix"
     mv $file "$dest/$prefix/$suffix"
 }
+
+TEMPLATES="issue.html issuesAccross.html issues.html newIssue.html project.html projects.html signin.html user.html view.html views.html"
+
+# Migrate the templates of the repository
+# $1 : smit repository to be migrated
+migrateRepoTemplates() {
+    local repo="$1"
+    local templates="$repo/.smit/templates"
+    mkdir -p "$templates"
+    for page in $TEMPLATES; do
+        mv "$repo/public/$page" "$templates/." 2>/dev/null
+    done
+}
+
+# Migrate the templates of a project
+# $1 : project to be migrated
+migrateProjectTemplates() {
+    local pDir="$1"
+    local templates="$pDir/.smit/templates"
+    mkdir -p "$templates"
+    for page in $TEMPLATES; do
+        mv "$pDir/html/$page" "$templates/." 2>/dev/null
+    done
+}
+
 # $1 : working directory of the project (where the migration is being done)
 # $2 : path to the issue directory
 migrateIssue() {
@@ -222,6 +248,7 @@ fi
 cp -a "$srcDir" "$dstDir"
 
 migrateUsers "$dstDir"
+migrateRepoTemplates "$dstDir"
 
 # then upgrade each project
 find "$dstDir" -name project | while read p; do
@@ -280,6 +307,8 @@ find "$dstDir" -name project | while read p; do
 
     migrateViews "$pDir"
     migrateTrigger "$pDir"
+
+    migrateProjectTemplates "$pDir"
 
     # remove old directories files, issues, tags
     rm -rf "$pDir/files"

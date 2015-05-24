@@ -586,6 +586,8 @@ void httpDeleteUser(const RequestContext *request, User signedInUser, const std:
         return;
     }
 
+    LOG_INFO("User '%s' deleted by '%s'", username.c_str(), signedInUser.username.c_str());
+
     int r = UserBase::deleteUser(username);
 
     if (r != 0) {
