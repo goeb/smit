@@ -123,6 +123,7 @@ bool Project::containsReservedName(std::string name)
     while (!name.empty()) {
         std::string part = popToken(name, '/');
         if (isReservedName(part)) return true;
+        if (part == "..") return true; // TODO name of function not relevant for this
     }
     return false;
 }
@@ -480,14 +481,23 @@ int Project::createProjectFiles(const std::string &repositoryPath, const std::st
         LOG_ERROR("Cannot create project over existing path: %s", newProjectPath.c_str());
         return -1;
     }
+    // TODO forbid .. in path part (prevent going out of repo)
     int r = mkdirs(newProjectPath);
     if (r != 0) {
         LOG_ERROR("Could not create directory '%s': %s", newProjectPath.c_str(), strerror(errno));
         return -1;
     }
 
+    // create directory '.smip'
+    std::string subpath = newProjectPath + "/" PATH_SMIP;
+    r = mkdir(subpath);
+    if (r != 0) {
+        LOG_ERROR("Could not create directory '%s': %s", subpath.c_str(), strerror(errno));
+        return -1;
+    }
+
     // create directory 'objects'
-    std::string subpath = newProjectPath + "/" PATH_OBJECTS;
+    subpath = newProjectPath + "/" PATH_OBJECTS;
     r = mkdir(subpath);
     if (r != 0) {
         LOG_ERROR("Could not create directory '%s': %s", subpath.c_str(), strerror(errno));
@@ -495,7 +505,7 @@ int Project::createProjectFiles(const std::string &repositoryPath, const std::st
     }
 
     // create directory 'refs'
-    subpath = newProjectPath + "/refs";
+    subpath = newProjectPath + "/" PATH_REFS;
     r = mkdir(subpath);
     if (r != 0) {
         LOG_ERROR("Could not create directory '%s': %s", subpath.c_str(), strerror(errno));
@@ -555,14 +565,6 @@ int Project::createProjectFiles(const std::string &repositoryPath, const std::st
     if (r != 0) {
         LOG_ERROR("Could not create file '%s': %s", subpath.c_str(), strerror(errno));
         return r;
-    }
-
-    // create directory 'html'
-    subpath = newProjectPath + "/html";
-    r = mkdir(subpath);
-    if (r != 0) {
-        LOG_ERROR("Could not create directory '%s': %s", subpath.c_str(), strerror(errno));
-        return -1;
     }
 
     // create directory 'tmp'

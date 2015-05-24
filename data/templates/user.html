@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html><head>
         <title>Configuration of User</title>
-        <link href="../public/style.css" type="text/css" rel="stylesheet">
+        <link href="SM_URL_ROOT/public/style.css" type="text/css" rel="stylesheet">
         <meta content="text/html;charset=UTF-8" http-equiv="Content-Type">
-        <script src="../sm/smit.js"></script>
+        <script src="SM_URL_ROOT/sm/smit.js"></script>
     </head>
     <body>
         <div style="padding-top: 15px;">
-            <table><tr><td><img src="../public/logo.png" class="logo" alt="Logo"></td>
+            <table><tr><td><img src="SM_URL_ROOT/public/logo.png" class="logo" alt="Logo"></td>
                     <td>SM_DIV_NAVIGATION_GLOBAL</td></tr></table>
         </div>
 
@@ -23,12 +23,13 @@
                     <tr><td><label for="sm_superadmin">Superadmin:</label></td><td><input id="sm_superadmin" name="superadmin" type="checkbox"></td></tr>
                 </table>
                 <br>
+                SM_TABLE_USER_PERMISSIONS
                 <br>
                 <br>
 
-                Roles on projects:<br>
+                Modify Roles on Projects:<br>
                 <div id="roles_on_projects"></div>
-                <div onclick="addProject('roles_on_projects', '', '');" class="clickable">+ Click for more...</div>
+                <div onclick="addPermission('roles_on_projects', '', '');" class="clickable">+ Click for more...</div>
                 <br>
             </div>
 
@@ -43,4 +44,5 @@
             <br>
             <input type="submit" value="Apply">
         </form>
+        <button type="button" onclick="sm_deleteResource('./');">Delete this user</button>
 </body></html>

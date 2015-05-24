@@ -131,11 +131,21 @@ int initRepository(int argc, char **argv)
     }
     closedir(dirp);
 
-    // ok, extract the files for the new repository
+    // Extract the files 'public' to the new repository
     int r = cpioExtractFile("public", directory);
     if (r < 0) {
         LOG_ERROR("Error while extracting 'public/*': r=%d", r);
         return 3;
+    }
+
+    // Extract the files 'templates' to the new repository
+    std::string templatesDir = directory;
+    templatesDir += "/" PATH_REPO;
+    mkdirs(templatesDir);
+    r = cpioExtractFile("templates", templatesDir.c_str());
+    if (r < 0) {
+        LOG_ERROR("Error while extracting 'templates/*': r=%d", r);
+        return 4;
     }
 
     r = UserBase::initUsersFile(directory);

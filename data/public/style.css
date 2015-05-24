@@ -318,7 +318,7 @@ table.sm_projects tr:hover, table.sm_users tr:hover {
     padding: 3px;
     margin: 0.5em;
 }
-.sm_link_projects, .sm_link_modify_project, .sm_link_views {
+.sm_link_projects, .sm_link_modify_project, .sm_link_views, .sm_link_users {
     padding: 3px;
     margin: 0.5em;
     font-weight: bold;
