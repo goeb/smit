@@ -19,9 +19,9 @@ $SMIT issue clone1/$PROJECT1 -a - summary="issue of clone1" freeText="this is xy
 $SMIT issue clone1/$PROJECT1 -a 3 summary="third issue" freeText="y1y2" "+file=5ab64de1bcfb3d5500b2a95145f44f74aa6ed72f/file2.txt"
 
 # add the attached file in the clone
-mkdir clone1/$PROJECT1/objects/5a
-echo "-- file2" > clone1/$PROJECT1/objects/5a/b64de1bcfb3d5500b2a95145f44f74aa6ed72f
-echo "-- contents of file2" >> clone1/$PROJECT1/objects/5a/b64de1bcfb3d5500b2a95145f44f74aa6ed72f
+mkdir clone1/$PROJECT1/.smip/objects/5a
+echo "-- file2" > clone1/$PROJECT1/.smip/objects/5a/b64de1bcfb3d5500b2a95145f44f74aa6ed72f
+echo "-- contents of file2" >> clone1/$PROJECT1/.smip/objects/5a/b64de1bcfb3d5500b2a95145f44f74aa6ed72f
 # sha1 of this file is: 5ab64de1bcfb3d5500b2a95145f44f74aa6ed72f
 
 # add another issue in the clone
@@ -49,5 +49,5 @@ $SMIT issue clone2/$PROJECT1 3 -ph | grep -v ^Date >> $TEST_NAME.out
 
 diff -u $srcdir/$TEST_NAME.ref $TEST_NAME.out 
 
-checkFileExists $REPO/$PROJECT1/objects/5a/b64de1bcfb3d5500b2a95145f44f74aa6ed72f
+checkFileExists $REPO/$PROJECT1/.smip/objects/5a/b64de1bcfb3d5500b2a95145f44f74aa6ed72f
 

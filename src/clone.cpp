@@ -491,6 +491,7 @@ int pullIssue(const PullContext &pullCtx, Project &p, const std::string &remoteI
 
     // download the remote issue
     Issue *remoteIssue = cloneIssue(pullCtx, p, remoteIssueId);
+    if (!remoteIssue) return -1;
 
     // Get the related local issue. 3 possible cases:
     // - no related local issue

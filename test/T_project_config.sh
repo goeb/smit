@@ -4,6 +4,12 @@
 
 . $srcdir/functions
 
+filterConfig() {
+    sed -e "s/+parent .*/+parent .../" \
+        -e "s/+ctime .*/+ctime .../" \
+        -e "s/+smv .*/+smv .../"
+}
+
 initTest
 rm -r $TEST_NAME.out
 
@@ -45,9 +51,7 @@ $SMITC postconfig "http://127.0.0.1:$PORT/p1/sub1/config" \
     type=select \
     selectOptions="option-one" \
     >> $TEST_NAME.out
-$SMIT project -al $REPO | \
-    sed -e "s/+parent .*/+parent .../" -e "s/+ctime .*/+ctime .../" \
-        >> $TEST_NAME.out
+$SMIT project -al $REPO | filterConfig >> $TEST_NAME.out
 
 # test modification of project config by unauthorized user1 (error case)
 echo "Modification of project config by unauthorized user" >> $TEST_NAME.out
@@ -65,9 +69,7 @@ $SMITC postconfig "http://127.0.0.1:$PORT/p1/sub1/config" \
     type=select \
     selectOptions="option-one-yy" \
     >> $TEST_NAME.out
-$SMIT project -al $REPO | \
-    sed -e "s/+parent .*/+parent .../" -e "s/+ctime .*/+ctime .../" \
-        >> $TEST_NAME.out
+$SMIT project -al $REPO | filterConfig >> $TEST_NAME.out
 $SMITC get http://127.0.0.1:$PORT/p1/config
 
 stopServer
