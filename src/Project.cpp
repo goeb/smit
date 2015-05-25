@@ -39,11 +39,6 @@
 #include "stringTools.h"
 #include "mg_win32.h"
 
-#define K_PARENT "+parent"
-#define K_AUTHOR "+author"
-#define K_CTIME "+ctime"
-#define K_PARENT_NULL "null"
-
 const char *Project::reservedNames[] = {
     "public", // reserved because 'public' is an existing folder
     "views",  // reserved for REST interface

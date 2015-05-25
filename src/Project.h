@@ -26,12 +26,6 @@
 #define PATH_TAGS           PATH_REFS "/tags"
 #define PATH_TRIGGER        PATH_REFS "/trigger"
 
-#define K_MESSAGE  "+message" // keyword used for the message
-#define K_FILE     "+file" // keyword used for uploaded files
-#define K_SUMMARY  "summary"
-#define K_AMEND    "+amend"
-#define K_TAG      "+tag"
-
 
 
 #define DELETE_DELAY_S (10*60) // seconds

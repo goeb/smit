@@ -12,10 +12,12 @@
 #include "stringTools.h"
 #include "Object.h"
 
-#define K_MESSAGE "+message" // keyword used for the message
-#define K_FILE "+file" // keyword used for uploaded files
-#define K_SUMMARY "summary"
-#define K_AMEND "+amend"
+#define K_MESSAGE     "+message" // keyword used for the message
+#define K_FILE        "+file" // keyword used for uploaded files
+#define K_SUMMARY     "summary"
+#define K_AMEND       "+amend"
+#define K_PARENT_NULL "null"
+#define K_TAG         "+tag"
 
 #define DELETE_DELAY_S (10*60) // seconds
 

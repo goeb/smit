@@ -15,8 +15,6 @@
 
 #define DIR_DELETED_OLD "_del"
 
-#define K_PARENT_NULL "null"
-
 #define DELETE_DELAY_S (10*60) // seconds
 
 enum PropertyType {
