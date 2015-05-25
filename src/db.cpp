@@ -168,7 +168,7 @@ std::list<std::string> Database::getProjects()
 }
 
 
-std::string Database::allocateNewIssueId()
+std::string Database::allocateNewIssueId(const std::string &realm)
 {
     ScopeLocker scopeLocker(Db.locker, LOCK_READ_WRITE);
 
@@ -183,7 +183,7 @@ std::string Database::allocateNewIssueId()
     return std::string(buffer);
 }
 
-void Database::updateMaxIssueId(uint32_t i)
+void Database::updateMaxIssueId(const std::string &realm, uint32_t i)
 {
     if (i > Db.maxIssueId) Db.maxIssueId = i;
 }

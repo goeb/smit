@@ -622,7 +622,7 @@ int Project::toggleTag(const std::string &entryId, const std::string &tagid)
 
 std::string Project::allocateNewIssueId()
 {
-    if (config.numberIssueAcrossProjects) return Database::allocateNewIssueId();
+    if (config.numberIssueAcrossProjects) return Database::allocateNewIssueId("global");
 
     maxIssueId++;
     if (maxIssueId == 0) LOG_ERROR("Project: max issue id zero: wrapped");
@@ -636,7 +636,7 @@ std::string Project::allocateNewIssueId()
 
 void Project::updateMaxIssueId(uint32_t i)
 {
-    if (config.numberIssueAcrossProjects) return Database::updateMaxIssueId(i);
+    if (config.numberIssueAcrossProjects) return Database::updateMaxIssueId("global", i);
 
     if (i > maxIssueId) maxIssueId = i;
 }

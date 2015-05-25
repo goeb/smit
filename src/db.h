@@ -27,8 +27,8 @@ public:
     static std::list<std::string> getProjects();
     static Project *loadProject(const std::string &path); // load a project
     static Project *createProject(const std::string &projectName);
-    static std::string allocateNewIssueId();
-    static void updateMaxIssueId(uint32_t i);
+    static std::string allocateNewIssueId(const std::string &realm);
+    static void updateMaxIssueId(const std::string &realm, uint32_t i);
     inline static uint32_t getMaxIssueId() { return Db.maxIssueId; }
     inline size_t getNumProjects() const { return projects.size(); }
     Project *getNextProject(const Project *p) const;
@@ -38,6 +38,7 @@ private:
     std::map<std::string, Project*> projects;
     Locker locker;
     uint32_t maxIssueId;
+    std::map<std::string, uint32_t> allocatedIds;
 };
 
 
