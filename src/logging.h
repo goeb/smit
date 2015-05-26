@@ -22,6 +22,19 @@ enum LogLevel {
     LL_DEBUG
 };
 
+/** encapsulate strerror_r
+  */
+inline std::string getStrerror(int errnum)
+{
+    char buffer[512];
+    char *s = strerror_r(errnum, buffer, sizeof(buffer));
+
+    if (s) return std::string(s);
+    else return std::string("strerror_r returned null");
+}
+
+#define STRERROR(_x) getStrerror(_x).c_str()
+
 extern LogLevel LoggingLevel;
 extern int LoggingOptions;
 // logging options
