@@ -18,13 +18,8 @@
 #include <list>
 
 #include "Issue.h"
+#include "Tag.h"
 
-struct TagSpec {
-    TagSpec(): display(false) {}
-    std::string id;
-    std::string label; // UTF-8 text
-    bool display; // status should be displayed in issue header
-};
 
 std::string propertyTypeToStr(PropertyType type);
 int strToPropertyType(const std::string &s, PropertyType &out);

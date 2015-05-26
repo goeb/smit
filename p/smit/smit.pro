@@ -80,6 +80,7 @@ HEADERS += \
     ../../src/AuthSha1.h \
     ../../src/AuthLdap.h \
     ../../src/third-party/fnmatch.h \
-    ../../src/mg_win32.h
+    ../../src/mg_win32.h \
+    ../../src/Tag.h
     ../../src/ssoKerberos.h
 
