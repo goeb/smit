@@ -45,10 +45,10 @@ std::string getLocalTimestamp()
 
 std::string epochToString(time_t t)
 {
-    struct tm *tmp;
-    tmp = localtime(&t);
+    struct tm tmp;
+    localtime_r(&t, &tmp);
     char datetime[100+1]; // should be enough
-    strftime(datetime, sizeof(datetime)-1, "%d %b %Y, %H:%M:%S", tmp);
+    strftime(datetime, sizeof(datetime)-1, "%d %b %Y, %H:%M:%S", &tmp);
 
     return std::string(datetime);
 }
