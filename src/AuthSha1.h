@@ -15,6 +15,7 @@ struct AuthSha1 : Auth {
     virtual std::string serialize();
     virtual Auth *createCopy();
     static Auth *load(std::list<std::string> &tokens);
+    inline ~AuthSha1() { }
 };
 
 #endif

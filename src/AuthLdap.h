@@ -14,6 +14,7 @@ struct AuthLdap : public Auth {
     virtual int authenticate(char *password);
     virtual std::string serialize();
     virtual Auth *createCopy();
+    inline ~AuthLdap() { }
 };
 
 #endif

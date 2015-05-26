@@ -12,6 +12,7 @@ struct AuthKrb5 : public Auth {
     virtual int authenticate(char *password);
     virtual std::string serialize();
     virtual Auth *createCopy();
+    inline ~AuthKrb5() { }
 };
 
 #endif
