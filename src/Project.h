@@ -23,7 +23,7 @@
 #define PATH_ISSUES         PATH_REFS "/issues" // sub-directory of a project where the entries are stored
 #define PATH_PROJECT_CONFIG PATH_REFS "/project"
 #define PATH_VIEWS          PATH_REFS "/views"
-#define PATH_TAGS           PATH_REFS "/tags"
+#define PATH_TAGS           PATH_REFS "/tags" ".x"  // TODO remove the ".x"
 #define PATH_TRIGGER        PATH_REFS "/trigger"
 
 
@@ -89,7 +89,7 @@ public:
     PredefinedView getDefaultView() const;
 
     // methods for handling tags
-    int toggleTag(const std::string &entryId, const std::string &tagid);
+    int toggleTag(const std::string &entryId, const std::string &tagname, const std::string &author);
 
     // local usage methods (not mutex-protected)
     Entry *getEntry(const std::string &id) const;
@@ -120,6 +120,9 @@ private:
 
     // views
     std::map<std::string, PredefinedView> predefinedViews;
+
+    // tags
+    std::string latestTagId;
 
     static const char *reservedNames[];
 

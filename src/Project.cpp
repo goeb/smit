@@ -38,6 +38,7 @@
 #include "global.h"
 #include "stringTools.h"
 #include "mg_win32.h"
+#include "Tag.h"
 
 const char *Project::reservedNames[] = {
     "public", // reserved because 'public' is an existing folder
@@ -576,45 +577,53 @@ int Project::createProjectFiles(const std::string &repositoryPath, const std::st
 /** Tag or untag an entry
   *
   */
-int Project::toggleTag(const std::string &entryId, const std::string &tagid)
+int Project::toggleTag(const std::string &entryId, const std::string &tagname, const std::string &author)
 {
-    ScopeLocker scopeLocker(locker, LOCK_READ_WRITE);
+    LOCK_SCOPE(locker, LOCK_READ_WRITE);
 
     Entry *e = getEntry(entryId);
     if (!e) {
         // entry not found
         LOG_DEBUG("Entry not found: %s", entryId.c_str());
         return -1;
+
     } else {
 
-        // invert the tag
-        std::set<std::string>::iterator tag = e->tags.find(tagid);
-        if (tag == e->tags.end()) e->tags.insert(tagid);
-        else e->tags.erase(tag);
+        Tag tag;
+        tag.author = author;
+        tag.ctime = time(0);
+        if (latestTagId.empty()) latestTagId = K_PARENT_NULL;
+        else tag.parent = latestTagId;
+        tag.entryId = entryId;
+        tag.tagName = tagname;
+        std::string tagContents = tag.serialize();
+        tag.id = getSha1(tagContents);
 
-        tag = e->tags.find(tagid); // update tag status after inversion
-
-        // store to disk
-        std::string tagDir = getPath() + "/" PATH_TAGS;
-        std::string path = tagDir + "/" + Object::getSubpath(entryId) + "." + tagid;
-        if (tag != e->tags.end()) {
-            std::string subdir = tagDir + "/" + Object::getSubdir(entryId);
-            mkdir(subdir);
-            // create the empty file
-            int r = writeToFile(path, "");
-            if (r != 0) {
-                LOG_ERROR("Cannot create tag '%s': %s", path.c_str(), strerror(errno));
-                return -1;
-            }
-
-        } else {
-            // remove the file
-            int r = unlink(path.c_str());
-            if (r != 0) {
-                LOG_ERROR("Cannot remove tag '%s': %s", path.c_str(), strerror(errno));
-                return -1;
-            }
+        // store the tag object to persistent storage
+        std::string tagSubdir = getObjectsDir() + "/" + Object::getSubdir(tag.id);
+        mkdir(tagSubdir);
+        std::string objectPath = getObjectsDir() + "/" + Object::getSubpath(tag.id);
+        if (fileExists(objectPath)) {
+            LOG_ERROR("Cannot set tag, file exists: %s", objectPath.c_str());
+            return -1;
         }
+        int r = writeToFile(objectPath, tagContents);
+        if (r != 0) {
+            LOG_ERROR("Cannot set tag '%s': %s", objectPath.c_str(), STRERROR(errno));
+            return -1;
+        }
+
+        // store the refs/tags file
+        std::string tagRef = getPath() + "/" + PATH_TAGS;
+        r = writeToFile(tagRef, tag.id);
+
+        // update latestTagId
+        latestTagId = tag.id;
+
+        // invert the tag in RAM
+        std::set<std::string>::iterator tagit = e->tags.find(tagname);
+        if (tagit == e->tags.end()) e->tags.insert(tagname);
+        else e->tags.erase(tagit);
 
         return 0;
     }
@@ -750,53 +759,47 @@ void Project::loadPredefinedViews()
     LOG_DEBUG("predefined views loaded: %ld", L(predefinedViews.size()));
 }
 
-/** Look for tags: files <project>/refs/tags/<prefix-sha1>/<suffix-sha1>
+/** Load tags, strating from the latest, ie: <p>/refs/tags
   *
-  * Tags are formed like this:
-  *   <entry-id> '.' <tag-id>
-  * Where: <entry-id> := <prefix-sha1> <suffix-sha1>
   */
 void Project::loadTags()
 {
-    std::string tagsPath = path + "/" PATH_TAGS "/";
-    DIR *tagsDirHandle = openDir(tagsPath.c_str());
-
-    if (!tagsDirHandle) {
-        LOG_DEBUG("No tags directory '%s'", tagsPath.c_str());
+    std::string tagRef = getPath() + "/" + PATH_TAGS;
+    std::string latestTag;
+    int r = loadFile(tagRef, latestTag);
+    if (r != 0) {
+        // No tag ref. No tag in this project.
+        LOG_DIAG("Cannot load '%s': %s", tagRef.c_str(), STRERROR(errno));
         return;
     }
 
-    std::string filename;
-    while ((filename = getNextFile(tagsDirHandle)) != "") {
+    trim(latestTag);
+    latestTagId = latestTag;
 
-        std::string prefix = filename;
-        // get the issue object
+    // load all the tags, chained from the latest
 
-        std::string suffixPath = tagsPath + "/" + prefix;
-        // open this subdir and look for all files of this subdir
-        DIR *suffixDirHandle = openDir(suffixPath.c_str());
-        if (!suffixDirHandle) continue; // not a directory ?
+    int n = 0;
+    std::string currentTag = latestTag;
+    while (currentTag != K_PARENT_NULL) {
+        std::string path = getObjectsDir() + "/" + Object::getSubpath(currentTag);
+        Tag *tag = Tag::load(path, currentTag);
+        if (!tag) break;
 
-        std::string tag;
-        while ((tag = getNextFile(suffixDirHandle)) != "") {
+        Entry *e = getEntry(tag->entryId);
+        if (!e) {
+            LOG_ERROR("Tag to unknown entry: %s -> %s", path.c_str(), tag->entryId.c_str());
+        } else {
+            // Toggle the tag of the entry
+            std::set<std::string>::iterator existingTag = e->tags.find(tag->tagName);
+            if (existingTag == e->tags.end()) e->tags.insert(tag->tagName);
+            else e->tags.erase(existingTag);
 
-            std::string entryId = popToken(tag, '.');
-            // add the prefix
-            entryId = prefix + entryId;
-            std::map<std::string, Entry*>::iterator eit;
-            eit = entries.find(entryId);
-            if (eit == entries.end()) {
-                LOG_ERROR("Tags for unknown entry: %s", entryId.c_str());
-                continue;
-            }
-            Entry *e = eit->second;
-            if (tag.empty()) tag = "tag"; // keep compatibility with version <= 1.2.x
-
-            e->tags.insert(tag);
+            n++;
         }
-        closeDir(suffixDirHandle);
+
+        currentTag = tag->parent;
     }
-    closeDir(tagsDirHandle);
+    LOG_INFO("Project %s: %d tags", getName().c_str(), n);
 }
 
 

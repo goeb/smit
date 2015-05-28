@@ -6,13 +6,14 @@
 
 class Tag {
 public:
+    std::string id;
     std::string parent;
     std::string author;
     time_t ctime;
     std::string entryId;
     std::string tagName;
     std::string serialize() const;
-    static Tag *load(const std::string &path);
+    static Tag *load(const std::string &path, const std::string &id);
 };
 
 struct TagSpec {

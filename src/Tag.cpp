@@ -21,7 +21,7 @@ std::string Tag::serialize() const
     return s.str();
 }
 
-Tag *Tag::load(const std::string &path)
+Tag *Tag::load(const std::string &path, const std::string &id)
 {
     std::string data;
     int r = loadFile(path, data);
@@ -46,5 +46,14 @@ Tag *Tag::load(const std::string &path)
             LOG_ERROR("Tag::load: invalid token '%s'", token.c_str());
         }
     }
+
+    if (tag->tagName.empty() || tag->entryId.empty()) {
+        LOG_ERROR("Incomplete tag in '%s': tagName=%s, entryId=%s", path.c_str(), tag->tagName.c_str(),
+                  tag->entryId.c_str());
+        delete tag;
+        return 0;
+    }
+
+    tag->id = id;
     return tag;
 }

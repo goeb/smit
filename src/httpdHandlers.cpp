@@ -1676,7 +1676,7 @@ void httpPostView(const RequestContext *req, Project &p, const std::string &name
     }
 }
 
-/** Handled the posting of a tag
+/** Handle the posting of a tag
   *
   * If the ref is not tagged, then this will put a tag on the entry.
   * If the ref is already tagged, then this will remove the tag of the entry.
@@ -1693,9 +1693,9 @@ void httpPostTag(const RequestContext *req, Project &p, std::string &ref, User u
     }
 
     std::string entryId = popToken(ref, '/');
-    std::string tagid = ref;
+    std::string tagname = ref;
 
-    int r = p.toggleTag(entryId, tagid);
+    int r = p.toggleTag(entryId, tagname, u.username);
     if (r == 0) {
         sendHttpHeader200(req);
         req->printf("\r\n");
