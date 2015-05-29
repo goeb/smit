@@ -168,6 +168,42 @@ migrateProjectConfig() {
     echo $objectId > "$pDir/.smip/refs/project"
 }
 
+# Migrate the tags of a project
+# $1 : project dir
+migrateTags() {
+
+    pDir="$1"
+
+    if [ ! -d "$pDir/tags" ]; then
+        return
+    fi
+
+    latest="null"
+    find "$pDir/tags" -type f > "$pDir/tmp/.files"
+    while read file; do
+        # old tag format is an empty file named <entry-id>.<tag-name>
+        echo "tag-file: $file"
+        oldTag=$(basename -- "$file")
+        newTagFile="$pDir/.smip/tmp/.tag.current"
+        echo "+parent $latest" > $newTagFile
+        echo "+author upgrade2db3" >> $newTagFile
+        timestamp=$(date +%s)
+        echo "+ctime $timestamp" >> $newTagFile
+        # handle unnamed tags (old versions)
+        echo "+tag $oldTag" |
+            sed -e 's/\([^ ]*\)\.\([^ ]*\)/\2 \1/' \
+                -e 's/+tag \([^ ]*\)$/+tag tag \1/' >> $newTagFile
+        id=$(sha1sum $newTagFile | sed -e "s/ .*//")
+        mv $newTagFile "$pDir/.smip/tmp/$id"
+        migrateObject "$pDir/.smip/tmp/$id" "$pDir/.smip/objects"
+        latest="$id"
+    done < "$pDir/tmp/.files"
+    # write latest
+    if [ "$latest" != "null" ]; then
+        echo "$latest" >  "$pDir/.smip/refs/tags"
+    fi
+}
+
 # Migrate file "users" to users/auth and users/permissions
 # $1 : smit repository to be modified
 migrateUsers() {
@@ -259,7 +295,7 @@ find "$dstDir" -name project | while read p; do
     echo "project: $pDir..."
     mkdir -p "$pDir/.smip/objects"
     mkdir -p "$pDir/.smip/refs/issues"
-    mkdir -p "$pDir/.smip/refs/tags"
+    mkdir -p "$pDir/.smip/tmp"
 
     # change issues to .../<p>/.smip/refs/issues/1
     find "$pDir/issues" -type d -maxdepth 1 | while read issue; do
@@ -296,12 +332,7 @@ find "$dstDir" -name project | while read p; do
         mv "$file" "$pDir/.smip/objects/$prefix/$suffix"
     done
 
-    # change tags
-    if [ -d "$pDir/tags" ]; then
-        find "$pDir/tags" -type f | while read file; do
-            migrateObject $file "$pDir/.smip/refs/tags"
-        done
-    fi
+    migrateTags "$pDir"
 
     migrateProjectConfig "$pDir"
 
