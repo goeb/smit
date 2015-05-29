@@ -40,6 +40,10 @@ migrateRepoTemplates() {
     mkdir -p "$templates"
     for page in $TEMPLATES; do
         mv "$repo/public/$page" "$templates/." 2>/dev/null
+        # replace some sm variables
+        sed -i -e "s/SM_REWRITE_ROOT/SM_URL_ROOT/g" \
+               -e "s/SM_HTML_PROJECT_NAME/SM_HTML_PROJECT/g" \
+            "$templates/$page"
     done
 }
 
