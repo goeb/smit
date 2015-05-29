@@ -23,7 +23,7 @@
 #define PATH_ISSUES         PATH_REFS "/issues" // sub-directory of a project where the entries are stored
 #define PATH_PROJECT_CONFIG PATH_REFS "/project"
 #define PATH_VIEWS          PATH_REFS "/views"
-#define PATH_TAGS           PATH_REFS "/tags" ".x"  // TODO remove the ".x"
+#define PATH_TAGS           PATH_REFS "/tags"
 #define PATH_TRIGGER        PATH_REFS "/trigger"
 
 
