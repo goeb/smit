@@ -1365,8 +1365,11 @@ void httpGetListOfIssues(const RequestContext *req, const Project &p, User u)
     sendHttpHeader200(req);
 
     if (format == RENDERING_TEXT) RText::printIssueList(req, issueList, cols);
-    else if (format == RENDERING_CSV) RCsv::printIssueList(req, issueList, cols);
-    else {
+    else if (format == RENDERING_CSV) {
+        std::string separator = getFirstParamFromQueryString(q, "sep");
+        separator = urlDecode(separator);
+        RCsv::printIssueList(req, issueList, cols, separator.c_str());
+    } else {
         ContextParameters ctx = ContextParameters(req, u, p);
         std::list<std::string> filterinRaw = getParamListFromQueryString(q, "filterin");
         std::list<std::string> filteroutRaw = getParamListFromQueryString(q, "filterout");
@@ -1517,7 +1520,7 @@ void httpPushAttachedFile(const RequestContext *req, Project &p, const std::stri
     int totalBytes = 0;
 
     while ( (n = req->read(postFragment, SIZ)) > 0) {
-        LOG_DEBUG("postFragment size=%d", n);
+        LOG_DEBUG("postFragment size=%lu", L(n));
         tmp.write(postFragment, n);
 
         totalBytes += n;

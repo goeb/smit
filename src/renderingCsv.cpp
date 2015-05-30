@@ -22,9 +22,10 @@
   *    \n or \r
   *    a comma ,
   */
-std::string doubleQuoteCsv(const std::string &input)
+std::string doubleQuoteCsv(const std::string &input, const char *separator)
 {
-    if (input.find_first_of("\n\r\",") == std::string::npos) return input; // no need for quotes
+    if (input.find_first_of("\n\r\"") == std::string::npos &&
+            input.find(separator) == std::string::npos ) return input; // no need for quotes
 
     size_t n = input.size();
     std::string result = "\"";
@@ -45,21 +46,25 @@ void RCsv::printProjectList(const RequestContext *req, const std::list<std::pair
 
     std::list<std::pair<std::string, std::string> >::const_iterator p;
     for (p=pList.begin(); p!=pList.end(); p++) {
-        req->printf("%s,%s\r\n", doubleQuoteCsv(p->first).c_str(), doubleQuoteCsv(p->second).c_str());
+        req->printf("%s,%s\r\n", doubleQuoteCsv(p->first, ",").c_str(), doubleQuoteCsv(p->second, ",").c_str());
     }
 }
 
-void RCsv::printIssueList(const RequestContext *req, std::vector<const Issue*> issueList, std::list<std::string> colspec)
+void RCsv::printIssueList(const RequestContext *req, std::vector<const Issue*> issueList,
+                          std::list<std::string> colspec, const char *separator)
 {
     req->printf("Content-Type: text/plain\r\n\r\n");
+
+    if (!separator || separator[0] == 0) separator = ","; // comma, for Comma-Separated Values
 
     // print names of columns
     std::list<std::string>::iterator colname;
     for (colname = colspec.begin(); colname != colspec.end(); colname++) {
         if (colname != colspec.begin()) req->printf(",");
-        req->printf("%s", doubleQuoteCsv(*colname).c_str());
+        req->printf("%s", doubleQuoteCsv(*colname, separator).c_str());
     }
     req->printf("\r\n");
+
 
     // list of issues
     std::vector<const Issue*>::const_iterator i;
@@ -67,12 +72,13 @@ void RCsv::printIssueList(const RequestContext *req, std::vector<const Issue*> i
 
         std::list<std::string>::iterator c;
         for (c = colspec.begin(); c != colspec.end(); c++) {
-            if (c != colspec.begin()) req->printf(",");
+            if (c != colspec.begin()) req->printf("%s", separator);
 
             std::string text;
             std::string column = *c;
 
             if (column == "id") text = (*i)->id;
+            else if (column == "p") text = (*i)->project;
             else if (column == "ctime") text = epochToString((*i)->ctime);
             else if (column == "mtime") text = epochToString((*i)->mtime);
             else {
@@ -83,7 +89,7 @@ void RCsv::printIssueList(const RequestContext *req, std::vector<const Issue*> i
                 if (p != properties.end()) text = toString(p->second);
             }
 
-            req->printf("%s", doubleQuoteCsv(text).c_str());
+            req->printf("%s", doubleQuoteCsv(text, separator).c_str());
         }
         req->printf("\r\n");
     }

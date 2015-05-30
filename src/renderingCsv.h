@@ -10,7 +10,8 @@
 class RCsv {
 public:
     static void printProjectList(const RequestContext *req, const std::list<std::pair<std::string, std::string> > &pList);
-    static void printIssueList(const RequestContext *req, std::vector<const Issue*> issueList, std::list<std::string> colspec);
+    static void printIssueList(const RequestContext *req, std::vector<const Issue*> issueList,
+                               std::list<std::string> colspec, const char *separator);
 };
 
 #endif
