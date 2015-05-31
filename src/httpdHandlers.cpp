@@ -1552,7 +1552,7 @@ void httpPushAttachedFile(const RequestContext *req, Project &p, const std::stri
 
 /** Handle the POST of a view
   *
-  * All user can post these as an advanced search (with no name).
+  * All users can post these as an advanced search (with no name).
   * But only admin users can post predefined views (with a name).
   */
 void httpPostView(const RequestContext *req, Project &p, const std::string &name, User u)
@@ -1619,7 +1619,7 @@ void httpPostView(const RequestContext *req, Project &p, const std::string &name
         } else if (key == "search") pv.search = value;
         else if (key == "filterin") { filterinPropname = value; filterValue = 0; }
         else if (key == "filterout") { filteroutPropname = value; filterValue = 0; }
-        else if (key == "filter_value") filterValue = value.c_str();
+        else if (0 == key.compare(0, strlen("filter_value"), "filter_value")) filterValue = value.c_str();
         else if (key == "sort_direction") sortDirection = value;
         else if (key == "sort_property") sortProperty = value;
         else if (key == "default" && value == "on") pv.isDefault = true;

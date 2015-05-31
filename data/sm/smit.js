@@ -342,7 +342,7 @@ function updateFilterValue(divObject, value) {
     var i = document.createElement('input');
     i.type = "text";
     i.value = value;
-    i.name = 'filter_value';
+    i.name = 'filter_value_' + randomString(5);
     i.setAttribute('list', 'datalist_'+selectedKey.value);
     divObject.appendChild(i);
 }
@@ -492,4 +492,10 @@ function addTag(name, label, display) {
 function addMoreTags(n) {
     // add n more tags on page
     for (var i=0; i<n; i++) addTag('', '', false);
+}
+function randomString(length) {
+    var chars = '0123456789abcdefghijklmnopqrstuvwxyz';
+    var result = '';
+    for (var i = length; i > 0; --i) result += chars[Math.round(Math.random() * (chars.length - 1))];
+    return result;
 }
