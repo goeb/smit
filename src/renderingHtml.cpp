@@ -1821,6 +1821,12 @@ void RHtml::printPageNewIssue(const ContextParameters &ctx)
 
 
 /** print form for adding a message / modifying the issue
+  *
+  * @param autofocus
+  *    Give focus to the summary field. Used mainly when creating a new issue.
+  *    (not used for existing issues, as it would force the browser to scroll
+  *    down to the summary field, and do not let the user read the top of
+  *    the page first)
   */
 void RHtml::printIssueForm(const ContextParameters &ctx, const Issue *issue, bool autofocus)
 {

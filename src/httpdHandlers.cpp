@@ -2222,7 +2222,7 @@ void httpPostEntry(const RequestContext *req, Project &pro, const std::string & 
   * /<p>/files/<id>/<name>  GET        user              get an attached file
   * /<p>/files/123          POST       user              push a file
   * /<p>/other/file         GET        user              any static file
-  * / * /issues               GET        user              issues of all projects
+  * / * /issues             GET        user              issues of all projects
   */
 
 int begin_request_handler(const RequestContext *req)
