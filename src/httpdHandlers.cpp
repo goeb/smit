@@ -1993,18 +1993,62 @@ void httpPushEntry(const RequestContext *req, Project &p, const std::string &iss
     }
 }
 
-/** Used for deleting an entry
-  * @param details
-  *     should be of the form: iid/eid/delete
+/**
   *
-  * @return
-  *     0, let Mongoose handle static file
-  *     1, do not.
+  * @param[out] vars
+  *     Associative array where the posted parameters get stored
+  *
+  * @param pathTmp
+  *     Path to a temporary directory where to store the uploaded files
+  *     If empty, the uploaded files should be ignored.
   */
-void httpDeleteEntry(const RequestContext *req, Project &p, const std::string &issueId,
-                     const std::string &entryId, User u)
+int parseFormRequest(const RequestContext *req, std::map<std::string, std::list<std::string> > &vars,
+                     const std::string &pathTmp)
 {
-    LOG_DEBUG("httpDeleteEntry: project=%s, issueId=%s, entryId=%s", p.getName().c_str(),
+    const char *multipart = "multipart/form-data";
+    const char *contentType = getContentType(req);
+    if (0 == strncmp(multipart, contentType, strlen(multipart))) {
+
+        // extract the boundary
+        const char *b = "boundary=";
+        const char *p = mg_strcasestr(contentType, b);
+        if (!p) {
+            LOG_ERROR("Missing boundary in multipart form data");
+            return -1;
+        }
+        p += strlen(b);
+        std::string boundary = p;
+        LOG_DEBUG("Boundary: %s", boundary.c_str());
+
+        std::string postData;
+        int rc = readMgreq(req, postData, MAX_SIZE_UPLOAD);
+        if (rc < 0) {
+            sendHttpHeader413(req, "You tried to upload too much data. Max is 10 MB.");
+            return -1;
+        }
+
+        // parseMultipartAndStoreUploadedFiles(postData, boundary, vars, pro);
+        // TODO parse the posted parameter
+
+    } else {
+        // other Content-Type
+        LOG_ERROR("Content-Type '%s' not supported", contentType);
+        sendHttpHeader400(req, "Bad Content-Type");
+        return -1;
+    }
+    return 0;
+}
+
+
+/** Handle a amend-entry request
+  *
+  * (formerly it was a delete)
+  *
+  */
+void httpAmendEntry(const RequestContext *req, Project &p, const std::string &issueId,
+                    const std::string &entryId, User u)
+{
+    LOG_DEBUG("httpAmendEntry: project=%s, issueId=%s, entryId=%s", p.getName().c_str(),
               issueId.c_str(), entryId.c_str());
 
     enum Role role = u.getRole(p.getName());
@@ -2013,10 +2057,20 @@ void httpDeleteEntry(const RequestContext *req, Project &p, const std::string &i
         return;
     }
 
-    int r = p.deleteEntry(entryId, u.username);
+    // Parse the request and Retrieve the message
+    std::map<std::string, std::list<std::string> > vars;
+    int r = parseFormRequest(req, vars, "");
+    if (r != 0) {
+        LOG_ERROR("httpAmendEntry: Could not parse request");
+        return;
+    }
+
+    std::string newMessage = getProperty(vars, K_MESSAGE);
+
+    r = p.amendEntry(entryId, u.username, newMessage);
     if (r < 0) {
         // failure
-        LOG_INFO("deleteEntry returned %d", r);
+        LOG_INFO("amendEntry returned %d", r);
         sendHttpHeader403(req);
 
     } else {
@@ -2106,6 +2160,7 @@ void cleanMultiselectProperties(const ProjectConfig &config, std::map<std::strin
     }
 }
 
+
 /** Handle the posting of an entry
   * If issueId is empty, then a new issue is created.
   */
@@ -2140,7 +2195,6 @@ void httpPostEntry(const RequestContext *req, Project &pro, const std::string & 
             return;
         }
 
-        std::string tmpDir = pro.getTmpDir();
         parseMultipartAndStoreUploadedFiles(postData, boundary, vars, pro);
 
     } else {
@@ -2150,7 +2204,7 @@ void httpPostEntry(const RequestContext *req, Project &pro, const std::string & 
         return;
     }
 
-   cleanMultiselectProperties(pro.getConfig(), vars);
+    cleanMultiselectProperties(pro.getConfig(), vars);
 
     std::string id = issueId;
     bool isNewIssue = false;
@@ -2315,10 +2369,11 @@ int begin_request_handler(const RequestContext *req)
         if      ( resource.empty()       && (method == "GET") ) httpGetProject(req, *p, user);
         else if ( (resource == "issues") && (method == "GET") && uri.empty() ) httpGetListOfIssues(req, *p, user);
         else if ( (resource == "issues") && (method == "POST") ) {
+            // /<p>/issues/<issue>/<entry> [/...]
             std::string issueId = popToken(uri, '/');
             std::string entryId = popToken(uri, '/');
             if (entryId.empty()) httpPostEntry(req, *p, issueId, user);
-            else if (uri == "delete") httpDeleteEntry(req, *p, issueId, entryId, user);
+            else if (uri == "message") httpAmendEntry(req, *p, issueId, entryId, user);
             else if (uri.empty()) httpPushEntry(req, *p, issueId, entryId, user);
             else return sendHttpHeader400(req, "");
 

@@ -1481,11 +1481,8 @@ int Project::deleteEntry(const std::string &entryId, const std::string &username
 {
     ScopeLocker scopeLocker(locker, LOCK_READ_WRITE);
 
-    std::map<std::string, Entry*>::iterator ite;
-    ite = entries.find(entryId);
-    if (ite == entries.end()) return -1;
-
-    Entry *e = ite->second;
+    Entry *e = getEntry(entryId);
+    if (!e) return -1;
 
     if (time(0) - e->ctime > DELETE_DELAY_S) return -2;
     else if (e->parent == K_PARENT_NULL) return -3;
@@ -1508,6 +1505,38 @@ int Project::deleteEntry(const std::string &entryId, const std::string &username
     r = storeRefIssue(e->issue->id, amendingEntry->id);
     if (r < 0) return r;
 
+    return 0;
+}
+
+/** Amend the message of an existing entry
+  *
+  * This creates a new entry that contains the amendment.
+  */
+int Project::amendEntry(const std::string &entryId, const std::string &username, const std::string &msg)
+{
+    LOCK_SCOPE(locker, LOCK_READ_WRITE);
+
+    Entry *e = getEntry(entryId);
+    if (!e) return -1;
+
+    if (time(0) - e->ctime > DELETE_DELAY_S) return -2;
+    else if (e->author != username) return -3;
+    else if (e->isAmending()) return -4; // one cannot amend an amending message
+
+    // ok, we can proceed
+    Entry *amendingEntry = e->issue->amendEntry(entryId, msg, username);
+    if (!amendingEntry) {
+        // should never happen
+        LOG_ERROR("amending entry: null");
+        return -5;
+    }
+
+    int r = addNewEntry(amendingEntry);
+    if (r != 0) return r;
+
+    // update latest entry of issue on disk
+    r = storeRefIssue(e->issue->id, amendingEntry->id);
+    if (r < 0) return r;
 
     return 0;
 }

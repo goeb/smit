@@ -54,6 +54,8 @@ public:
                   const std::string &user, const std::string &tmpPath);
 
     int deleteEntry(const std::string &entryId, const std::string &username);
+    int amendEntry(const std::string &entryId, const std::string &username, const std::string &msg);
+
     int getNumIssues() const;
 
     // methods for handling project

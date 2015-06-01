@@ -1819,6 +1819,45 @@ void RHtml::printPageNewIssue(const ContextParameters &ctx)
     vn.printPage();
 }
 
+void RHtml::printFormMessage(const ContextParameters &ctx, const std::string &contents)
+{
+    ctx.req->printf("<tr>\n");
+    ctx.req->printf("<td class=\"sm_issue_plabel sm_issue_plabel_message\" >%s: </td>\n",
+                    htmlEscape(_("Message")).c_str());
+    ctx.req->printf("<td colspan=\"3\">\n");
+    ctx.req->printf("<textarea class=\"sm_issue_pinput sm_issue_pinput_message\" placeholder=\"%s\" name=\"%s\" wrap=\"hard\" cols=\"80\">\n",
+                    _("Enter a message"), K_MESSAGE);
+    ctx.req->printf("%s", htmlEscape(contents).c_str());
+    ctx.req->printf("</textarea>\n");
+    ctx.req->printf("</td></tr>\n");
+
+    // check box "enable long lines"
+    ctx.req->printf("<tr><td></td>\n");
+    ctx.req->printf("<td class=\"sm_issue_longlines\" colspan=\"3\">\n");
+    ctx.req->printf("<label><input type=\"checkbox\" onclick=\"changeWrapping();\">\n");
+    ctx.req->printf("%s\n", _("Enable long lines"));
+    ctx.req->printf("</label></td></tr>\n");
+}
+
+void RHtml::printEditMessage(const ContextParameters &ctx, const Issue *issue,
+                             const std::string &oldMsg)
+{
+    if (!issue) {
+        LOG_ERROR("printEditMessage: Invalid null issue");
+        return;
+    }
+    if (ctx.userRole != ROLE_ADMIN && ctx.userRole != ROLE_RW) {
+        return;
+    }
+    ctx.req->printf("<form enctype=\"multipart/form-data\" method=\"post\"  class=\"sm_issue_form\">");
+    ctx.req->printf("<table class=\"sm_issue_properties\">");
+
+    printFormMessage(ctx, oldMsg);
+
+    ctx.req->printf("</table>\n");
+    ctx.req->printf("</form>");
+
+}
 
 /** print form for adding a message / modifying the issue
   *
@@ -1841,13 +1880,15 @@ void RHtml::printIssueForm(const ContextParameters &ctx, const Issue *issue, boo
     const ProjectConfig &pconfig = ctx.projectConfig;
 
     ctx.req->printf("<form enctype=\"multipart/form-data\" method=\"post\"  class=\"sm_issue_form\">");
-    // print the fields of the issue in a two-column table
 
     // The form is made over a table with 4 columns.
     // each row is made of 1 label, 1 input, 1 label, 1 input (4 columns)
     // except for the summary.
     // summary
     ctx.req->printf("<table class=\"sm_issue_properties\">");
+
+    // properties of the issue
+    // summary
     ctx.req->printf("<tr>\n");
     ctx.req->printf("<td class=\"sm_issue_plabel sm_issue_plabel_summary\">%s: </td>\n",
                     htmlEscape(pconfig.getLabelOfProperty("summary")).c_str());
@@ -1859,6 +1900,8 @@ void RHtml::printIssueForm(const ContextParameters &ctx, const Issue *issue, boo
     ctx.req->printf(">");
     ctx.req->printf("</td>\n");
     ctx.req->printf("</tr>\n");
+
+    // other properties
 
     int workingColumn = 1;
     const uint8_t MAX_COLUMNS = 2;
@@ -2008,22 +2051,10 @@ void RHtml::printIssueForm(const ContextParameters &ctx, const Issue *issue, boo
         ctx.req->printf("<td></td><td></td></tr>\n");
     }
 
+    // end of other properties
+
     // message
-    ctx.req->printf("<tr>\n");
-    ctx.req->printf("<td class=\"sm_issue_plabel sm_issue_plabel_message\" >%s: </td>\n",  htmlEscape(_("Message")).c_str());
-    ctx.req->printf("<td colspan=\"3\">\n");
-    ctx.req->printf("<textarea class=\"sm_issue_pinput sm_issue_pinput_message\" placeholder=\"%s\" name=\"%s\" wrap=\"hard\" cols=\"80\">\n",
-                    _("Enter a message"), K_MESSAGE);
-    ctx.req->printf("</textarea>\n");
-    ctx.req->printf("</td></tr>\n");
-
-    // check box "enable long lines"
-    ctx.req->printf("<tr><td></td>\n");
-    ctx.req->printf("<td class=\"sm_issue_longlines\" colspan=\"3\">\n");
-    ctx.req->printf("<label><input type=\"checkbox\" onclick=\"changeWrapping();\">\n");
-    ctx.req->printf("%s\n", _("Enable long lines"));
-    ctx.req->printf("</label></td></tr>\n");
-
+    printFormMessage(ctx, "");
 
     // add file upload input
     ctx.req->printf("<tr>\n");
@@ -2039,7 +2070,6 @@ void RHtml::printIssueForm(const ContextParameters &ctx, const Issue *issue, boo
     ctx.req->printf("</td></tr>\n");
 
     ctx.req->printf("</table>\n");
-
     ctx.req->printf("</form>");
 
 }
