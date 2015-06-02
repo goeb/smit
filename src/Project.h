@@ -53,8 +53,7 @@ public:
     int pushEntry(std::string &issueId, const std::string &entryId,
                   const std::string &user, const std::string &tmpPath);
 
-    int deleteEntry(const std::string &entryId, const std::string &username);
-    int amendEntry(const std::string &entryId, const std::string &username, const std::string &msg);
+    Entry *amendEntry(const std::string &entryId, const std::string &username, const std::string &msg);
 
     int getNumIssues() const;
 

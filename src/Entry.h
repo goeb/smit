@@ -40,19 +40,20 @@ public:
     long ctime; // creation time
     std::string author;
     PropertiesMap properties;
-    std::string serialize() const;
-    int getCtime() const;
-    std::string getMessage() const;
-    bool isAmending() const;
     // chainlist pointers
     struct Entry *next; // child
     struct Entry *prev; // parent
     Issue *issue;
+    std::list<std::string> amendments; // id of the entries that amend this entry
     std::set<std::string> tags;
-    Entry() : ctime(0), next(0), prev(0) {}
+
+    Entry() : ctime(0), next(0), prev(0), issue(0) {}
     static Entry *loadEntry(const std::string &path, const std::string &id, bool checkId=false);
     void setId();
-    std::list<std::string> amendments; // id of the entries that amend this entry
+    std::string serialize() const;
+    int getCtime() const;
+    std::string getMessage() const;
+    bool isAmending() const;
     inline std::string getSubpath() const { return Object::getSubpath(id); }
     static inline std::string getSubpath(const std::string identifier) { return Object::getSubpath(identifier); }
     static Entry *createNewEntry(const PropertiesMap &props, const std::string &author, const Entry *eParent);

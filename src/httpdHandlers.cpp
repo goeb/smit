@@ -1772,6 +1772,21 @@ int httpGetIssue(const RequestContext *req, Project &p, const std::string &issue
 
         if (format == RENDERING_TEXT) RText::printIssue(req, issue);
         else {
+
+            std::string q = req->getQueryString();
+            std::string amend = getFirstParamFromQueryString(q, "amend");
+            Entry *entryToBeAmended = 0;
+
+            if (!amend.empty()) {
+                // look for the entry in the entries of the issue
+                Entry *e = issue.first;
+                while (e) {
+                    if (e->id == amend) break;
+                    e = e->next;
+                }
+                entryToBeAmended = e;
+            }
+
             ContextParameters ctx = ContextParameters(req, u, p);
             std::string originView;
             int r = getFromCookie(req, QS_ORIGIN_VIEW, originView);
@@ -1782,7 +1797,7 @@ int httpGetIssue(const RequestContext *req, Project &p, const std::string &issue
             // (get/next use a redirection from a view, so the cookie will be set for these)
             req->printf("%s\r\n", getDeletedCookieString(QS_ORIGIN_VIEW).c_str());
             if (ctx.originView) LOG_DEBUG("originView=%s", ctx.originView);
-            RHtml::printPageIssue(ctx, issue);
+            RHtml::printPageIssue(ctx, issue, entryToBeAmended);
         }
     }
     return REQUEST_COMPLETED;
@@ -2039,51 +2054,6 @@ int parseFormRequest(const RequestContext *req, std::map<std::string, std::list<
     return 0;
 }
 
-
-/** Handle a amend-entry request
-  *
-  * (formerly it was a delete)
-  *
-  */
-void httpAmendEntry(const RequestContext *req, Project &p, const std::string &issueId,
-                    const std::string &entryId, User u)
-{
-    LOG_DEBUG("httpAmendEntry: project=%s, issueId=%s, entryId=%s", p.getName().c_str(),
-              issueId.c_str(), entryId.c_str());
-
-    enum Role role = u.getRole(p.getName());
-    if (role != ROLE_RW && role != ROLE_ADMIN) {
-        sendHttpHeader403(req);
-        return;
-    }
-
-    // Parse the request and Retrieve the message
-    std::map<std::string, std::list<std::string> > vars;
-    int r = parseFormRequest(req, vars, "");
-    if (r != 0) {
-        LOG_ERROR("httpAmendEntry: Could not parse request");
-        return;
-    }
-
-    std::string newMessage = getProperty(vars, K_MESSAGE);
-
-    r = p.amendEntry(entryId, u.username, newMessage);
-    if (r < 0) {
-        // failure
-        LOG_INFO("amendEntry returned %d", r);
-        sendHttpHeader403(req);
-
-    } else {
-        sendHttpHeader200(req);
-        req->printf("\r\n"); // no contents
-    }
-
-    return;
-}
-
-
-
-
 void parseQueryStringVar(const std::string &var, std::string &key, std::string &value) {
     size_t x = var.find('=');
     if (x != std::string::npos) {
@@ -2097,39 +2067,6 @@ void parseQueryStringVar(const std::string &var, std::string &key, std::string &
     key = urlDecode(key);
     value = urlDecode(value);
 }
-
-
-void parseQueryString(const std::string &queryString, std::map<std::string, std::list<std::string> > &vars)
-{
-    size_t n = queryString.size();
-    size_t i;
-    size_t offsetOfCurrentVar = 0;
-    for (i=0; i<n; i++) {
-        if ( (queryString[i] == '&') || (i == n-1) ) {
-            // param delimiter encountered or last character reached
-            std::string var;
-            size_t length;
-            if (queryString[i] == '&') length = i-offsetOfCurrentVar; // do not take the '&'
-            else length = i-offsetOfCurrentVar+1; // take the last char
-
-            var = queryString.substr(offsetOfCurrentVar, length);
-
-            std::string key, value;
-            parseQueryStringVar(var, key, value);
-            if (key.size() > 0) {
-                trimBlanks(value);
-                if (vars.count(key) == 0) {
-                    std::list<std::string> L;
-                    L.push_back(value);
-                    vars[key] = L;
-                } else vars[key].push_back(value);
-            }
-            offsetOfCurrentVar = i+1;
-        }
-    }
-    // append the latest parameter (if any)
-}
-
 
 /** Remove empty values for multiselect properties
   *
@@ -2166,8 +2103,8 @@ void cleanMultiselectProperties(const ProjectConfig &config, std::map<std::strin
   */
 void httpPostEntry(const RequestContext *req, Project &pro, const std::string & issueId, User u)
 {
-    enum Role r = u.getRole(pro.getName());
-    if (r != ROLE_RW && r != ROLE_ADMIN) {
+    enum Role role = u.getRole(pro.getName());
+    if (role != ROLE_RW && role != ROLE_ADMIN) {
         sendHttpHeader403(req);
         return;
     }
@@ -2204,35 +2141,49 @@ void httpPostEntry(const RequestContext *req, Project &pro, const std::string & 
         return;
     }
 
-    cleanMultiselectProperties(pro.getConfig(), vars);
-
-    std::string id = issueId;
     bool isNewIssue = false;
-    if (id == "new") {
-        id = "";
-        isNewIssue = true;
-    }
+    std::string id = issueId;
     Entry *entry = 0;
-    int status = pro.addEntry(vars, id, entry, u.username);
-    if (status < 0) {
-        // error
-        sendHttpHeader500(req, "Cannot add entry");
 
-    } else if (status > 0) {
-        // entry not added (beacuse it brings no change, etc.)
-        // HTTP redirect
-        std::string redirectUrl = "/" + pro.getUrlName() + "/issues/" + id;
-        sendHttpRedirect(req, redirectUrl.c_str(), 0);
+    std::string amendedEntry = getProperty(vars, K_AMEND);
+    int r = 0;
+    if (!amendedEntry.empty()) {
+        // this post is an amendment to an existing entry
+        std::string newMessage = getProperty(vars, K_MESSAGE);
+        entry = pro.amendEntry(amendedEntry, u.username, newMessage);
+        if (!entry) {
+            // failure
+            LOG_INFO("amendEntry returned %d", r);
+            sendHttpHeader403(req);
+        }
 
     } else {
-        // entry correctly added
+        // nominal post
+        cleanMultiselectProperties(pro.getConfig(), vars);
+
+        if (id == "new") {
+            id = "";
+            isNewIssue = true;
+        }
+        r = pro.addEntry(vars, id, entry, u.username);
+        if (r < 0) {
+            // error
+            sendHttpHeader500(req, "Cannot add entry");
+        }
+    }
+
+
+    if (r == 0) {
+        // entry correctly added or amended
 
 #if !defined(_WIN32)
         // launch the trigger, if any
         // launch the trigger only if a new entry was actually created
         if (entry && ! UserBase::isLocalUserInterface()) Trigger::notifyEntry(pro, entry, isNewIssue);
 #endif
+    }
 
+    if (r >= 0) {
         if (getFormat(req) == RENDERING_HTML) {
             // HTTP redirect
             std::string redirectUrl = "/" + pro.getUrlName() + "/issues/" + id;
@@ -2269,7 +2220,6 @@ void httpPostEntry(const RequestContext *req, Project &pro, const std::string & 
   * /<p>/issues             GET/POST   user              issues of the project / add new issue
   * /<p>/issues/new         GET        user              page with a form for submitting new issue
   * /<p>/issues/123         GET/POST   user              a particular issue: get all entries or add a new entry
-  * /<p>/issues/x/y/delete  POST       user              delete an entry y of issue x
   * /<p>/issues/x/y         POST       user              push an entry
   * /<p>/tags/x/y           POST       user              tag / untag an entry
   * /<p>/reload             POST       admin             reload project from disk storage
@@ -2373,7 +2323,6 @@ int begin_request_handler(const RequestContext *req)
             std::string issueId = popToken(uri, '/');
             std::string entryId = popToken(uri, '/');
             if (entryId.empty()) httpPostEntry(req, *p, issueId, user);
-            else if (uri == "message") httpAmendEntry(req, *p, issueId, entryId, user);
             else if (uri.empty()) httpPushEntry(req, *p, issueId, entryId, user);
             else return sendHttpHeader400(req, "");
 

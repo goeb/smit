@@ -41,7 +41,6 @@ struct Issue {
     int mtime; // modification time (the one of the last entry)
     std::map<std::string, std::list<std::string> > properties;
 
-    /** { association-name : [related issues] } */
     Issue() : first(0), latest(0), ctime(0), mtime(0) {}
 
     // the properties of the issue is the consolidation of all the properties

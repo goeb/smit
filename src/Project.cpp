@@ -1184,7 +1184,8 @@ int Project::storeEntry(const Entry *e)
   *
   * @return
   *     0 if no error. The entryId is fullfilled.
-  *       except if no entry was created due to no change.
+  *    >0 no entry was created due to no change.
+  *    -1 error
   */
 int Project::addEntry(PropertiesMap properties, const std::string &issueId,
                       Entry *&entry, std::string username)
@@ -1297,7 +1298,7 @@ int Project::addEntry(PropertiesMap properties, const std::string &issueId,
 
     // add the entry to the project
     int r = addNewEntry(e);
-    if (r != 0) return r; // already exists
+    if (r < 0) return r; // already exists
 
     // add the entry to the issue
     i->addEntry(e);
@@ -1332,7 +1333,7 @@ int Project::addNewEntry(Entry *e)
     int r = insertEntryInTable(e);
     if (r != 0) return r; // already exists
 
-    r = storeEntry(e);
+    r = storeEntry(e); // TODO move the storage before the insertion in RAM
 
     return r;
 }
@@ -1461,84 +1462,40 @@ std::map<std::string, PredefinedView> Project::getViews() const
 }
 
 
-
-/** Deleting an entry is only possible if:
-  *     - the deleting happens less than DELETE_DELAY_S seconds after creation of the entry
-  *     - this entry is the HEAD (has no child)
-  *     - this entry is not the first of the issue
-  *     - the author of the entry is the same as the given username
-  * @return
-  *     0 if success
-  *     <0 in case of error
-  *
-  * Uploaded files are not deleted.
-  * Temporarily, deleting an entry is the same as amending it with an empty message.
-  * TODO: remove deleteEntry() and replace by amendEntry()
-  *
-  */
-
-int Project::deleteEntry(const std::string &entryId, const std::string &username)
-{
-    ScopeLocker scopeLocker(locker, LOCK_READ_WRITE);
-
-    Entry *e = getEntry(entryId);
-    if (!e) return -1;
-
-    if (time(0) - e->ctime > DELETE_DELAY_S) return -2;
-    else if (e->parent == K_PARENT_NULL) return -3;
-    else if (e->author != username) return -4;
-    //else if (i->latest != e) return -7;
-    else if (e->isAmending()) return -8; // one cannot amend an amending message
-
-    // ok, we can proceed
-    Entry *amendingEntry = e->issue->amendEntry(entryId, "", username);
-    if (!amendingEntry) {
-        // should never happen
-        LOG_ERROR("amending entry: null");
-        return -1;
-    }
-
-    int r = addNewEntry(amendingEntry);
-    if (r != 0) return r;
-
-    // update latest entry of issue on disk
-    r = storeRefIssue(e->issue->id, amendingEntry->id);
-    if (r < 0) return r;
-
-    return 0;
-}
-
 /** Amend the message of an existing entry
   *
   * This creates a new entry that contains the amendment.
   */
-int Project::amendEntry(const std::string &entryId, const std::string &username, const std::string &msg)
+Entry *Project::amendEntry(const std::string &entryId, const std::string &username, const std::string &msg)
 {
     LOCK_SCOPE(locker, LOCK_READ_WRITE);
 
     Entry *e = getEntry(entryId);
-    if (!e) return -1;
+    if (!e) return 0;
 
-    if (time(0) - e->ctime > DELETE_DELAY_S) return -2;
-    else if (e->author != username) return -3;
-    else if (e->isAmending()) return -4; // one cannot amend an amending message
+    if (time(0) - e->ctime > DELETE_DELAY_S) return 0;
+    else if (e->author != username) return 0;
+    else if (e->isAmending()) return 0; // one cannot amend an amending message
 
     // ok, we can proceed
     Entry *amendingEntry = e->issue->amendEntry(entryId, msg, username);
     if (!amendingEntry) {
         // should never happen
         LOG_ERROR("amending entry: null");
-        return -5;
+        return 0;
     }
 
+    // in case of tuther error, we should delete the entry
+    // TODO (memory leak at the moment)
+
     int r = addNewEntry(amendingEntry);
-    if (r != 0) return r;
+    if (r != 0) return 0;
 
     // update latest entry of issue on disk
     r = storeRefIssue(e->issue->id, amendingEntry->id);
-    if (r < 0) return r;
+    if (r < 0) return 0;
 
-    return 0;
+    return amendingEntry;
 }
 
 

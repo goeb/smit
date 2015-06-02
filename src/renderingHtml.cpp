@@ -128,6 +128,7 @@ public:
     const std::list<User> *usersList;
     const Issue *currentIssue;
     const User *concernedUser;
+    const Entry *entryToBeAmended;
     const std::map<std::string, std::map<Role, std::set<std::string> > > *userRolesByProject;
 
     VariableNavigator(const std::string basename, const ContextParameters &context) : ctx(context) {
@@ -141,6 +142,7 @@ public:
         currentIssue = 0;
         userRolesByProject = 0;
         concernedUser = 0;
+        entryToBeAmended = 0;
 
         int n = loadProjectPage(ctx.req, ctx.project, basename, &buffer);
 
@@ -249,8 +251,10 @@ public:
 
             } else if (varname == K_SM_DIV_ISSUE_FORM) {
                 Issue issue;
-                if (!currentIssue)  currentIssue = &issue;
-                RHtml::printIssueForm(ctx, currentIssue, false);
+                if (!currentIssue) currentIssue = &issue; // set an empty issue
+
+                if (entryToBeAmended) RHtml::printEditMessage(ctx, currentIssue, *entryToBeAmended);
+                else RHtml::printIssueForm(ctx, currentIssue, false);
 
             } else if (varname == K_SM_DIV_PREDEFINED_VIEWS) {
                 RHtml::printLinksToPredefinedViews(ctx);
@@ -1781,10 +1785,11 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
 
 }
 
-void RHtml::printPageIssue(const ContextParameters &ctx, const Issue &issue)
+void RHtml::printPageIssue(const ContextParameters &ctx, const Issue &issue, const Entry *eToBeAmended)
 {
     VariableNavigator vn("issue.html", ctx);
     vn.currentIssue = &issue;
+    vn.entryToBeAmended = eToBeAmended;
     vn.printPage();
 
     // update the next/previous links
@@ -1840,7 +1845,7 @@ void RHtml::printFormMessage(const ContextParameters &ctx, const std::string &co
 }
 
 void RHtml::printEditMessage(const ContextParameters &ctx, const Issue *issue,
-                             const std::string &oldMsg)
+                             const Entry &eToBeAmended)
 {
     if (!issue) {
         LOG_ERROR("printEditMessage: Invalid null issue");
@@ -1849,10 +1854,18 @@ void RHtml::printEditMessage(const ContextParameters &ctx, const Issue *issue,
     if (ctx.userRole != ROLE_ADMIN && ctx.userRole != ROLE_RW) {
         return;
     }
+    ctx.req->printf("<div class=\"sm_amend\">%s: %s</div>", _("Amend Messsage"), urlEncode(eToBeAmended.id).c_str());
     ctx.req->printf("<form enctype=\"multipart/form-data\" method=\"post\"  class=\"sm_issue_form\">");
+    ctx.req->printf("<input type=\"hidden\" value=\"%s\" name=\"%s\">", urlEncode(eToBeAmended.id).c_str(), K_AMEND);
     ctx.req->printf("<table class=\"sm_issue_properties\">");
 
-    printFormMessage(ctx, oldMsg);
+    printFormMessage(ctx, eToBeAmended.getMessage());
+
+    ctx.req->printf("<tr><td></td>\n");
+    ctx.req->printf("<td colspan=\"3\">\n");
+    ctx.req->printf("<button onclick=\"previewMessage(); return false;\">%s</button>\n", htmlEscape(_("Preview")).c_str());
+    ctx.req->printf("<input type=\"submit\" value=\"%s\">\n", htmlEscape(_("Post")).c_str());
+    ctx.req->printf("</td></tr>\n");
 
     ctx.req->printf("</table>\n");
     ctx.req->printf("</form>");

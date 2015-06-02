@@ -60,12 +60,15 @@ public:
     static void printPageIssueAccrossProjects(const ContextParameters &ctx,
                                              std::vector<const Issue*> issues,
 											 std::list<std::string> colspec);
-    static void printPageIssue(const ContextParameters &ctx, const Issue &issue);
+    static void printPageIssue(const ContextParameters &ctx, const Issue &issue,
+                               const Entry *eTobeAmended);
+
     static void printPageNewIssue(const ContextParameters &ctx);
 
     static bool inList(const std::list<std::string> &listOfValues, const std::string &value);
     static void printFormMessage(const ContextParameters &ctx, const std::string &contents);
-    static void printEditMessage(const ContextParameters &ctx, const Issue *issue, const std::string &oldMsg);
+    static void printEditMessage(const ContextParameters &ctx, const Issue *issue,
+                                 const Entry &eToBeAmended);
     static void printIssueForm(const ContextParameters &ctx, const Issue *issue, bool autofocus);
     static void printPageSignin(const ContextParameters &ctx, const char *redirect);
 
