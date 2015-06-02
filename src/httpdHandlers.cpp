@@ -2155,7 +2155,8 @@ void httpPostEntry(const RequestContext *req, Project &pro, const std::string & 
             // failure
             LOG_INFO("amendEntry returned %d", r);
             sendHttpHeader403(req);
-        }
+            r = -1;
+        } else r = 0;
 
     } else {
         // nominal post

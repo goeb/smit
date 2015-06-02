@@ -249,7 +249,7 @@ a:link.sm_issues_sort_cumulative { color: #344; }
 a:visited.sm_issues_sort_cumulative { color: #344; }
 a.sm_issues_sort { }
 
-.sm_entry_delete, .sm_entry_delete form {
+.sm_entry_edit, .sm_entry_edit form {
     vertical-align: top;
     font-size: small;
     display: inline-block;

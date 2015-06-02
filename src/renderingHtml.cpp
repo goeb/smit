@@ -1645,15 +1645,17 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
         // conversion of date in javascript
         // document.write(new Date(%d)).toString());
 
-        // delete button
+        // edit button
         time_t delta = time(0) - ee.ctime;
-        if ( (delta < DELETE_DELAY_S) && (ee.author == ctx.user.username) && e->prev &&
+        if ( (delta < DELETE_DELAY_S) && (ee.author == ctx.user.username) &&
              (ctx.userRole == ROLE_ADMIN || ctx.userRole == ROLE_RW) ) {
             // entry was created less than 10 minutes ago, and by same user, and is latest in the issue
-            ctx.req->printf("<a href=\"#\" class=\"sm_entry_delete\" title=\"Delete this entry (at most %d minutes after posting)\" ", (DELETE_DELAY_S/60));
-            ctx.req->printf(" onclick=\"deleteEntry('/%s/issues/%s', '%s');return false;\">\n",
-                            ctx.getProject().getUrlName().c_str(), enquoteJs(issue.id).c_str(), enquoteJs(ee.id).c_str());
-            ctx.req->printf("&#10008; delete");
+            ctx.req->printf("<a href=\"%s/%s/issues/%s?amend=%s\" class=\"sm_entry_edit\" "
+                            "title=\"Edit this message (at most %d minutes after posting)\">",
+                            MongooseServerContext::getInstance().getUrlRewritingRoot().c_str(),
+                            ctx.getProject().getUrlName().c_str(), enquoteJs(issue.id).c_str(),
+                            enquoteJs(ee.id).c_str(), (DELETE_DELAY_S/60));
+            ctx.req->printf("&#10008; %s", _("edit"));
             ctx.req->printf("</a>\n");
         }
 

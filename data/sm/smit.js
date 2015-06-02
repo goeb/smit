@@ -37,15 +37,6 @@ function sm_deleteResource(redirect) {
         else window.location.href = redirect;
     }
 }
-function deleteEntry(urlPrefix, entryId) {
-    var r = confirm("Confirm delete?");
-    if (r==true) {
-        r = ajaxSend(urlPrefix + '/' + entryId + '/delete', 'POST');
-        if (r == 'ok') { // ok, remove entry from current HTML page
-            location.reload();
-        } else alert(r);
-    }
-}
 
 function tagEntry(urlPrefix, entryId, tagId) {
     var r = ajaxSend(urlPrefix + '/' + entryId + '/' + tagId, 'POST');
