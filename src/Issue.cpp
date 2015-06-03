@@ -156,7 +156,7 @@ Entry *Issue::amendEntry(const std::string &entryId, const std::string &newMsg, 
 
     addEntry(amendingEntry);
 
-    consolidateAmendment(amendingEntry);
+    consolidateAmendment(amendingEntry, true);
 
     return amendingEntry;
 }
@@ -181,7 +181,7 @@ void Issue::consolidateWithSingleEntry(Entry *e, bool overwrite) {
 
 /** Consolidate a possible amended entry
   */
-void Issue::consolidateAmendment(Entry *e)
+void Issue::consolidateAmendment(Entry *e, bool forward)
 {
     PropertiesIt p = e->properties.find(K_AMEND);
     if (p == e->properties.end()) return; // no amendment
@@ -192,13 +192,13 @@ void Issue::consolidateAmendment(Entry *e)
     std::string amendedEntryId = p->second.front();
 
     p = e->properties.find(K_MESSAGE);
-    std::string msg;
+    const std::string *newMsg = 0;
     if (p == e->properties.end()) return; // no amending message
     if (p->second.empty()) {
         LOG_ERROR("cannot consolidateAmendment with no message");
         // consider the message as empty
 
-    } else msg = p->second.front();
+    } else newMsg = &(p->second.front());
 
     // find this entry and modify its message
     Entry *amendedEntry = e;
@@ -209,10 +209,19 @@ void Issue::consolidateAmendment(Entry *e)
         LOG_ERROR("cannot consolidateAmendment for unfound entry '%s'", amendedEntryId.c_str());
         return;
     }
-    amendedEntry->properties[K_MESSAGE].clear();
-    amendedEntry->properties[K_MESSAGE].push_back(msg);
-    amendedEntry->amendments.push_back(e->id);
-
+    if (forward) {
+        // overwrite previous message
+        amendedEntry->amendments.push_back(e->id);
+        amendedEntry->message = newMsg;
+    } else {
+        // backward walk
+        if (amendedEntry->amendments.empty()) {
+            // only update the message on the last amendment
+            // (the first here because we walk backward)
+            amendedEntry->message = newMsg;
+        }
+        amendedEntry->amendments.insert(amendedEntry->amendments.begin(), e->id);
+    }
 }
 
 /** Consolidate an issue by accumulating all its entries
@@ -241,7 +250,7 @@ void Issue::consolidate()
         // (in order to have only most recent properties)
 
         consolidateWithSingleEntry(e, false); // do not overwrite as we move from most recent to oldest
-        consolidateAmendment(e);
+        consolidateAmendment(e, false);
         ctime = e->ctime; // the oldest entry will take precedence for ctime
         e = e->prev;
     }

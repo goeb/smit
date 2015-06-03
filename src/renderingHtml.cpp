@@ -1655,7 +1655,7 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
                             MongooseServerContext::getInstance().getUrlRewritingRoot().c_str(),
                             ctx.getProject().getUrlName().c_str(), enquoteJs(issue.id).c_str(),
                             enquoteJs(ee.id).c_str(), (DELETE_DELAY_S/60));
-            ctx.req->printf("&#10008; %s", _("edit"));
+            ctx.req->printf("&#9998; %s", _("edit"));
             ctx.req->printf("</a>\n");
         }
 

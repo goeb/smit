@@ -728,7 +728,7 @@ int pullProject(const PullContext &pullCtx, Project &p)
   * - pull entries
   * - pull files
   *
-  * Things not pulled: tags, views, project config, files in html, public, etc.
+  * Things not pulled: tags, files in html, public,...
   */
 int pullProjects(const PullContext &pullCtx)
 {

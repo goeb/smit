@@ -38,6 +38,8 @@
 #include "stringTools.h"
 #include "mg_win32.h"
 
+const std::string Entry::EMPTY_MESSAGE("");
+
 
 /** Load an entry from a file
   *
@@ -106,14 +108,14 @@ Entry *Entry::loadEntry(const std::string &path, const std::string &id, bool che
         }
     }
 
-
+    e->updateMessage();
     return e;
 }
 
 
-std::string Entry::getMessage() const
+const std::string &Entry::getMessage() const
 {
-    return getProperty(properties, K_MESSAGE);
+    return *message;
 }
 
 bool Entry::isAmending() const
@@ -135,6 +137,13 @@ void Entry::setId()
     id = getSha1(data);
 }
 
+void Entry::updateMessage()
+{
+    // update pointer to message
+    std::map<std::string, std::list<std::string> >::const_iterator t = properties.find(K_MESSAGE);
+    if (t != properties.end() && (t->second.size()>0) ) message = &(t->second.front());
+    else message = &EMPTY_MESSAGE;
+}
 
 Entry *Entry::createNewEntry(const PropertiesMap &props, const std::string &author, const Entry *eParent)
 {
@@ -142,6 +151,8 @@ Entry *Entry::createNewEntry(const PropertiesMap &props, const std::string &auth
     e->properties = props;
     e->author = author;
     e->ctime = time(0);
+
+    e->updateMessage();
 
     if (eParent) e->parent = eParent->id;
     else e->parent = K_PARENT_NULL;

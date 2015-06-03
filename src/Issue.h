@@ -51,7 +51,7 @@ struct Issue {
 
     void consolidate();
     void consolidateWithSingleEntry(Entry *e, bool overwrite);
-    void consolidateAmendment(Entry *e);
+    void consolidateAmendment(Entry *e, bool forward);
     bool searchFullText(const char *text) const;
     int getNumberOfTaggedIEntries(const std::string &tagId) const;
     Entry *getEntry(const std::string id);

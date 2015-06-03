@@ -40,19 +40,31 @@ public:
     long ctime; // creation time
     std::string author;
     PropertiesMap properties;
+    Issue *issue;
+
+    // mutable members (they may be modified when a user posts another entry)
     // chainlist pointers
     struct Entry *next; // child
     struct Entry *prev; // parent
-    Issue *issue;
     std::list<std::string> amendments; // id of the entries that amend this entry
     std::set<std::string> tags;
 
-    Entry() : ctime(0), next(0), prev(0), issue(0) {}
+    /** The member "message" points to :
+      * - either null if no message
+      * - or this->properties[K_MESSAGE]
+      * - or to the message of the latest amending entry
+      */
+    const std::string *message;
+    static const std::string EMPTY_MESSAGE;
+
+    // methods
+    Entry() : ctime(0), issue(0), next(0), prev(0), message(0) {}
     static Entry *loadEntry(const std::string &path, const std::string &id, bool checkId=false);
     void setId();
+    void updateMessage();
     std::string serialize() const;
     int getCtime() const;
-    std::string getMessage() const;
+    const std::string &getMessage() const;
     bool isAmending() const;
     inline std::string getSubpath() const { return Object::getSubpath(id); }
     static inline std::string getSubpath(const std::string identifier) { return Object::getSubpath(identifier); }
