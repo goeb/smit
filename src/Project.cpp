@@ -516,14 +516,6 @@ int Project::createProjectFiles(const std::string &repositoryPath, const std::st
         return -1;
     }
 
-    // create directory 'tags'
-    subpath = newProjectPath + '/' + PATH_TAGS;
-    r = mkdir(subpath);
-    if (r != 0) {
-        LOG_ERROR("Could not create directory '%s': %s", subpath.c_str(), strerror(errno));
-        return -1;
-    }
-
     // create directory 'templates'
     subpath = newProjectPath + "/" PATH_TEMPLATES;
     r = mkdir(subpath);
