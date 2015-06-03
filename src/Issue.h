@@ -35,13 +35,15 @@ struct Issue {
     std::string id; // same as the first entry
     std::string path; // path of the directory where the issue is stored
     Entry *first; // the first entry
-    Entry *latest; // the latest entry
     std::string project; // name of the project
     int ctime; // creation time (the one of the first entry)
+
+    // mutable members, that may be modified when a user posts an entry
     int mtime; // modification time (the one of the last entry)
     std::map<std::string, std::list<std::string> > properties;
+    Entry *latest; // the latest entry
 
-    Issue() : first(0), latest(0), ctime(0), mtime(0) {}
+    Issue() : first(0), ctime(0), mtime(0), latest(0) {}
 
     // the properties of the issue is the consolidation of all the properties
     // of its entries. For a given key, the most recent value has priority.
@@ -54,7 +56,6 @@ struct Issue {
     void consolidateAmendment(Entry *e, bool forward);
     bool searchFullText(const char *text) const;
     int getNumberOfTaggedIEntries(const std::string &tagId) const;
-    Entry *getEntry(const std::string id);
 
     void addEntryInTable(Entry *e);
     void addEntry(Entry *e);

@@ -42,7 +42,7 @@ public:
     PropertiesMap properties;
     Issue *issue;
 
-    // mutable members (they may be modified when a user posts another entry)
+    // mutable members, that may be modified when a user posts another entry
     // chainlist pointers
     struct Entry *next; // child
     struct Entry *prev; // parent
