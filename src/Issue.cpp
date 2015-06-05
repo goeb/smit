@@ -203,8 +203,8 @@ void Issue::consolidateAmendment(Entry *e)
         return;
     }
 
+    amendments[amendedEntry->id].push_back(e->id);
     // overwrite previous message
-    amendedEntry->amendments.push_back(e->id);
     amendedEntry->setMessage(newMsg);
 }
 

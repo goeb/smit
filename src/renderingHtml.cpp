@@ -1665,12 +1665,15 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
                         urlEncode(ee.id).c_str(), _("raw"));
         // link to possible amendments
         int i = 1;
-        std::list<std::string>::const_iterator a;
-        FOREACH(a, ee.amendments) {
-            ctx.req->printf(", <a href=\"/%s/" RESOURCE_FILES "/%s\" class=\"sm_entry_raw\">%s%d</a>",
-                            ctx.getProject().getUrlName().c_str(),
-                            urlEncode(*a).c_str(), _("amend"), i);
-            i++;
+        std::map<std::string, std::list<std::string> >::const_iterator as = issue.amendments.find(ee.id);
+        if (as != issue.amendments.end()) {
+            std::list<std::string>::const_iterator a;
+            FOREACH(a, as->second) {
+                ctx.req->printf(", <a href=\"/%s/" RESOURCE_FILES "/%s\" class=\"sm_entry_raw\">%s%d</a>",
+                                ctx.getProject().getUrlName().c_str(),
+                                urlEncode(*a).c_str(), _("amend"), i);
+                i++;
+            }
         }
         ctx.req->printf(")");
 

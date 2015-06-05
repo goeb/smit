@@ -64,7 +64,6 @@ public:
     inline void setMessage(const std::string *msg) { message = msg; }
 
 // TODO move this to Issue::
-    std::list<std::string> amendments; // id of the entries that amend this entry
     std::set<std::string> tags;
 
 private:

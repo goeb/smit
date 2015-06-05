@@ -42,6 +42,7 @@ struct Issue {
     int mtime; // modification time (the one of the last entry)
     std::map<std::string, std::list<std::string> > properties;
     Entry *latest; // the latest entry
+    std::map<std::string, std::list<std::string> > amendments; // key: amended entry-id, value: amending entries
 
     Issue() : first(0), ctime(0), mtime(0), latest(0) {}
 
