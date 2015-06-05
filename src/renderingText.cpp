@@ -74,11 +74,10 @@ void RText::printIssue(const RequestContext *req, const Issue &issue)
 {
     LOG_DEBUG("RText::printIssue...");
     req->printf("Content-Type: text/plain\r\n\r\n");
-    Entry *e = issue.latest;
-    while (e && e->prev) e = e->prev; // go to the first one
+    Entry *e = issue.first;
     while (e) {
         req->printf("%s\n", e->id.c_str());
-        e = e->next;
+        e = e->getNext();
     }
 }
 

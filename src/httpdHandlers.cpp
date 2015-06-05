@@ -1763,7 +1763,7 @@ int httpGetIssue(const RequestContext *req, Project &p, const std::string &issue
 
         while (e) {
            req->printf("%s\n", e->id.c_str());
-           e = e->next;
+           e = e->getNext();
         }
 
     } else {
@@ -1782,7 +1782,7 @@ int httpGetIssue(const RequestContext *req, Project &p, const std::string &issue
                 Entry *e = issue.first;
                 while (e) {
                     if (e->id == amend) break;
-                    e = e->next;
+                    e = e->getNext();
                 }
                 entryToBeAmended = e;
             }

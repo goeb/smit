@@ -373,17 +373,17 @@ void handleConflictOnEntries(const PullContext &pullCtx, Project &p,
     std::string commonParent = conflictingLocalEntry->parent;
     // look for this parent in the remote issue
     Entry *re = remoteIssue.first;
-    while (re && re->id != commonParent) re = re->next;
+    while (re && re->id != commonParent) re = re->getNext();
     if (!re) {
         LOG_ERROR("Cannot find remote common parent in locally downloaded issue: %s", commonParent.c_str());
         LOG_ERROR("Abort.");
         exit(1);
     }
     Issue remoteConflictingIssuePart;
-    re = re->next; // start with the first conflicting entry
+    re = re->getNext(); // start with the first conflicting entry
     while (re) {
-        remoteConflictingIssuePart.consolidateWithSingleEntry(re, true);
-        re = re->next;
+        remoteConflictingIssuePart.consolidateWithSingleEntry(re);
+        re = re->getNext();
     }
     // at this point, remoteConflictingIssuePart contains the conflicting remote part of the issue
 
@@ -392,7 +392,7 @@ void handleConflictOnEntries(const PullContext &pullCtx, Project &p,
     while (conflictingLocalEntry) {
         Entry *e = mergeEntry(conflictingLocalEntry, remoteIssue, remoteConflictingIssuePart, pullCtx.mergeStrategy);
         if (e) mergingEntries.push_back(e);
-        conflictingLocalEntry = conflictingLocalEntry->next;
+        conflictingLocalEntry = conflictingLocalEntry->getNext();
     }
     // store to disk
     // The storage is done after all merging is complete
@@ -585,8 +585,8 @@ int pullIssue(const PullContext &pullCtx, Project &p, const std::string &remoteI
             }
 
             // move the local entry pointer forward, except if already at the end
-            localEntry = localEntry->next;
-            remoteEntry = remoteEntry->next;
+            localEntry = localEntry->getNext();
+            remoteEntry = remoteEntry->getNext();
         }
     }
 
@@ -1441,7 +1441,7 @@ int pushIssue(const PullContext &pushCtx, Project &project, Issue localIssue)
                 }
                 remoteEntryIt++;
             }
-            localEntry = localEntry->next;
+            localEntry = localEntry->getNext();
         }
     }
 
@@ -1449,7 +1449,7 @@ int pushIssue(const PullContext &pushCtx, Project &project, Issue localIssue)
     const Entry *e = localIssue.first;
     while (e) {
         pushAttachedFiles(pushCtx, project, *e);
-        e = e->next;
+        e = e->getNext();
     }
 
 

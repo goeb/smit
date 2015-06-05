@@ -63,10 +63,7 @@ void Issue::addEntryInTable(Entry *e)
     // update the chain list of entries
     if (!first) first = e;
 
-    e->prev = latest;
-    if (latest) {
-        latest->next = e;
-    }
+    if (latest) latest->append(e);
     latest = e;
 
     e->issue = this;
@@ -83,7 +80,7 @@ void Issue::addEntry(Entry *e)
     addEntryInTable(e);
 
     // consolidate the issue
-    consolidateWithSingleEntry(e, true);
+    consolidateWithSingleEntry(e);
 }
 
 /** Insert entry before the latest entry
@@ -93,13 +90,13 @@ void Issue::addEntry(Entry *e)
   */
 void Issue::insertEntry(Entry* e)
 {
+    if (!e) {
+        LOG_ERROR("Issue::insertEntry: e=null");
+        return;
+    }
     if (!latest) latest = e;
 
-    if (first) {
-        // insert before the first
-        first->prev = e;
-        e->next = first;
-    }
+    if (first) e->append(first); // insert before the first
 
     first = e;
     e->issue = this;
@@ -130,7 +127,7 @@ Issue *Issue::load(const std::string &objectsDir, const std::string &latestEntry
         Entry *e = issue->first;
         while (e) {
             Entry *tobeDeleted = e;
-            e = e->next;
+            e = e->getNext();
             delete tobeDeleted;
         }
         delete issue;
@@ -156,7 +153,7 @@ Entry *Issue::amendEntry(const std::string &entryId, const std::string &newMsg, 
 
     addEntry(amendingEntry);
 
-    consolidateAmendment(amendingEntry, true);
+    consolidateAmendment(amendingEntry);
 
     return amendingEntry;
 }
@@ -164,24 +161,20 @@ Entry *Issue::amendEntry(const std::string &entryId, const std::string &newMsg, 
 
 
 /** Copy properties of an entry to an issue.
-  * If overwrite == false, then an already existing property in the
-  * issue will not be overwritten.
   */
-void Issue::consolidateWithSingleEntry(Entry *e, bool overwrite) {
+void Issue::consolidateWithSingleEntry(Entry *e) {
     std::map<std::string, std::list<std::string> >::iterator p;
     FOREACH(p, e->properties) {
         if (p->first.size() && p->first[0] == '+') continue; // do not consolidate these (+file, +message, etc.)
-        if (overwrite || (properties.count(p->first) == 0) ) {
-            properties[p->first] = p->second;
-        }
+        properties[p->first] = p->second;
     }
     // update also mtime of the issue
-    if (mtime == 0 || overwrite) mtime = e->ctime;
+    mtime = e->ctime;
 }
 
 /** Consolidate a possible amended entry
   */
-void Issue::consolidateAmendment(Entry *e, bool forward)
+void Issue::consolidateAmendment(Entry *e)
 {
     PropertiesIt p = e->properties.find(K_AMEND);
     if (p == e->properties.end()) return; // no amendment
@@ -202,26 +195,17 @@ void Issue::consolidateAmendment(Entry *e, bool forward)
 
     // find this entry and modify its message
     Entry *amendedEntry = e;
-    while ((amendedEntry = amendedEntry->prev)) {
+    while ((amendedEntry = amendedEntry->getPrev())) {
         if (amendedEntry->id == amendedEntryId) break;
     }
     if (!amendedEntry) {
         LOG_ERROR("cannot consolidateAmendment for unfound entry '%s'", amendedEntryId.c_str());
         return;
     }
-    if (forward) {
-        // overwrite previous message
-        amendedEntry->amendments.push_back(e->id);
-        amendedEntry->message = newMsg;
-    } else {
-        // backward walk
-        if (amendedEntry->amendments.empty()) {
-            // only update the message on the last amendment
-            // (the first here because we walk backward)
-            amendedEntry->message = newMsg;
-        }
-        amendedEntry->amendments.insert(amendedEntry->amendments.begin(), e->id);
-    }
+
+    // overwrite previous message
+    amendedEntry->amendments.push_back(e->id);
+    amendedEntry->setMessage(newMsg);
 }
 
 /** Consolidate an issue by accumulating all its entries
@@ -242,17 +226,17 @@ void Issue::consolidate()
     // this is especially necessary when consolidating after a deleted entry
     properties.clear();
 
-    Entry *e = latest;
+    Entry *e = first;
     // the entries are walked through backwards (from most recent to oldest)
     while (e) {
         // for each property of the parent,
         // create the same property in the issue, if not already existing
         // (in order to have only most recent properties)
 
-        consolidateWithSingleEntry(e, false); // do not overwrite as we move from most recent to oldest
-        consolidateAmendment(e, false);
+        consolidateWithSingleEntry(e); // do not overwrite as we move from most recent to oldest
+        consolidateAmendment(e);
         ctime = e->ctime; // the oldest entry will take precedence for ctime
-        e = e->prev;
+        e = e->getNext();
     }
 }
 
@@ -463,7 +447,7 @@ bool Issue::searchFullText(const char *text) const
     }
 
     // look through the entries
-    Entry *e = latest;
+    Entry *e = first;
     while (e) {
         if (mg_strcasestr(e->getMessage().c_str(), text)) return true; // found
 
@@ -479,7 +463,7 @@ bool Issue::searchFullText(const char *text) const
         // look at the author
         if (mg_strcasestr(e->author.c_str(), text)) return true; // found
 
-        e = e->prev;
+        e = e->getNext();
     }
 
     return false; // text not found
@@ -488,11 +472,11 @@ bool Issue::searchFullText(const char *text) const
 
 int Issue::getNumberOfTaggedIEntries(const std::string &tagId) const
 {
-    Entry *e = latest;
+    Entry *e = first;
     int n = 0;
     while (e) {
         if (e->tags.find(tagId) != e->tags.end()) n++;
-        e = e->prev;
+        e = e->getNext();
     }
     return n;
 }

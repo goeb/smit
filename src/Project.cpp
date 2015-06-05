@@ -229,7 +229,7 @@ int Project::loadIssues()
                 // maybe 2 issues pointing to the same first entry?
                 LOG_ERROR("Cannot load issue %s", issueId.c_str());
             }
-            e = e->prev;
+            e = e->getPrev();
         }
 
         // update the maximum id

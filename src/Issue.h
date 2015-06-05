@@ -52,8 +52,8 @@ struct Issue {
     bool isInFilter(const std::map<std::string, std::list<std::string> > &filter) const;
 
     void consolidate();
-    void consolidateWithSingleEntry(Entry *e, bool overwrite);
-    void consolidateAmendment(Entry *e, bool forward);
+    void consolidateWithSingleEntry(Entry *e);
+    void consolidateAmendment(Entry *e);
     bool searchFullText(const char *text) const;
     int getNumberOfTaggedIEntries(const std::string &tagId) const;
 

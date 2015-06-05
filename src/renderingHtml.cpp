@@ -1603,12 +1603,11 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
 
     // entries
     // -------------------------------------------------
-    Entry *e = issue.latest;
-    while (e && e->prev) e = e->prev; // go to the first one
+    Entry *e = issue.first;
     while (e) {
         Entry ee = *e;
 
-        if (!e->next) {
+        if (!e->getNext()) {
             // latest entry. Add an anchor.
             ctx.req->printf("<span id=\"sm_last_entry\"></span>");
         }
@@ -1780,7 +1779,7 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
 
         ctx.req->printf("</div>\n"); // end entry
 
-        e = e->next;
+        e = e->getNext();
     } // end of entries
 
     ctx.req->printf("</div>\n");

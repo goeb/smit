@@ -42,20 +42,6 @@ public:
     PropertiesMap properties;
     Issue *issue;
 
-    // mutable members, that may be modified when a user posts another entry
-    // chainlist pointers
-    struct Entry *next; // child
-    struct Entry *prev; // parent
-    std::list<std::string> amendments; // id of the entries that amend this entry
-    std::set<std::string> tags;
-
-    /** The member "message" points to :
-      * - either null if no message
-      * - or this->properties[K_MESSAGE]
-      * - or to the message of the latest amending entry
-      */
-    const std::string *message;
-    static const std::string EMPTY_MESSAGE;
 
     // methods
     Entry() : ctime(0), issue(0), next(0), prev(0), message(0) {}
@@ -69,6 +55,31 @@ public:
     inline std::string getSubpath() const { return Object::getSubpath(id); }
     static inline std::string getSubpath(const std::string identifier) { return Object::getSubpath(identifier); }
     static Entry *createNewEntry(const PropertiesMap &props, const std::string &author, const Entry *eParent);
+
+    // methods managing the linked list
+    void append(Entry *e);
+    inline Entry *getNext() const { return next; } // TODO use std::atomic to make it thread-safe for reading
+    inline Entry *getPrev() const { return prev; }
+    /** set a message */ // TODO use std::atomic to make it thread-safe for reading
+    inline void setMessage(const std::string *msg) { message = msg; }
+
+// TODO move this to Issue::
+    std::list<std::string> amendments; // id of the entries that amend this entry
+    std::set<std::string> tags;
+
+private:
+    // mutable members, that may be modified when a user posts another entry
+    // chainlist pointers
+    struct Entry *next; // child
+    struct Entry *prev; // parent
+
+    /** The member "message" points to :
+      * - either null if no message
+      * - or this->properties[K_MESSAGE]
+      * - or to the message of the latest amending entry
+      */
+    const std::string *message;
+    static const std::string EMPTY_MESSAGE;
 
 };
 

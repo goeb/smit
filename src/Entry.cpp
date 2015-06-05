@@ -162,6 +162,18 @@ Entry *Entry::createNewEntry(const PropertiesMap &props, const std::string &auth
     return e;
 }
 
+/** Append an entry after this
+  *
+  * This ensures the following concurrent access protection:
+  * - other threads can safely read the entries linked list
+  * - other threads that modify the linked list must use a mutex
+  */
+void Entry::append(Entry *e)
+{
+    e->prev = this;
+    next = e;
+}
+
 std::string Entry::serialize() const
 {
     std::ostringstream s;

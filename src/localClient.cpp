@@ -77,8 +77,7 @@ void printProperties(const Issue &i)
 
 void printMessages(const Issue &i, int printMode)
 {
-    const Entry *e = i.latest;
-    while (e && e->prev) e = e->prev;
+    const Entry *e = i.first;
     while (e) {
         bool doPrint = false; // used to know ifn the header must be printed
         std::string msg = e->getMessage();
@@ -129,7 +128,7 @@ void printMessages(const Issue &i, int printMode)
                 }
             }
         }
-        e = e->next;
+        e = e->getNext();
     }
 }
 
