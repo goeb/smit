@@ -1421,7 +1421,8 @@ bool isImage(const std::string &filename)
 void RHtml::printIssueSummary(const ContextParameters &ctx, const Issue &issue)
 {
     ctx.req->printf("<div class=\"sm_issue_header\">\n");
-    ctx.req->printf("<span class=\"sm_issue_id\">%s</span>\n", htmlEscape(issue.id).c_str());
+    ctx.req->printf("<a href=\"%s\" class=\"sm_issue_id\">%s</a>\n", htmlEscape(issue.id).c_str(),
+            htmlEscape(issue.id).c_str());
     ctx.req->printf("<span class=\"sm_issue_summary\">%s</span>\n", htmlEscape(issue.getSummary()).c_str());
     ctx.req->printf("</div>\n");
 
