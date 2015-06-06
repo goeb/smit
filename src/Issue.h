@@ -43,6 +43,7 @@ struct Issue {
     std::map<std::string, std::list<std::string> > properties;
     Entry *latest; // the latest entry
     std::map<std::string, std::list<std::string> > amendments; // key: amended entry-id, value: amending entries
+    std::map<std::string, std::set<std::string> > tags; // key: entry-id, value: tags
 
     Issue() : first(0), ctime(0), mtime(0), latest(0) {}
 
@@ -56,7 +57,9 @@ struct Issue {
     void consolidateWithSingleEntry(Entry *e);
     void consolidateAmendment(Entry *e);
     bool searchFullText(const char *text) const;
-    int getNumberOfTaggedIEntries(const std::string &tagId) const;
+    int getNumberOfTaggedIEntries(const std::string &tagname) const;
+    void toggleTag(const std::string &entryId, const std::string &tagname);
+    bool hasTag(const std::string &entryId, const std::string &tagname) const;
 
     void addEntryInTable(Entry *e);
     void addEntry(Entry *e);

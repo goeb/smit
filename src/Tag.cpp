@@ -57,3 +57,4 @@ Tag *Tag::load(const std::string &path, const std::string &id)
     tag->id = id;
     return tag;
 }
+

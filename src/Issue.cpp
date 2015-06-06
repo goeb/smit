@@ -470,15 +470,38 @@ bool Issue::searchFullText(const char *text) const
 
 }
 
-int Issue::getNumberOfTaggedIEntries(const std::string &tagId) const
+int Issue::getNumberOfTaggedIEntries(const std::string &tagname) const
 {
-    Entry *e = first;
     int n = 0;
-    while (e) {
-        if (e->tags.find(tagId) != e->tags.end()) n++;
-        e = e->getNext();
+    std::map<std::string, std::set<std::string> >::const_iterator tit;
+    FOREACH(tit, tags) {
+        n += tit->second.count(tagname);
     }
     return n;
 }
 
 
+void Issue::toggleTag(const std::string &entryId, const std::string &tagname)
+{
+    bool hasTag = false;
+    std::map<std::string, std::set<std::string> >::iterator tit = tags.find(entryId);
+    if (tit != tags.end()) {
+        std::set<std::string>::iterator tagit = tit->second.find(tagname);
+        if (tagit != tit->second.end()) {
+            hasTag = true;
+            tit->second.erase(tagit);
+            if (tit->second.empty()) tags.erase(entryId); // no more tag for this entry
+        }
+    }
+    if (!hasTag) tags[entryId].insert(tagname);
+}
+bool Issue::hasTag(const std::string &entryId, const std::string &tagname) const
+{
+    std::map<std::string, std::set<std::string> >::const_iterator tit = tags.find(entryId);
+    if (tit == tags.end()) return false;
+
+    std::set<std::string>::const_iterator tagit = tit->second.find(tagname);
+    if (tagit == tit->second.end()) return false;
+
+    return true;
+}

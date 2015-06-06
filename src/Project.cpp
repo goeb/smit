@@ -578,48 +578,45 @@ int Project::toggleTag(const std::string &entryId, const std::string &tagname, c
         // entry not found
         LOG_DEBUG("Entry not found: %s", entryId.c_str());
         return -1;
-
-    } else {
-
-        Tag tag;
-        tag.author = author;
-        tag.ctime = time(0);
-        if (latestTagId.empty()) latestTagId = K_PARENT_NULL;
-        else tag.parent = latestTagId;
-        tag.entryId = entryId;
-        tag.tagName = tagname;
-        std::string tagContents = tag.serialize();
-        tag.id = getSha1(tagContents);
-
-        // store the tag object to persistent storage
-        std::string tagSubdir = getObjectsDir() + "/" + Object::getSubdir(tag.id);
-        mkdir(tagSubdir);
-        std::string objectPath = getObjectsDir() + "/" + Object::getSubpath(tag.id);
-        if (fileExists(objectPath)) {
-            LOG_ERROR("Cannot set tag, file exists: %s", objectPath.c_str());
-            return -1;
-        }
-        int r = writeToFile(objectPath, tagContents);
-        if (r != 0) {
-            LOG_ERROR("Cannot set tag '%s': %s", objectPath.c_str(), STRERROR(errno));
-            return -1;
-        }
-
-        // store the refs/tags file
-        std::string tagRef = getPath() + "/" + PATH_TAGS;
-        r = writeToFile(tagRef, tag.id);
-
-        // update latestTagId
-        latestTagId = tag.id;
-
-        // invert the tag in RAM
-        std::set<std::string>::iterator tagit = e->tags.find(tagname);
-        if (tagit == e->tags.end()) e->tags.insert(tagname);
-        else e->tags.erase(tagit);
-
-        return 0;
     }
+
+    Tag tag;
+    tag.author = author;
+    tag.ctime = time(0);
+    if (latestTagId.empty()) latestTagId = K_PARENT_NULL;
+    else tag.parent = latestTagId;
+    tag.entryId = entryId;
+    tag.tagName = tagname;
+    std::string tagContents = tag.serialize();
+    tag.id = getSha1(tagContents);
+
+    // store the tag object to persistent storage
+    std::string tagSubdir = getObjectsDir() + "/" + Object::getSubdir(tag.id);
+    mkdir(tagSubdir);
+    std::string objectPath = getObjectsDir() + "/" + Object::getSubpath(tag.id);
+    if (fileExists(objectPath)) {
+        LOG_ERROR("Cannot set tag, file exists: %s", objectPath.c_str());
+        return -1;
+    }
+    int r = writeToFile(objectPath, tagContents);
+    if (r != 0) {
+        LOG_ERROR("Cannot set tag '%s': %s", objectPath.c_str(), STRERROR(errno));
+        return -1;
+    }
+
+    // store the refs/tags file
+    std::string tagRef = getPath() + "/" + PATH_TAGS;
+    r = writeToFile(tagRef, tag.id);
+
+    // update latestTagId
+    latestTagId = tag.id;
+
+    // invert the tag in RAM
+    e->issue->toggleTag(e->id, tagname);
+
+    return 0;
 }
+
 
 std::string Project::allocateNewIssueId()
 {
@@ -780,12 +777,11 @@ void Project::loadTags()
         Entry *e = getEntry(tag->entryId);
         if (!e) {
             LOG_ERROR("Tag to unknown entry: %s -> %s", path.c_str(), tag->entryId.c_str());
+        } else if (!e->issue) {
+            LOG_ERROR("Tagged entry has unknwon issue: %s", e->id.c_str());
         } else {
             // Toggle the tag of the entry
-            std::set<std::string>::iterator existingTag = e->tags.find(tag->tagName);
-            if (existingTag == e->tags.end()) e->tags.insert(tag->tagName);
-            else e->tags.erase(existingTag);
-
+            e->issue->toggleTag(e->id, tag->tagName);
             n++;
         }
 

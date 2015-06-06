@@ -1624,10 +1624,12 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
 
         // add tag-related styles, for the tags of the entry
         std::string classTagged = "sm_entry_notag";
-        if (!ee.tags.empty()) {
+        std::map<std::string, std::set<std::string> >::const_iterator tit = issue.tags.find(ee.id);
+        if (tit != issue.tags.end()) {
+
             classTagged = "sm_entry_tagged";
             std::set<std::string>::iterator tag;
-            FOREACH(tag, ee.tags) {
+            FOREACH(tag, tit->second) {
                 // check that this tag is declared in project config
                 if (pconfig.tags.find(*tag) != pconfig.tags.end()) {
                     classTagged += "sm_entry_tag_" + *tag + " ";
@@ -1684,7 +1686,8 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
                 TagSpec tag = tagIt->second;
                 LOG_DEBUG("tag: id=%s, label=%s", tag.id.c_str(), tag.label.c_str());
                 std::string tagStyle = "sm_entry_notag";
-                if (ee.tags.find(tag.id) != ee.tags.end()) tagStyle = "sm_entry_tagged " + urlEncode("sm_entry_tag_" + tag.id);
+                bool tagged = issue.hasTag(ee.id, tag.id);
+                if (tagged) tagStyle = "sm_entry_tagged " + urlEncode("sm_entry_tag_" + tag.id);
 
                 if (ctx.userRole == ROLE_ADMIN || ctx.userRole == ROLE_RW) {
                     const char *tagTitle = _("Click to tag/untag");
@@ -1705,7 +1708,7 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
                 } else {
                     // read-only
                     // if tag is not active, do not display
-                    if (ee.tags.find(tag.id) != ee.tags.end()) {
+                    if (tagged) {
                         ctx.req->printf("<span class=\"%s\">", tagStyle.c_str());
                         ctx.req->printf("[%s]", htmlEscape(tag.label).c_str());
                         ctx.req->printf("</span>\n");

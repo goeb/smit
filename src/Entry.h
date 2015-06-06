@@ -63,9 +63,6 @@ public:
     /** set a message */ // TODO use std::atomic to make it thread-safe for reading
     inline void setMessage(const std::string *msg) { message = msg; }
 
-// TODO move this to Issue::
-    std::set<std::string> tags;
-
 private:
     // mutable members, that may be modified when a user posts another entry
     // chainlist pointers
