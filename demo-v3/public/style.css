@@ -102,6 +102,10 @@ tr.sm_issue_asso td.sm_issue_asso {
     margin-top: 0.5em;
     margin-bottom: 0.5em;
 }
+.sm_entry_being_amended {
+    background-color: lightgreen;
+    /*border: 1px solid #000;*/
+}
 .sm_entry_other_properties {
     clear: both;
     display: none;
@@ -175,9 +179,9 @@ input {
 }
 .sm_issue_form {
     clear: both;
-    border-top: 2px solid #E0E0E0;
-    padding-top: 2em;
-    margin-top: 4em;
+    /*border-top: 2px solid #E0E0E0;*/
+    /*padding-top: 2em;*/
+    /*margin-top: 4em;*/
 }
 textarea {
     vertical-align: top;
@@ -377,5 +381,8 @@ div.sm_entry_files {
 .sm_accross_project {
     margin-top: 2em;
     font-style: italic;
+    font-size: 150%;
+}
+.sm_amend {
     font-size: 150%;
 }

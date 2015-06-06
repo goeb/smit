@@ -247,7 +247,9 @@ public:
                 RHtml::printIssueListFullContents(ctx, *issueListFullContents);
 
             } else if (varname == K_SM_DIV_ISSUE && currentIssue) {
-                RHtml::printIssue(ctx, *currentIssue);
+                std::string eAmended;
+                if (entryToBeAmended) eAmended = entryToBeAmended->id;
+                RHtml::printIssue(ctx, *currentIssue, eAmended);
 
             } else if (varname == K_SM_DIV_ISSUE_FORM) {
                 Issue issue;
@@ -1064,7 +1066,7 @@ void RHtml::printIssueListFullContents(const ContextParameters &ctx, std::vector
             ContextParameters ctxCopy = ctx;
             ctxCopy.userRole = ROLE_RO;
             printIssueSummary(ctxCopy, issue);
-            printIssue(ctxCopy, issue);
+            printIssue(ctxCopy, issue, "");
 
         }
     }
@@ -1461,7 +1463,7 @@ void printAssociations(const ContextParameters &ctx, const std::string &associat
 }
 
 
-void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
+void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue, const std::string &entryToBeAmended)
 {
     ctx.req->printf("<div class=\"sm_issue\">");
 
@@ -1607,9 +1609,11 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
     while (e) {
         Entry ee = *e;
 
-        if (!e->getNext()) {
-            // latest entry. Add an anchor.
-            ctx.req->printf("<span id=\"sm_last_entry\"></span>");
+        const char *styleBeingAmended = "";
+        if (ee.id == entryToBeAmended) {
+            // the page will display a form for editing this entry.
+            // we want here a special display to help the user understand the link
+            styleBeingAmended = "sm_entry_being_amended";
         }
 
         // look if class sm_no_contents is applicable
@@ -1637,8 +1641,8 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
             }
         }
 
-        ctx.req->printf("<div class=\"sm_entry %s %s\" id=\"%s\">\n", classNoContents,
-                        urlEncode(classTagged).c_str(), urlEncode(ee.id).c_str());
+        ctx.req->printf("<div class=\"sm_entry %s %s %s\" id=\"%s\">\n", classNoContents,
+                        urlEncode(classTagged).c_str(), styleBeingAmended, urlEncode(ee.id).c_str());
 
         ctx.req->printf("<div class=\"sm_entry_header\">\n");
         ctx.req->printf("<span class=\"sm_entry_author\">%s</span>", htmlEscape(ee.author).c_str());
@@ -1649,7 +1653,8 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
         // edit button
         time_t delta = time(0) - ee.ctime;
         if ( (delta < DELETE_DELAY_S) && (ee.author == ctx.user.username) &&
-             (ctx.userRole == ROLE_ADMIN || ctx.userRole == ROLE_RW) ) {
+             (ctx.userRole == ROLE_ADMIN || ctx.userRole == ROLE_RW) &&
+             !ee.isAmending()) {
             // entry was created less than 10 minutes ago, and by same user, and is latest in the issue
             ctx.req->printf("<a href=\"%s/%s/issues/%s?amend=%s\" class=\"sm_entry_edit\" "
                             "title=\"Edit this message (at most %d minutes after posting)\">",
@@ -1727,7 +1732,7 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
             ctx.req->printf("<div class=\"sm_entry_message\">");
             ctx.req->printf("%s\n", convertToRichText(htmlEscape(m)).c_str());
             ctx.req->printf("</div>\n"); // end message
-        }
+        } // else, do not display
 
 
         // uploaded / attached files
@@ -1805,6 +1810,10 @@ void RHtml::printPageIssue(const ContextParameters &ctx, const Issue &issue, con
     const char* SM_ISSUE_NEXT = "sm_issue_next";
     const char* SM_ISSUE_PREVIOUS = "sm_issue_previous";
     ctx.req->printf("<script>");
+    if (eToBeAmended) {
+        // give the focus to the message
+        ctx.req->printf("document.getElementsByName('+message')[0].focus();");
+    }
     if (ctx.originView == 0) {
         // disable the next/previous links
         ctx.req->printf("updateHref('%s', null);\n", SM_ISSUE_NEXT);

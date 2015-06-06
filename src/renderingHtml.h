@@ -87,7 +87,7 @@ public:
     static void printIssueSummary(const ContextParameters &ctx, const Issue &issue);
     static void printIssueNext(const ContextParameters &ctx, const Issue &issue);
     static void printIssuePrevious(const ContextParameters &ctx, const Issue &issue);
-    static void printIssue(const ContextParameters &ctx, const Issue &issue);
+    static void printIssue(const ContextParameters &ctx, const Issue &issue, const std::string &entryToBeAmended);
     static void printIssueListFullContents(const ContextParameters &ctx, std::vector<const Issue*> issueList);
     static void printIssueList(const ContextParameters &ctx, const std::vector<const Issue*> &issueList,
                                const std::list<std::string> &colspec, bool showOtherFormats);
