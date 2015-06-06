@@ -3,6 +3,7 @@
     <head>
         <title>Issue SM_RAW_ISSUE_ID</title>
         <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+        <link rel="icon" type="image/x-icon" href="/public/favicon.ico"/>
         <link media="all" rel="stylesheet" type="text/css" href="SM_URL_ROOT/public/style.css">
         <link id="printCSS" media="print" rel="stylesheet" type="text/css" href="SM_URL_ROOT/public/print.css">
         <meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
@@ -36,7 +37,7 @@
             <span class="no_print"><a class="sm_issue_previous">previous</a> <a class="sm_issue_next">next</a></span>
         </div>
         <div class="no_print">
-            <a href="#edit_form">Edit</a> -
+            <a href="#" onclick="document.getElementsByName('+message')[0].focus();return false;">Edit</a> -
             <a href="#" onclick="showPropertiesChanges();return false;">Show properties changes</a> - 
             <a href="#" onclick="hideUntaggedEntries();return false;">Show only tagged</a> -
             <a href="javascript:togglePrintPreview('printCSS')">Print Preview</a>
