@@ -2,7 +2,7 @@
 TESTS = T_parseConfig \
 		T_stringTools \
 		T_smparser \
-		T_smp_encode_decode.sh functest.sh \
+		T_smp_encode_decode.sh T_functest.sh \
 		T_clone.sh T_pull.sh T_pull_2.sh \
 		T_push.sh T_push2.sh T_push3.sh \
 		T_push_endurance.sh T_permissions.sh \
