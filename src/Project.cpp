@@ -256,6 +256,11 @@ Issue *Project::getIssue(const std::string &id) const
     else return i->second;
 }
 
+/** Return a given issue
+  *
+  * @param[out] issue
+  *     Thread-safe, as the returned issue is a copy.
+  */
 int Project::get(const std::string &issueId, Issue &issue) const
 {
     ScopeLocker scopeLocker(locker, LOCK_READ_ONLY);
@@ -267,10 +272,14 @@ int Project::get(const std::string &issueId, Issue &issue) const
         return -1;
     }
 
-    issue = *i;
+    issue = *i; // make a copy
     return 0;
 }
 
+/** Return a non-thread-safe list of pointers to the issues
+  *
+  * Must be called from a mutex-protected scope or from a single threaded program.
+  */
 void Project::getAllIssues(std::vector<Issue*> &issuesList)
 {
     std::map<std::string, Issue*>::iterator i;
@@ -854,10 +863,11 @@ std::list<std::pair<bool, std::string> > parseSortingSpec(const char *sortingSpe
   * filterIn=propA:valueA1, filterOut=propA:valueA1
   *     => filterOut takes precedence, valueA1 is excluded from the result
   */
-std::vector<const Issue*> Project::search(const char *fulltextSearch,
-                                    const std::map<std::string, std::list<std::string> > &filterIn,
-                                    const std::map<std::string, std::list<std::string> > &filterOut,
-                                    const char *sortingSpec) const
+void Project::search(const char *fulltextSearch,
+                     const std::map<std::string, std::list<std::string> > &filterIn,
+                     const std::map<std::string, std::list<std::string> > &filterOut,
+                     const char *sortingSpec,
+                     std::vector<Issue> &returnedIssues) const
 {
     ScopeLocker scopeLocker(locker, LOCK_READ_ONLY);
 
@@ -887,12 +897,17 @@ std::vector<const Issue*> Project::search(const char *fulltextSearch,
         result.push_back(issue);
     }
 
+    // make a copy of the issues (do not return pointers)
+    std::vector<const Issue*>::iterator it;
+    FOREACH(it, result) {
+        returnedIssues.push_back(*(*it));
+    }
+
     // 4. do the sorting
     if (sortingSpec) {
         std::list<std::pair<bool, std::string> > sSpec = parseSortingSpec(sortingSpec);
-        Issue::sort(result, sSpec);
+        Issue::sort(returnedIssues, sSpec);
     }
-    return result;
 }
 
 

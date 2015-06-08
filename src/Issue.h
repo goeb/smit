@@ -50,6 +50,7 @@ struct Issue {
     // the properties of the issue is the consolidation of all the properties
     // of its entries. For a given key, the most recent value has priority.
     std::string getSummary() const;
+    bool lessThan(const Issue &other, const std::list<std::pair<bool, std::string> > &sortingSpec) const;
     bool lessThan(const Issue *other, const std::list<std::pair<bool, std::string> > &sortingSpec) const;
     bool isInFilter(const std::map<std::string, std::list<std::string> > &filter) const;
 
@@ -66,7 +67,8 @@ struct Issue {
     static Issue *load(const std::string &objectsDir, const std::string &latestEntryOfIssue);
     void insertEntry(Entry *e);
     Entry *amendEntry(const std::string &entryId, const std::string &newMsg, const std::string &username);
-    static void sort(std::vector<const Issue*> &inout, const std::list<std::pair<bool, std::string> > &sortingSpec);
+    static void sort(std::vector<Issue> &inout, const std::list<std::pair<bool, std::string> > &sortingSpec);
+
     std::string getProperty(const std::string &propertyName) const;
 
 };
@@ -76,6 +78,7 @@ class IssueComparator {
 public:
     IssueComparator(const std::list<std::pair<bool, std::string> > &sSpec) : sortingSpec(sSpec) { }
     inline bool operator() (const Issue* i, const Issue* j) { return i->lessThan(j, sortingSpec); }
+    inline bool operator() (const Issue i, const Issue j) { return i.lessThan(j, sortingSpec); }
 private:
     const std::list<std::pair<bool, std::string> > &sortingSpec;
 };

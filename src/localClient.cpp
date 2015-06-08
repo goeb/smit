@@ -150,10 +150,11 @@ void printAllIssues(const Project &p)
     const std::map<std::string, std::list<std::string> > filterIn;
     const std::map<std::string, std::list<std::string> > filterOut;
 
-    std::vector<const Issue*> issueList = p.search("", filterIn, filterOut, "id");
-    std::vector<const Issue*>::const_iterator i;
+    std::vector<Issue> issueList;
+    p.search("", filterIn, filterOut, "id", issueList);
+    std::vector<Issue>::const_iterator i;
     FOREACH(i, issueList) {
-        printIssue(*(*i), PRINT_SUMMARY);
+        printIssue(*i, PRINT_SUMMARY);
     }
 }
 

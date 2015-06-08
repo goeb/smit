@@ -39,10 +39,11 @@ public:
     static bool containsReservedName(std::string name);
     static bool isReservedName(const std::string &name);
     // methods for handling issues
-    std::vector<const Issue*> search(const char *fulltextSearch,
-                                     const std::map<std::string, std::list<std::string> > &filterIn,
-                                     const std::map<std::string, std::list<std::string> > &filterOut,
-                                     const char *sortingSpec) const;
+    void search(const char *fulltextSearch,
+                const std::map<std::string, std::list<std::string> > &filterIn,
+                const std::map<std::string, std::list<std::string> > &filterOut,
+                const char *sortingSpec,
+                std::vector<Issue> &returnedIssues) const;
     int get(const std::string &issueId, Issue &issue) const;
     void getAllIssues(std::vector<Issue*> &issuesList);
     std::map<std::string, std::set<std::string> > getReverseAssociations(const std::string &issue) const;

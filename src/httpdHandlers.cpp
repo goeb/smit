@@ -1176,13 +1176,13 @@ enum IssueNavigation { ISSUE_NEXT, ISSUE_PREVIOUS };
   *     a string containing the url to redirect to
   *     "" if the next or previous the redirection could not be done
   */
-std::string getRedirectionToIssue(const Project &p, std::vector<const Issue*> issueList,
+std::string getRedirectionToIssue(const Project &p, std::vector<Issue> &issueList,
                     const std::string &issueId, IssueNavigation direction, const std::string &qs)
 {
     // get current issue
-    std::vector<const Issue*>::const_iterator i;
+    std::vector<Issue>::const_iterator i;
     FOREACH(i, issueList) {
-        if ((*i)->id == issueId) {
+        if (i->id == issueId) {
             break;
         }
     }
@@ -1198,7 +1198,7 @@ std::string getRedirectionToIssue(const Project &p, std::vector<const Issue*> is
     std::string redirectUrl;
     if (i != issueList.end()) {
         // redirect
-        redirectUrl = "/" + p.getUrlName() + "/issues/" + (*i)->id;
+        redirectUrl = "/" + p.getUrlName() + "/issues/" + i->id;
 
     } else {
         // no next nor previous issue.
@@ -1222,7 +1222,7 @@ void httpIssuesAccrossProjects(const RequestContext *req, User u, const std::str
     std::string q = req->getQueryString();
     PredefinedView v = PredefinedView::loadFromQueryString(q); // unamed view, used as handle on the viewing parameters
 
-    std::vector<const Issue*> issues;
+    std::vector<Issue> issues;
 
     // foreach project, get list of issues
     std::list<std::pair<std::string, std::string> >::const_iterator p;
@@ -1239,9 +1239,7 @@ void httpIssuesAccrossProjects(const RequestContext *req, User u, const std::str
         if (vcopy.search == "me") vcopy.search = u.username;
 
         // search, without sorting
-        std::vector<const Issue*> issueList = p->search(vcopy.search.c_str(),
-                                                        vcopy.filterin, vcopy.filterout, 0);
-        issues.insert(issues.end(), issueList.begin(), issueList.end());
+        p->search(vcopy.search.c_str(), vcopy.filterin, vcopy.filterout, 0, issues);
     }
 
     // sort
@@ -1288,10 +1286,11 @@ void httpCloneIssues(const RequestContext *req, const Project &p)
     req->printf("Content-Type: text/directory\r\n\r\n");
 
     // get all the issues, sorted by id
-    std::vector<const Issue*> issues = p.search(0, filterIn, filterOut, "id");
-    std::vector<const Issue*>::const_iterator i;
+    std::vector<Issue> issues;
+    p.search(0, filterIn, filterOut, "id", issues);
+    std::vector<Issue>::const_iterator i;
     FOREACH(i, issues) {
-        req->printf("%s\n", (*i)->id.c_str());
+        req->printf("%s\n", i->id.c_str());
     }
 }
 
@@ -1327,8 +1326,8 @@ void httpGetListOfIssues(const RequestContext *req, const Project &p, User u)
     if (v.search == "me") v.search = u.username;
 
 
-    std::vector<const Issue*> issueList = p.search(v.search.c_str(),
-                                                    v.filterin, v.filterout, v.sort.c_str());
+    std::vector<Issue> issueList;
+    p.search(v.search.c_str(), v.filterin, v.filterout, v.sort.c_str(), issueList);
 
     // check for redirection to specific issue (used for previous/next)
     std::string next = getFirstParamFromQueryString(q, QS_GOTO_NEXT);

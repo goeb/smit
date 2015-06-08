@@ -50,7 +50,7 @@ void RCsv::printProjectList(const RequestContext *req, const std::list<std::pair
     }
 }
 
-void RCsv::printIssueList(const RequestContext *req, std::vector<const Issue*> issueList,
+void RCsv::printIssueList(const RequestContext *req, std::vector<Issue> &issueList,
                           std::list<std::string> colspec, const char *separator)
 {
     req->printf("Content-Type: text/plain\r\n\r\n");
@@ -67,7 +67,7 @@ void RCsv::printIssueList(const RequestContext *req, std::vector<const Issue*> i
 
 
     // list of issues
-    std::vector<const Issue*>::const_iterator i;
+    std::vector<Issue>::const_iterator i;
     for (i=issueList.begin(); i!=issueList.end(); i++) {
 
         std::list<std::string>::iterator c;
@@ -77,13 +77,13 @@ void RCsv::printIssueList(const RequestContext *req, std::vector<const Issue*> i
             std::string text;
             std::string column = *c;
 
-            if (column == "id") text = (*i)->id;
-            else if (column == "p") text = (*i)->project;
-            else if (column == "ctime") text = epochToString((*i)->ctime);
-            else if (column == "mtime") text = epochToString((*i)->mtime);
+            if (column == "id") text = i->id;
+            else if (column == "p") text = i->project;
+            else if (column == "ctime") text = epochToString(i->ctime);
+            else if (column == "mtime") text = epochToString(i->mtime);
             else {
                 std::map<std::string, std::list<std::string> >::const_iterator p;
-                const std::map<std::string, std::list<std::string> > & properties = (*i)->properties;
+                const std::map<std::string, std::list<std::string> > & properties = i->properties;
 
                 p = properties.find(column);
                 if (p != properties.end()) text = toString(p->second);

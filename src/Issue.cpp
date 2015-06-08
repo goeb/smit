@@ -245,13 +245,14 @@ void Issue::consolidate()
   * sortingSpec: a list of pairs (ascending-order, property-name)
   *
   */
-void Issue::sort(std::vector<const Issue*> &inout, const std::list<std::pair<bool, std::string> > &sortingSpec)
+void Issue::sort(std::vector<Issue> &inout, const std::list<std::pair<bool, std::string> > &sortingSpec)
 {
     if (sortingSpec.size()==0) return;
 
     IssueComparator ic(sortingSpec);
     std::sort(inout.begin(), inout.end(), ic);
 }
+
 
 std::string Issue::getProperty(const std::string &propertyName) const
 {
@@ -371,6 +372,10 @@ bool Issue::isInFilter(const std::map<std::string, std::list<std::string> > &fil
     return true;
 }
 
+bool Issue::lessThan(const Issue &other, const std::list<std::pair<bool, std::string> > &sortingSpec) const
+{
+    return lessThan(&other, sortingSpec);
+}
 
 /** Compare 2 issues after sortingSpec.
   *
