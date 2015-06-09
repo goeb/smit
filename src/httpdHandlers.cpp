@@ -1439,11 +1439,10 @@ void httpGetView(const RequestContext *req, Project &p, const std::string &view,
 
     } else {
         // print the form of the given view
-        std::string viewName = urlDecode(view);
-        PredefinedView pv = p.getPredefinedView(viewName);
+        PredefinedView pv = p.getPredefinedView(view);
 
         if (pv.name.empty()) {
-            // in this case (unnamed view, ie: advanced search)
+            // in this case (unknown or unnamed view, ie: advanced search)
             // handle the optional origin view
             std::string originView;
             int r = getFromCookie(req, QS_ORIGIN_VIEW, originView);
