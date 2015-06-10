@@ -51,7 +51,7 @@ migrateRepoTemplates() {
 # $1 : project to be migrated
 migrateProjectTemplates() {
     local pDir="$1"
-    local templates="$pDir/.smit/templates"
+    local templates="$pDir/.smip/templates"
     mkdir -p "$templates"
     for page in $TEMPLATES; do
         mv "$pDir/html/$page" "$templates/." 2>/dev/null
