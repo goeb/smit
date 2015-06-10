@@ -106,7 +106,7 @@ int cpioGetNextFileHeader(const char *&offset, const char *end, std::string &fil
     LOG_DEBUG("cpioExtract: filepath=%s", filepathBuf);
     if (0 == strcmp(filepathBuf, "TRAILER!!!")) return -10; // end of archive
 
-    filesize = (header.c_filesize[0] << 8) + header.c_filesize[1];
+    filesize = (header.c_filesize[0] << 16) + header.c_filesize[1];
     filepath = filepathBuf;
     return 0;
 }
