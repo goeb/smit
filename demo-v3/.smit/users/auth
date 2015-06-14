@@ -3,7 +3,7 @@ adduser "John the ripper" -type sha1 -hash e61a3587b3f7a142b8c7b9263c82f8119398e
 adduser "Mister Myster" -type sha1 -hash e61a3587b3f7a142b8c7b9263c82f8119398ecb7
 adduser alexia -type sha1 -hash e61a3587b3f7a142b8c7b9263c82f8119398ecb7
 adduser alice -type sha1 -hash 522b276a356bdf39013dfabea2cd43e141ecc9e8
-adduser fred -type sha1 -hash 238d91ba43f135f40987f9304bb0193a63bfbcc4 -salt 6b39e7fe3f6475b1
+adduser fred -type sha1 -hash bb28a780a234b32ba4362b3a64b4e1297f29928c -salt 1f2d9360ffbd7a5
 adduser homer -type sha1 -hash 9c38e24cb7d4f0b73f8b9cdf4f6a3612f989ce2b -salt 6cc8be554574aa67
 adduser john1 -type sha1 -hash 9c38e24cb7d4f0b73f8b9cdf4f6a3612f989ce2b -salt 6cc8be554574aa67
 adduser john2 -type sha1 -hash 9c38e24cb7d4f0b73f8b9cdf4f6a3612f989ce2b -salt 6cc8be554574aa67
