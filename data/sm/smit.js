@@ -137,7 +137,7 @@ function createSelect(items, selected, allowVoid) {
 }
 
 function hideSuperadminZone() {
-    var divs = document.getElementsByClassName('sm_user_superadmin_zone');
+    var divs = document.getElementsByClassName('sm_zone_superadmin');
     for(var i=0; i<divs.length; i++) {
         divs[i].style.display='none';
         var inputs = divs[i].getElementsByTagName('input');
@@ -315,7 +315,7 @@ function setName(value) {
     input.value = value;
 }
 function setSuperadminCheckbox() {
-    var input = document.getElementById('sm_superadmin');
+    var input = document.getElementsByName('sm_superadmin')[0];
     input.checked = true;
 }
 
@@ -490,3 +490,33 @@ function randomString(length) {
     for (var i = length; i > 0; --i) result += chars[Math.round(Math.random() * (chars.length - 1))];
     return result;
 }
+// authentication types in page user config
+function setAuthSha1() {
+    setAuth('sha1');
+}
+function setAuthLdap(uri, dname) {
+    setAuth('ldap');
+    var item = document.getElementsByName('sm_ldap_uri')[0];
+    item.value = uri;
+    var item = document.getElementsByName('sm_ldap_dname')[0];
+    item.value = dname;
+}
+function setAuthKrb5(principal, realm) {
+    setAuth('krb5');
+    var item = document.getElementsByName('sm_krb5_principal')[0];
+    item.value = principal;
+    var item = document.getElementsByName('sm_krb5_realm')[0];
+    item.value = realm;
+}
+function setAuth(authType) {
+    var items = document.getElementsByName('sm_auth_type');
+    for (var i=0; i<items.length; i++) {
+        var item = items[i];
+        if (item.value == authType) {
+            item.checked = true;
+            showOrHide('box_auth', false);
+            showOrHide('box_auth_' + authType, true);
+        }
+    }
+}
+

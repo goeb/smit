@@ -5,6 +5,28 @@
         <link href="SM_URL_ROOT/public/style.css" type="text/css" rel="stylesheet">
         <meta content="text/html;charset=UTF-8" http-equiv="Content-Type">
         <script src="SM_URL_ROOT/sm/smit.js"></script>
+        SM_SCRIPT
+        <script type="text/javascript">
+            function showOrHide(className, show) {
+                var items = document.getElementsByClassName(className);
+                for (var i=0; i<items.length; i++) {
+                    var item = items[i];
+                    if (item.classList.contains(className)) {
+                        if (show) {
+                            item.style.display='block';
+                            item.disabled = false;
+                        } else {
+                            item.style.display='none';
+                            item.disabled = true;
+                        }
+                    }
+                }
+            }
+            function selectAuth(item) {
+                showOrHide('box_auth', false);
+                showOrHide('box_auth_' + item.value, true);
+            }
+        </script>
     </head>
     <body>
         <div style="padding-top: 15px;">
@@ -18,30 +40,65 @@
         <br>
         <form action="" method="POST">
             <h1>User Configuration</h1>
-            <div class="sm_user_superadmin_zone">
+            <div class="sm_zone_superadmin">
                 <table>
                     <tr><td>User name:</td><td><input id="name" name="name" type="text" required="required"></td></tr>
-                    <tr><td><label for="sm_superadmin">Superadmin:</label></td><td><input id="sm_superadmin" name="superadmin" type="checkbox"></td></tr>
+                    <tr><td><label for="superadmin">Superadmin:</label></td><td><input id="superadmin" name="sm_superadmin" type="checkbox"></td></tr>
                 </table>
                 <br>
                 SM_TABLE_USER_PERMISSIONS
                 <br>
                 <br>
 
-                Modify Roles on Projects:<br>
-                <div id="roles_on_projects"></div>
-                <div onclick="addPermission('roles_on_projects', '', '');" class="clickable">+ Click for more...</div>
+                Modify Permissions on Projects:<br>
+                <div id="sm_permissions"></div>
+                <div onclick="addPermission('sm_permissions', '', '');" class="clickable">+ Click for more...</div>
                 <br>
             </div>
 
             <br>
             <br>
-            <h2>Password</h2>
+<div class="sm_zone_non_superadmin">
+    <h2>Password</h2>
             (leave empty to keep it unchanged)<br>
-            <input name="passwd1" type="password">
-            <br>
-            <input name="passwd2" type="password"> (re-enter the password)
-            <br>
+            <table><tr><td>Password:</td><td>
+                        <input name="sm_passwd1" type="password" size="30" placeholder="leave empty to keep unchanged">
+                </td></tr>
+                <tr><td>Re-enter password:</td><td>
+                        <input name="sm_passwd2" type="password" size="30">
+            </td></tr></table>
+</div>
+    <div class="sm_zone_superadmin">
+            <h2>Authentication</h2>
+        <label><input onclick="selectAuth(this);" type="radio" name="sm_auth_type" value="sha1">Password</label>
+        <label><input onclick="selectAuth(this);" type="radio" name="sm_auth_type" value="krb5">Kerberos</label>
+        <label><input onclick="selectAuth(this);" type="radio" name="sm_auth_type" value="ldap">LDAP</label>
+    </div>
+    <div class="box_auth_sha1 box_auth">
+            (leave empty to keep it unchanged)<br>
+            <table><tr><td>Password:</td><td>
+                        <input name="sm_passwd1" type="password" size="30" placeholder="leave empty to keep unchanged">
+                </td></tr>
+                <tr><td>Re-enter password:</td><td>
+                        <input name="sm_passwd2" type="password" size="30">
+            </td></tr></table>
+    </div>
+    <div class="box_auth_krb5 box_auth">
+        <table><tr><td>Kerberos name:</td><td>
+            <input name="sm_krb5_principal" type="text" size="30"> (if different from the username)
+        </td></tr>
+        <tr><td>Kerberos Realm:</td><td>
+            <input name="sm_krb5_realm" type="text" placeholder="EXAMPLE.COM" size="30"> (must be upper case)
+</td></tr></table>
+    </div>
+    <div class="box_auth_ldap box_auth">
+        <table><tr><td>LDAP URI:</td><td>
+                    <input name="sm_ldap_uri" type="text" placeholder="ldaps://example.com:636" size="30">
+            </td></tr>
+            <tr><td>LDAP Distinguished Name:</td><td>
+                    <input name="sm_ldap_dname" type="text" placeholder="cn=John Doe,ou=People,dc=example,dc=com" size="60">
+        </td></tr></table>
+    </div>
             <br>
             <input type="submit" value="Apply">
         </form>

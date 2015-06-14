@@ -84,6 +84,7 @@ const Project &ContextParameters::getProject() const
 #define K_SM_DIV_ISSUE_MSG_PREVIEW "SM_DIV_ISSUE_MSG_PREVIEW"
 #define K_SM_URL_ROOT "SM_URL_ROOT"
 #define K_SM_TABLE_USER_PERMISSIONS "SM_TABLE_USER_PERMISSIONS"
+#define K_SM_SCRIPT "SM_SCRIPT"
 
 /** Load a page template of a specific project
   *
@@ -130,6 +131,7 @@ public:
     const User *concernedUser;
     const Entry *entryToBeAmended;
     const std::map<std::string, std::map<Role, std::set<std::string> > > *userRolesByProject;
+    std::string script; // javascript to be inserted in SM_SCRIPT
 
     VariableNavigator(const std::string basename, const ContextParameters &context) : ctx(context) {
         buffer = 0;
@@ -271,6 +273,10 @@ public:
                                 "%s"
                                 "</div>", htmlEscape(_("...message preview...")).c_str());
 
+            } else if (varname == K_SM_SCRIPT) {
+                if (!script.empty()) {
+                    ctx.req->printf("<script type=\"text/javascript\">%s</script>\n", script.c_str());
+                }
             } else {
                 // unknown variable name
                 ctx.req->printf("%s", varname.c_str());
@@ -308,41 +314,41 @@ void RHtml::printPageUser(const ContextParameters &ctx, const User *u)
 {
     VariableNavigator vn("user.html", ctx);
     vn.concernedUser = u;
-    vn.printPage();
 
-    // add javascript for updating the inputs
-    ctx.req->printf("<script>\n");
+    // add javascript for updating the form fields
+    vn.script = "";
 
     if (!ctx.user.superadmin) {
         // hide what is reserved to superadmin
-        ctx.req->printf("hideSuperadminZone();\n");
+        vn.script += "hideSuperadminZone();\n";
     } else {
-        if (u) ctx.req->printf("setName('%s');\n", enquoteJs(u->username).c_str());
+        if (u) vn.script += "setName('" + enquoteJs(u->username) + "');\n";
     }
 
     if (u && u->superadmin) {
-        ctx.req->printf("setSuperadminCheckbox();\n");
+        vn.script += "setSuperadminCheckbox();\n";
     }
 
     std::list<std::string> projects = Database::getProjects();
-    ctx.req->printf("Projects = %s;\n", toJavascriptArray(projects).c_str());
+    vn.script += "Projects = " + toJavascriptArray(projects) + ";\n";
     std::list<std::string> roleList = getAvailableRoles();
-    ctx.req->printf("Roles = %s;\n", toJavascriptArray(roleList).c_str());
+    vn.script += "Roles = " + toJavascriptArray(roleList) + ";\n";
 
-    ctx.req->printf("addProjectDatalist('roles_on_projects');\n");
+    vn.script += "addProjectDatalist('sm_permissions');\n";
 
     if (u) {
         std::map<std::string, enum Role>::const_iterator rop;
         FOREACH(rop, u->permissions) {
-            ctx.req->printf("addPermission('roles_on_projects', '%s', '%s');\n",
-                            enquoteJs(rop->first).c_str(),
-                            enquoteJs(roleToString(rop->second)).c_str());
+            vn.script += "addPermission('sm_permissions', '" + enquoteJs(rop->first)
+                    + "', '" + enquoteJs(roleToString(rop->second)) + "');\n";
         }
     }
-    ctx.req->printf("addPermission('roles_on_projects', '', '');\n");
-    ctx.req->printf("addPermission('roles_on_projects', '', '');\n");
+    vn.script +=  "addPermission('sm_permissions', '', '');\n";
+    vn.script +=  "addPermission('sm_permissions', '', '');\n";
+    vn.script += "setAuthSha1();\n"; // TODO handle krb5 and ldap
 
-    ctx.req->printf("</script>\n");
+    vn.printPage();
+
 }
 
 void RHtml::printPageView(const ContextParameters &ctx, const PredefinedView &pv)

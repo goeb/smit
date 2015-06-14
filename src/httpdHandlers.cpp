@@ -635,9 +635,9 @@ void httpPostUser(const RequestContext *request, User signedInUser, const std::s
             std::string value = urlDecode(tokenPair);
 
             if (key == "name") newUserConfig.username = value;
-            else if (key == "superadmin" && value == "on") newUserConfig.superadmin = true;
-            else if (key == "passwd1") passwd1 = value;
-            else if (key == "passwd2") passwd2 = value;
+            else if (key == "sm_superadmin" && value == "on") newUserConfig.superadmin = true;
+            else if (key == "sm_passwd1") passwd1 = value;
+            else if (key == "sm_passwd2") passwd2 = value;
             else if (key == "project_wildcard") projectWildcard = value;
             else if (key == "role") role = value;
             else {

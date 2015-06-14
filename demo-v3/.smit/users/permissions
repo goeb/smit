@@ -1,34 +1,34 @@
-setperm "John Smith" ro "myproject"
-setperm "John Smith" rw "things_to_do"
-setperm "John the ripper" ro "myproject"
-setperm "John the ripper" rw "mypxxx"
-setperm "ldapToto" rw "myproject"
-setperm "Mister Myster" ro "myproject"
-setperm "Mister Myster" rw "mypxxx"
-setperm "alexia" ro "myproject"
-setperm "alexia" rw "mypxxx"
-setperm "alice" ro "a:b:c"
-setperm "alice" ro "myproject"
-setperm "alice" ro "things_to_do"
-setperm "fred" superadmin
-setperm "fred" admin "myproject"
-setperm "fred" ro "myproject/yoyo"
-setperm "fred" admin "smit"
-setperm "fred" admin "things_to_do"
-setperm "fred" rw "toto"
-setperm "fred" admin "tutuut"
-setperm "homer" superadmin
-setperm "homer" ro "myproject"
-setperm "homer" admin "things_to_do"
-setperm "john1" ro "myproject"
-setperm "john1" rw "mypxxx"
-setperm "john2" ro "myproject"
-setperm "john2" rw "mypxxx"
-setperm "not assigned" ro "myproject"
-setperm "not assigned" ref "smit"
-setperm "not assigned" ref "things_to_do"
-setperm "olivia" ro "myproject"
-setperm "olivia" rw "mypxxx"
-setperm "toto" ro "a b c"
-setperm "xxxt" rw "myproject"
-setperm "xxxt" rw "mypxxx"
+setperm "John Smith" ro myproject
+setperm "John Smith" rw things_to_do
+setperm "John the ripper" ro myproject
+setperm "John the ripper" rw mypxxx
+setperm "Mister Myster" ro myproject
+setperm "Mister Myster" rw mypxxx
+setperm alexia ro myproject
+setperm alexia rw mypxxx
+setperm alice ro a:b:c
+setperm alice ro myproject
+setperm alice ro things_to_do
+setperm fred superadmin
+setperm fred admin myproject
+setperm fred ro myproject/yoyo
+setperm fred admin smit
+setperm fred admin things_to_do
+setperm fred rw toto
+setperm fred admin tutuut
+setperm homer superadmin
+setperm homer ro myproject
+setperm homer admin things_to_do
+setperm john1 ro myproject
+setperm john1 rw mypxxx
+setperm john2 ro myproject
+setperm john2 rw mypxxx
+setperm ldapToto rw myproject
+setperm "not assigned" ro myproject
+setperm "not assigned" ref smit
+setperm "not assigned" ref things_to_do
+setperm olivia ro myproject
+setperm olivia rw mypxxx
+setperm toto ro "a b c"
+setperm xxxt rw myproject
+setperm xxxt rw mypxxx
