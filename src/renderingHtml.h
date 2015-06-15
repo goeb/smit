@@ -27,7 +27,7 @@ public:
     void init(const RequestContext *request, const User &u);
     const Project &getProject() const;
 
-    User user;
+    User user; // signed-in user
     enum Role userRole;
     std::string search;
     std::string sort;

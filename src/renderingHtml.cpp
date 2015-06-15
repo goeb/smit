@@ -318,34 +318,42 @@ void RHtml::printPageUser(const ContextParameters &ctx, const User *u)
     // add javascript for updating the form fields
     vn.script = "";
 
-    if (!ctx.user.superadmin) {
-        // hide what is reserved to superadmin
-        vn.script += "hideSuperadminZone();\n";
-    } else {
+    if (ctx.user.superadmin) {
+        vn.script += "showOrHideClasses('sm_zone_superadmin', true);\n";
+        vn.script += "showOrHideClasses('sm_zone_non_superadmin', false);\n";
         if (u) vn.script += "setName('" + enquoteJs(u->username) + "');\n";
+
+    } else {
+        // hide what is reserved to superadmin
+        vn.script += "showOrHideClasses('sm_zone_superadmin', false);\n";
+        vn.script += "showOrHideClasses('sm_zone_non_superadmin', true);\n";
     }
 
     if (u && u->superadmin) {
         vn.script += "setSuperadminCheckbox();\n";
     }
 
-    std::list<std::string> projects = Database::getProjects();
-    vn.script += "Projects = " + toJavascriptArray(projects) + ";\n";
-    std::list<std::string> roleList = getAvailableRoles();
-    vn.script += "Roles = " + toJavascriptArray(roleList) + ";\n";
+    if (ctx.user.superadmin) {
+        // the signed-in user has permission to modify the permissions of the user
 
-    vn.script += "addProjectDatalist('sm_permissions');\n";
+        std::list<std::string> projects = Database::getProjects();
+        vn.script += "Projects = " + toJavascriptArray(projects) + ";\n";
+        std::list<std::string> roleList = getAvailableRoles();
+        vn.script += "Roles = " + toJavascriptArray(roleList) + ";\n";
+        vn.script += "addProjectDatalist('sm_permissions');\n";
 
-    if (u) {
-        std::map<std::string, enum Role>::const_iterator rop;
-        FOREACH(rop, u->permissions) {
-            vn.script += "addPermission('sm_permissions', '" + enquoteJs(rop->first)
-                    + "', '" + enquoteJs(roleToString(rop->second)) + "');\n";
+        if (u) {
+            std::map<std::string, enum Role>::const_iterator rop;
+            FOREACH(rop, u->permissions) {
+                vn.script += "addPermission('sm_permissions', '" + enquoteJs(rop->first)
+                        + "', '" + enquoteJs(roleToString(rop->second)) + "');\n";
+            }
         }
+
+        vn.script +=  "addPermission('sm_permissions', '', '');\n";
+        vn.script +=  "addPermission('sm_permissions', '', '');\n";
+        vn.script += "setAuthSha1();\n"; // TODO handle krb5 and ldap
     }
-    vn.script +=  "addPermission('sm_permissions', '', '');\n";
-    vn.script +=  "addPermission('sm_permissions', '', '');\n";
-    vn.script += "setAuthSha1();\n"; // TODO handle krb5 and ldap
 
     vn.printPage();
 
@@ -983,17 +991,19 @@ void RHtml::printScriptUpdateConfig(const ContextParameters &ctx)
 void RHtml::printProjectConfig(const ContextParameters &ctx)
 {
     VariableNavigator vn("project.html", ctx);
-    vn.printPage();
 
-    ctx.req->printf("<script>");
-    if (!ctx.user.superadmin) {
-        // hide what is reserved to superadmin
-        ctx.req->printf("hideSuperadminZone();\n");
+    if (ctx.user.superadmin) {
+        vn.script += "showOrHideClasses('sm_zone_superadmin', true);\n";
+        if (ctx.project) {
+            vn.script += "setProjectName('" + enquoteJs(ctx.getProject().getName()) + "');\n";
+        }
+
     } else {
-        if (ctx.project) ctx.req->printf("setProjectName('%s');\n", enquoteJs(ctx.getProject().getName()).c_str());
+        // hide what is reserved to superadmin
+        vn.script += "showOrHideClasses('sm_zone_superadmin', false);\n";
     }
-    ctx.req->printf("</script>");
 
+    vn.printPage();
 }
 
 /** Get the property name that will be used for grouping

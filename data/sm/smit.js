@@ -136,14 +136,6 @@ function createSelect(items, selected, allowVoid) {
     return select;
 }
 
-function hideSuperadminZone() {
-    var divs = document.getElementsByClassName('sm_zone_superadmin');
-    for(var i=0; i<divs.length; i++) {
-        divs[i].style.display='none';
-        var inputs = divs[i].getElementsByTagName('input');
-        for(var j=0; j<inputs.length; j++) inputs[j].disabled = true;
-    }
-}
 function addMoreProperties(n) {
     // add 3 more properties on page
     for (var i=0; i<n; i++) addProperty('', '', '', '');
@@ -514,8 +506,26 @@ function setAuth(authType) {
         var item = items[i];
         if (item.value == authType) {
             item.checked = true;
-            showOrHide('box_auth', false);
-            showOrHide('box_auth_' + authType, true);
+            showOrHideClasses('box_auth', false);
+            showOrHideClasses('box_auth_' + authType, true);
+        }
+    }
+}
+function showOrHideClasses(className, show) {
+    var items = document.getElementsByClassName(className);
+    for (var i=0; i<items.length; i++) {
+        var item = items[i];
+        if (item.classList.contains(className)) {
+            if (show) item.style.display='block';
+            else item.style.display='none';
+
+            // disable child inputs
+            var inputs = item.getElementsByTagName('input');
+            for(var j=0; j<inputs.length; j++) {
+                if (show) inputs[j].disabled = false;
+                else inputs[j].disabled = true;
+                //console.log("input[" + j + "], " + inputs[j].name + ", show=" + show );
+            }
         }
     }
 }

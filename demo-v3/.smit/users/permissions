@@ -6,7 +6,7 @@ setperm "Mister Myster" ro myproject
 setperm "Mister Myster" rw mypxxx
 setperm alexia ro myproject
 setperm alexia rw mypxxx
-setperm alice ro a:b:c
+setperm alice admin a:b:c
 setperm alice ro myproject
 setperm alice ro things_to_do
 setperm fred superadmin

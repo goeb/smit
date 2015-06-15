@@ -604,6 +604,7 @@ int UserBase::updatePassword(const std::string &username, const std::string &pas
     std::map<std::string, User*>::iterator u = UserDb.configuredUsers.find(username);
     if (u == UserDb.configuredUsers.end()) return -1;
 
+    LOG_DIAG("updatePassword for %s", username.c_str());
     u->second->setPasswd(password);
     return store(Repository);
 }
