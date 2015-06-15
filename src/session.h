@@ -32,7 +32,7 @@ std::list<std::string> getAvailableRoles();
 class User {
 public:
     std::string username;
-    Auth *authHandler;
+    Auth *authHandler; // instance owned by the currect User. Deleted on User destruction.
     std::map<std::string, enum Role> rolesOnProjects;
     bool superadmin;
     std::map<std::string, Role> permissions; // map of projectWildcard => role

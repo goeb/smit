@@ -46,6 +46,15 @@
 #include "restApi.h"
 #include "embedcpio.h" // generated
 
+#ifdef KERBEROS_ENABLED
+  #include "AuthKrb5.h"
+#endif
+
+#ifdef LDAP_ENABLED
+  #include "AuthLdap.h"
+#endif
+
+
 #define K_ME "me"
 #define MAX_SIZE_UPLOAD (10*1024*1024)
 
@@ -645,6 +654,9 @@ void httpPostUser(const RequestContext *request, User signedInUser, const std::s
         User newUserConfig;
         std::string passwd1, passwd2;
         std::string projectWildcard, role;
+        std::string authType = "sha1"; // default value
+        std::string ldapUri, ldapDname;
+        std::string krb5Principal, krb5Realm;
 
         while (postData.size() > 0) {
             std::string tokenPair = popToken(postData, '&');
@@ -653,8 +665,13 @@ void httpPostUser(const RequestContext *request, User signedInUser, const std::s
 
             if (key == "name") newUserConfig.username = value;
             else if (key == "sm_superadmin" && value == "on") newUserConfig.superadmin = true;
+            else if (key == "sm_auth_type") authType = value;
             else if (key == "sm_passwd1") passwd1 = value;
             else if (key == "sm_passwd2") passwd2 = value;
+            else if (key == "sm_ldap_uri") ldapUri = value;
+            else if (key == "sm_ldap_dname") ldapDname = value;
+            else if (key == "sm_krb5_principal") krb5Principal = value;
+            else if (key == "sm_krb5_realm") krb5Realm = value;
             else if (key == "project_wildcard") projectWildcard = value;
             else if (key == "role") role = value;
             else {
@@ -684,11 +701,15 @@ void httpPostUser(const RequestContext *request, User signedInUser, const std::s
         int r = 0;
         std::string error;
 
+        // check the parameters
         if (passwd1 != passwd2) {
             LOG_INFO("passwd1 (%s) != passwd2 (%s)", passwd1.c_str(), passwd2.c_str());
             sendHttpHeader400(request, "passwords 1 and 2 do not match");
             return;
         }
+
+
+        LOG_INFO("authType=%s", authType.c_str()); // TODO remove this debug
 
         if (!signedInUser.superadmin) {
             // if signedInUser is not superadmin, only password is updated
@@ -706,7 +727,37 @@ void httpPostUser(const RequestContext *request, User signedInUser, const std::s
 
         } else {
             // superadmin: update all parameters of the user's configuration
-            if (!passwd1.empty()) newUserConfig.setPasswd(passwd1);
+            if (authType == "sha1" && !passwd1.empty()) newUserConfig.setPasswd(passwd1);
+#ifdef LDAP_ENABLED
+            else if (authType == "ldap") {
+                if (ldapUri.empty() || ldapDname.empty()) {
+                    sendHttpHeader400(request, "Missing parameter. Check the LDAP URI and Distinguished Name.");
+                    return;
+                }
+                AuthLdap *ah = new AuthLdap();
+                ah->type = AUTH_LDAP;
+                ah->uri = ldapUri;
+                ah->dname = ldapDname;
+                newUserConfig.authHandler = ah;
+#endif
+#ifdef KERBEROS_ENABLED
+            } else if (authType == "krb5") {
+                if (krb5Realm.empty()) {
+                    sendHttpHeader400(request, "Empty parameter: Kerberos Realm.");
+                    return;
+                }
+                AuthKrb5 *ah = new AuthKrb5();
+                ah->type = AUTH_KRB5;
+                ah->realm = krb5Realm;
+                newUserConfig.authHandler = ah;
+
+#endif
+            } else {
+                // unsupported authentication type
+                std::string msg = "Unsupported authentication type: " + authType;
+                sendHttpHeader400(request, msg.c_str());
+                return;
+            }
 
             if (username == "_") {
                 r = UserBase::addUser(newUserConfig);
