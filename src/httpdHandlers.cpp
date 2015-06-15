@@ -514,8 +514,7 @@ int httpGetSm(const RequestContext *request, const std::string &file)
             remainingBytes -= nToRead;
         }
     } else {
-        // typically return the file 'version'
-        return REQUEST_NOT_PROCESSED;
+        sendHttpHeader403(request);
     }
 
     return REQUEST_COMPLETED;
