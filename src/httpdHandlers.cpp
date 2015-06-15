@@ -44,6 +44,7 @@
 #include "Trigger.h"
 #include "filesystem.h"
 #include "restApi.h"
+#include "embedcpio.h" // generated
 
 #define K_ME "me"
 #define MAX_SIZE_UPLOAD (10*1024*1024)
@@ -128,10 +129,19 @@ void sendHttpHeader204(const RequestContext *request)
 {
     LOG_FUNC();
     request->printf("HTTP/1.0 204 No Content\r\n");
+    request->printf("Content-Length: 0\r\n");
+    request->printf("Connection: close\r\n\r\n");
     addHttpStat(H_2XX);
 }
 
+int sendHttpHeader304(const RequestContext *request)
+{
+    request->printf("HTTP/1.0 304 No Modified\r\n");
+    request->printf("Content-Length: 0\r\n");
+    request->printf("Connection: close\r\n\r\n");
 
+    return REQUEST_COMPLETED;
+}
 
 int sendHttpHeader400(const RequestContext *request, const char *msg)
 {
@@ -456,10 +466,17 @@ int httpGetSm(const RequestContext *request, const std::string &file)
     const char *virtualFilePreview = "preview";
     if (0 == strncmp(file.c_str(), virtualFilePreview, strlen(virtualFilePreview))) {
         handleMessagePreview(request);
-        return 1;
+        return REQUEST_COMPLETED;
     } else if (0 == strcmp(file.c_str(), "stat")) {
         handleGetStats(request);
-        return 1;
+        return REQUEST_COMPLETED;
+    }
+
+    // check if etag does match
+    // the etag if the build time for /sm/* files.
+    const char *inm = request->getHeader("If-None-Match");
+    if (inm && 0 == strcmp(em_binary_etag, inm)) {
+        return sendHttpHeader304(request);
     }
 
     std::string internalFile = "sm/" + file;
@@ -471,6 +488,7 @@ int httpGetSm(const RequestContext *request, const std::string &file)
         sendHttpHeader200(request);
         const char *mimeType = mg_get_builtin_mime_type(file.c_str());
         LOG_DEBUG("mime-type=%s, size=%d", mimeType, filesize);
+        request->printf("ETag: %s\r\n", em_binary_etag);
         request->printf("Content-Type: %s\r\n\r\n", mimeType);
 
         // file found
@@ -495,12 +513,12 @@ int httpGetSm(const RequestContext *request, const std::string &file)
 
             remainingBytes -= nToRead;
         }
-        r = 1;
     } else {
-        r = 0;
+        // typically return the file 'version'
+        return REQUEST_NOT_PROCESSED;
     }
 
-    return r;
+    return REQUEST_COMPLETED;
 }
 
 void httpGetUsers(const RequestContext *req, const User &signedInUser)

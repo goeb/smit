@@ -1655,7 +1655,7 @@ embedcpio.c embedcpio.h: @srcdir@/tools/convertToC.cpp @srcdir@/data/sm/smit.js
 	@# build convertToC with gcc
 	@# I do not know how to make this portable with the GNU autotools
 	g++ -o ./convertToC @srcdir@/tools/convertToC.cpp
-	./convertToC embedcpio
+	./convertToC embedcpio `date +%s`
 
 .PHONY: clean-local-embedded-data
 clean-local-embedded-data:
