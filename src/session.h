@@ -53,13 +53,15 @@ public:
 
 class UserBase {
 public:
-    static int init(const char *repository, bool checkProject = true);
+    static int init(const char *repository);
+    static int load(const std::string &repository, std::map<std::string, User*> &users);
     static void setLocalUserInterface(const std::string username);
     static int store(const std::string &repository);
     static int initUsersFile(const char *repository);
     static User* getUser(const std::string &username);
     static int addUser(User u);
     static int deleteUser(const std::string &username);
+    static int hotReload();
     static std::set<std::string> getUsersOfProject(const std::string &project);
     static std::map<std::string, Role> getUsersRolesOfProject(const std::string &project);
     static std::map<Role, std::set<std::string> > getUsersByRole(const std::string &project);

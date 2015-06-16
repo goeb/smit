@@ -247,10 +247,15 @@ std::list<std::string> getAvailableRoles()
     return result;
 }
 
-
-/** Load the users of a repository
+/** Load user authentication parameters and permissions
+  *
+  * @param[out] users
+  *
+  * @return
+  *    0 ok
+  *   -1 configuration error
   */
-int UserBase::init(const char *path, bool checkProject)
+int UserBase::load(const std::string &path, std::map<std::string, User*> &users)
 {
     Repository = path;
 
@@ -274,7 +279,7 @@ int UserBase::init(const char *path, bool checkProject)
                 if (r == 0) {
                     // add user in database
                     LOG_DIAG("Loaded user: '%s'", u.username.c_str());
-                    UserBase::addUserInArray(u);
+                    users[u.username] = new User(u);
                 }
             } else {
                 LOG_ERROR("Invalid token '%s' in %s", verb.c_str(), auth.c_str());
@@ -300,8 +305,9 @@ int UserBase::init(const char *path, bool checkProject)
                     LOG_ERROR("Invalid 'setperm' with no username: %s", filePermissions.c_str());
                     continue;
                 }
-                User *u = UserBase::getUser(username);
-                if (!u) {
+                std::map<std::string, User*>::iterator uit = users.find(username);
+
+                if (uit == users.end()) {
                     LOG_ERROR("Unknown user '%s' referenced from '%s'", username.c_str(),
                               filePermissions.c_str());
                     continue;
@@ -309,11 +315,11 @@ int UserBase::init(const char *path, bool checkProject)
 
                 std::string roleStr = popListToken(*line);
                 if (roleStr == "superadmin") {
-                    u->superadmin = true;
+                    uit->second->superadmin = true;
                 } else {
                     Role role = stringToRole(roleStr);
                     std::string projectWildcard = popListToken(*line);
-                    u->permissions[projectWildcard] = role;
+                    uit->second->permissions[projectWildcard] = role;
                 }
 
             } else {
@@ -325,11 +331,19 @@ int UserBase::init(const char *path, bool checkProject)
 
     // for each user, consolidate its roles after the wildcarded permissions
     std::map<std::string, User*>::iterator u;
-    FOREACH(u, UserDb.configuredUsers) {
+    FOREACH(u, users) {
         u->second->consolidateRoles();
     }
 
     return 0;
+
+}
+
+/** Load the users of a repository
+  */
+int UserBase::init(const char *path)
+{
+    return load(path, UserDb.configuredUsers);
 }
 
 void UserBase::setLocalUserInterface(const std::string username)
@@ -456,6 +470,38 @@ int UserBase::deleteUser(const std::string &username)
 
     return r;
 
+}
+
+/** Reload the user database (authentication parameters and permissions)
+  */
+int UserBase::hotReload()
+{
+    LOG_INFO("Hot reload of users");
+
+    std::map<std::string, User*> newUsers;
+    int r = load(UserDb.Repository, newUsers);
+    if (r != 0) {
+        // delete the allocated objects
+        std::map<std::string, User*>::iterator u;
+        FOREACH(u, newUsers) {
+            delete u->second;
+        }
+        return -1;
+    }
+
+    // Ok, the files were loaded successfully.
+
+    LOCK_SCOPE(UserDb.locker, LOCK_READ_WRITE);
+
+    // free the old objects
+    std::map<std::string, User*>::iterator u;
+    FOREACH(u, UserDb.configuredUsers) {
+        delete u->second;
+    }
+
+    UserDb.configuredUsers = newUsers;
+
+    return 0;
 }
 
 
@@ -630,6 +676,8 @@ std::list<std::pair<std::string, std::string> > User::getProjects() const
 
 /** Check user credentials and initiate a session
   *
+  * @return
+  *    The session id on success, otherwise, an empty string.
   */
 std::string SessionBase::requestSession(const std::string &username, char *passwd)
 {

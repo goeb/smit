@@ -443,7 +443,7 @@ int cmdUser(int argc, char **argv)
         return helpUser();
     }
 
-    int r = UserBase::init(repo, false);
+    int r = UserBase::init(repo);
     if (r < 0) {
         LOG_ERROR("Cannot loads users of repository '%s'. Aborting.", repo);
         exit(1);

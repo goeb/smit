@@ -209,7 +209,6 @@ void sendHttpHeader500(const RequestContext *request, const char *msg)
   */
 int sendHttpRedirect(const RequestContext *request, const std::string &redirectUrl, const char *otherHeader)
 {
-    LOG_FUNC();
     request->printf("HTTP/1.1 303 See Other\r\n");
     const char *scheme = 0;
     if (request->isSSL()) scheme = "https";
@@ -223,12 +222,18 @@ int sendHttpRedirect(const RequestContext *request, const std::string &redirectU
 
     if (redirectUrl[0] != '/') LOG_ERROR("Invalid redirect URL (missing first /): %s", redirectUrl.c_str());
 
-    request->printf("Location: %s://%s%s%s", scheme, host,
-                    MongooseServerContext::getInstance().getUrlRewritingRoot().c_str(),
-                    redirectUrl.c_str());
+    std::string location = scheme;
+    location += "://";
+    location += host;
+    location += MongooseServerContext::getInstance().getUrlRewritingRoot();
+    location += redirectUrl;
+    request->printf("Location: %s", location.c_str());
 
     if (otherHeader) request->printf("\r\n%s", otherHeader);
     request->printf("\r\n\r\n");
+
+    LOG_DIAG("Redirected to: %s", location.c_str());
+
     return REQUEST_COMPLETED;
 }
 
@@ -625,6 +630,53 @@ void httpDeleteUser(const RequestContext *request, User signedInUser, const std:
     }
 }
 
+/** Hot reload of users (if hotreload=1)
+  */
+void httpPostUserEmpty(const RequestContext *req, const User &signedInUser)
+{
+    if (!signedInUser.superadmin) {
+        sendHttpHeader403(req);
+        return;
+    }
+
+    // check if a hot reload is requested
+
+    // get the posted parameters
+
+    const char *contentType = getContentType(req);
+    if (0 == strcmp("application/x-www-form-urlencoded", contentType)) {
+        // application/x-www-form-urlencoded
+        // post_data is "var1=val1&var2=val2...".
+
+        std::string postData;
+        int rc = readMgreq(req, postData, 4096);
+        if (rc < 0) {
+            sendHttpHeader413(req, "You tried to upload too much data. Max is 4096 bytes.");
+            return;
+        }
+
+        std::string tokenPair = popToken(postData, '&');
+        std::string key = popToken(tokenPair, '=');
+        std::string value = urlDecode(tokenPair);
+
+        if (key == "hotreload" && value == "1") {
+            int r = UserBase::hotReload();
+            if (r != 0) {
+                sendHttpHeader500(req, "Hot reload failed");
+                return;
+            } else {
+                // Ok, redirect
+                sendHttpRedirect(req, "/users", 0);
+                return;
+            }
+        }
+    } else {
+        LOG_INFO("httpPostUserEmpty: contentType '%s' rejected", contentType);
+    }
+    sendHttpHeader403(req);
+    return;
+}
+
 /** Post configuration of a new or existing user
   *
   * Non-superadmin users may only post their password.
@@ -635,7 +687,8 @@ void httpPostUser(const RequestContext *request, User signedInUser, const std::s
         sendHttpHeader403(request);
         return;
     }
-    if (username.empty()) return sendHttpHeader403(request);
+
+    if (username.empty()) return httpPostUserEmpty(request, signedInUser);
 
     // get the posted parameters
     const char *contentType = getContentType(request);
