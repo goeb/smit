@@ -124,7 +124,7 @@ int User::loadAuth(std::list<std::string> &tokens)
             token = popListToken(tokens);
 
             if (token == AUTH_SHA1) {
-                Auth *ah = AuthSha1::load(tokens);
+                Auth *ah = AuthSha1::deserialize(tokens);
                 if (!ah) {
                     LOG_ERROR("Cannot load auth for user '%s'", username.c_str());
                 }
@@ -132,43 +132,12 @@ int User::loadAuth(std::list<std::string> &tokens)
 
 #ifdef KERBEROS_ENABLED
             } else if (token == AUTH_KRB5) {
-                AuthKrb5 *ah = new AuthKrb5();
-                ah->type = AUTH_KRB5;
-                // single sign-on authentication via a kerberos server
-
-                popListToken(tokens); // consume the -realm (TODO check it)
-                ah->realm = popListToken(tokens);
-                if (ah->realm.empty()) {
-                    LOG_ERROR("Empty kerberos realm for user '%s'", username.c_str());
-                    delete ah;
-                    return -1;
-                }
-                // TODO add -alias option
-                authHandler = ah;
+                authHandler = AuthKrb5::deserialize(tokens);
 #endif
 #ifdef LDAP_ENABLED
             } else if (token == AUTH_LDAP) {
                 // single sign-on authentication via a ldap server
-                AuthLdap *ah = new AuthLdap();
-                ah->type = token;
-
-                while (!tokens.empty()) {
-                    token = popListToken(tokens);
-                    if (token == "-uri") ah->uri = popListToken(tokens);
-                    else if (token == "-dname") ah->dname = popListToken(tokens);
-                    else {
-                        LOG_ERROR("Invalid token '%s' for user '%s'",
-                                  token.c_str(), username.c_str());
-                        delete ah;
-                        return -1;
-                    }
-                }
-                if (ah->uri.empty()) {
-                    LOG_ERROR("Empty ldap server for user %s", username.c_str());
-                    delete ah;
-                    return -1;
-                }
-                authHandler = ah;
+                authHandler = AuthLdap::deserialize(tokens);
 #endif
             }
         } else {
@@ -190,10 +159,9 @@ std::string getNewSalt()
   */
 void User::setPasswd(const std::string &password)
 {
-    AuthSha1 *ah = new AuthSha1();
-    ah->type = AUTH_SHA1;
-    ah->salt = getNewSalt();
-    ah->hash = getSha1(password + ah->salt);
+    std::string salt = getNewSalt();
+    std::string hash = getSha1(password + salt);
+    AuthSha1 *ah = new AuthSha1("", hash, salt);
     if (authHandler) delete authHandler;
     authHandler = ah;
 }

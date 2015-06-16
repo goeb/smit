@@ -29,6 +29,15 @@
 #include "filesystem.h"
 #include "restApi.h"
 
+#ifdef KERBEROS_ENABLED
+  #include "AuthKrb5.h"
+#endif
+
+#ifdef LDAP_ENABLED
+  #include "AuthLdap.h"
+#endif
+
+
 
 /** Build a context for a user and project
   *
@@ -352,7 +361,17 @@ void RHtml::printPageUser(const ContextParameters &ctx, const User *u)
 
         vn.script +=  "addPermission('sm_permissions', '', '');\n";
         vn.script +=  "addPermission('sm_permissions', '', '');\n";
-        vn.script += "setAuthSha1();\n"; // TODO handle krb5 and ldap
+        if (u && u->authHandler) {
+            if (u->authHandler->type == "sha1") vn.script += "setAuthSha1();\n";
+            else if (u->authHandler->type == "krb5") {
+                AuthKrb5 *ah = dynamic_cast<AuthKrb5*>(u->authHandler);
+                vn.script += "setAuthKrb5('" + enquoteJs(ah->alternateUsername) + "', '" + enquoteJs(ah->realm) + "');\n";
+            } else if (u->authHandler->type == "ldap") {
+                AuthLdap *ah = dynamic_cast<AuthLdap*>(u->authHandler);
+                vn.script += "setAuthLdap('" + enquoteJs(ah->uri) + "', '" + enquoteJs(ah->dname) + "');\n";
+            }
+            // else, it may be empty, if no auth type is assigned
+        }
     }
 
     vn.printPage();

@@ -2,6 +2,7 @@
 #define _AuthLdap_h
 
 #include <string>
+#include <list>
 
 #include "Auth.h"
 
@@ -9,12 +10,15 @@
 
 
 struct AuthLdap : public Auth {
-    std::string dname; // Distinguished name. Eg: uid=john,ou=people,dc=example,dc=com
     std::string uri; // eg: ldaps://example.com:389
+    std::string dname; // Distinguished name. Eg: uid=john,ou=people,dc=example,dc=com
     virtual int authenticate(char *password);
     virtual std::string serialize();
+    static Auth *deserialize(std::list<std::string> &tokens);
     virtual Auth *createCopy();
     inline ~AuthLdap() { }
+    inline AuthLdap(const std::string &username, const std::string &ur, const std::string &dn) :
+        Auth(AUTH_LDAP, username), uri(ur), dname(dn) { }
 };
 
 #endif

@@ -493,10 +493,10 @@ function setAuthLdap(uri, dname) {
     var item = document.getElementsByName('sm_ldap_dname')[0];
     item.value = dname;
 }
-function setAuthKrb5(principal, realm) {
+function setAuthKrb5(primary, realm) {
     setAuth('krb5');
-    var item = document.getElementsByName('sm_krb5_principal')[0];
-    item.value = principal;
+    var item = document.getElementsByName('sm_krb5_primary')[0];
+    item.value = primary;
     var item = document.getElementsByName('sm_krb5_realm')[0];
     item.value = realm;
 }

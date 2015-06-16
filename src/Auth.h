@@ -8,6 +8,8 @@ struct Auth {
     virtual std::string serialize() = 0;
     virtual Auth *createCopy() = 0;
     inline virtual ~Auth() { }
+    inline Auth(const std::string &t, const std::string &u) :
+        type(t), username(u) {}
 };
 
 #endif

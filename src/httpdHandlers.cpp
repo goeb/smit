@@ -656,7 +656,7 @@ void httpPostUser(const RequestContext *request, User signedInUser, const std::s
         std::string projectWildcard, role;
         std::string authType = "sha1"; // default value
         std::string ldapUri, ldapDname;
-        std::string krb5Principal, krb5Realm;
+        std::string krb5Primary, krb5Realm;
 
         while (postData.size() > 0) {
             std::string tokenPair = popToken(postData, '&');
@@ -670,7 +670,7 @@ void httpPostUser(const RequestContext *request, User signedInUser, const std::s
             else if (key == "sm_passwd2") passwd2 = value;
             else if (key == "sm_ldap_uri") ldapUri = value;
             else if (key == "sm_ldap_dname") ldapDname = value;
-            else if (key == "sm_krb5_principal") krb5Principal = value;
+            else if (key == "sm_krb5_primary") krb5Primary = value;
             else if (key == "sm_krb5_realm") krb5Realm = value;
             else if (key == "project_wildcard") projectWildcard = value;
             else if (key == "role") role = value;
@@ -734,11 +734,7 @@ void httpPostUser(const RequestContext *request, User signedInUser, const std::s
                     sendHttpHeader400(request, "Missing parameter. Check the LDAP URI and Distinguished Name.");
                     return;
                 }
-                AuthLdap *ah = new AuthLdap();
-                ah->type = AUTH_LDAP;
-                ah->uri = ldapUri;
-                ah->dname = ldapDname;
-                newUserConfig.authHandler = ah;
+                newUserConfig.authHandler = new AuthLdap(newUserConfig.username, ldapUri, ldapDname);
 #endif
 #ifdef KERBEROS_ENABLED
             } else if (authType == "krb5") {
@@ -746,11 +742,7 @@ void httpPostUser(const RequestContext *request, User signedInUser, const std::s
                     sendHttpHeader400(request, "Empty parameter: Kerberos Realm.");
                     return;
                 }
-                AuthKrb5 *ah = new AuthKrb5();
-                ah->type = AUTH_KRB5;
-                ah->realm = krb5Realm;
-                newUserConfig.authHandler = ah;
-
+                newUserConfig.authHandler = new AuthKrb5(newUserConfig.username, krb5Realm, krb5Primary);
 #endif
             } else {
                 // unsupported authentication type

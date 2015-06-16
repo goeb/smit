@@ -45,7 +45,7 @@ Auth *AuthSha1::createCopy()
 }
 
 
-Auth *AuthSha1::load(std::list<std::string> &tokens)
+Auth *AuthSha1::deserialize(std::list<std::string> &tokens)
 {
     std::string hash;
     std::string salt;
@@ -64,9 +64,6 @@ Auth *AuthSha1::load(std::list<std::string> &tokens)
         return 0;
     }
 
-    AuthSha1 *ah = new AuthSha1();
-    ah->type = AUTH_SHA1;
-    ah->hash = hash;
-    ah->salt = salt;
+    AuthSha1 *ah = new AuthSha1("", hash, salt);
     return dynamic_cast<Auth*>(ah);
 }
