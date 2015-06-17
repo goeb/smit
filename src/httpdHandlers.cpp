@@ -134,12 +134,19 @@ void sendHttpHeader201(const RequestContext *request)
     addHttpStat(H_2XX);
 }
 
-void sendHttpHeader204(const RequestContext *request)
+/**
+  *
+  * @param extraHeader
+  *     Typically a cookie.
+  */
+void sendHttpHeader204(const RequestContext *request, const char *extraHeader)
 {
     LOG_FUNC();
     request->printf("HTTP/1.0 204 No Content\r\n");
+    if (extraHeader) request->printf("%s\r\n", extraHeader);
     request->printf("Content-Length: 0\r\n");
-    request->printf("Connection: close\r\n\r\n");
+    request->printf("Connection: close\r\n");
+    request->printf("\r\n");
     addHttpStat(H_2XX);
 }
 
@@ -372,8 +379,8 @@ int httpPostSignin(const RequestContext *request)
         }
 
         if (format == X_SMIT) {
-            sendHttpHeader204(request);
-            request->printf("%s\r\n\r\n", getServerCookie(SESSID, sessionId.c_str(), SESSION_DURATION).c_str());
+            std::string cookieSessid = getServerCookie(SESSID, sessionId.c_str(), SESSION_DURATION);
+            sendHttpHeader204(request, cookieSessid.c_str());
         } else {
             if (redirect.empty()) redirect = "/";
             setCookieAndRedirect(request, SESSID, sessionId.c_str(), redirect.c_str());
@@ -425,9 +432,10 @@ void httpPostSignout(const RequestContext *request, const std::string &sessionId
         redirectToSignin(request, "/");
 
     } else {
-        sendHttpHeader204(request);
         // delete session cookie
-        request->printf("%s\r\n\r\n", getDeletedCookieString(SESSID).c_str());
+        std::string cookieSessid = getDeletedCookieString(SESSID);
+        sendHttpHeader204(request, cookieSessid.c_str());
+
     }
 }
 
@@ -1599,8 +1607,7 @@ void httpGetHeadObject(const RequestContext *req, Project &p, std::string object
     std::string realpath = p.getObjectsDir() + "/" + Object::getSubpath(id);
 
     if (fileExists(realpath)) {
-        sendHttpHeader204(req);
-        req->printf("\r\n");
+        sendHttpHeader204(req, 0);
 
     } else {
         sendHttpHeader404(req);
