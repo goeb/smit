@@ -82,7 +82,6 @@ const Project &ContextParameters::getProject() const
 #define K_SM_HTML_PROJECT "SM_HTML_PROJECT"
 #define K_SM_URL_PROJECT "SM_URL_PROJECT"
 #define K_SM_RAW_ISSUE_ID "SM_RAW_ISSUE_ID"
-#define K_SM_SCRIPT_PROJECT_CONFIG_UPDATE "SM_SCRIPT_PROJECT_CONFIG_UPDATE"
 #define K_SM_DIV_PREDEFINED_VIEWS "SM_DIV_PREDEFINED_VIEWS"
 #define K_SM_DIV_PROJECTS "SM_DIV_PROJECTS"
 #define K_SM_DIV_USERS "SM_DIV_USERS"
@@ -238,9 +237,6 @@ public:
             } else if (varname == K_SM_TABLE_USER_PERMISSIONS) {
                 if (concernedUser) RHtml::printUserPermissions(ctx.req, *concernedUser);
                 // else, dont print the table
-
-            } else if (varname == K_SM_SCRIPT_PROJECT_CONFIG_UPDATE) {
-                RHtml::printScriptUpdateConfig(ctx);
 
             } else if (varname == K_SM_RAW_ISSUE_ID && currentIssue) {
                 ctx.req->printf("%s", htmlEscape(currentIssue->id).c_str());
@@ -946,19 +942,20 @@ std::string getNewSortingSpec(const RequestContext *req, const std::string prope
     return result;
 }
 
-/** Print javascript that will fulfill the inputs of the project configuration
+/** Generate javascript that will fulfill the inputs of the project configuration
   */
-void RHtml::printScriptUpdateConfig(const ContextParameters &ctx)
+std::string RHtml::getScriptProjectConfig(const ContextParameters &ctx)
 {
-    ctx.req->printf("<script>\n");
+    std::string script;
 
     // fulfill reserved properties first
     std::list<std::string> reserved = ProjectConfig::getReservedProperties();
     std::list<std::string>::iterator r;
     FOREACH(r, reserved) {
         std::string label = ctx.projectConfig.getLabelOfProperty(*r);
-        ctx.req->printf("addProperty('%s', '%s', 'reserved', '');\n", enquoteJs(*r).c_str(),
-                        enquoteJs(label).c_str());
+        script += "addProperty('" +
+                enquoteJs(*r) + "', '" +
+                enquoteJs(label) + "', 'reserved', '');\n";
     }
 
     // other properties
@@ -978,38 +975,41 @@ void RHtml::printScriptUpdateConfig(const ContextParameters &ctx)
         } else if (pspec->type == F_ASSOCIATION) {
             options = pspec->reverseLabel;
         }
-        ctx.req->printf("addProperty('%s', '%s', '%s', '%s');\n", enquoteJs(pspec->name).c_str(),
-                        enquoteJs(label).c_str(),
-                        type.c_str(), options.c_str());
+        script +=  "addProperty('" + enquoteJs(pspec->name) +
+                "', '" + enquoteJs(label) +
+                "', '" + type +
+                "', '" + options + "');\n";
     }
 
     // add 3 more empty properties
-    ctx.req->printf("addProperty('', '', '', '');\n");
-    ctx.req->printf("addProperty('', '', '', '');\n");
-    ctx.req->printf("addProperty('', '', '', '');\n");
+    script += "addProperty('', '', '', '');\n";
+    script += "addProperty('', '', '', '');\n";
+    script += "addProperty('', '', '', '');\n";
 
-    ctx.req->printf("replaceContentInContainer();\n");
+    script += "replaceContentInContainer();\n";
 
     // add tags
     std::map<std::string, TagSpec>::const_iterator tagspec;
     FOREACH(tagspec, c.tags) {
         const TagSpec& tpsec = tagspec->second;
-        ctx.req->printf("addTag('%s', '%s', %s);\n", enquoteJs(tpsec.id).c_str(),
-                        enquoteJs(tpsec.label).c_str(),
-                        tpsec.display?"true":"false");
+        script += "addTag('" + enquoteJs(tpsec.id) +
+                "', '" + enquoteJs(tpsec.label) + "', ";
+        if (tpsec.display) script += "true";
+        else script += "false";
+        script += ");\n";
     }
 
-    ctx.req->printf("addTag('', '', '', '');\n");
-    ctx.req->printf("addTag('', '', '', '');\n");
-
-
-    ctx.req->printf("</script>\n");
+    script += "addTag('', '', '', '');\n";
+    script += "addTag('', '', '', '');\n";
+    return script;
 }
 
 
 void RHtml::printProjectConfig(const ContextParameters &ctx)
 {
     VariableNavigator vn("project.html", ctx);
+
+    vn.script = getScriptProjectConfig(ctx);
 
     if (ctx.user.superadmin) {
         vn.script += "showOrHideClasses('sm_zone_superadmin', true);\n";

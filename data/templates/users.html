@@ -2,6 +2,7 @@
 <html>
     <head>
         <title>Users</title>
+        <link rel="icon" type="image/x-icon" href="/public/favicon.ico"/>
         <link rel="stylesheet" type="text/css" href="SM_URL_ROOT/public/style.css">
         <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/>
         <script src="SM_URL_ROOT/sm/smit.js"></script>
@@ -15,5 +16,11 @@
         <br>
         <br>
 SM_DIV_USERS
+<br>
+        <form onsubmit="return confirm('Really reload users?');" method="post">
+            <input type="hidden" name="hotreload" value="1">
+            <input type="submit" value="Reload Users From Disk Storage">
+        </form>
+
     </body>
 </html>

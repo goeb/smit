@@ -32,6 +32,20 @@ migrateObject() {
 
 TEMPLATES="issue.html issuesAccross.html issues.html newIssue.html project.html projects.html signin.html user.html view.html views.html"
 
+# Replace SM_ vars, etc.
+# $1 : file to be updated in-place
+migrateTemplateVars() {
+    file="$1"
+    sed -i -e "s/SM_REWRITE_ROOT/SM_URL_ROOT/g" \
+        -e "s/SM_HTML_PROJECT_NAME/SM_HTML_PROJECT/g" \
+        -e "s/sm_user_superadmin_zone/sm_zone_superadmin/g" \
+        -e "s/roles_on_projects/sm_permissions/g" \
+        -e "s/passwd1/sm_passwd1/g" \
+        -e "s/passwd2/sm_passwd2/g" \
+        -e "s/SM_SCRIPT_PROJECT_CONFIG_UPDATE/SM_SCRIPT/g" \
+        "$file"
+}
+
 # Migrate the templates of the repository
 # $1 : smit repository to be migrated
 migrateRepoTemplates() {
@@ -40,11 +54,11 @@ migrateRepoTemplates() {
     mkdir -p "$templates"
     for page in $TEMPLATES; do
         mv "$repo/public/$page" "$templates/." 2>/dev/null
-        # replace some sm variables
-        sed -i -e "s/SM_REWRITE_ROOT/SM_URL_ROOT/g" \
-               -e "s/SM_HTML_PROJECT_NAME/SM_HTML_PROJECT/g" \
-            "$templates/$page"
+        migrateTemplateVars "$templates/$page"
     done
+
+    # copy new page users.html
+    # TODO
 }
 
 # Migrate the templates of a project
@@ -55,6 +69,7 @@ migrateProjectTemplates() {
     mkdir -p "$templates"
     for page in $TEMPLATES; do
         mv "$pDir/html/$page" "$templates/." 2>/dev/null
+        [ -f "$templates/$page" ] && migrateTemplateVars "$templates/$page"
     done
 }
 
@@ -351,5 +366,10 @@ find "$dstDir" -name project | while read p; do
     rm -rf "$pDir/tags"
 
 done
+
+echo "Manual actions you should do:"
+echo "- copy template SMIT_SRC/data/templates/users.html to your new smit repo"
+echo "- update REPO/public/style.css to take into account the new styles from SMIT_SRC/public/style.css"
+
 
 
