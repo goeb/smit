@@ -24,6 +24,8 @@ import subprocess
 import MailConfig
 import WebConfig
 
+Verbose = False
+
 def getGpgKey(email):
     "return the GPG id of a user, if any"
     try:
@@ -130,8 +132,12 @@ def escapeProjectName(pname):
 def getMailBody(jsonMsg):
     "print a recap of the properties of the issue, and the message"
     body = getMailSubject(jsonMsg) + "\r\n"
-    if jsonMsg['isNew']: body += "(new issue created)"
-    else: body += "(issue modified)"
+    if jsonMsg['author']: author = jsonMsg['author']
+    else: author = 'unknown author'
+
+    if jsonMsg['isNew']: body += "(new issue created by %s)" % (author)
+    else: body += "(issue modified by %s)" % (author)
+
     body += '\r\n'
     body += "---- properties -------------------------\r\n"
     for p in jsonMsg['properties']:
@@ -191,15 +197,13 @@ def getTestData():
 def parseCommandLine():
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('--if-property-modified', help='send an email if the given property is modified')
+    parser.add_argument('--if-property-modified', help='send an email if any of the given properties is modified (separated by commas)')
     parser.add_argument('--mailto-property', help='send the email to the people in the given property')
     parser.add_argument('--mailto-admins', action='store_true', help='send the email to all administrators of the project')
     parser.add_argument('--test', action='store_true', help='test with dummy data (useful for command line debugging)')
+    parser.add_argument('--verbose', action='store_true', help='be verbose')
     args = parser.parse_args()
 
-    #print "--if-property-modified", args.if_property_modified
-    #print "--mailto-property", args.mailto_property
-    #print "--test", args.test
     return args
 	
 
@@ -208,7 +212,10 @@ def parseCommandLine():
 #print "triggers/notifyNewEntry.py(%s)" % (sys.argv)
 args = parseCommandLine()
 
+if args.verbose: Verbose = True
+
 if args.test:
+    print("Using test data...")
     raw = getTestData()
 else:
     raw = sys.stdin.read()
@@ -223,13 +230,16 @@ except:
 # check the conditions for sending the email
 doSendMail = False
 if args.if_property_modified:
-    if args.if_property_modified in jsonMsg['modified']:
-        doSendMail = True
+    props = args.if_property_modified.split(',')
+    for p in props:
+        if p in jsonMsg['modified']:
+            doSendMail = True
+            break
 else:
     doSendMail = True
 
 if not doSendMail:
-    print('doSendMail=False') # debug
+    #print('doSendMail=False') # debug
     sys.exit(0)
 
 # build the list of addressees
@@ -244,8 +254,10 @@ if args.mailto_admins:
 
 if len(addressees) == 0:
     # no addressees, no email to send
-    print('no addressees')
+    print('no addressees, mail not sent')
     sys.exit(0)
+
+if Verbose: print("addressees: ", addressees)
 
 # set contents of the email
 subject = getMailSubject(jsonMsg)
