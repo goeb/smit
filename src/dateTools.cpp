@@ -45,10 +45,10 @@ std::string getLocalTimestamp()
 
 std::string epochToString(time_t t)
 {
-    struct tm *tmp;
-    tmp = localtime(&t);
+    struct tm tmp;
+    localtime_r(&t, &tmp);
     char datetime[100+1]; // should be enough
-    strftime(datetime, sizeof(datetime)-1, "%d %b %Y, %H:%M:%S", tmp);
+    strftime(datetime, sizeof(datetime)-1, "%d %b %Y, %H:%M:%S", &tmp);
 
     return std::string(datetime);
 }
@@ -65,8 +65,8 @@ std::string epochToStringDelta(time_t t)
     else if (delta < 60*60) snprintf(datetime, sizeof(datetime)-1, "%ld %s", delta/60, _("min"));
     else if (delta < 60*60*24) snprintf(datetime, sizeof(datetime)-1, "%ld %s", delta/60/60, _("h"));
     else if (delta < 60*60*24*31) snprintf(datetime, sizeof(datetime)-1, "%ld %s", delta/60/60/24, _("day"));
-    else if (delta < 60*60*24*365) snprintf(datetime, sizeof(datetime)-1, "%ld %s", delta/60/60/24/30, _("month"));
-    else if (delta > 0) snprintf(datetime, sizeof(datetime)-1, "%ld %s", delta/60/60/24/365, _("year"));
+    else if (delta <= 60*60*24*366) snprintf(datetime, sizeof(datetime)-1, "%ld %s", delta/60/60/24/30, _("month"));
+    else if (delta > 0) snprintf(datetime, sizeof(datetime)-1, "%ld %s", delta/60/60/24/366, _("year"));
     else return epochToString(t);
 
 

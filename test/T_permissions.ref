@@ -1,0 +1,49 @@
+smitc POST p1
+403 Forbidden
+smitc GET p1
+403 Forbidden
+smitc POST p2
+403 Forbidden
+smitc GET p2
+403 Forbidden
+smitc POST p3
+403 Forbidden
+smitc GET p3
+id,	summary
+1,	p3:first issue
+smitc POST p4
+1/...
+smitc GET p4
+id,	summary
+1,	new-summary/p4
+smitc POST p5
+1/...
+smitc GET p5
+id,	summary
+1,	new-summary/p5
+Issues of clone1/p1:
+Issues of clone1/p2:
+Issues of clone1/p3:
+Issue 1: p3:first issue
+Issues of clone1/p4:
+Issue 1: new-summary/p4
+Issues of clone1/p5:
+Issue 1: new-summary/p5
+INFO  Project clone1/p5 loaded: 1 issues
+INFO  Project clone1/p3 loaded: 1 issues
+INFO  Project clone1/p4 loaded: 1 issues
+Pulling project: p3
+Pulling project: p4
+Pulling project: p5
+2/...
+2/...
+pushing project p3...
+pushing project p4...
+Pushing entry: p4/issues/2/...
+pushing project p5...
+Pushing entry: p5/issues/2/...
+2/...
+pushing project p3...
+Pushing entry: p3/issues/2/...
+ERROR Got HTTP status 403
+ERROR Could not push entry of project p3: 2/...

@@ -2,15 +2,22 @@
 #define _AuthKrb5_h
 
 #include <string>
+#include <list>
 
 #include "Auth.h"
 
 #define AUTH_KRB5 "krb5"
 
 struct AuthKrb5 : public Auth {
-    std::string realm; // must generally be upper case
+    std::string realm; // Must generally be upper case
+    std::string alternateUsername; // Optional. If empty, then username is used.
     virtual int authenticate(char *password);
     virtual std::string serialize();
+    virtual Auth *createCopy();
+    static Auth *deserialize(std::list<std::string> &tokens);
+    inline ~AuthKrb5() { }
+    inline AuthKrb5(const std::string &u, const std::string &r, const std::string &p) :
+        Auth(AUTH_KRB5, u), realm(r), alternateUsername(p) {}
 };
 
 #endif

@@ -1,0 +1,14 @@
+Issue 1: first issue
+Issue 2: second issue
+Issue 3: issue of clone1
+Issue 4: issue of clone2
+Issue 3: issue of clone1
+--------------------------------------------------------------------------------
+Modified Properties:
+    freeText: this is xyz
+    summary: issue of clone1
+Issue 4: issue of clone2
+--------------------------------------------------------------------------------
+Modified Properties:
+    freeText: abcdef
+    summary: issue of clone2

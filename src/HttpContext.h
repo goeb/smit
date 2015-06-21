@@ -29,6 +29,7 @@ public:
     inline const char *getHeader(const char *h) const { return mg_get_header(conn, h); }
     inline int isSSL() const { return mg_get_request_info(conn)->is_ssl; }
     const char *getQueryString() const;
+    void sendObject(const std::string &basemane, const std::string &realpath) const;
 
 private:
     mutable struct mg_connection *conn;

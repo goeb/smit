@@ -1,6 +1,8 @@
 #!/bin/sh
 # SMIT client
 
+SMITC_COOKIE=.smitcCookie
+
 usage() {
     echo "Usage:"
     echo "    smitc <options> <command> <arguments>"
@@ -11,23 +13,11 @@ usage() {
     echo "    smitc signin http://127.0.0.1:8090 john johnpasswd"
     echo "    smitc get http://127.0.0.1:8090/smit/issues?colspec=id+title"
     echo "    smitc post http://127.0.0.1:8090/project/issues/new summary=testxxx"
+    echo "    smitc postconfig http://127.0.0.1:8090/project/config ..."
 
     exit 1
 }
 
-SMITC_COOKIE=.smitcCookie
-
-command=""
-while [ "$1" != "" ]; do
-    case "$1" in
-        --*|-?) shift;; # no option yet
-        *) command="$1"; shift; break;
-        esac
-done
-
-args="$@"
- 
-if [ "$command" = "" ]; then usage; fi
 
 signin() {
     echo "signin... args=$@"
@@ -48,11 +38,13 @@ get() {
         else q="?"; fi
         q="${q}format=text"
     fi
+    #set -x
     curl -s -b $SMITC_COOKIE "$url$q"
 }
 
+# post entry
+# HTTP form format: multipart/form-data
 post() {
-    #echo "post... args=$@" 
     uri="$1"
     shift
     data=""
@@ -62,5 +54,28 @@ post() {
     done
     curl -X POST -H Expect: -s $data -b $SMITC_COOKIE "$uri?format=text"
 }
+# post project config
+# HTTP form format: application/x-www-form-urlencoded
+postconfig() {
+    uri="$1"
+    shift
+    data=""
+    while [ "$1" != "" ]; do
+        data="$data --data-urlencode $1"
+        shift
+    done
+    curl -X POST -H Expect: -s $data -b $SMITC_COOKIE "$uri?format=text"
+}
 
-eval $command $args
+# main
+command=""
+while [ "$1" != "" ]; do
+    case "$1" in
+        --*|-?) shift;; # no option yet
+        *) command="$1"; shift; break;
+    esac
+done
+
+if [ "$command" = "" ]; then usage; fi
+
+$command "$@"

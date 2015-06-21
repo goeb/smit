@@ -21,9 +21,12 @@
 #include <sys/types.h>
 #include <dirent.h>
 #include <time.h>
+#include <openssl/sha.h>
 
 #include <string>
 #include <sstream>
+#include <fstream>
+
 #include "httpdHandlers.h"
 
 #include "db.h"
@@ -40,6 +43,17 @@
 #include "cpio.h"
 #include "Trigger.h"
 #include "filesystem.h"
+#include "restApi.h"
+#include "embedcpio.h" // generated
+
+#ifdef KERBEROS_ENABLED
+  #include "AuthKrb5.h"
+#endif
+
+#ifdef LDAP_ENABLED
+  #include "AuthLdap.h"
+#endif
+
 
 #define K_ME "me"
 #define MAX_SIZE_UPLOAD (10*1024*1024)
@@ -113,17 +127,41 @@ void sendHttpHeader200(const RequestContext *request)
     addHttpStat(H_2XX);
 }
 
-void sendHttpHeader204(const RequestContext *request)
+void sendHttpHeader201(const RequestContext *request)
 {
     LOG_FUNC();
-    request->printf("HTTP/1.0 204 No Content\r\n");
+    request->printf("HTTP/1.0 201 Created\r\n\r\n");
     addHttpStat(H_2XX);
 }
 
+/**
+  *
+  * @param extraHeader
+  *     Typically a cookie.
+  */
+void sendHttpHeader204(const RequestContext *request, const char *extraHeader)
+{
+    LOG_FUNC();
+    request->printf("HTTP/1.0 204 No Content\r\n");
+    if (extraHeader) request->printf("%s\r\n", extraHeader);
+    request->printf("Content-Length: 0\r\n");
+    request->printf("Connection: close\r\n");
+    request->printf("\r\n");
+    addHttpStat(H_2XX);
+}
 
+int sendHttpHeader304(const RequestContext *request)
+{
+    request->printf("HTTP/1.0 304 No Modified\r\n");
+    request->printf("Content-Length: 0\r\n");
+    request->printf("Connection: close\r\n\r\n");
+
+    return REQUEST_COMPLETED;
+}
 
 int sendHttpHeader400(const RequestContext *request, const char *msg)
 {
+    LOG_DIAG("HTTP 400 Bad Request: %s", msg);
     request->printf("HTTP/1.0 400 Bad Request\r\n\r\n");
     request->printf("400 Bad Request\r\n");
     request->printf("%s\r\n", msg);
@@ -131,15 +169,17 @@ int sendHttpHeader400(const RequestContext *request, const char *msg)
 
     return REQUEST_COMPLETED; // request completely handled
 }
-void sendHttpHeader403(const RequestContext *request)
+void sendHttpHeader403(const RequestContext *req)
 {
-    request->printf("HTTP/1.1 403 Forbidden\r\n\r\n");
-    request->printf("403 Forbidden\r\n");
+    LOG_INFO("HTTP 403 Forbidden: %s %s?%s", req->getMethod(), req->getUri(), req->getQueryString());
+    req->printf("HTTP/1.1 403 Forbidden\r\n\r\n");
+    req->printf("403 Forbidden\r\n");
     addHttpStat(H_403);
 }
 
 void sendHttpHeader413(const RequestContext *request, const char *msg)
 {
+    LOG_DIAG("HTTP 413 Request Entity Too Large");
     request->printf("HTTP/1.1 413 Request Entity Too Large\r\n\r\n");
     request->printf("413 Request Entity Too Large\r\n%s\r\n", msg);
     addHttpStat(H_413);
@@ -147,12 +187,20 @@ void sendHttpHeader413(const RequestContext *request, const char *msg)
 
 void sendHttpHeader404(const RequestContext *request)
 {
+    LOG_DIAG("HTTP 404 Not Found");
     request->printf("HTTP/1.1 404 Not Found\r\n\r\n");
     request->printf("404 Not Found\r\n");
+}
+void sendHttpHeader409(const RequestContext *request)
+{
+    LOG_DIAG("HTTP 409 Conflict");
+    request->printf("HTTP/1.1 409 Conflict\r\n\r\n");
+    request->printf("409 Conflict\r\n");
 }
 
 void sendHttpHeader500(const RequestContext *request, const char *msg)
 {
+    LOG_ERROR("HTTP 500 Internal Server Error");
     request->printf("HTTP/1.1 500 Internal Server Error\r\n\r\n");
     request->printf("500 Internal Server Error\r\n");
     request->printf("%s\r\n", msg);
@@ -168,7 +216,6 @@ void sendHttpHeader500(const RequestContext *request, const char *msg)
   */
 int sendHttpRedirect(const RequestContext *request, const std::string &redirectUrl, const char *otherHeader)
 {
-    LOG_FUNC();
     request->printf("HTTP/1.1 303 See Other\r\n");
     const char *scheme = 0;
     if (request->isSSL()) scheme = "https";
@@ -182,12 +229,18 @@ int sendHttpRedirect(const RequestContext *request, const std::string &redirectU
 
     if (redirectUrl[0] != '/') LOG_ERROR("Invalid redirect URL (missing first /): %s", redirectUrl.c_str());
 
-    request->printf("Location: %s://%s%s%s", scheme, host,
-                    MongooseServerContext::getInstance().getUrlRewritingRoot().c_str(),
-                    redirectUrl.c_str());
+    std::string location = scheme;
+    location += "://";
+    location += host;
+    location += MongooseServerContext::getInstance().getUrlRewritingRoot();
+    location += redirectUrl;
+    request->printf("Location: %s", location.c_str());
 
     if (otherHeader) request->printf("\r\n%s", otherHeader);
     request->printf("\r\n\r\n");
+
+    LOG_DIAG("Redirected to: %s", location.c_str());
+
     return REQUEST_COMPLETED;
 }
 
@@ -326,8 +379,8 @@ int httpPostSignin(const RequestContext *request)
         }
 
         if (format == X_SMIT) {
-            sendHttpHeader204(request);
-            request->printf("%s\r\n\r\n", getServerCookie(SESSID, sessionId.c_str(), SESSION_DURATION).c_str());
+            std::string cookieSessid = getServerCookie(SESSID, sessionId.c_str(), SESSION_DURATION);
+            sendHttpHeader204(request, cookieSessid.c_str());
         } else {
             if (redirect.empty()) redirect = "/";
             setCookieAndRedirect(request, SESSID, sessionId.c_str(), redirect.c_str());
@@ -351,6 +404,7 @@ std::string getDeletedCookieString(const std::string &name)
 
 void redirectToSignin(const RequestContext *request, const char *resource = 0)
 {
+    LOG_DIAG("redirectToSignin");
     sendHttpHeader200(request);
 
     // delete session cookie
@@ -378,9 +432,10 @@ void httpPostSignout(const RequestContext *request, const std::string &sessionId
         redirectToSignin(request, "/");
 
     } else {
-        sendHttpHeader204(request);
         // delete session cookie
-        request->printf("%s\r\n\r\n", getDeletedCookieString(SESSID).c_str());
+        std::string cookieSessid = getDeletedCookieString(SESSID);
+        sendHttpHeader204(request, cookieSessid.c_str());
+
     }
 }
 
@@ -433,10 +488,17 @@ int httpGetSm(const RequestContext *request, const std::string &file)
     const char *virtualFilePreview = "preview";
     if (0 == strncmp(file.c_str(), virtualFilePreview, strlen(virtualFilePreview))) {
         handleMessagePreview(request);
-        return 1;
+        return REQUEST_COMPLETED;
     } else if (0 == strcmp(file.c_str(), "stat")) {
         handleGetStats(request);
-        return 1;
+        return REQUEST_COMPLETED;
+    }
+
+    // check if etag does match
+    // the etag if the build time for /sm/* files.
+    const char *inm = request->getHeader("If-None-Match");
+    if (inm && 0 == strcmp(em_binary_etag, inm)) {
+        return sendHttpHeader304(request);
     }
 
     std::string internalFile = "sm/" + file;
@@ -448,6 +510,7 @@ int httpGetSm(const RequestContext *request, const std::string &file)
         sendHttpHeader200(request);
         const char *mimeType = mg_get_builtin_mime_type(file.c_str());
         LOG_DEBUG("mime-type=%s, size=%d", mimeType, filesize);
+        request->printf("ETag: %s\r\n", em_binary_etag);
         request->printf("Content-Type: %s\r\n\r\n", mimeType);
 
         // file found
@@ -472,12 +535,28 @@ int httpGetSm(const RequestContext *request, const std::string &file)
 
             remainingBytes -= nToRead;
         }
-        r = 1;
     } else {
-        r = 0;
+        sendHttpHeader403(request);
     }
 
-    return r;
+    return REQUEST_COMPLETED;
+}
+
+void httpGetUsers(const RequestContext *req, const User &signedInUser)
+{
+    if (!signedInUser.superadmin) {
+        sendHttpHeader403(req);
+        return;
+    }
+
+    std::list<User> allUsers;
+    // get the list of all users
+    allUsers = UserBase::getAllUsers();
+
+    // only HTML supported at the moment
+    sendHttpHeader200(req);
+    ContextParameters ctx = ContextParameters(req, signedInUser);
+    RHtml::printPageUserList(ctx, allUsers);
 }
 
 /** Get the configuration page of a given user
@@ -489,11 +568,17 @@ int httpGetSm(const RequestContext *request, const std::string &file)
   *     user whose configuration is requested
   *
   */
-void httpGetUsers(const RequestContext *request, User signedInUser, const std::string &username)
+void httpGetUser(const RequestContext *request, const User &signedInUser, const std::string &username)
 {
+    if (username.empty()) {
+        return httpGetUsers(request, signedInUser);
+    }
+
     ContextParameters ctx = ContextParameters(request, signedInUser);
 
-    if (username.empty() || username == "_") {
+    enum RenderingFormat format = getFormat(request);
+
+    if (username == "_") {
         // display form for a new user
         // only a superadmin may do this
         if (!signedInUser.superadmin) {
@@ -515,24 +600,103 @@ void httpGetUsers(const RequestContext *request, User signedInUser, const std::s
 
             // handle an existing user
             // a user may only view his/her own user page
+
             sendHttpHeader200(request);
-            RHtml::printPageUser(ctx, editedUser);
+
+            if (format == X_SMIT) {
+                // print the permissions of the signed-in user
+                request->printf("Content-Type: text/plain\r\n\r\n");
+                request->printf("%s\n", editedUser->serializePermissions().c_str());
+
+            } else {
+                RHtml::printPageUser(ctx, editedUser);
+            }
 
         } else sendHttpHeader403(request);
     }
+}
+
+/** Delete a user
+  */
+void httpDeleteUser(const RequestContext *request, User signedInUser, const std::string &username)
+{
+    if (!signedInUser.superadmin) {
+        sendHttpHeader403(request);
+        return;
+    }
+
+    LOG_INFO("User '%s' deleted by '%s'", username.c_str(), signedInUser.username.c_str());
+
+    int r = UserBase::deleteUser(username);
+
+    if (r != 0) {
+        sendHttpHeader400(request, "Cannot delete user");
+
+    } else {
+        // ok, redirect
+        sendHttpRedirect(request, "/" RSRC_USERS, 0);
+    }
+}
+
+/** Hot reload of users (if hotreload=1)
+  */
+void httpPostUserEmpty(const RequestContext *req, const User &signedInUser)
+{
+    if (!signedInUser.superadmin) {
+        sendHttpHeader403(req);
+        return;
+    }
+
+    // check if a hot reload is requested
+
+    // get the posted parameters
+
+    const char *contentType = getContentType(req);
+    if (0 == strcmp("application/x-www-form-urlencoded", contentType)) {
+        // application/x-www-form-urlencoded
+        // post_data is "var1=val1&var2=val2...".
+
+        std::string postData;
+        int rc = readMgreq(req, postData, 4096);
+        if (rc < 0) {
+            sendHttpHeader413(req, "You tried to upload too much data. Max is 4096 bytes.");
+            return;
+        }
+
+        std::string tokenPair = popToken(postData, '&');
+        std::string key = popToken(tokenPair, '=');
+        std::string value = urlDecode(tokenPair);
+
+        if (key == "hotreload" && value == "1") {
+            int r = UserBase::hotReload();
+            if (r != 0) {
+                sendHttpHeader500(req, "Hot reload failed");
+                return;
+            } else {
+                // Ok, redirect
+                sendHttpRedirect(req, "/users", 0);
+                return;
+            }
+        }
+    } else {
+        LOG_INFO("httpPostUserEmpty: contentType '%s' rejected", contentType);
+    }
+    sendHttpHeader403(req);
+    return;
 }
 
 /** Post configuration of a new or existing user
   *
   * Non-superadmin users may only post their password.
   */
-void httpPostUsers(const RequestContext *request, User signedInUser, const std::string &username)
+void httpPostUser(const RequestContext *request, User signedInUser, const std::string &username)
 {
     if (!signedInUser.superadmin && username != signedInUser.username) {
         sendHttpHeader403(request);
         return;
     }
-    if (username.empty()) return sendHttpHeader403(request);
+
+    if (username.empty()) return httpPostUserEmpty(request, signedInUser);
 
     // get the posted parameters
     const char *contentType = getContentType(request);
@@ -550,7 +714,10 @@ void httpPostUsers(const RequestContext *request, User signedInUser, const std::
 
         User newUserConfig;
         std::string passwd1, passwd2;
-        std::string project, role;
+        std::string projectWildcard, role;
+        std::string authType = "sha1"; // default value
+        std::string ldapUri, ldapDname;
+        std::string krb5Primary, krb5Realm;
 
         while (postData.size() > 0) {
             std::string tokenPair = popToken(postData, '&');
@@ -558,20 +725,25 @@ void httpPostUsers(const RequestContext *request, User signedInUser, const std::
             std::string value = urlDecode(tokenPair);
 
             if (key == "name") newUserConfig.username = value;
-            else if (key == "superadmin" && value == "on") newUserConfig.superadmin = true;
-            else if (key == "passwd1") passwd1 = value;
-            else if (key == "passwd2") passwd2 = value;
-            else if (key == "project") project = value;
+            else if (key == "sm_superadmin" && value == "on") newUserConfig.superadmin = true;
+            else if (key == "sm_auth_type") authType = value;
+            else if (key == "sm_passwd1") passwd1 = value;
+            else if (key == "sm_passwd2") passwd2 = value;
+            else if (key == "sm_ldap_uri") ldapUri = value;
+            else if (key == "sm_ldap_dname") ldapDname = value;
+            else if (key == "sm_krb5_primary") krb5Primary = value;
+            else if (key == "sm_krb5_realm") krb5Realm = value;
+            else if (key == "project_wildcard") projectWildcard = value;
             else if (key == "role") role = value;
             else {
                 LOG_ERROR("httpPostUsers: unexpected parameter '%s'", key.c_str());
             }
 
             // look if the pair project/role is complete
-            if (!project.empty() && !role.empty()) {
+            if (!projectWildcard.empty() && !role.empty()) {
                 Role r = stringToRole(role);
-                if (r != ROLE_NONE) newUserConfig.rolesOnProjects[project] = r;
-                project.clear();
+                if (r != ROLE_NONE) newUserConfig.permissions[projectWildcard] = r;
+                projectWildcard.clear();
                 role.clear();
             }
         }
@@ -590,11 +762,15 @@ void httpPostUsers(const RequestContext *request, User signedInUser, const std::
         int r = 0;
         std::string error;
 
+        // check the parameters
         if (passwd1 != passwd2) {
             LOG_INFO("passwd1 (%s) != passwd2 (%s)", passwd1.c_str(), passwd2.c_str());
             sendHttpHeader400(request, "passwords 1 and 2 do not match");
             return;
         }
+
+
+        LOG_INFO("authType=%s", authType.c_str()); // TODO remove this debug
 
         if (!signedInUser.superadmin) {
             // if signedInUser is not superadmin, only password is updated
@@ -612,7 +788,29 @@ void httpPostUsers(const RequestContext *request, User signedInUser, const std::
 
         } else {
             // superadmin: update all parameters of the user's configuration
-            if (!passwd1.empty()) newUserConfig.setPasswd(passwd1);
+            if (authType == "sha1" && !passwd1.empty()) newUserConfig.setPasswd(passwd1);
+#ifdef LDAP_ENABLED
+            else if (authType == "ldap") {
+                if (ldapUri.empty() || ldapDname.empty()) {
+                    sendHttpHeader400(request, "Missing parameter. Check the LDAP URI and Distinguished Name.");
+                    return;
+                }
+                newUserConfig.authHandler = new AuthLdap(newUserConfig.username, ldapUri, ldapDname);
+#endif
+#ifdef KERBEROS_ENABLED
+            } else if (authType == "krb5") {
+                if (krb5Realm.empty()) {
+                    sendHttpHeader400(request, "Empty parameter: Kerberos Realm.");
+                    return;
+                }
+                newUserConfig.authHandler = new AuthKrb5(newUserConfig.username, krb5Realm, krb5Primary);
+#endif
+            } else {
+                // unsupported authentication type
+                std::string msg = "Unsupported authentication type: " + authType;
+                sendHttpHeader400(request, msg.c_str());
+                return;
+            }
 
             if (username == "_") {
                 r = UserBase::addUser(newUserConfig);
@@ -630,7 +828,7 @@ void httpPostUsers(const RequestContext *request, User signedInUser, const std::
             if (r != 0) LOG_ERROR("Cannot update user '%s': %s", username.c_str(), error.c_str());
             else if (newUserConfig.username != username) {
                 LOG_INFO("User '%s' renamed '%s'", username.c_str(), newUserConfig.username.c_str());
-            } else LOG_INFO("Parameters updated for user '%s'", username.c_str());
+            } else LOG_INFO("Parameters of user '%s' updated by '%s'", username.c_str(), signedInUser.username.c_str());
         }
 
         if (r != 0) {
@@ -699,38 +897,34 @@ int httpGetFile(const RequestContext *request)
     std::string uri = request->getUri();
     std::string dir = Database::Db.pathToRepository + uri; // uri contains a leading /
 
-    struct dirent *dp;
-    DIR *dirp;
-    if ((dirp = opendir(dir.c_str())) == NULL) return REQUEST_NOT_PROCESSED; // not a directory: let Mongoose handle it
+    DIR *d = openDir(dir.c_str());
+    if (!d) return REQUEST_NOT_PROCESSED; // not a directory: let Mongoose handle it
 
     // send the directory contents
     // walk through the directory and print the entries
     sendHttpHeader200(request);
     request->printf("Content-Type: text/directory\r\n\r\n");
 
-    while ((dp = readdir(dirp)) != NULL) {
-        // Do not show . and ..
-        if (0 == strcmp(dp->d_name, ".")) continue;
-        if (0 == strcmp(dp->d_name, "..")) continue;
+    std::string f;
+    while ((f = getNextFile(d)) != "") request->printf("%s\n", f.c_str());
 
-       request->printf("%s\n", dp->d_name);
-    }
-    closedir(dirp);
+    closeDir(d);
 
     return REQUEST_COMPLETED; // the request is completely handled
 }
 
-
-void httpGetRoot(const RequestContext *req, User u)
+void httpGetProjects(const RequestContext *req, User u)
 {
     sendHttpHeader200(req);
     // print list of available projects
     std::list<std::pair<std::string, Role> > usersRoles;
     std::list<std::pair<std::string, std::string> > pList;
-    if (!UserBase::isLocalUserInterface() && !u.superadmin) pList = u.getProjects();
-    else {
-        // for a superadmin, get the list of all the projects
-        // or in the case of a local user interface
+    if (!UserBase::isLocalUserInterface() && !u.superadmin) {
+        // Get the list of the projects to which the user has permission
+        pList = u.getProjects();
+    } else {
+        // Get the list of all projects
+        // (case of a superadmin of a local user)
         std::list<std::string> allProjects = Database::getProjects();
         std::list<std::string>::iterator p;
         FOREACH(p, allProjects) {
@@ -748,10 +942,9 @@ void httpGetRoot(const RequestContext *req, User u)
         req->printf("Content-Type: text/directory\r\n\r\n");
         std::list<std::pair<std::string, std::string> >::iterator p;
         FOREACH(p, pList) {
-           req->printf("%s\n", Project::urlNameEncode(p->first).c_str());
+           req->printf("%s\n", p->first.c_str());
         }
         req->printf("public\n");
-
 
     } else {
 
@@ -763,14 +956,8 @@ void httpGetRoot(const RequestContext *req, User u)
             usersRolesByProject[p->first] = ur;
         }
 
-        std::list<User> allUsers;
-        if (u.superadmin) {
-            // get the list of all users
-            allUsers = UserBase::getAllUsers();
-        }
-
         ContextParameters ctx = ContextParameters(req, u);
-        RHtml::printPageProjectList(ctx, pList, usersRolesByProject, allUsers);
+        RHtml::printPageProjectList(ctx, pList, usersRolesByProject);
     }
 }
 
@@ -849,10 +1036,147 @@ std::list<std::list<std::string> > convertPostToTokens(std::string &postData)
     return tokens;
 }
 
+void consolidatePropertyDescription(std::list<std::list<std::string> > &tokens, PropertySpec &pSpec)
+{
+    LOG_DEBUG("process propertyName=%s", pSpec.name.c_str());
+
+    if (ProjectConfig::isReservedProperty(pSpec.name)) {
+        // case of reserved properties (id, ctime, mtime, etc.)
+        if (pSpec.label != pSpec.name) {
+            std::list<std::string> line;
+            line.push_back(KEY_SET_PROPERTY_LABEL);
+            line.push_back(pSpec.name);
+            line.push_back(pSpec.label);
+            tokens.push_back(line);
+        }
+
+    } else {
+        // case of regular properties
+        std::list<std::string> line;
+        line.push_back(KEY_ADD_PROPERTY);
+        line.push_back(pSpec.name);
+        if (pSpec.label != pSpec.name) {
+            line.push_back("-label");
+            line.push_back(pSpec.label);
+        }
+        line.push_back(propertyTypeToStr(pSpec.type));
+        if (pSpec.type == F_SELECT || pSpec.type == F_MULTISELECT) {
+            // add options
+            line.insert(line.end(), pSpec.selectOptions.begin(), pSpec.selectOptions.end());
+
+        } else if  (pSpec.type == F_ASSOCIATION) {
+            line.push_back("-reverseLabel");
+            line.push_back(pSpec.reverseLabel);
+        }
+        tokens.push_back(line);
+    }
+
+}
+void consolidateTagDescription(std::list<std::list<std::string> > &tokens, const std::string &tagName,
+                                      const std::string &label, const std::string &tagDisplay)
+{
+    std::list<std::string> line;
+    line.push_back("tag");
+    line.push_back(tagName);
+    if (!label.empty()) {
+        line.push_back("-label");
+        line.push_back(label);
+    }
+    if (tagDisplay == "on") line.push_back("-display");
+    tokens.push_back(line);
+}
+
+/** Parse the form parameters
+  *
+  * @param postData
+  *    Eg: "projectName=apollo&propertyName=propx&type=text&propertyName=propy&type=text&tag=analysis"
+  *    This data is modified in-place.
+  *
+  * @param[out] tokens
+  * @param[out] projectName
+  *
+  * @return
+  *    0, success
+  *   -1, error
+  */
+void parsePostedProjectConfig(std::string &postData, std::list<std::list<std::string> > &tokens, std::string &projectName)
+{
+    // parse the posted data
+    PropertySpec pSpec;
+    std::string tagName;
+    std::string tagLabel;
+    std::string tagDisplay;
+
+    while (1) {
+        std::string tokenPair = popToken(postData, '&');
+        std::string key = popToken(tokenPair, '=');
+        std::string value = urlDecode(tokenPair);
+        trimBlanks(value);
+
+        LOG_DEBUG("key=%s, value=%s", key.c_str(), value.c_str());
+        if (key == "projectName") {
+            projectName = value;
+
+        } else if (key == "type") {
+            int r = strToPropertyType(value, pSpec.type);
+            if (r != 0) {
+                LOG_ERROR("Unknown property type: %s", value.c_str());
+                pSpec.type = F_TEXT;
+            }
+
+        } else if (key == "label") {
+            // the same key "label" is used for properties and tags
+            pSpec.label = value;
+            tagLabel = value;
+
+        } else if (key == "selectOptions") {
+            pSpec.selectOptions = splitLinesAndTrimBlanks(value);
+        }
+        else if (key == "reverseAssociation") pSpec.reverseLabel = value;
+        else if (key == "tagDisplay") tagDisplay = value;
+        else if (key == "propertyName" || key == "tagName") {
+
+            // a starting property or tag description stops any other on-going
+            // property description or tag description
+
+            // commit previous propertyName if any
+            if (!pSpec.name.empty()) consolidatePropertyDescription(tokens, pSpec);
+            // commit previous tagName, if any
+            if (!tagName.empty()) consolidateTagDescription(tokens, tagName, tagLabel, tagDisplay);
+
+            // clear parameters
+            pSpec.type = F_TEXT;
+            pSpec.selectOptions.clear();
+            pSpec.label.clear();
+            tagName.clear();
+            pSpec.name.clear();
+            tagDisplay.clear();
+            tagLabel.clear();
+
+            if (key == "propertyName") pSpec.name = value; // start new property description
+            else if (key == "tagName") tagName = value; // start new tag description
+
+        } else {
+            LOG_ERROR("ProjectConfig: invalid posted parameter: '%s'", key.c_str());
+        }
+
+        if (postData.empty()) {
+            // process last item (property or tag)
+
+            // commit previous propertyName if any
+            if (!pSpec.name.empty()) consolidatePropertyDescription(tokens, pSpec);
+            // commit previous tagName, if any
+            if (!tagName.empty()) consolidateTagDescription(tokens, tagName, tagLabel, tagDisplay);
+
+            break;
+        }
+    }
+}
+
 void httpPostProjectConfig(const RequestContext *req, Project &p, User u)
 {
-    enum Role r = u.getRole(p.getName());
-    if (r != ROLE_ADMIN && ! u.superadmin) {
+    enum Role role = u.getRole(p.getName());
+    if (role != ROLE_ADMIN && ! u.superadmin) {
         sendHttpHeader403(req);
         return;
     }
@@ -867,113 +1191,25 @@ void httpPostProjectConfig(const RequestContext *req, Project &p, User u)
 
         int rc = readMgreq(req, postData, 4096);
         if (rc < 0) {
-            std::ostringstream s;
             sendHttpHeader413(req, "You tried to upload too much data. Max is 4096 bytes.");
             return;
         }
 
-
         LOG_DEBUG("postData=%s", postData.c_str());
-        // parse the posted data
-        std::string propertyName;
-        std::string tagName;
-        std::string type;
-        std::string label;
-        std::string selectOptions;
-        std::string projectName;
-        std::string reverseAssociationName;
-        std::string tagDisplay;
         ProjectConfig pc;
+        std::string projectName;
         std::list<std::list<std::string> > tokens;
-        while (1) {
-            std::string tokenPair = popToken(postData, '&');
-            std::string key = popToken(tokenPair, '=');
-            std::string value = urlDecode(tokenPair);
-
-            if (key == "projectName") {
-                projectName = value;
-
-            } else if (key == "propertyName" || key == "tagName" || postData.empty()) {
-                // process previous row
-                if (!propertyName.empty()) {
-                    // the previous row was a property
-
-                    if (type.empty()) {
-                        // case of reserved properties (id, ctime, mtime, etc.)
-                        if (label != propertyName) {
-                            std::list<std::string> line;
-                            line.push_back("setPropertyLabel");
-                            line.push_back(propertyName);
-                            line.push_back(label);
-                            tokens.push_back(line);
-                        }
-                    } else {
-                        // case of regular properties
-
-                        // check that it is not a reserved property
-                        if (ProjectConfig::isReservedProperty(propertyName)) {
-                            // error
-                            std::string msg = "Cannot add reserved property: ";
-                            msg += propertyName;
-                            sendHttpHeader400(req, msg.c_str());
-                            return;
-
-                        }
-
-                        std::list<std::string> line;
-                        line.push_back("addProperty");
-                        line.push_back(propertyName);
-                        if (label != propertyName) {
-                            line.push_back("-label");
-                            line.push_back(label);
-                        }
-                        line.push_back(type);
-                        PropertyType ptype;
-                        int r = strToPropertyType(type, ptype);
-                        if (r == 0 && (ptype == F_SELECT || ptype == F_MULTISELECT) ) {
-                            // add options
-                            std::list<std::string> so = splitLinesAndTrimBlanks(selectOptions);
-                            line.insert(line.end(), so.begin(), so.end());
-                        } else if  (r== 0 && ptype == F_ASSOCIATION) {
-                            line.push_back("-reverseLabel");
-                            line.push_back(reverseAssociationName);
-                        }
-                        tokens.push_back(line);
-                    }
-                } else if (!tagName.empty()) {
-                    // the previous row was a tag
-                    std::list<std::string> line;
-                    line.push_back("tag");
-                    line.push_back(tagName);
-                    if (!label.empty()) {
-                        line.push_back("-label");
-                        line.push_back(label);
-                    }
-                    if (tagDisplay == "on") line.push_back("-display");
-                    tokens.push_back(line);
-                }
-                propertyName.clear();
-                tagName.clear();
-                if (key == "propertyName") propertyName = value;
-                else if (key == "tagName") tagName = value;
-                type.clear();
-                label.clear();
-                selectOptions.clear();
-                tagDisplay.clear();
-
-            } else if (key == "type") { type = value; trimBlanks(type); }
-            else if (key == "label") { label = value; trimBlanks(label); }
-            else if (key == "selectOptions") selectOptions = value;
-            else if (key == "reverseAssociation") reverseAssociationName = value;
-            else if (key == "tagDisplay") tagDisplay = value;
-            else {
-                LOG_ERROR("ProjectConfig: invalid posted parameter: '%s'", key.c_str());
-            }
-            if (postData.empty()) break; // leave the loop
-        }
+        parsePostedProjectConfig(postData, tokens, projectName);
 
         Project *ptr;
+        // check if project name is valid
+        if (!ProjectConfig::isValidProjectName(projectName)) {
+            sendHttpHeader400(req, "Invalid project name");
+            return;
+        }
+
         if (p.getName().empty()) {
+            // request to create a new project
             if (!u.superadmin) return sendHttpHeader403(req);
             if (projectName.empty()) {
                 sendHttpHeader400(req, "Empty project name");
@@ -993,7 +1229,7 @@ void httpPostProjectConfig(const RequestContext *req, Project &p, User u)
             }
             ptr = &p;
         }
-        int r = ptr->modifyConfig(tokens);
+        int r = ptr->modifyConfig(tokens, u.username);
 
         if (r == 0) {
             // success, redirect to
@@ -1004,6 +1240,8 @@ void httpPostProjectConfig(const RequestContext *req, Project &p, User u)
             LOG_ERROR("Cannot modify project config");
             sendHttpHeader500(req, "Cannot modify project config");
         }
+    } else {
+        LOG_ERROR("httpPostProjectConfig: invalid content-type '%s'", contentType);
     }
 }
 
@@ -1059,13 +1297,13 @@ enum IssueNavigation { ISSUE_NEXT, ISSUE_PREVIOUS };
   *     a string containing the url to redirect to
   *     "" if the next or previous the redirection could not be done
   */
-std::string getRedirectionToIssue(const Project &p, std::vector<const Issue*> issueList,
+std::string getRedirectionToIssue(const Project &p, std::vector<Issue> &issueList,
                     const std::string &issueId, IssueNavigation direction, const std::string &qs)
 {
     // get current issue
-    std::vector<const Issue*>::const_iterator i;
+    std::vector<Issue>::const_iterator i;
     FOREACH(i, issueList) {
-        if ((*i)->id == issueId) {
+        if (i->id == issueId) {
             break;
         }
     }
@@ -1081,7 +1319,7 @@ std::string getRedirectionToIssue(const Project &p, std::vector<const Issue*> is
     std::string redirectUrl;
     if (i != issueList.end()) {
         // redirect
-        redirectUrl = "/" + p.getUrlName() + "/issues/" + (*i)->id;
+        redirectUrl = "/" + p.getUrlName() + "/issues/" + i->id;
 
     } else {
         // no next nor previous issue.
@@ -1105,7 +1343,7 @@ void httpIssuesAccrossProjects(const RequestContext *req, User u, const std::str
     std::string q = req->getQueryString();
     PredefinedView v = PredefinedView::loadFromQueryString(q); // unamed view, used as handle on the viewing parameters
 
-    std::map<std::string, std::vector<const Issue*> > issues;
+    std::vector<Issue> issues;
 
     // foreach project, get list of issues
     std::list<std::pair<std::string, std::string> >::const_iterator p;
@@ -1121,10 +1359,13 @@ void httpIssuesAccrossProjects(const RequestContext *req, User u, const std::str
         replaceUserMe(vcopy.filterout, *p, u.username);
         if (vcopy.search == "me") vcopy.search = u.username;
 
-        std::vector<const Issue*> issueList = p->search(vcopy.search.c_str(),
-                                                        vcopy.filterin, vcopy.filterout, vcopy.sort.c_str());
-        issues[project] = issueList;
+        // search, without sorting
+        p->search(vcopy.search.c_str(), vcopy.filterin, vcopy.filterout, 0, issues);
     }
+
+    // sort
+    std::list<std::pair<bool, std::string> > sSpec = parseSortingSpec(v.sort.c_str());
+    Issue::sort(issues, sSpec);
 
     // get the colspec
     std::list<std::string> cols;
@@ -1166,10 +1407,11 @@ void httpCloneIssues(const RequestContext *req, const Project &p)
     req->printf("Content-Type: text/directory\r\n\r\n");
 
     // get all the issues, sorted by id
-    std::vector<const Issue*> issues = p.search(0, filterIn, filterOut, "id");
-    std::vector<const Issue*>::const_iterator i;
+    std::vector<Issue> issues;
+    p.search(0, filterIn, filterOut, "id", issues);
+    std::vector<Issue>::const_iterator i;
     FOREACH(i, issues) {
-        req->printf("%s\n", (*i)->id.c_str());
+        req->printf("%s\n", i->id.c_str());
     }
 }
 
@@ -1205,8 +1447,8 @@ void httpGetListOfIssues(const RequestContext *req, const Project &p, User u)
     if (v.search == "me") v.search = u.username;
 
 
-    std::vector<const Issue*> issueList = p.search(v.search.c_str(),
-                                                    v.filterin, v.filterout, v.sort.c_str());
+    std::vector<Issue> issueList;
+    p.search(v.search.c_str(), v.filterin, v.filterout, v.sort.c_str(), issueList);
 
     // check for redirection to specific issue (used for previous/next)
     std::string next = getFirstParamFromQueryString(q, QS_GOTO_NEXT);
@@ -1243,8 +1485,11 @@ void httpGetListOfIssues(const RequestContext *req, const Project &p, User u)
     sendHttpHeader200(req);
 
     if (format == RENDERING_TEXT) RText::printIssueList(req, issueList, cols);
-    else if (format == RENDERING_CSV) RCsv::printIssueList(req, issueList, cols);
-    else {
+    else if (format == RENDERING_CSV) {
+        std::string separator = getFirstParamFromQueryString(q, "sep");
+        separator = urlDecode(separator);
+        RCsv::printIssueList(req, issueList, cols, separator.c_str());
+    } else {
         ContextParameters ctx = ContextParameters(req, u, p);
         std::list<std::string> filterinRaw = getParamListFromQueryString(q, "filterin");
         std::list<std::string> filteroutRaw = getParamListFromQueryString(q, "filterout");
@@ -1270,14 +1515,11 @@ void httpGetProject(const RequestContext *req, const Project &p, User u)
         sendHttpHeader200(req);
         req->printf("Content-Type: text/directory\r\n\r\n");
 
-        req->printf("files\n");
-        std::string path = p.getPath()+"/html";
-        if (fileExists(path)) req->printf("html\n");
-        req->printf("issues\n");
-        req->printf("project\n");
-        path = p.getPath()+"/tags";
-        if (fileExists(path)) req->printf("tags\n");
-        req->printf("views\n");
+        DIR *d = openDir(p.getPath().c_str());
+        std::string f;
+        while ((f = getNextFile(d)) != "") req->printf("%s\n", f.c_str());
+
+        closedir(d);
         return;
     }
 
@@ -1318,11 +1560,10 @@ void httpGetView(const RequestContext *req, Project &p, const std::string &view,
 
     } else {
         // print the form of the given view
-        std::string viewName = urlDecode(view);
-        PredefinedView pv = p.getPredefinedView(viewName);
+        PredefinedView pv = p.getPredefinedView(view);
 
         if (pv.name.empty()) {
-            // in this case (unnamed view, ie: advanced search)
+            // in this case (unknown or unnamed view, ie: advanced search)
             // handle the optional origin view
             std::string originView;
             int r = getFromCookie(req, QS_ORIGIN_VIEW, originView);
@@ -1336,9 +1577,100 @@ void httpGetView(const RequestContext *req, Project &p, const std::string &view,
     }
 }
 
+/** Get an object
+  *
+  * Read access is supposed to have already been granted.
+  *
+  * @param object
+  *    Must be <id>/<filename>, where:
+  *    - <id> is the identifier of the object
+  *    - <filename> is the name of the file. The extension is used to determine the type.
+  */
+void httpGetObject(const RequestContext *req, Project &p, std::string object)
+{
+    std::string id = popToken(object, '/');
+    std::string basemane = object;
+    std::string realpath = p.getObjectsDir() + "/" + Object::getSubpath(id);
+    LOG_DEBUG("httpGetObject: basename=%s, realpath=%s", basemane.c_str(), realpath.c_str());
+    req->sendObject(basemane, realpath);
+}
+
+/** Get the HEAD of an object
+  *
+  * This is used by client pushers to know if a file exists.
+  */
+void httpGetHeadObject(const RequestContext *req, Project &p, std::string object)
+{
+    LOG_FUNC();
+    std::string id = popToken(object, '/');
+    std::string basemane = object;
+    std::string realpath = p.getObjectsDir() + "/" + Object::getSubpath(id);
+
+    if (fileExists(realpath)) {
+        sendHttpHeader204(req, 0);
+
+    } else {
+        sendHttpHeader404(req);
+    }
+}
+
+/** Handle the pushing of a file
+  *
+  * If the file already exists, then do not overwrite it.
+  */
+void httpPushAttachedFile(const RequestContext *req, Project &p, const std::string &filename, User u)
+{
+    enum Role role = u.getRole(p.getName());
+    if (role != ROLE_ADMIN && role != ROLE_RW) {
+        sendHttpHeader403(req);
+        return;
+    }
+
+    // store the file in a temporary location
+    std::string tmpPath = p.getTmpDir() + '/' + filename;
+
+    std::ofstream tmp(tmpPath.c_str(), std::ios_base::binary);
+
+    // get the data
+    const int SIZ = 4096;
+    char postFragment[SIZ+1];
+    size_t n; // number of bytes read
+    int totalBytes = 0;
+
+    while ( (n = req->read(postFragment, SIZ)) > 0) {
+        LOG_DEBUG("postFragment size=%lu", L(n));
+        tmp.write(postFragment, n);
+
+        totalBytes += n;
+        if (totalBytes > MAX_SIZE_UPLOAD) {
+            LOG_ERROR("Pushed file too big: %s\n", filename.c_str());
+            sendHttpHeader400(req, "Pushed file too big");
+            return;
+        }
+    }
+    tmp.close();
+
+    int r = p.addFile(filename);
+    if (r != 0) {
+        // error, file not added in database
+        unlink(tmpPath.c_str());
+
+        if (r == -1) {
+            sendHttpHeader400(req, "Bad file name (hash)");
+            return;
+
+        } else if (r == -2) return sendHttpHeader403(req);
+
+        else return sendHttpHeader500(req, "cannot rename pushed file");
+    }
+
+    LOG_INFO("File pushed: (%s) %s", p.getName().c_str(), filename.c_str());
+    sendHttpHeader201(req);
+}
+
 /** Handle the POST of a view
   *
-  * All user can post these as an advanced search (with no name).
+  * All users can post these as an advanced search (with no name).
   * But only admin users can post predefined views (with a name).
   */
 void httpPostView(const RequestContext *req, Project &p, const std::string &name, User u)
@@ -1355,7 +1687,10 @@ void httpPostView(const RequestContext *req, Project &p, const std::string &name
             sendHttpHeader413(req, "You tried to upload too much data. Max is 10 MB.");
             return;
         }
-
+    } else {
+        // bad request
+        sendHttpHeader400(req, "");
+        return;
     }
     //LOG_DEBUG("postData=%s\n<br>", postData.c_str());
 
@@ -1402,7 +1737,7 @@ void httpPostView(const RequestContext *req, Project &p, const std::string &name
         } else if (key == "search") pv.search = value;
         else if (key == "filterin") { filterinPropname = value; filterValue = 0; }
         else if (key == "filterout") { filteroutPropname = value; filterValue = 0; }
-        else if (key == "filter_value") filterValue = value.c_str();
+        else if (0 == key.compare(0, strlen("filter_value"), "filter_value")) filterValue = value.c_str();
         else if (key == "sort_direction") sortDirection = value;
         else if (key == "sort_property") sortProperty = value;
         else if (key == "default" && value == "on") pv.isDefault = true;
@@ -1430,7 +1765,7 @@ void httpPostView(const RequestContext *req, Project &p, const std::string &name
     }
 
     if (pv.name.empty()) {
-        // unnamed view
+        // unnamed view. This is an advanced search
         if (role != ROLE_ADMIN && role != ROLE_RO && role != ROLE_RW && !u.superadmin) {
             sendHttpHeader403(req);
             return;
@@ -1462,7 +1797,7 @@ void httpPostView(const RequestContext *req, Project &p, const std::string &name
     }
 }
 
-/** Handled the posting of a tag
+/** Handle the posting of a tag
   *
   * If the ref is not tagged, then this will put a tag on the entry.
   * If the ref is already tagged, then this will remove the tag of the entry.
@@ -1478,11 +1813,10 @@ void httpPostTag(const RequestContext *req, Project &p, std::string &ref, User u
         return;
     }
 
-    std::string issueId = popToken(ref, '/');
     std::string entryId = popToken(ref, '/');
-    std::string tagid = ref;
+    std::string tagname = ref;
 
-    int r = p.toggleTag(issueId, entryId, tagid);
+    int r = p.toggleTag(entryId, tagname, u.username);
     if (r == 0) {
         sendHttpHeader200(req);
         req->printf("\r\n");
@@ -1518,7 +1852,6 @@ void httpReloadProject(const RequestContext *req, Project &p, User u)
     }
 }
 
-
 int httpGetIssue(const RequestContext *req, Project &p, const std::string &issueId, User u)
 {
     LOG_DEBUG("httpGetIssue: project=%s, issue=%s", p.getName().c_str(), issueId.c_str());
@@ -1533,7 +1866,7 @@ int httpGetIssue(const RequestContext *req, Project &p, const std::string &issue
 
     } else if (format == X_SMIT) {
         // for cloning, print the entries in the right order
-        const Entry *e = issue.latest;
+        const Entry *e = issue.first;
 
         if (!e) {
             std::string msg = "null entry for issue: ";
@@ -1542,16 +1875,13 @@ int httpGetIssue(const RequestContext *req, Project &p, const std::string &issue
             return REQUEST_COMPLETED;
         }
 
-        // rewind to oldest entry
-        while (e->prev) e = e->prev;
-
         // print the entries in the rigth order
         sendHttpHeader200(req);
         req->printf("Content-Type: text/directory\r\n\r\n");
 
         while (e) {
            req->printf("%s\n", e->id.c_str());
-           e = e->next;
+           e = e->getNext();
         }
 
     } else {
@@ -1560,6 +1890,21 @@ int httpGetIssue(const RequestContext *req, Project &p, const std::string &issue
 
         if (format == RENDERING_TEXT) RText::printIssue(req, issue);
         else {
+
+            std::string q = req->getQueryString();
+            std::string amend = getFirstParamFromQueryString(q, "amend");
+            Entry *entryToBeAmended = 0;
+
+            if (!amend.empty()) {
+                // look for the entry in the entries of the issue
+                Entry *e = issue.first;
+                while (e) {
+                    if (e->id == amend) break;
+                    e = e->getNext();
+                }
+                entryToBeAmended = e;
+            }
+
             ContextParameters ctx = ContextParameters(req, u, p);
             std::string originView;
             int r = getFromCookie(req, QS_ORIGIN_VIEW, originView);
@@ -1570,72 +1915,15 @@ int httpGetIssue(const RequestContext *req, Project &p, const std::string &issue
             // (get/next use a redirection from a view, so the cookie will be set for these)
             req->printf("%s\r\n", getDeletedCookieString(QS_ORIGIN_VIEW).c_str());
             if (ctx.originView) LOG_DEBUG("originView=%s", ctx.originView);
-            RHtml::printPageIssue(ctx, issue);
+            RHtml::printPageIssue(ctx, issue, entryToBeAmended);
         }
     }
     return REQUEST_COMPLETED;
 }
 
-/** Used for deleting an entry
-  * @param details
-  *     should be of the form: iid/eid/delete
-  *
-  * @return
-  *     0, let Mongoose handle static file
-  *     1, do not.
-  */
-void httpDeleteEntry(const RequestContext *req, Project &p, const std::string &issueId,
-                    std::string details, User u)
-{
-    LOG_DEBUG("httpDeleteEntry: project=%s, issueId=%s, details=%s", p.getName().c_str(),
-              issueId.c_str(), details.c_str());
-
-    std::string entryId = popToken(details, '/');
-    if (details != "delete") {
-        sendHttpHeader404(req);
-        return;
-    }
-
-    enum Role role = u.getRole(p.getName());
-    if (role != ROLE_RW && role != ROLE_ADMIN) {
-        sendHttpHeader403(req);
-        return;
-    }
-
-    int r = p.deleteEntry(issueId, entryId, u.username);
-    if (r < 0) {
-        // failure
-        LOG_INFO("deleteEntry returned %d", r);
-        sendHttpHeader403(req);
-
-    } else {
-        sendHttpHeader200(req);
-        req->printf("\r\n"); // no contents
-    }
-
-    return;
-}
-
-
-
-
-void parseQueryStringVar(const std::string &var, std::string &key, std::string &value) {
-    size_t x = var.find('=');
-    if (x != std::string::npos) {
-        key = var.substr(0, x);
-        value = "";
-        if (x+1 < var.size()) {
-            value = var.substr(x+1);
-        }
-    }
-
-    key = urlDecode(key);
-    value = urlDecode(value);
-}
-
 void parseMultipartAndStoreUploadedFiles(const std::string &data, std::string boundary,
                                          std::map<std::string, std::list<std::string> > &vars,
-                                         const std::string &tmpDirectory)
+                                         const Project &project)
 {
     const char *p = data.data();
     size_t len = data.size();
@@ -1742,28 +2030,20 @@ void parseMultipartAndStoreUploadedFiles(const std::string &data, std::string bo
 
             size_t size = endOfPart-p; // size of the file
             if (size) {
-                // get the file extension
+                // keep only the basename
                 size_t lastSlash = filename.find_last_of("\\/");
                 if (lastSlash != std::string::npos) filename = filename.substr(lastSlash+1);
 
-                std::string id = getSha1(p, size);
-                std::string basename = id + "." + filename;
 
-                LOG_DEBUG("New filename: %s", basename.c_str());
-
-                // store to tmpDirectory
-                std::string path = tmpDirectory;
-                mg_mkdir(tmpDirectory.c_str(), S_IRUSR | S_IWUSR | S_IXUSR); // create dir if needed
-                path += "/";
-                path += basename;
-                int r = writeToFile(path.c_str(), p, size);
+                // store to objects directory
+                std::string objectid;
+                int r = Object::write(project.getObjectsDir(), p, size, objectid);
                 if (r < 0) {
-                    LOG_ERROR("Could not store uploaded file.");
+                    LOG_ERROR("Could not store uploaded file: %s", filename.c_str());
                     return;
                 }
-
-                vars[name].push_back(basename);
-                LOG_DEBUG("name=%s, basename=%s, size=%lu", name.c_str(), basename.c_str(), L(size));
+                std::string base = objectid + "/" + filename;
+                vars[name].push_back(base);
 
             } // else: empty file, ignore.
         }
@@ -1781,37 +2061,130 @@ void parseMultipartAndStoreUploadedFiles(const std::string &data, std::string bo
     }
 }
 
-void parseQueryString(const std::string &queryString, std::map<std::string, std::list<std::string> > &vars)
+
+void httpPushEntry(const RequestContext *req, Project &p, const std::string &issueId,
+                   const std::string &entryId, User u)
 {
-    size_t n = queryString.size();
-    size_t i;
-    size_t offsetOfCurrentVar = 0;
-    for (i=0; i<n; i++) {
-        if ( (queryString[i] == '&') || (i == n-1) ) {
-            // param delimiter encountered or last character reached
-            std::string var;
-            size_t length;
-            if (queryString[i] == '&') length = i-offsetOfCurrentVar; // do not take the '&'
-            else length = i-offsetOfCurrentVar+1; // take the last char
+    LOG_DEBUG("httpPushEntry: %s/%s", issueId.c_str(), entryId.c_str());
 
-            var = queryString.substr(offsetOfCurrentVar, length);
-
-            std::string key, value;
-            parseQueryStringVar(var, key, value);
-            if (key.size() > 0) {
-                trimBlanks(value);
-                if (vars.count(key) == 0) {
-                    std::list<std::string> L;
-                    L.push_back(value);
-                    vars[key] = L;
-                } else vars[key].push_back(value);
-            }
-            offsetOfCurrentVar = i+1;
-        }
+    enum Role r = u.getRole(p.getName());
+    if (r != ROLE_RW && r != ROLE_ADMIN) {
+        sendHttpHeader403(req);
+        return;
     }
-    // append the latest parameter (if any)
+    const char *multipart = "application/octet-stream";
+    const char *contentType = getContentType(req);
+    if (0 == strncmp(multipart, contentType, strlen(multipart))) {
+
+        std::string postData;
+        int rc = readMgreq(req, postData, MAX_SIZE_UPLOAD);
+        if (rc < 0) {
+            sendHttpHeader413(req, "You tried to upload too much data. Max is 10 MB.");
+            return;
+        }
+
+        LOG_DEBUG("Got upload data: %ld bytes", L(postData.size()));
+
+        // store the entry in a temporary location
+        std::string tmpPath = p.getTmpDir() + "/" + entryId;
+        int r = writeToFile(tmpPath, postData);
+        if (r != 0) {
+            std::string msg = "Failed to store pushed entry: %s" + entryId;
+            sendHttpHeader500(req, msg.c_str());
+            return;
+        }
+
+        // insert the entry into the database
+        std::string id = issueId;
+        r = p.pushEntry(id, entryId, u.username, tmpPath);
+        if (r == -1) {
+            std::string msg = "Cannot push the entry";
+            sendHttpHeader400(req, msg.c_str());
+
+        } else if (r == -2) {
+            // Internal Server Error
+            std::string msg = "pushEntry error";
+            sendHttpHeader500(req, msg.c_str());
+        } else if (r == -3) {
+            // HTTP 409 Conflict
+            sendHttpHeader409(req);
+
+        } else {
+            // ok, no problem
+            sendHttpHeader201(req);
+            // give the issue id, as it may be necessary to inform
+            // the client that it has been renamed (renumbered)
+            req->printf("issue: %s\r\n", id.c_str());
+        }
+
+        unlink(tmpPath.c_str()); // clean-up the tmp file
+
+    } else {
+        LOG_ERROR("Content-Type '%s' not supported", contentType);
+        sendHttpHeader400(req, "bad content-type");
+        return;
+    }
 }
 
+/**
+  *
+  * @param[out] vars
+  *     Associative array where the posted parameters get stored
+  *
+  * @param pathTmp
+  *     Path to a temporary directory where to store the uploaded files
+  *     If empty, the uploaded files should be ignored.
+  */
+int parseFormRequest(const RequestContext *req, std::map<std::string, std::list<std::string> > &vars,
+                     const std::string &pathTmp)
+{
+    const char *multipart = "multipart/form-data";
+    const char *contentType = getContentType(req);
+    if (0 == strncmp(multipart, contentType, strlen(multipart))) {
+
+        // extract the boundary
+        const char *b = "boundary=";
+        const char *p = mg_strcasestr(contentType, b);
+        if (!p) {
+            LOG_ERROR("Missing boundary in multipart form data");
+            return -1;
+        }
+        p += strlen(b);
+        std::string boundary = p;
+        LOG_DEBUG("Boundary: %s", boundary.c_str());
+
+        std::string postData;
+        int rc = readMgreq(req, postData, MAX_SIZE_UPLOAD);
+        if (rc < 0) {
+            sendHttpHeader413(req, "You tried to upload too much data. Max is 10 MB.");
+            return -1;
+        }
+
+        // parseMultipartAndStoreUploadedFiles(postData, boundary, vars, pro);
+        // TODO parse the posted parameter
+
+    } else {
+        // other Content-Type
+        LOG_ERROR("Content-Type '%s' not supported", contentType);
+        sendHttpHeader400(req, "Bad Content-Type");
+        return -1;
+    }
+    return 0;
+}
+
+void parseQueryStringVar(const std::string &var, std::string &key, std::string &value) {
+    size_t x = var.find('=');
+    if (x != std::string::npos) {
+        key = var.substr(0, x);
+        value = "";
+        if (x+1 < var.size()) {
+            value = var.substr(x+1);
+        }
+    }
+
+    key = urlDecode(key);
+    value = urlDecode(value);
+}
 
 /** Remove empty values for multiselect properties
   *
@@ -1842,13 +2215,14 @@ void cleanMultiselectProperties(const ProjectConfig &config, std::map<std::strin
     }
 }
 
+
 /** Handle the posting of an entry
   * If issueId is empty, then a new issue is created.
   */
 void httpPostEntry(const RequestContext *req, Project &pro, const std::string & issueId, User u)
 {
-    enum Role r = u.getRole(pro.getName());
-    if (r != ROLE_RW && r != ROLE_ADMIN) {
+    enum Role role = u.getRole(pro.getName());
+    if (role != ROLE_RW && role != ROLE_ADMIN) {
         sendHttpHeader403(req);
         return;
     }
@@ -1876,58 +2250,75 @@ void httpPostEntry(const RequestContext *req, Project &pro, const std::string & 
             return;
         }
 
-        std::string tmpDir = pro.getPath() + "/tmp";
-        parseMultipartAndStoreUploadedFiles(postData, boundary, vars, tmpDir);
+        parseMultipartAndStoreUploadedFiles(postData, boundary, vars, pro);
 
     } else {
-        // multipart/form-data
+        // other Content-Type
         LOG_ERROR("Content-Type '%s' not supported", contentType);
-        sendHttpHeader400(req, "bad Content-Type");
+        sendHttpHeader400(req, "Bad Content-Type");
         return;
     }
 
-   cleanMultiselectProperties(pro.getConfig(), vars);
-
-    std::string id = issueId;
     bool isNewIssue = false;
-    if (id == "new") {
-        id = "";
-        isNewIssue = true;
-    }
-    std::string entryId;
-    int status = pro.addEntry(vars, id, entryId, u.username);
-    if (status < 0) {
-        // error
-        sendHttpHeader500(req, "Cannot add entry");
+    std::string id = issueId;
+    Entry *entry = 0;
 
-    } else if (status > 0) {
-        // entry not added (beacuse it brings no change, etc.)
-        // HTTP redirect
-        std::string redirectUrl = "/" + pro.getUrlName() + "/issues/" + id;
-        sendHttpRedirect(req, redirectUrl.c_str(), 0);
+    std::string amendedEntry = getProperty(vars, K_AMEND);
+    int r = 0;
+    if (!amendedEntry.empty()) {
+        // this post is an amendment to an existing entry
+        std::string newMessage = getProperty(vars, K_MESSAGE);
+        entry = pro.amendEntry(amendedEntry, u.username, newMessage);
+        if (!entry) {
+            // failure
+            LOG_INFO("amendEntry returned %d", r);
+            sendHttpHeader403(req);
+            r = -1;
+        } else r = 0;
 
     } else {
-        // entry correctly added
+        // nominal post
+        cleanMultiselectProperties(pro.getConfig(), vars);
+
+        if (id == "new") {
+            id = "";
+            isNewIssue = true;
+        }
+        r = pro.addEntry(vars, id, entry, u.username);
+        if (r < 0) {
+            // error
+            sendHttpHeader500(req, "Cannot add entry");
+        }
+    }
+
+
+    if (r == 0) {
+        // entry correctly added or amended
 
 #if !defined(_WIN32)
         // launch the trigger, if any
         // launch the trigger only if a new entry was actually created
-        if (!entryId.empty()) Trigger::notifyEntry(pro, id, entryId, isNewIssue);
+        if (entry && ! UserBase::isLocalUserInterface()) Trigger::notifyEntry(pro, entry, isNewIssue);
 #endif
+    }
 
-
+    if (r >= 0) {
         if (getFormat(req) == RENDERING_HTML) {
             // HTTP redirect
             std::string redirectUrl = "/" + pro.getUrlName() + "/issues/" + id;
             sendHttpRedirect(req, redirectUrl.c_str(), 0);
+
         } else {
             sendHttpHeader200(req);
             req->printf("\r\n");
-            req->printf("%s/%s\r\n", id.c_str(), entryId.c_str());
+            if (entry) req->printf("%s/%s\r\n", entry->issue->id.c_str(), entry->id.c_str());
+            else req->printf("%s/(no change)\r\n", id.c_str());
         }
     }
 
 }
+
+
 
 
 /** begin_request_handler is the main entry point of an incoming HTTP request
@@ -1937,22 +2328,24 @@ void httpPostEntry(const RequestContext *req, Project &pro, const std::string & 
   * /                       GET/POST   user              list of projects / management of projects (create, ...)
   * /public/...             GET        all               public pages, javascript, CSS, logo
   * /signin                 POST       all               sign-in
-  * /users                             superadmin        management of users for all projects
-  * /_                      GET/POST   superadmin        new project
+  * /users/                            superadmin        management of users for all projects
   * /users/<user>           GET/POST   user, superadmin  management of a single user
-  * /myp/config             GET/POST   admin             configuration of the project
-  * /myp/views              GET/POST   admin             list predefined views / create new view
-  * /myp/views/_            GET        admin             form for advanced search / new predefined view
-  * /myp/views/xyz          GET/POST   admin             display / update / rename predefined view
-  * /myp/views/xyz?delete=1 POST       admin             delete predefined view
-  * /myp/issues             GET/POST   user              issues of the project / add new issue
-  * /myp/issues/new         GET        user              page with a form for submitting new issue
-  * /myp/issues/123         GET/POST   user              a particular issue: get all entries or add a new entry
-  * /myp/issues/x/y/delete  POST       user              delete an entry y of issue x
-  * /myp/tags/x/y           POST       user              tag / untag an entry
-  * /myp/reload             POST       admin             reload project from disk storage
+  * /_                      GET/POST   superadmin        new project
+  * /<p>/config             GET/POST   admin             configuration of the project
+  * /<p>/views/             GET/POST   admin             list predefined views / create new view
+  * /<p>/views/_            GET        admin             form for advanced search / new predefined view
+  * /<p>/views/xyz          GET/POST   admin             display / update / rename predefined view
+  * /<p>/views/xyz?delete=1 POST       admin             delete predefined view
+  * /<p>/issues             GET/POST   user              issues of the project / add new issue
+  * /<p>/issues/new         GET        user              page with a form for submitting new issue
+  * /<p>/issues/123         GET/POST   user              a particular issue: get all entries or add a new entry
+  * /<p>/issues/x/y         POST       user              push an entry
+  * /<p>/tags/x/y           POST       user              tag / untag an entry
+  * /<p>/reload             POST       admin             reload project from disk storage
+  * /<p>/files/<id>/<name>  GET        user              get an attached file
+  * /<p>/files/123          POST       user              push a file
+  * /<p>/other/file         GET        user              any static file
   * / * /issues             GET        user              issues of all projects
-  * /any/other/file         GET        user              any existing file (in the repository)
   */
 
 int begin_request_handler(const RequestContext *req)
@@ -1961,9 +2354,9 @@ int begin_request_handler(const RequestContext *req)
 
     std::string uri = req->getUri();
     std::string method = req->getMethod();
-    std::string resource = popToken(uri, '/');
+    LOG_DIAG("%s %s", method.c_str(), uri.c_str());
 
-    LOG_DEBUG("uri=%s, method=%s, resource=%s", uri.c_str(), method.c_str(), resource.c_str());
+    std::string resource = popToken(uri, '/');
 
     // increase statistics
     if (method == "GET") addHttpStat(H_GET);
@@ -1971,7 +2364,8 @@ int begin_request_handler(const RequestContext *req)
     else addHttpStat(H_OTHER);
 
     // check method
-    if (method != "GET" && method != "POST") return sendHttpHeader400(req, "invalid method");
+    std::string m = method; // use a shorter name to have a shorter next line
+    if (m != "GET" && m != "POST" && m != "HEAD" && m != "DELETE") return sendHttpHeader400(req, "invalid method");
 
     // public access to /public and /sm
     if    ( (resource == "public") && (method == "GET")) return httpGetFile(req);
@@ -1986,43 +2380,55 @@ int begin_request_handler(const RequestContext *req)
 
     // get signed-in user
     std::string sessionId;
-    int r = getFromCookie(req, SESSID, sessionId);
+    getFromCookie(req, SESSID, sessionId);
     // even if cookie not found, call getLoggedInUser in order to manage
     // local user interface case (smit ui)
     User user = SessionBase::getLoggedInUser(sessionId);
+    LOG_DIAG("Session %s -> user '%s'", sessionId.c_str(), user.username.c_str());
     // if username is empty, then no access is granted (only public pages will be available)
 
     if (user.username.empty()) return handleUnauthorizedAccess(req, false); // no user signed-in
 
     // at this point there is a signed-in user
+    LOG_DIAG("User signed-in: %s", user.username.c_str());
 
     bool handled = true; // by default, do not let Mongoose handle the request
 
     if      ( (resource == "signout") && (method == "POST") ) httpPostSignout(req, sessionId);
-    else if ( (resource == "") && (method == "GET") ) httpGetRoot(req, user);
+    else if ( (resource == "") && (method == "GET") ) httpGetProjects(req, user);
     else if ( (resource == "") && (method == "POST") ) httpPostRoot(req, user);
-    else if ( (resource == "users") && (method == "GET") ) httpGetUsers(req, user, uri);
-    else if ( (resource == "users") && (method == "POST") ) httpPostUsers(req, user, uri);
+    else if ( (resource == "users") && (method == "GET") ) httpGetUser(req, user, uri);
+    else if ( (resource == "users") && (method == "POST") ) httpPostUser(req, user, uri);
+    else if ( (resource == "users") && (method == "DELETE") ) httpDeleteUser(req, user, uri);
     else if ( (resource == "_") && (method == "GET") ) httpGetNewProject(req, user);
     else if ( (resource == "_") && (method == "POST") ) httpPostNewProject(req, user);
     else if ( (resource == "*") && (method == "GET") ) httpIssuesAccrossProjects(req, user, uri);
     else {
-        // check if it is a valid project resource such as /myp/issues, /myp/users, /myp/config
-        std::string projectUrl = resource;
-        std::string project = Project::urlNameDecode(projectUrl);
-        Project *p = Database::Db.getProject(project);
-        if (!p) return handleUnauthorizedAccess(req, true);
+        // Get the project given by the uri.
+        // We need to concatenate back 'resource' and 'uri', as resource was
+        // previously popped from the URI.
+        uri = resource + "/" + uri;
+        Project *p = Database::Db.lookupProject(uri);
 
-        LOG_DEBUG("project %s, %p", project.c_str(), p);
+        if (!p) {
+            // No such project. Bad request
+            LOG_DIAG("Unknown project for URI '%s'", uri.c_str());
+            // Send same error as for existing project in order to prevent
+            // an attacker from deducing existing projects after the http status code
+            return handleUnauthorizedAccess(req, true);
+        }
+        LOG_DIAG("project %s, %p", p->getName().c_str(), p);
 
         // check if user has at least read access
-        enum Role r = user.getRole(project);
+        enum Role r = user.getRole(p->getName());
         if (r != ROLE_ADMIN && r != ROLE_RW && r != ROLE_RO && ! user.superadmin) {
             // no access granted for this user to this project
             return handleUnauthorizedAccess(req, true);
         }
 
         // at this point the user has read access to the resource inside the project
+        LOG_DIAG("user '%s' has role '%s' on project '%s'", user.username.c_str(),
+                 roleToString(r).c_str(), p->getName().c_str());
 
         bool isdir = false;
         if (!uri.empty() && uri[uri.size()-1] == '/') isdir = true;
@@ -2032,9 +2438,12 @@ int begin_request_handler(const RequestContext *req)
         if      ( resource.empty()       && (method == "GET") ) httpGetProject(req, *p, user);
         else if ( (resource == "issues") && (method == "GET") && uri.empty() ) httpGetListOfIssues(req, *p, user);
         else if ( (resource == "issues") && (method == "POST") ) {
+            // /<p>/issues/<issue>/<entry> [/...]
             std::string issueId = popToken(uri, '/');
-            if (uri.empty()) httpPostEntry(req, *p, issueId, user);
-            else httpDeleteEntry(req, *p, issueId, uri, user);
+            std::string entryId = popToken(uri, '/');
+            if (entryId.empty()) httpPostEntry(req, *p, issueId, user);
+            else if (uri.empty()) httpPushEntry(req, *p, issueId, entryId, user);
+            else return sendHttpHeader400(req, "");
 
         } else if ( (resource == "issues") && (uri == "new") && (method == "GET") ) httpGetNewIssueForm(req, *p, user);
         else if ( (resource == "issues") && (method == "GET") ) return httpGetIssue(req, *p, uri, user);
@@ -2046,6 +2455,9 @@ int begin_request_handler(const RequestContext *req)
         else if ( (resource == "tags") && (method == "GET") ) return httpGetFile(req);
         else if ( (resource == "tags") && (method == "POST") ) httpPostTag(req, *p, uri, user);
         else if ( (resource == "reload") && (method == "POST") ) httpReloadProject(req, *p, user);
+        else if ( (resource == RESOURCE_FILES) && (method == "POST") ) httpPushAttachedFile(req, *p, uri, user);
+        else if ( (resource == RESOURCE_FILES) && (method == "GET") ) httpGetObject(req, *p, uri);
+        else if ( (resource == RESOURCE_FILES) && (method == "HEAD") ) httpGetHeadObject(req, *p, uri);
         else handled = false;
 
     }

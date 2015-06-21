@@ -11,6 +11,9 @@
 
 #define SESSION_DURATION (60*60*24) // 1 day
 #define COOKIE_VIEW_DURATION (60*60*24) // 1 day
+#define PATH_AUTH  "/users/auth"
+#define PATH_PERMISSIONS "/users/permissions"
+
 // authentication schemes
 
 enum Role {
@@ -21,34 +24,44 @@ enum Role {
     ROLE_NONE
 };
 
+
 std::string roleToString(Role r);
 Role stringToRole(const std::string &s);
 std::list<std::string> getAvailableRoles();
 
-struct User {
+class User {
+public:
     std::string username;
-    Auth *authHandler;
+    Auth *authHandler; // instance owned by the currect User. Deleted on User destruction.
     std::map<std::string, enum Role> rolesOnProjects;
+    bool superadmin;
+    std::map<std::string, Role> permissions; // map of projectWildcard => role
+
+    User();
+    User(const User &other);
+    User& operator=(const User &rhs);
+    ~User();
     enum Role getRole(const std::string &project) const;
     std::list<std::pair<std::string, std::string> >  getProjects() const;
-    bool superadmin;
-    User();
-    std::string serialize();
-    int load(std::list<std::string> &tokens, bool checkProject);
+    std::string serializePermissions() const;
+    std::string serializeAuth();
+    int loadAuth(std::list<std::string> &tokens);
     void setPasswd(const std::string &passwd);
     int authenticate(char *passwd);
-
+    void consolidateRoles();
 };
 
 class UserBase {
 public:
-    static int init(const char *repository, bool checkProject = true);
-    static void setLocalUserInterface();
+    static int init(const char *repository);
+    static int load(const std::string &repository, std::map<std::string, User*> &users);
+    static void setLocalUserInterface(const std::string username);
     static int store(const std::string &repository);
     static int initUsersFile(const char *repository);
     static User* getUser(const std::string &username);
     static int addUser(User u);
-    static void addUserByProject(std::string project, std::string username);
+    static int deleteUser(const std::string &username);
+    static int hotReload();
     static std::set<std::string> getUsersOfProject(const std::string &project);
     static std::map<std::string, Role> getUsersRolesOfProject(const std::string &project);
     static std::map<Role, std::set<std::string> > getUsersByRole(const std::string &project);
@@ -62,7 +75,7 @@ private:
     std::map<std::string, User*> configuredUsers;
     Locker locker; // mutex for configuredUsers
     static std::string Repository;
-    static void addUserInArray(User u);
+    static User *addUserInArray(User u);
 
     // localUserInterface enables anonymous read access
     // used for browsing a local clone of a smit repository

@@ -5,13 +5,13 @@ function changeWrapping() {
     else msg.wrap = "hard";
 }
 
-function ajaxPost(url) {
+function ajaxSend(url, method) {
     var request = new XMLHttpRequest();
-    request.open('POST', url, false); // synchronous
+    request.open(method, url, false); // synchronous
     request.send(null);
     var status = request.status;
-    if (status == 200) return true;
-    else return false;
+    if (status == 200) return 'ok';
+    else return request.responseText;
 }
 function previewMessage() {
     var divPreview = document.getElementById('sm_entry_preview');
@@ -28,20 +28,19 @@ function previewMessage() {
     request.send(null);
     divPreview.innerHTML = request.responseText;
 }
-function deleteEntry(urlPrefix, entryId) {
+
+function sm_deleteResource(redirect) {
     var r = confirm("Confirm delete?");
     if (r==true) {
-        r = ajaxPost(urlPrefix + '/' + entryId + '/delete');
-        if (r) { // ok, remove entry from current HTML page
-            var e = document.getElementById(entryId);
-            e.parentNode.removeChild(e);
-        } else alert('error');
+        r = ajaxSend('#', 'DELETE');
+        if (r != 'ok') alert(r);
+        else window.location.href = redirect;
     }
 }
 
 function tagEntry(urlPrefix, entryId, tagId) {
-    var r = ajaxPost(urlPrefix + '/' + entryId + '/' + tagId);
-    if (r) {
+    var r = ajaxSend(urlPrefix + '/' + entryId + '/' + tagId, 'POST');
+    if (r == 'ok') {
         var etag = document.getElementById('sm_tag_' + entryId + "_" + tagId);
         var doTag = false;
         taggedStyle = 'sm_entry_tag_' + tagId;
@@ -105,6 +104,19 @@ function updateFileInput(classname) {
         }
     }
 }
+function createDatalist(id, items) {
+    var datalist = document.createElement('datalist');
+    datalist.id = id;
+    var length = items.length;
+    for (var i = 0; i < length; i++) {
+        var opt = document.createElement('option');
+        opt.innerHTML = items[i];
+        opt.value = items[i];
+        opt.text = items[i];
+        datalist.appendChild(opt);
+    }
+    return datalist;
+}
 function createSelect(items, selected, allowVoid) {
     var select = document.createElement('select');
     var items2 = items.slice(0); // copy the array
@@ -124,14 +136,6 @@ function createSelect(items, selected, allowVoid) {
     return select;
 }
 
-function hideSuperadminZone() {
-    var divs = document.getElementsByClassName('sm_user_superadmin_zone');
-    for(var i=0; i<divs.length; i++) {
-        divs[i].style.display='none';
-        var inputs = divs[i].getElementsByTagName('input');
-        for(var j=0; j<inputs.length; j++) inputs[j].disabled = true;
-    }
-}
 function addMoreProperties(n) {
     // add 3 more properties on page
     for (var i=0; i<n; i++) addProperty('', '', '', '');
@@ -268,12 +272,30 @@ function setProjectName(value) {
     input.value = value;
 }
 
-function addProject(divname, selectedProject, selectedRole) {
+function addFilterDatalist(divname, id, items) {
     var div = document.getElementById(divname);
+    var datalist = createDatalist(id, items);
+    div.appendChild(datalist);
+}
+function addProjectDatalist(divname) {
+    var div = document.getElementById(divname);
+    var datalist = createDatalist('datalist_projects', Projects);
+    div.appendChild(datalist);
 
-    var select = createSelect(Projects, selectedProject, true);
-    select.name = 'project';
-    div.appendChild(select);
+}
+function addPermission(divname, selectedProject, selectedRole) {
+    var div = document.getElementById(divname);
+    var datalist = document.getElementById('datalist_projects');
+
+    // input for the project name or wildcard
+    var input = document.createElement('input');
+    input.type = 'text';
+    input.value = selectedProject;
+    input.setAttribute('list', 'datalist_projects');
+    input.name = 'project_wildcard';
+    div.appendChild(input);
+
+    // input for the role (ref, ro, rw,...)
     var i = createSelect(Roles, selectedRole, true);
     i.name = 'role';
     div.appendChild(i);
@@ -285,7 +307,7 @@ function setName(value) {
     input.value = value;
 }
 function setSuperadminCheckbox() {
-    var input = document.getElementById('sm_superadmin');
+    var input = document.getElementsByName('sm_superadmin')[0];
     input.checked = true;
 }
 
@@ -298,25 +320,19 @@ function updateFilterValue(divObject, value) {
     // remove the second one, and recalculate it
     removeElement(divObject.childNodes.item(1));
     var selectedKey = divObject.childNodes.item(0);
-    var values = PropertiesLists[selectedKey.value];
-    if (values) {
-        // build select
-        var select = createSelect(values, value, true);
-        select.name = 'filter_value';
-        divObject.appendChild(select);
-    } else {
-        // build text input
-        var i = document.createElement('input');
-        i.type = "text";
-        i.value = value;
-        i.name = 'filter_value';
-        divObject.appendChild(i);
-    }
+
+    // build text input
+    var i = document.createElement('input');
+    i.type = "text";
+    i.value = value;
+    i.name = 'filter_value_' + randomString(5);
+    i.setAttribute('list', 'datalist_'+selectedKey.value);
+    divObject.appendChild(i);
 }
 
-function addFilter(divname, selected, value) {
+function addFilter(divname, selectedProperty, value) {
     var div = document.getElementById(divname);
-    var select = createSelect(Properties, selected, true);
+    var select = createSelect(Properties, selectedProperty, true);
     select.name = divname;
 
     var container = document.createElement('div');
@@ -460,3 +476,57 @@ function addMoreTags(n) {
     // add n more tags on page
     for (var i=0; i<n; i++) addTag('', '', false);
 }
+function randomString(length) {
+    var chars = '0123456789abcdefghijklmnopqrstuvwxyz';
+    var result = '';
+    for (var i = length; i > 0; --i) result += chars[Math.round(Math.random() * (chars.length - 1))];
+    return result;
+}
+// authentication types in page user config
+function setAuthSha1() {
+    setAuth('sha1');
+}
+function setAuthLdap(uri, dname) {
+    setAuth('ldap');
+    var item = document.getElementsByName('sm_ldap_uri')[0];
+    item.value = uri;
+    var item = document.getElementsByName('sm_ldap_dname')[0];
+    item.value = dname;
+}
+function setAuthKrb5(primary, realm) {
+    setAuth('krb5');
+    var item = document.getElementsByName('sm_krb5_primary')[0];
+    item.value = primary;
+    var item = document.getElementsByName('sm_krb5_realm')[0];
+    item.value = realm;
+}
+function setAuth(authType) {
+    var items = document.getElementsByName('sm_auth_type');
+    for (var i=0; i<items.length; i++) {
+        var item = items[i];
+        if (item.value == authType) {
+            item.checked = true;
+            showOrHideClasses('box_auth', false);
+            showOrHideClasses('box_auth_' + authType, true);
+        }
+    }
+}
+function showOrHideClasses(className, show) {
+    var items = document.getElementsByClassName(className);
+    for (var i=0; i<items.length; i++) {
+        var item = items[i];
+        if (item.classList.contains(className)) {
+            if (show) item.style.display='block';
+            else item.style.display='none';
+
+            // disable child inputs
+            var inputs = item.getElementsByTagName('input');
+            for(var j=0; j<inputs.length; j++) {
+                if (show) inputs[j].disabled = false;
+                else inputs[j].disabled = true;
+                //console.log("input[" + j + "], " + inputs[j].name + ", show=" + show );
+            }
+        }
+    }
+}
+

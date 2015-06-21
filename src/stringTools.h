@@ -6,7 +6,13 @@
 #include <map>
 #include <vector>
 #include <stdio.h>
+#include "ustring.h"
 
+typedef std::map<std::string, std::list<std::string> > PropertiesMap;
+typedef std::map<std::string, std::list<std::string> >::const_iterator PropertiesIt;
+
+std::string bin2hex(const uint8_t *buffer, size_t len);
+std::string bin2hex(const ustring & in);
 
 std::string popToken(std::string & uri, char separator);
 void trimLeft(std::string & s, const char *c);
@@ -18,15 +24,16 @@ std::string urlDecode(const std::string &src, int is_form_url_encoded=true, char
 std::string urlEncode(const std::string &src, char mark = '%', const char *dontEscape="._-$,;~()");
 std::string htmlEscape(const std::string &value);
 std::string pop(std::list<std::string> & L);
-std::string getProperty(const std::map<std::string, std::list<std::string> > &properties, const std::string &name);
+std::string getProperty(const PropertiesMap &properties, const std::string &name);
 std::string replaceAll(const std::string &in, char c, const char *replaceBy);
 std::string enquoteJs(const std::string &in);
 std::string toJavascriptArray(const std::list<std::string> &items);
-std::vector<std::string> split(const std::string &s, const char *c, int limit = -1);
+std::list<std::string> split(const std::string &s, const char *c, int limit = -1);
 std::list<std::string> splitLinesAndTrimBlanks(const std::string &s);
 
 std::string join(const std::list<std::string> &items, const char *separator);
 std::string getBasename(const std::string &path);
+std::string getDirname(const std::string &path);
 std::string getFirstParamFromQueryString(const std::string & queryString, const char *param);
 std::list<std::string> getParamListFromQueryString(const std::string & queryString, const char *param);
 
@@ -36,5 +43,7 @@ std::list<std::string> getParamListFromQueryString(const std::string & queryStri
   */
 inline unsigned long int L(size_t x) { return (unsigned long int)x; }
 inline long int L(ssize_t x) { return (long int)x; }
+
+void printfIndent(const char *text, const char *indent);
 
 #endif

@@ -24,13 +24,13 @@ void RText::printProjectList(const RequestContext *req, const std::list<std::pai
 
     std::list<std::pair<std::string, std::string> >::const_iterator p;
     for (p=pList.begin(); p!=pList.end(); p++) {
-        req->printf("%s %s %s\n", Project::urlNameEncode(p->first).c_str(),
+        req->printf("%s %s %s\n", p->first.c_str(),
                     p->second.c_str(), p->first.c_str());
 
     }
 }
 
-void RText::printIssueList(const RequestContext *req, std::vector<const Issue*> issueList, std::list<std::string> colspec)
+void RText::printIssueList(const RequestContext *req, std::vector<Issue> &issueList, std::list<std::string> colspec)
 {
     req->printf("Content-Type: text/plain\r\n\r\n");
 
@@ -43,7 +43,7 @@ void RText::printIssueList(const RequestContext *req, std::vector<const Issue*> 
     req->printf("\n");
 
     // list of issues
-    std::vector<const Issue*>::const_iterator i;
+    std::vector<Issue>::const_iterator i;
     for (i=issueList.begin(); i!=issueList.end(); i++) {
 
         std::list<std::string>::iterator c;
@@ -52,12 +52,12 @@ void RText::printIssueList(const RequestContext *req, std::vector<const Issue*> 
             std::string column = *c;
             if (c != colspec.begin()) req->printf(",\t");
 
-            if (column == "id") text = (*i)->id;
-            else if (column == "ctime") text = epochToString((*i)->ctime);
-            else if (column == "mtime") text = epochToString((*i)->mtime);
+            if (column == "id") text = i->id;
+            else if (column == "ctime") text = epochToString(i->ctime);
+            else if (column == "mtime") text = epochToString(i->mtime);
             else {
                 std::map<std::string, std::list<std::string> >::const_iterator p;
-                const std::map<std::string, std::list<std::string> > & properties = (*i)->properties;
+                const std::map<std::string, std::list<std::string> > & properties = i->properties;
 
                 p = properties.find(column);
                 if (p != properties.end()) text = toString(p->second);
@@ -74,11 +74,10 @@ void RText::printIssue(const RequestContext *req, const Issue &issue)
 {
     LOG_DEBUG("RText::printIssue...");
     req->printf("Content-Type: text/plain\r\n\r\n");
-    Entry *e = issue.latest;
-    while (e && e->prev) e = e->prev; // go to the first one
+    Entry *e = issue.first;
     while (e) {
         req->printf("%s\n", e->id.c_str());
-        e = e->next;
+        e = e->getNext();
     }
 }
 

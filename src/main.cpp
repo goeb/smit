@@ -39,6 +39,7 @@
 #include "identifiers.h"
 #include "filesystem.h"
 #include "clone.h"
+#include "localClient.h"
 
 
 void usage()
@@ -49,6 +50,7 @@ void usage()
            "\n"
            "  clone       Clone a smit repository\n"
            "  init        Initialise a smit repository\n"
+           "  issue       Print or modify an issue in a local project\n"
            "  project     List, create, or update a smit project\n"
            "  pull        Fetch from a remote repository\n"
            "  serve       Start a smit web server\n"
@@ -106,8 +108,7 @@ int initRepository(int argc, char **argv)
     dirp = opendir(directory);
     if (!dirp) {
         // try create it
-        mode_t mode = S_IRUSR | S_IWUSR | S_IXUSR;
-        int r = mg_mkdir(directory, mode);
+        int r = mkdir(directory);
         if (r != 0) {
             LOG_ERROR("Cannot create directory '%s': %s", directory, strerror(errno));
             return 1;
@@ -130,11 +131,21 @@ int initRepository(int argc, char **argv)
     }
     closedir(dirp);
 
-    // ok, extract the files for the new repository
+    // Extract the files 'public' to the new repository
     int r = cpioExtractFile("public", directory);
     if (r < 0) {
         LOG_ERROR("Error while extracting 'public/*': r=%d", r);
         return 3;
+    }
+
+    // Extract the files 'templates' to the new repository
+    std::string templatesDir = directory;
+    templatesDir += "/" PATH_REPO;
+    mkdirs(templatesDir);
+    r = cpioExtractFile("templates", templatesDir.c_str());
+    if (r < 0) {
+        LOG_ERROR("Error while extracting 'templates/*': r=%d", r);
+        return 4;
     }
 
     r = UserBase::initUsersFile(directory);
@@ -148,36 +159,56 @@ int initRepository(int argc, char **argv)
 
 int helpProject()
 {
-    printf("Usage: smit project [<project-name>] [options]\n"
+    printf("Usage: smit project [options] [<project-path> [<action> ...]]\n"
            "\n"
            "  List, create, or update a smit project.\n"
            "\n"
+           "  <project-path>\n"
+           "        Path to a project or a repository\n"
+           "\n"
+           "  <action>\n"
+           "        Update the project configuration. Non compatible with\n"
+           "        option '-a'.\n"
+           "\n"
            "Options:\n"
-           "  -c         Create a project, with a default structure. The structure\n"
-           "             may be modified online by an admin user.\n"
-           "  -d <repo>  select a repository by its path (by default . is used)\n"
+           "  -a    List all projects under the given path.\n"
+           "\n"
+           "  -c    Create a project, with a default structure. The structure\n"
+           "        may be modified online by an admin user.\n"
+           "\n"
+           "  -l    Print the project configuration.\n"
+           "\n"
+           "Example:\n"
+           "  smit project -c example addProperty \"priority select high low\"\n"
+           "  smit project example addProperty \"friendly_name text\"\n"
+           "  smit project example delProperty friendly_name\n"
           );
     return 1;
 }
 
 int cmdProject(int argc, char **argv)
 {
-    const char *repo = ".";
-    const char *projectName = 0;
+    const char *path = ".";
     bool create = false;
+    bool printall = false;
+    bool update = false;
+    bool listconfig = false;
 
     int c;
     int optionIndex = 0;
     struct option longOptions[] = { {NULL, 0, NULL, 0}  };
-    while ((c = getopt_long(argc, argv, "cd:", longOptions, &optionIndex)) != -1) {
+    while ((c = getopt_long(argc, argv, "acl", longOptions, &optionIndex)) != -1) {
         switch (c) {
         case 0: // manage long options
             break;
-        case 'd':
-            repo = optarg;
+        case 'a':
+            printall = true;
             break;
         case 'c':
             create = true;
+            break;
+        case 'l':
+            listconfig = true;
             break;
         case '?': // incorrect syntax, a message is printed by getopt_long
             return helpProject();
@@ -189,62 +220,117 @@ int cmdProject(int argc, char **argv)
     }
     // manage non-option ARGV elements
     if (optind < argc) {
-        projectName = argv[optind];
+        path = argv[optind];
         optind++;
     }
-    if (optind < argc) {
-        printf("Too many arguments.\n\n");
-        return helpProject();
+    std::list<std::pair<std::string, std::string> > updateActions;
+    while (optind < argc) {
+        // actions go by pair
+        std::string verb = argv[optind];
+        optind++;
+
+        if (verb == "addProperty" || verb == "numberIssues") {
+            // ok
+        } else {
+            printf("Invalid action '%s'. Allowed values are: \n"
+                   "  addProperty\n"
+                   "  numberIssues\n"
+                   "\n", verb.c_str());
+            return helpProject();
+        }
+
+        if (optind >= argc) {
+            printf("Invalid action '%s': missing second argument\n\n", verb.c_str());
+            return helpProject();
+        }
+
+        std::string arg = argv[optind];
+        optind++;
+
+        updateActions.push_back(std::make_pair(verb, arg));
     }
 
     // set log level to hide INFO logs
     setLoggingLevel(LL_ERROR);
+    setLoggingOption(LO_CLI);
 
-    // Load all projects
-    int r = dbLoad(repo);
-    if (r < 0) {
-        LOG_ERROR("Cannot load projects of repository '%s'. Aborting.", repo);
-        return 1;
+    if (printall && update) {
+        printf("Options '-a' and '-u' not compatible.\n\n");
+        return helpProject();
     }
+    if (printall) {
+        Database::loadProjects(path, true);
 
-    if (!projectName) {
-        if (create) {
-            LOG_ERROR("Cannot create project with no name.\n");
-            return 1;
-        }
-        // list projects
-        const Project *p = Database::Db.getNext(0);
-        while (p) {
-            printf("%s: %d issues\n", p->getName().c_str(), p->getNumIssues());
-            p = Database::Db.getNext(p);
-        }
-        printf("%lu project(s)\n", L(Database::Db.getNumProjects()));
-        return 0;
-    }
-
-    if (create) {
-        std::string resultingPath;
-        r = Project::createProjectFiles(repo, projectName, resultingPath);
-        if (r < 0) return 1;
-        printf("Project created: %s\n", resultingPath.c_str());
     } else {
-        // print project
-        const Project* p = Database::Db.getProject(projectName);
-        if (!p) {
-            printf("No such project: %s\n", projectName);
-            return 1;
+        if (create) {
+            if (fileExists(path)) {
+                printf("Cannot create project: existing file or directory '%s'\n", path);
+                return 1;
+            }
+            std::string resultingPath;
+            std::string projectName = getBasename(path);
+            std::string repo = getDirname(path);
+            int r = Project::createProjectFiles(repo, projectName, resultingPath);
+            if (r < 0) return 1;
+            printf("Project created: %s\n", resultingPath.c_str());
         }
-        printf("%s: %d issue(s)\n", projectName, p->getNumIssues());
+        Database::loadProjects(path, false); // do not recurse in sub directories
+
+        if (updateActions.size() > 0) {
+            Project *p = Database::Db.getNextProject(0);
+            if (!p) {
+                printf("Cannot update project '%s': no project found\n", path);
+                return 1;
+            }
+
+            ProjectConfig config = p->getConfig();
+
+            std::list<std::pair<std::string, std::string> >::iterator action;
+            FOREACH(action, updateActions) {
+                if (action->first == "addProperty") {
+                    std::list<std::string> tokens = split(action->second, " \t");
+                    int r = config.addProperty(tokens);
+                    if (r != 0) {
+                        printf("Cannot addProperty: check the syntax\n");
+                        return 1;
+                    }
+                } else if (action->first == "numberIssues") {
+                    if (action->second == "global") config.numberIssueAcrossProjects = true;
+                    else config.numberIssueAcrossProjects = false;
+                }
+            }
+
+            int r = p->modifyConfig(config, "");
+            if (r != 0) {
+                printf("Cannot modify project config\n");
+                return 1;
+            }
+        }
     }
+
+    const Project *p = Database::Db.getNextProject(0);
+    while (p) {
+        if (listconfig) {
+            std::string config = p->getConfig().serialize();
+            printf("Configuration of project '%s':\n", p->getName().c_str());
+            printf("%s\n", config.c_str());
+        } else {
+            // simply list projects
+            printf("%s: %d issues\n", p->getName().c_str(), p->getNumIssues());
+        }
+        p = Database::Db.getNextProject(p);
+    }
+    printf("%lu project(s)\n", L(Database::Db.getNumProjects()));
+
     return 0;
 }
 
 int showUser(const User &u)
 {
     printf("%s", u.username.c_str());
+    if (u.superadmin) printf(" (superadmin)");
     if (!u.authHandler) printf(", no password");
     else printf(", %s", u.authHandler->serialize().c_str());
-    if (u.superadmin) printf(", superadmin");
     printf("\n");
 
     std::map<std::string, enum Role>::const_iterator project;
@@ -273,6 +359,7 @@ int helpUser()
            "                    projects and manage users via the web interface)\n"
            "  --no-superadmin   remove the superadmin priviledge\n"
            "  -d <repo>         select a repository by its path (by default . is used)\n"
+           "  -v                be verbose (debug)"
            "\n"
            "Roles:\n"
            "    admin       able to modify an existing project\n"
@@ -291,7 +378,7 @@ int cmdUser(int argc, char **argv)
     std::string superadmin;
     enum UserConfigAction { GET_CONFIG, SET_CONFIG };
     UserConfigAction action = GET_CONFIG;
-    User u;
+    User newUser;
 
     int c;
     int optionIndex = 0;
@@ -303,14 +390,14 @@ int cmdUser(int argc, char **argv)
         {"project", 1, 0, 0},
         {NULL, 0, NULL, 0}
     };
-    while ((c = getopt_long(argc, argv, "d:", longOptions, &optionIndex)) != -1) {
+    while ((c = getopt_long(argc, argv, "vd:", longOptions, &optionIndex)) != -1) {
         switch (c) {
         case 0: // manage long options
             if (0 == strcmp(longOptions[optionIndex].name, "no-passwd")) {
                 deletePasswd = true;
                 action = SET_CONFIG;
             } else if (0 == strcmp(longOptions[optionIndex].name, "passwd")) {
-                u.setPasswd(optarg);
+                newUser.setPasswd(optarg);
                 action = SET_CONFIG;
             } else if (0 == strcmp(longOptions[optionIndex].name, "superadmin")) {
                 superadmin = "yes";
@@ -327,9 +414,12 @@ int cmdUser(int argc, char **argv)
                 }
                 std::string project = arg.substr(0, i);
                 std::string role = arg.substr(i+1);
-                u.rolesOnProjects[project] = stringToRole(role);
+                newUser.permissions[project] = stringToRole(role);
                 action = SET_CONFIG;
             }
+            break;
+        case 'v':
+            setLoggingLevel(LL_DIAG);
             break;
         case 'd':
             repo = optarg;
@@ -353,7 +443,7 @@ int cmdUser(int argc, char **argv)
         return helpUser();
     }
 
-    int r = UserBase::init(repo, false);
+    int r = UserBase::init(repo);
     if (r < 0) {
         LOG_ERROR("Cannot loads users of repository '%s'. Aborting.", repo);
         exit(1);
@@ -369,39 +459,60 @@ int cmdUser(int argc, char **argv)
         printf("%ld user(s)\n", L(users.size()));
 
     } else {
+        User *existingUser = UserBase::getUser(username);
         if (action == GET_CONFIG) {
-            const User *u = UserBase::getUser(username);
-            if (!u) {
+            // list a specific user configuration
+            if (!existingUser) {
                 printf("No such user: %s\n", username);
                 return 1;
-            } else return showUser(*u);
+            } else return showUser(*existingUser);
         }
 
         // create or update user
-        u.username = username;
-        if (superadmin == "no") u.superadmin = false;
-        else if (superadmin == "yes") u.superadmin = true;
-        User *old = UserBase::getUser(username);
-        if (old) {
-            if (!superadmin.empty()) old->superadmin = u.superadmin;
-            if (deletePasswd) {
-                if (old->authHandler) delete old->authHandler;
-                old->authHandler = 0;
 
-            } else if (u.authHandler) {
+        newUser.username = username;
+        if (superadmin == "no") newUser.superadmin = false;
+        else if (superadmin == "yes") newUser.superadmin = true;
+
+        if (existingUser) {
+            // update the existing user
+            if (!superadmin.empty()) existingUser->superadmin = newUser.superadmin;
+            if (deletePasswd) {
+                if (existingUser->authHandler) delete existingUser->authHandler;
+                existingUser->authHandler = 0;
+
+            } else if (newUser.authHandler) {
                 // keep existing auth scheme
-                old->authHandler = u.authHandler;
+                existingUser->authHandler = newUser.authHandler;
+            } else {
+                // keep authentication and password unchanged
             }
-            // update modified roles (and keep the others unchanged)
-            std::map<std::string, enum Role>::iterator newRole;
-            FOREACH(newRole, u.rolesOnProjects) {
-                if (newRole->second == ROLE_NONE) old->rolesOnProjects.erase(newRole->first);
-                else old->rolesOnProjects[newRole->first] = newRole->second;
+
+            // update permissions (keep the others unchanged)
+            std::map<std::string, Role>::iterator newPermission;
+            FOREACH(newPermission, newUser.permissions) {
+                if (newPermission->second == ROLE_NONE) {
+                    // erase if same wildcard in existingUser
+                    std::map<std::string, Role>::iterator existingPerm;
+                    existingPerm = existingUser->permissions.find(newPermission->first);
+                    if (existingPerm == existingUser->permissions.end()) {
+                        // no such existing permission
+                        // simlpy add the new wildcard and associated role
+                        existingUser->permissions[newPermission->first] = newPermission->second;
+                    } else {
+                        // remove existing wildcard
+                        existingUser->permissions.erase(newPermission->first);
+                    }
+                } else {
+                    // add permission
+                    existingUser->permissions[newPermission->first] = newPermission->second;
+                }
             }
-            r = UserBase::updateUser(username, *old);
+            // store the user (the existing user that has been updated)
+            r = UserBase::updateUser(username, *existingUser);
 
         } else {
-            r = UserBase::addUser(u);
+            r = UserBase::addUser(newUser);
         }
         if (r < 0) {
             LOG_ERROR("Abort.");
@@ -450,6 +561,7 @@ int serveRepository(int argc, char **argv)
         {NULL, 0, NULL, 0}
     };
     optind = 1; // reset this in case cmdUi has already parsed with getopt_long
+    int loglevel = LL_INFO;
     while ((c = getopt_long(argc, argv, "d", longOptions, &optionIndex)) != -1) {
         switch (c) {
         case 0: // manage long options
@@ -458,8 +570,7 @@ int serveRepository(int argc, char **argv)
             else if (0 == strcmp(longOptions[optionIndex].name, "url-rewrite-root")) urlRewritingRoot = optarg;
             break;
         case 'd':
-            setLoggingLevel(LL_DEBUG);
-            LOG_DIAG("setLoggingLevel(LL_DEBUG)");
+            loglevel++;
             break;
         case '?': // incorrect syntax, a message is printed by getopt_long
             return helpServe();
@@ -469,6 +580,7 @@ int serveRepository(int argc, char **argv)
             return helpServe();
         }
     }
+    setLoggingLevel((LogLevel)loglevel);
 
     // manage non-option ARGV elements
     if (optind < argc) {
@@ -489,12 +601,10 @@ int serveRepository(int argc, char **argv)
         LOG_ERROR("Cannot serve repository '%s'. Aborting.", repo);
         exit(1);
     }
-    if (!UserBase::isLocalUserInterface()) {
-        r = UserBase::init(repo);
-        if (r < 0) {
-            LOG_ERROR("Cannot loads users of repository '%s'. Aborting.", repo);
-            exit(1);
-        }
+    r = UserBase::init(repo);
+    if (r < 0) {
+        LOG_ERROR("Cannot loads users of repository '%s'. Aborting.", repo);
+        exit(1);
     }
 
     initHttpStats();
@@ -533,8 +643,6 @@ int serveRepository(int argc, char **argv)
 
     if (!UserBase::isLocalUserInterface()) {
         while (1) sleep(1); // block until ctrl-C
-        getchar();  // Wait until user hits "enter"
-        mc.stop();
     }
     // else, we return, and the cmdUi() will launch the web browser
     return 0;
@@ -581,6 +689,7 @@ int cmdUi(int argc, char **argv)
 {
     std::string listenPort = "8199";
     char *repo = 0;
+    setLoggingOption(LO_CLI);
 
     int c;
     int optionIndex = 0;
@@ -618,7 +727,9 @@ int cmdUi(int argc, char **argv)
 
     if (!repo) repo = (char*)".";
 
-    UserBase::setLocalUserInterface();
+
+    std::string username = loadUsername(repo);
+    UserBase::setLocalUserInterface(username);
 
     listenPort = "127.0.0.1:" + listenPort;
 
@@ -748,6 +859,9 @@ int main(int argc, char **argv)
 {
     if (argc < 2) usage();
 
+    // init random seed
+    srand(time(0));
+
     int i = 1;
     const char *command = 0;
     while (i < argc) {
@@ -770,11 +884,20 @@ int main(int argc, char **argv)
         } else if (0 == strcmp(command, "user")) {
             return cmdUser(argc-1, argv+1);
 
+        } else if (0 == strcmp(command, "issue")) {
+            return cmdIssue(argc-1, argv+1);
+
         } else if (0 == strcmp(command, "clone")) {
             return cmdClone(argc-1, argv+1);
 
         } else if (0 == strcmp(command, "pull")) {
             return cmdPull(argc-1, argv+1);
+
+        } else if (0 == strcmp(command, "push")) {
+            return cmdPush(argc-1, argv+1);
+
+        } else if (0 == strcmp(command, "get")) {
+            return cmdGet(argc-1, argv+1);
 
         } else if (0 == strcmp(command, "ui")) {
             return cmdUi(argc-1, argv+1);
@@ -783,11 +906,15 @@ int main(int argc, char **argv)
             if (i < argc) {
                 const char *help = argv[i];
                 if      (0 == strcmp(help, "init")) return helpInit();
+                else if (0 == strcmp(help, "issue")) return helpIssue();
                 else if (0 == strcmp(help, "project")) return helpProject();
                 else if (0 == strcmp(help, "user")) return helpUser();
                 else if (0 == strcmp(help, "serve")) return helpServe();
                 else if (0 == strcmp(help, "ui")) return helpUi();
                 else if (0 == strcmp(help, "clone")) return helpClone();
+                else if (0 == strcmp(help, "pull")) return helpPull();
+                else if (0 == strcmp(help, "push")) return helpPush(0);
+                else if (0 == strcmp(help, "get")) return helpGet();
                 else {
                     printf("No help for '%s'\n", help);
                     exit(1);

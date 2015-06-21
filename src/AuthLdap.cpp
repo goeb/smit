@@ -70,8 +70,42 @@ int AuthLdap::authenticate(char *password)
 std::string AuthLdap::serialize()
 {
     std::string result;
-    result += serializeSimpleToken(AUTH_LDAP) + " ";
-    result += serializeSimpleToken(dname) + " ";
-    result += serializeSimpleToken(uri);
+    result += serializeSimpleToken(AUTH_LDAP);
+    result += " -uri " + serializeSimpleToken(dname);
+    result += " -dname " + serializeSimpleToken(uri);
     return result;
 }
+
+Auth *AuthLdap::deserialize(std::list<std::string> &tokens)
+{
+    std::string uri;
+    std::string dname;
+    std::string token;
+    while (!tokens.empty()) {
+        token = popListToken(tokens);
+        if (token == "-uri") uri = popListToken(tokens);
+        else if (token == "-dname") dname = popListToken(tokens);
+        else {
+            LOG_ERROR("Invalid token '%s'", token.c_str());
+            return 0;
+        }
+    }
+    if (uri.empty()) {
+        LOG_ERROR("AuthLdap: empty uri");
+        return 0;
+    }
+    if (dname.empty()) {
+        LOG_ERROR("AuthLdap: empty dname");
+        return 0;
+    }
+
+    return new AuthLdap("", uri, dname);
+}
+
+
+Auth *AuthLdap::createCopy()
+{
+    AuthLdap *ah = new AuthLdap(*this);
+    return ah;
+}
+

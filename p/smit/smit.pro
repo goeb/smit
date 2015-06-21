@@ -3,7 +3,7 @@ CONFIG += console
 CONFIG -= qt
 
 SOURCES += \
-    ../../mongoose/mongoose.c \
+    ../../third-party/mongoose.c \
     ../../src/db.cpp \
     ../../src/parseConfig.cpp \
     ../../src/identifiers.cpp \
@@ -25,12 +25,25 @@ SOURCES += \
     ../../src/clone.cpp \
     ../../src/console.cpp \
     ../../src/HttpContext.cpp \
+    ../../src/httpClient.cpp \
+    ../../src/localClient.cpp \
+    ../../src/Args.cpp \
+    ../../src/Entry.cpp \
+    ../../src/Project.cpp \
+    ../../src/Issue.cpp \
+    ../../src/View.cpp \
+    ../../src/Tag.cpp \
+    ../../src/ProjectConfig.cpp \
+    ../../src/Object.cpp \
     ../../src/AuthKrb5.cpp \
     ../../src/AuthSha1.cpp \
-    ../../src/AuthLdap.cpp
+    ../../src/AuthLdap.cpp \
+    ../../src/third-party/mongoose.c \
+    ../../src/third-party/fnmatch.c
+    ../../src/ssoKerberos.cpp
 
 HEADERS += \
-    ../../mongoose/mongoose.h \
+    ../../src/third-party/mongoose.h \
     ../../src/db.h \
     ../../src/parseConfig.h \
     ../../src/ustring.h \
@@ -52,8 +65,22 @@ HEADERS += \
     ../../src/clone.h \
     ../../src/console.h \
     ../../src/HttpContext.h \
+    ../../src/httpClient.h \
+    ../../src/localClient.h \
+    ../../src/Args.h \
+    ../../src/Entry.h \
+    ../../src/Project.h \
+    ../../src/Issue.h \
+    ../../src/View.h \
+    ../../src/Object.h \
+    ../../src/restApi.h \
+    ../../src/ProjectConfig.h \
     ../../src/Auth.h \
     ../../src/AuthKrb5.h \
     ../../src/AuthSha1.h \
-    ../../src/AuthLdap.h
+    ../../src/AuthLdap.h \
+    ../../src/third-party/fnmatch.h \
+    ../../src/mg_win32.h \
+    ../../src/Tag.h
+    ../../src/ssoKerberos.h
 

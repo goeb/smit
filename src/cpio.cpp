@@ -26,6 +26,7 @@
 #include "logging.h"
 #include "mg_win32.h"
 #include "stringTools.h"
+#include "filesystem.h"
 
 #include "embedcpio.h" // generated
 
@@ -105,7 +106,7 @@ int cpioGetNextFileHeader(const char *&offset, const char *end, std::string &fil
     LOG_DEBUG("cpioExtract: filepath=%s", filepathBuf);
     if (0 == strcmp(filepathBuf, "TRAILER!!!")) return -10; // end of archive
 
-    filesize = (header.c_filesize[0] << 8) + header.c_filesize[1];
+    filesize = (header.c_filesize[0] << 16) + header.c_filesize[1];
     filepath = filepathBuf;
     return 0;
 }
@@ -199,9 +200,8 @@ int cpioExtractTree(const char *cpioStart, size_t cpioSize, const char *src, con
             incrementalDir += "/";
             incrementalDir += subdir;
 
-            mode_t mode = S_IRUSR | S_IWUSR | S_IXUSR;
             LOG_DEBUG("cpioExtract: mkdir %s...", incrementalDir.c_str());
-            int r = mg_mkdir(incrementalDir.c_str(), mode);
+            int r = mkdir(incrementalDir);
             if (r == 0) continue; // ok
 #if defined(_WIN32)
             else if (errno == ERROR_ALREADY_EXISTS) continue; // maybe ok

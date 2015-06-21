@@ -58,7 +58,7 @@ void Locker::lockForWriting()
         r = pthread_mutex_unlock(&readOnlyMutex);
         if (r != 0) LOG_ERROR("pthread_mutex_unlock error: (%d) %s", r, strerror(r));
 
-        if (n == 0) break; // save the following msleep...
+        if (n == 0) break; // skip the following msleep...
 
         msleep(10); // prevent CPU consuming loop
     }
@@ -69,6 +69,7 @@ void Locker::unlockForWriting()
 
     int r = pthread_mutex_unlock(&readWriteMutex);
     if (r != 0) LOG_ERROR("pthread_mutex_unlock error: (%d) %s", r, strerror(r));
+
 }
 
 void Locker::lockForReading()

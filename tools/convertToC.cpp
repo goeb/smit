@@ -7,15 +7,16 @@
 
 int usage()
 {
-    printf("Usage: convertToC <file>\n");
+    printf("Usage: convertToC <file> <etag>\n");
     return -1;
 }
 int main(int argc, char **argv)
 {
     // load input file
-    if (argc != 2) return usage();
+    if (argc != 3) return usage();
 
     std::string filename = argv[1];
+    const char *etag =  argv[2];
     std::ifstream f(filename.c_str());
     if (!f.good()) {
         printf("Cannot open '%s': %s\n", filename.c_str(), strerror(errno));
@@ -50,6 +51,7 @@ int main(int argc, char **argv)
     }
     fprintf(fbody, "\"\n;\n");
     fprintf(fbody, "%s = %zd;\n", sizeDeclaration.c_str(), size);
+    fprintf(fbody, "const char *em_binary_etag = \"%s\";\n", etag);
     fclose(fbody);
 
     // generate header file
@@ -63,6 +65,7 @@ int main(int argc, char **argv)
     fprintf(fheader, "#include <stdio.h>\n");
     fprintf(fheader, "extern %s;\n", binaryDeclaration.c_str());
     fprintf(fheader, "extern %s;\n", sizeDeclaration.c_str());
+    fprintf(fheader, "extern const char *em_binary_etag;\n");
     fprintf(fheader, "#endif\n");
     fclose(fheader);
     return 0;

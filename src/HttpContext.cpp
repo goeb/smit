@@ -121,3 +121,9 @@ const char *MongooseRequestContext::getQueryString() const
     if (req->query_string) qs = req->query_string;
     return qs;
 }
+
+void MongooseRequestContext::sendObject(const std::string &basemane, const std::string &realpath) const
+{
+    mg_send_object(conn, basemane.c_str(), realpath.c_str());
+}
+

@@ -24,3 +24,7 @@ Open SSL
     make
     make install
 
+
+smit :
+../configure CXXFLAGS="-g -O0" KRB5_LIBS="-L/usr/lib/i386-linux-gnu/mit-krb5 -lkrb5" KRB5_CFLAGS="-I/usr/include" --enable-kerberos --enable-ldap LDAP_CFLAGS="-I/usr/include" LDAP_LIBS="-lldap"
+

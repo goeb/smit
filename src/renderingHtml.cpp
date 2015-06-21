@@ -27,6 +27,17 @@
 #include "session.h"
 #include "global.h"
 #include "filesystem.h"
+#include "restApi.h"
+
+#ifdef KERBEROS_ENABLED
+  #include "AuthKrb5.h"
+#endif
+
+#ifdef LDAP_ENABLED
+  #include "AuthLdap.h"
+#endif
+
+
 
 /** Build a context for a user and project
   *
@@ -40,6 +51,7 @@ ContextParameters::ContextParameters(const RequestContext *request, const User &
     init(request, u);
     project = &p;
     projectConfig = p.getConfig(); // take a copy of the config
+    predefinedViews = p.getViews(); // take a copy of the config
     userRole = u.getRole(p.getName());
 }
 
@@ -67,39 +79,41 @@ const Project &ContextParameters::getProject() const
 
 #define K_SM_DIV_NAVIGATION_GLOBAL "SM_DIV_NAVIGATION_GLOBAL"
 #define K_SM_DIV_NAVIGATION_ISSUES "SM_DIV_NAVIGATION_ISSUES"
-#define K_SM_HTML_PROJECT_NAME "SM_HTML_PROJECT_NAME"
-#define K_SM_URL_PROJECT_NAME "SM_URL_PROJECT_NAME"
+#define K_SM_HTML_PROJECT "SM_HTML_PROJECT"
+#define K_SM_URL_PROJECT "SM_URL_PROJECT"
 #define K_SM_RAW_ISSUE_ID "SM_RAW_ISSUE_ID"
-#define K_SM_SCRIPT_PROJECT_CONFIG_UPDATE "SM_SCRIPT_PROJECT_CONFIG_UPDATE"
 #define K_SM_DIV_PREDEFINED_VIEWS "SM_DIV_PREDEFINED_VIEWS"
 #define K_SM_DIV_PROJECTS "SM_DIV_PROJECTS"
 #define K_SM_DIV_USERS "SM_DIV_USERS"
 #define K_SM_DIV_ISSUES "SM_DIV_ISSUES"
 #define K_SM_DIV_ISSUE "SM_DIV_ISSUE"
-#define K_SM_DIV_ISSUE_SUMMARY "SM_DIV_ISSUE_SUMMARY" // deprecated
 #define K_SM_HTML_ISSUE_SUMMARY "SM_HTML_ISSUE_SUMMARY"
 #define K_SM_DIV_ISSUE_FORM "SM_DIV_ISSUE_FORM"
 #define K_SM_DIV_ISSUE_MSG_PREVIEW "SM_DIV_ISSUE_MSG_PREVIEW"
-#define K_SM_REWRITE_ROOT "SM_REWRITE_ROOT"
+#define K_SM_URL_ROOT "SM_URL_ROOT"
+#define K_SM_TABLE_USER_PERMISSIONS "SM_TABLE_USER_PERMISSIONS"
+#define K_SM_SCRIPT "SM_SCRIPT"
 
-
-/** Load a page for a specific project
+/** Load a page template of a specific project
   *
   * By default pages (typically HTML pages) are loaded from $REPO/public/ directory.
   * But the administrator may override this by pages located in $REPO/$PROJECT/html/ directory.
   *
   * The caller is responsible for calling 'free' on the returned pointer (if not null).
   */
-int loadProjectPage(const RequestContext *req, const std::string &projectPath, const std::string &page, const char **data)
+int loadProjectPage(const RequestContext *req, const Project *project, const std::string &page, const char **data)
 {
-    // first look for the page in $REPO/$PROJECT/html/
-    std::string path = projectPath + "/html/" + page;
-    int n = loadFile(path.c_str(), data);
-    if (n > 0) return n;
+    std::string path;
+    if (project) {
+        // first look in the templates of the project
+        path = project->getPath() + "/" PATH_TEMPLATES "/" + page;
+        int n = loadFile(path.c_str(), data);
+        if (n > 0) return n;
+    }
 
-    // secondly, look at $REPO/public/
-    path = Database::Db.getRootDir() + "/public/" + page;
-    n = loadFile(path.c_str(), data);
+    // secondly, look in the templates of the repository
+    path = Database::Db.getRootDir() + "/" PATH_REPO_TEMPLATES "/" + page;
+    int n = loadFile(path.c_str(), data);
 
     if (n > 0) return n;
 
@@ -114,15 +128,18 @@ int loadProjectPage(const RequestContext *req, const std::string &projectPath, c
   */
 class VariableNavigator {
 public:
-    std::vector<const Issue*> *issueList;
-    std::map<std::string, std::vector<const Issue*> > *issuesOfAllProjects;
-    std::vector<const Issue*> *issueListFullContents;
+    std::vector<Issue> *issueList;
+    std::vector<Issue> *issuesOfAllProjects;
+    std::vector<Issue> *issueListFullContents;
     std::list<std::string> *colspec;
     const ContextParameters &ctx;
     const std::list<std::pair<std::string, std::string> > *projectList;
     const std::list<User> *usersList;
     const Issue *currentIssue;
+    const User *concernedUser;
+    const Entry *entryToBeAmended;
     const std::map<std::string, std::map<Role, std::set<std::string> > > *userRolesByProject;
+    std::string script; // javascript to be inserted in SM_SCRIPT
 
     VariableNavigator(const std::string basename, const ContextParameters &context) : ctx(context) {
         buffer = 0;
@@ -134,13 +151,10 @@ public:
         usersList = 0;
         currentIssue = 0;
         userRolesByProject = 0;
+        concernedUser = 0;
+        entryToBeAmended = 0;
 
-        int n;
-        if (ctx.project) n = loadProjectPage(ctx.req, ctx.getProject().getPath(), basename, &buffer);
-        else {
-            std::string path = Database::Db.getRootDir() + "/public/" + basename;
-            n = loadFile(path.c_str(), &buffer);
-        }
+        int n = loadProjectPage(ctx.req, ctx.project, basename, &buffer);
 
         if (n > 0) {
             size = n;
@@ -198,12 +212,14 @@ public:
             dumpPrevious(ctx.req);
             if (varname.empty()) break;
 
-            if (varname == K_SM_HTML_PROJECT_NAME && ctx.project) {
+            if (varname == K_SM_HTML_PROJECT && ctx.project) {
                 if (ctx.getProject().getName().empty()) ctx.req->printf("(new)");
                 else ctx.req->printf("%s", htmlEscape(ctx.getProject().getName()).c_str());
 
-            } else if (varname == K_SM_URL_PROJECT_NAME && ctx.project) {
-                ctx.req->printf("%s", ctx.getProject().getUrlName().c_str());
+            } else if (varname == K_SM_URL_PROJECT && ctx.project) {
+                MongooseServerContext &mc = MongooseServerContext::getInstance();
+                ctx.req->printf("%s/%s", mc.getUrlRewritingRoot().c_str(),
+                                ctx.getProject().getUrlName().c_str());
 
             } else if (varname == K_SM_DIV_NAVIGATION_GLOBAL) {
                 RHtml::printNavigationGlobal(ctx);
@@ -218,8 +234,9 @@ public:
             } else if (varname == K_SM_DIV_USERS && usersList) {
                 RHtml::printUsers(ctx.req, *usersList);
 
-            } else if (varname == K_SM_SCRIPT_PROJECT_CONFIG_UPDATE) {
-                RHtml::printScriptUpdateConfig(ctx);
+            } else if (varname == K_SM_TABLE_USER_PERMISSIONS) {
+                if (concernedUser) RHtml::printUserPermissions(ctx.req, *concernedUser);
+                // else, dont print the table
 
             } else if (varname == K_SM_RAW_ISSUE_ID && currentIssue) {
                 ctx.req->printf("%s", htmlEscape(currentIssue->id).c_str());
@@ -237,20 +254,21 @@ public:
                 RHtml::printIssueListFullContents(ctx, *issueListFullContents);
 
             } else if (varname == K_SM_DIV_ISSUE && currentIssue) {
-                RHtml::printIssue(ctx, *currentIssue);
-
-            } else if (varname == K_SM_DIV_ISSUE_SUMMARY && currentIssue) {
-                RHtml::printIssueSummary(ctx, *currentIssue);
+                std::string eAmended;
+                if (entryToBeAmended) eAmended = entryToBeAmended->id;
+                RHtml::printIssue(ctx, *currentIssue, eAmended);
 
             } else if (varname == K_SM_DIV_ISSUE_FORM) {
                 Issue issue;
-                if (!currentIssue)  currentIssue = &issue;
-                RHtml::printIssueForm(ctx, currentIssue, false);
+                if (!currentIssue) currentIssue = &issue; // set an empty issue
+
+                if (entryToBeAmended) RHtml::printEditMessage(ctx, currentIssue, *entryToBeAmended);
+                else RHtml::printIssueForm(ctx, currentIssue, false);
 
             } else if (varname == K_SM_DIV_PREDEFINED_VIEWS) {
                 RHtml::printLinksToPredefinedViews(ctx);
 
-            } else if (varname == K_SM_REWRITE_ROOT) {
+            } else if (varname == K_SM_URL_ROOT) {
                 // url-rewriting
                 MongooseServerContext &mc = MongooseServerContext::getInstance();
                 ctx.req->printf("%s", mc.getUrlRewritingRoot().c_str());
@@ -260,6 +278,10 @@ public:
                                 "%s"
                                 "</div>", htmlEscape(_("...message preview...")).c_str());
 
+            } else if (varname == K_SM_SCRIPT) {
+                if (!script.empty()) {
+                    ctx.req->printf("<script type=\"text/javascript\">%s</script>\n", script.c_str());
+                }
             } else {
                 // unknown variable name
                 ctx.req->printf("%s", varname.c_str());
@@ -296,38 +318,60 @@ void RHtml::printPageSignin(const ContextParameters &ctx, const char *redirect)
 void RHtml::printPageUser(const ContextParameters &ctx, const User *u)
 {
     VariableNavigator vn("user.html", ctx);
-    vn.printPage();
+    vn.concernedUser = u;
 
-    // add javascript for updating the inputs
-    ctx.req->printf("<script>\n");
+    // add javascript for updating the form fields
+    vn.script = "";
 
-    if (!ctx.user.superadmin) {
-        // hide what is reserved to superadmin
-        ctx.req->printf("hideSuperadminZone();\n");
+    if (ctx.user.superadmin) {
+        vn.script += "showOrHideClasses('sm_zone_superadmin', true);\n";
+        vn.script += "showOrHideClasses('sm_zone_non_superadmin', false);\n";
+        if (u) vn.script += "setName('" + enquoteJs(u->username) + "');\n";
+
     } else {
-        if (u) ctx.req->printf("setName('%s');\n", enquoteJs(u->username).c_str());
+        // hide what is reserved to superadmin
+        vn.script += "showOrHideClasses('sm_zone_superadmin', false);\n";
+        vn.script += "showOrHideClasses('sm_zone_non_superadmin', true);\n";
     }
 
     if (u && u->superadmin) {
-        ctx.req->printf("setSuperadminCheckbox();\n");
+        vn.script += "setSuperadminCheckbox();\n";
     }
 
-    std::list<std::string> projects = Database::getProjects();
-    ctx.req->printf("Projects = %s;\n", toJavascriptArray(projects).c_str());
-    std::list<std::string> roleList = getAvailableRoles();
-    ctx.req->printf("Roles = %s;\n", toJavascriptArray(roleList).c_str());
+    if (ctx.user.superadmin) {
+        // the signed-in user has permission to modify the permissions of the user
 
-    if (u) {
-        std::map<std::string, enum Role>::const_iterator rop;
-        FOREACH(rop, u->rolesOnProjects) {
-            ctx.req->printf("addProject('roles_on_projects', '%s', '%s');\n",
-                            enquoteJs(rop->first).c_str(),
-                            enquoteJs(roleToString(rop->second)).c_str());
+        std::list<std::string> projects = Database::getProjects();
+        vn.script += "Projects = " + toJavascriptArray(projects) + ";\n";
+        std::list<std::string> roleList = getAvailableRoles();
+        vn.script += "Roles = " + toJavascriptArray(roleList) + ";\n";
+        vn.script += "addProjectDatalist('sm_permissions');\n";
+
+        if (u) {
+            std::map<std::string, enum Role>::const_iterator rop;
+            FOREACH(rop, u->permissions) {
+                vn.script += "addPermission('sm_permissions', '" + enquoteJs(rop->first)
+                        + "', '" + enquoteJs(roleToString(rop->second)) + "');\n";
+            }
+        }
+
+        vn.script +=  "addPermission('sm_permissions', '', '');\n";
+        vn.script +=  "addPermission('sm_permissions', '', '');\n";
+        if (u && u->authHandler) {
+            if (u->authHandler->type == "sha1") vn.script += "setAuthSha1();\n";
+            else if (u->authHandler->type == "krb5") {
+                AuthKrb5 *ah = dynamic_cast<AuthKrb5*>(u->authHandler);
+                vn.script += "setAuthKrb5('" + enquoteJs(ah->alternateUsername) + "', '" + enquoteJs(ah->realm) + "');\n";
+            } else if (u->authHandler->type == "ldap") {
+                AuthLdap *ah = dynamic_cast<AuthLdap*>(u->authHandler);
+                vn.script += "setAuthLdap('" + enquoteJs(ah->uri) + "', '" + enquoteJs(ah->dname) + "');\n";
+            }
+            // else, it may be empty, if no auth type is assigned
         }
     }
-    ctx.req->printf("addProject('roles_on_projects', '', '');\n");
 
-    ctx.req->printf("</script>\n");
+    vn.printPage();
+
 }
 
 void RHtml::printPageView(const ContextParameters &ctx, const PredefinedView &pv)
@@ -349,24 +393,28 @@ void RHtml::printPageView(const ContextParameters &ctx, const PredefinedView &pv
     std::list<std::string> properties = ctx.projectConfig.getPropertiesNames();
     ctx.req->printf("Properties = %s;\n", toJavascriptArray(properties).c_str());
 
-    // add PropertiesLists, for proposing the values in filterin/out
-    ctx.req->printf("PropertiesLists = {};\n");
+    // add datalists, for proposing the values in filterin/out
+    // datalists are name 'datalist_' + <property-name>
     std::list<PropertySpec>::const_iterator pspec;
     FOREACH(pspec, ctx.projectConfig.properties) {
         PropertyType t = pspec->type;
+        std::string propname = pspec->name;
+        std::list<std::string> proposedValues;
         if (t == F_SELECT || t == F_MULTISELECT) {
-            ctx.req->printf("PropertiesLists['%s'] = %s;\n", enquoteJs(pspec->name).c_str(),
-                            toJavascriptArray(pspec->selectOptions).c_str());
+            proposedValues = pspec->selectOptions;
 
         } else if (t == F_SELECT_USER) {
             std::set<std::string>::const_iterator u;
             std::set<std::string> users = UserBase::getUsersOfProject(ctx.getProject().getName());
-            // convert to std::list
-            std::list<std::string> userList;
-            userList.push_back("me");
-            FOREACH(u, users) { userList.push_back(*u); }
-            ctx.req->printf("PropertiesLists['%s'] = %s;\n", enquoteJs(pspec->name).c_str(),
-                            toJavascriptArray(userList).c_str());
+            // fulfill the list of proposed values
+            proposedValues.push_back("me");
+            FOREACH(u, users) { proposedValues.push_back(*u); }
+        }
+
+        if (!propname.empty()) {
+            ctx.req->printf("addFilterDatalist('filterin', 'datalist_%s', %s);\n",
+                            enquoteJs(propname).c_str(),
+                            toJavascriptArray(proposedValues).c_str());
         }
     }
 
@@ -375,6 +423,9 @@ void RHtml::printPageView(const ContextParameters &ctx, const PredefinedView &pv
                     MongooseServerContext::getInstance().getUrlRewritingRoot().c_str(),
                     ctx.getProject().getUrlName().c_str(),
                     pv.generateQueryString().c_str());
+
+    // add datalists for all types select, multiselect and selectuser
+
 
     // filter in and out
     std::map<std::string, std::list<std::string> >::const_iterator f;
@@ -399,8 +450,8 @@ void RHtml::printPageView(const ContextParameters &ctx, const PredefinedView &pv
 
     // Colums specification
     if (!pv.colspec.empty()) {
-        std::vector<std::string> items = split(pv.colspec, " +");
-        std::vector<std::string>::iterator i;
+        std::list<std::string> items = split(pv.colspec, " +");
+        std::list<std::string>::iterator i;
         FOREACH(i, items) {
             ctx.req->printf("addColspec('%s');\n", enquoteJs(*i).c_str());
         }
@@ -423,11 +474,10 @@ void RHtml::printPageView(const ContextParameters &ctx, const PredefinedView &pv
 
 void RHtml::printLinksToPredefinedViews(const ContextParameters &ctx)
 {
-    const ProjectConfig &c = ctx.projectConfig;
     std::map<std::string, PredefinedView>::const_iterator pv;
     ctx.req->printf("<table class=\"sm_views\">");
     ctx.req->printf("<tr><th>%s</th><th>%s</th></tr>\n", _("Name"), _("Associated Url"));
-    FOREACH(pv, c.predefinedViews) {
+    FOREACH(pv, ctx.predefinedViews) {
         ctx.req->printf("<tr><td class=\"sm_views_name\">");
         ctx.req->printf("<a href=\"%s\">%s</a>", urlEncode(pv->first).c_str(), htmlEscape(pv->first).c_str());
         ctx.req->printf("</td><td class=\"sm_views_link\">");
@@ -536,8 +586,18 @@ void RHtml::printNavigationGlobal(const ContextParameters &ctx)
     HtmlNode linkToProjects("a");
     linkToProjects.addAttribute("class", "sm_link_projects");
     linkToProjects.addAttribute("href", "/");
-    linkToProjects.addContents("%s", _("All projects"));
+    linkToProjects.addContents("%s", _("Projects"));
     div.addContents(linkToProjects);
+
+    if (ctx.user.superadmin) {
+        // link to all users
+        HtmlNode allUsers("a");
+        allUsers.addAttribute("class", "sm_link_users");
+        allUsers.addAttribute("href", "/users");
+        allUsers.addContents("%s", _("Users"));
+        div.addContents(" ");
+        div.addContents(allUsers);
+    }
 
     if (ctx.project && (ctx.userRole == ROLE_ADMIN || ctx.user.superadmin) ) {
         // link for modifying project structure
@@ -555,7 +615,6 @@ void RHtml::printNavigationGlobal(const ContextParameters &ctx)
         linkToViews.addContents("%s", _("Predefined Views"));
         div.addContents(" ");
         div.addContents(linkToViews);
-
     }
 
     // signed-in
@@ -612,8 +671,7 @@ void RHtml::printNavigationIssues(const ContextParameters &ctx, bool autofocus)
     }
 
     std::map<std::string, PredefinedView>::const_iterator pv;
-    const ProjectConfig &config = ctx.projectConfig;
-    FOREACH (pv, config.predefinedViews) {
+    FOREACH (pv, ctx.predefinedViews) {
         HtmlNode a("a");
         a.addAttribute("href", "/%s/issues/?%s", ctx.getProject().getUrlName().c_str(),
                        pv->second.generateQueryString().c_str());
@@ -717,7 +775,8 @@ void RHtml::printUsers(const RequestContext *req, const std::list<User> &usersLi
     req->printf("<table class=\"sm_users\">\n");
     req->printf("<tr class=\"sm_users\">");
     req->printf("<th class=\"sm_users\">%s</th>\n", _("Users"));
-    req->printf("<th class=\"sm_users\">%s</th></tr>\n", _("Capabilities"));
+    req->printf("<th class=\"sm_users\">%s</th>\n", _("Capabilities"));
+    req->printf("<th class=\"sm_users\">%s</th>\n", _("Authentication"));
     req->printf("</tr>");
 
     FOREACH(u, usersList) {
@@ -731,6 +790,15 @@ void RHtml::printUsers(const RequestContext *req, const std::list<User> &usersLi
         if (u->superadmin) req->printf("<td class=\"sm_users\">%s</td>\n", _("superadmin"));
         else req->printf("<td class=\"sm_users\"> </td>\n");
 
+        // print authentication parameters
+        req->printf("<td class=\"sm_users\">\n");
+        if (u->authHandler) {
+            req->printf("%s", htmlEscape(u->authHandler->type).c_str());
+        } else {
+            req->printf("none");
+        }
+        req->printf("</td>\n");
+
         req->printf("</tr>\n");
 
     }
@@ -742,14 +810,32 @@ void RHtml::printUsers(const RequestContext *req, const std::list<User> &usersLi
 
 }
 
+void RHtml::printUserPermissions(const RequestContext *req, const User &u)
+{
+    req->printf("<table class=\"sm_users\">\n");
+    req->printf("<tr><th>%s</th><th>%s</th></tr>\n", _("Project"), _("Role"));
+    std::map<std::string, enum Role>::const_iterator rop;
+    FOREACH(rop, u.rolesOnProjects) {
+        req->printf("<tr><td>%s</td><td>%s</td></tr>\n", htmlEscape(rop->first).c_str(),
+                    roleToString(rop->second).c_str());
+    }
+
+    req->printf("</table>\n");
+}
+
+void RHtml::printPageUserList(const ContextParameters &ctx, const std::list<User> &users)
+{
+    VariableNavigator vn("users.html", ctx);
+    vn.usersList = &users;
+    vn.printPage();
+}
+
 void RHtml::printPageProjectList(const ContextParameters &ctx,
                                  const std::list<std::pair<std::string, std::string> > &pList,
-                                 const std::map<std::string, std::map<Role, std::set<std::string> > > &userRolesByProject,
-                                 const std::list<User> &users)
+                                 const std::map<std::string, std::map<Role, std::set<std::string> > > &userRolesByProject)
 {
     VariableNavigator vn("projects.html", ctx);
     vn.projectList = &pList;
-    vn.usersList = &users;
     vn.userRolesByProject = &userRolesByProject;
     vn.printPage();
 }
@@ -856,19 +942,20 @@ std::string getNewSortingSpec(const RequestContext *req, const std::string prope
     return result;
 }
 
-/** Print javascript that will fulfill the inputs of the project configuration
+/** Generate javascript that will fulfill the inputs of the project configuration
   */
-void RHtml::printScriptUpdateConfig(const ContextParameters &ctx)
+std::string RHtml::getScriptProjectConfig(const ContextParameters &ctx)
 {
-    ctx.req->printf("<script>\n");
+    std::string script;
 
     // fulfill reserved properties first
     std::list<std::string> reserved = ProjectConfig::getReservedProperties();
     std::list<std::string>::iterator r;
     FOREACH(r, reserved) {
         std::string label = ctx.projectConfig.getLabelOfProperty(*r);
-        ctx.req->printf("addProperty('%s', '%s', 'reserved', '');\n", enquoteJs(*r).c_str(),
-                        enquoteJs(label).c_str());
+        script += "addProperty('" +
+                enquoteJs(*r) + "', '" +
+                enquoteJs(label) + "', 'reserved', '');\n";
     }
 
     // other properties
@@ -888,49 +975,54 @@ void RHtml::printScriptUpdateConfig(const ContextParameters &ctx)
         } else if (pspec->type == F_ASSOCIATION) {
             options = pspec->reverseLabel;
         }
-        ctx.req->printf("addProperty('%s', '%s', '%s', '%s');\n", enquoteJs(pspec->name).c_str(),
-                        enquoteJs(label).c_str(),
-                        type.c_str(), options.c_str());
+        script +=  "addProperty('" + enquoteJs(pspec->name) +
+                "', '" + enquoteJs(label) +
+                "', '" + type +
+                "', '" + options + "');\n";
     }
 
     // add 3 more empty properties
-    ctx.req->printf("addProperty('', '', '', '');\n");
-    ctx.req->printf("addProperty('', '', '', '');\n");
-    ctx.req->printf("addProperty('', '', '', '');\n");
+    script += "addProperty('', '', '', '');\n";
+    script += "addProperty('', '', '', '');\n";
+    script += "addProperty('', '', '', '');\n";
 
-    ctx.req->printf("replaceContentInContainer();\n");
+    script += "replaceContentInContainer();\n";
 
     // add tags
     std::map<std::string, TagSpec>::const_iterator tagspec;
     FOREACH(tagspec, c.tags) {
         const TagSpec& tpsec = tagspec->second;
-        ctx.req->printf("addTag('%s', '%s', %s);\n", enquoteJs(tpsec.id).c_str(),
-                        enquoteJs(tpsec.label).c_str(),
-                        tpsec.display?"true":"false");
+        script += "addTag('" + enquoteJs(tpsec.id) +
+                "', '" + enquoteJs(tpsec.label) + "', ";
+        if (tpsec.display) script += "true";
+        else script += "false";
+        script += ");\n";
     }
 
-    ctx.req->printf("addTag('', '', '', '');\n");
-    ctx.req->printf("addTag('', '', '', '');\n");
-
-
-    ctx.req->printf("</script>\n");
+    script += "addTag('', '', '', '');\n";
+    script += "addTag('', '', '', '');\n";
+    return script;
 }
 
 
 void RHtml::printProjectConfig(const ContextParameters &ctx)
 {
     VariableNavigator vn("project.html", ctx);
-    vn.printPage();
 
-    ctx.req->printf("<script>");
-    if (!ctx.user.superadmin) {
-        // hide what is reserved to superadmin
-        ctx.req->printf("hideSuperadminZone();\n");
+    vn.script = getScriptProjectConfig(ctx);
+
+    if (ctx.user.superadmin) {
+        vn.script += "showOrHideClasses('sm_zone_superadmin', true);\n";
+        if (ctx.project) {
+            vn.script += "setProjectName('" + enquoteJs(ctx.getProject().getName()) + "');\n";
+        }
+
     } else {
-        if (ctx.project) ctx.req->printf("setProjectName('%s');\n", enquoteJs(ctx.getProject().getName()).c_str());
+        // hide what is reserved to superadmin
+        vn.script += "showOrHideClasses('sm_zone_superadmin', false);\n";
     }
-    ctx.req->printf("</script>");
 
+    vn.printPage();
 }
 
 /** Get the property name that will be used for grouping
@@ -956,6 +1048,8 @@ std::string getPropertyForGrouping(const ProjectConfig &pconfig, const std::stri
     else property = sortingSpec.substr(i, n-i);
 
     // check the type of this property
+    if (property == "p") return property; // enable grouping by project name
+
     const PropertySpec *propertySpec = pconfig.getPropertySpec(property);
     if (!propertySpec) return "";
     enum PropertyType type = propertySpec->type;
@@ -978,7 +1072,7 @@ void printFilters(const ContextParameters &ctx)
     }
 }
 
-void RHtml::printIssueListFullContents(const ContextParameters &ctx, std::vector<const Issue*> issueList)
+void RHtml::printIssueListFullContents(const ContextParameters &ctx, std::vector<Issue> &issueList)
 {
     ctx.req->printf("<div class=\"sm_issues\">\n");
 
@@ -988,7 +1082,7 @@ void RHtml::printIssueListFullContents(const ContextParameters &ctx, std::vector
                     _("Issues found"), L(issueList.size()));
 
 
-    std::vector<const Issue*>::const_iterator i;
+    std::vector<Issue>::const_iterator i;
     if (!ctx.project) {
         LOG_ERROR("Null project");
         return;
@@ -996,10 +1090,10 @@ void RHtml::printIssueListFullContents(const ContextParameters &ctx, std::vector
 
     FOREACH (i, issueList) {
         Issue issue;
-        int r = ctx.getProject().get((*i)->id, issue);
+        int r = ctx.getProject().get(i->id, issue);
         if (r < 0) {
             // issue not found (or other error)
-            LOG_INFO("Issue disappeared: %s", (*i)->id.c_str());
+            LOG_INFO("Issue disappeared: %s", i->id.c_str());
 
         } else {
 
@@ -1007,7 +1101,7 @@ void RHtml::printIssueListFullContents(const ContextParameters &ctx, std::vector
             ContextParameters ctxCopy = ctx;
             ctxCopy.userRole = ROLE_RO;
             printIssueSummary(ctxCopy, issue);
-            printIssue(ctxCopy, issue);
+            printIssue(ctxCopy, issue, "");
 
         }
     }
@@ -1029,7 +1123,7 @@ std::string queryStringAdd(const RequestContext *req, const char *param)
     return url;
 }
 
-void RHtml::printIssueList(const ContextParameters &ctx, const std::vector<const Issue*> &issueList,
+void RHtml::printIssueList(const ContextParameters &ctx, const std::vector<Issue> &issueList,
                            const std::list<std::string> &colspec, bool showOtherFormats)
 {
     ctx.req->printf("<div class=\"sm_issues\">\n");
@@ -1072,14 +1166,14 @@ void RHtml::printIssueList(const ContextParameters &ctx, const std::vector<const
     ctx.req->printf("</tr>\n");
 
     // print the rows of the issues
-    std::vector<const Issue*>::const_iterator i;
+    std::vector<Issue>::const_iterator i;
     for (i=issueList.begin(); i!=issueList.end(); i++) {
 
         if (! group.empty() &&
-                (i == issueList.begin() || getProperty((*i)->properties, group) != currentGroup) ) {
+                (i == issueList.begin() || i->getProperty(group) != currentGroup) ) {
             // insert group bar if relevant
             ctx.req->printf("<tr class=\"sm_issues_group\">\n");
-            currentGroup = getProperty((*i)->properties, group);
+            currentGroup = i->getProperty(group);
             ctx.req->printf("<td class=\"sm_group\" colspan=\"%lu\"><span class=\"sm_issues_group_label\">%s: </span>",
                             L(colspec.size()), htmlEscape(ctx.projectConfig.getLabelOfProperty(group)).c_str());
             ctx.req->printf("<span class=\"sm_issues_group\">%s</span></td>\n", htmlEscape(currentGroup).c_str());
@@ -1093,12 +1187,13 @@ void RHtml::printIssueList(const ContextParameters &ctx, const std::vector<const
             std::ostringstream text;
             std::string column = *c;
 
-            if (column == "id") text << (*i)->id.c_str();
-            else if (column == "ctime") text << epochToStringDelta((*i)->ctime);
-            else if (column == "mtime") text << epochToStringDelta((*i)->mtime);
+            if (column == "id") text << i->id.c_str();
+            else if (column == "ctime") text << epochToStringDelta(i->ctime);
+            else if (column == "mtime") text << epochToStringDelta(i->mtime);
+            else if (column == "p") text << i->project;
             else {
                 std::map<std::string, std::list<std::string> >::const_iterator p;
-                const std::map<std::string, std::list<std::string> > & properties = (*i)->properties;
+                const std::map<std::string, std::list<std::string> > & properties = i->properties;
 
                 p = properties.find(column);
                 if (p != properties.end()) text << toString(p->second);
@@ -1109,8 +1204,8 @@ void RHtml::printIssueList(const ContextParameters &ctx, const std::vector<const
             if ( (column == "id") || (column == "summary") ) {
                 href_lhs = "<a href=\"";
                 std::string href = MongooseServerContext::getInstance().getUrlRewritingRoot() + "/";
-                href += ctx.getProject().getUrlName() + "/issues/";
-                href += urlEncode((*i)->id);
+                href += Project::urlNameEncode(i->project) + "/issues/";
+                href += urlEncode(i->id);
                 href_lhs = href_lhs + href;
                 href_lhs = href_lhs +  + "\">";
 
@@ -1127,27 +1222,17 @@ void RHtml::printIssueList(const ContextParameters &ctx, const std::vector<const
 }
 
 void RHtml::printIssuesAccrossProjects(ContextParameters ctx,
-                                       const std::map<std::string, std::vector<const Issue*> >&issues,
+                                       const std::vector<Issue> &issues,
                                        const std::list<std::string> &colspec)
 {
-    ctx.req->printf("<div class=\"sm_accross_issues\">");
-    std::map<std::string, std::vector<const Issue*> >::const_iterator i;
-    FOREACH(i, issues) {
-        const Project *p = Database::Db.getProject(i->first);
-        if (!p) continue;
-        ctx.project = p;
-        ctx.projectConfig = p->getConfig();
-        ctx.req->printf("<div class=\"sm_accross_project\">%s</div>\n", htmlEscape(p->getName()).c_str());
-        printIssueList(ctx, i->second, colspec, false);
-    }
-    ctx.req->printf("</div>");
+    printIssueList(ctx, issues, colspec, false);
 }
 
 
 /** Print HTML page with the given issues and their full contents
   *
   */
-void RHtml::printPageIssuesFullContents(const ContextParameters &ctx, std::vector<const Issue*> issueList)
+void RHtml::printPageIssuesFullContents(const ContextParameters &ctx, std::vector<Issue> &issueList)
 {
     VariableNavigator vn("issues.html", ctx);
     vn.issueListFullContents = &issueList;
@@ -1155,7 +1240,7 @@ void RHtml::printPageIssuesFullContents(const ContextParameters &ctx, std::vecto
 }
 
 void RHtml::printPageIssueList(const ContextParameters &ctx,
-                               std::vector<const Issue*> issueList, std::list<std::string> colspec)
+                               std::vector<Issue> &issueList, std::list<std::string> colspec)
 {
     VariableNavigator vn("issues.html", ctx);
     vn.issueList = &issueList;
@@ -1163,7 +1248,7 @@ void RHtml::printPageIssueList(const ContextParameters &ctx,
     vn.printPage();
 }
 void RHtml::printPageIssueAccrossProjects(const ContextParameters &ctx,
-                                          std::map<std::string, std::vector<const Issue*> > issues,
+                                          std::vector<Issue> &issues,
                                           std::list<std::string> colspec)
 {
     VariableNavigator vn("issuesAccross.html", ctx);
@@ -1371,7 +1456,8 @@ bool isImage(const std::string &filename)
 void RHtml::printIssueSummary(const ContextParameters &ctx, const Issue &issue)
 {
     ctx.req->printf("<div class=\"sm_issue_header\">\n");
-    ctx.req->printf("<span class=\"sm_issue_id\">%s</span>\n", htmlEscape(issue.id).c_str());
+    ctx.req->printf("<a href=\"%s\" class=\"sm_issue_id\">%s</a>\n", htmlEscape(issue.id).c_str(),
+            htmlEscape(issue.id).c_str());
     ctx.req->printf("<span class=\"sm_issue_summary\">%s</span>\n", htmlEscape(issue.getSummary()).c_str());
     ctx.req->printf("</div>\n");
 
@@ -1413,7 +1499,7 @@ void printAssociations(const ContextParameters &ctx, const std::string &associat
 }
 
 
-void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
+void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue, const std::string &entryToBeAmended)
 {
     ctx.req->printf("<div class=\"sm_issue\">");
 
@@ -1555,20 +1641,21 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
 
     // entries
     // -------------------------------------------------
-    Entry *e = issue.latest;
-    while (e && e->prev) e = e->prev; // go to the first one
+    Entry *e = issue.first;
     while (e) {
         Entry ee = *e;
 
-        if (!e->next) {
-            // latest entry. Add an anchor.
-            ctx.req->printf("<span id=\"sm_last_entry\"></span>");
+        const char *styleBeingAmended = "";
+        if (ee.id == entryToBeAmended) {
+            // the page will display a form for editing this entry.
+            // we want here a special display to help the user understand the link
+            styleBeingAmended = "sm_entry_being_amended";
         }
 
         // look if class sm_no_contents is applicable
         // an entry has no contents if no message and no file
         const char* classNoContents = "";
-        if (ee.getMessage().empty()) {
+        if (ee.getMessage().empty() || ee.isAmending()) {
             std::map<std::string, std::list<std::string> >::iterator files = ee.properties.find(K_FILE);
             if (files == ee.properties.end() || files->second.empty()) {
                 classNoContents = "sm_entry_no_contents";
@@ -1577,10 +1664,12 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
 
         // add tag-related styles, for the tags of the entry
         std::string classTagged = "sm_entry_notag";
-        if (!ee.tags.empty()) {
+        std::map<std::string, std::set<std::string> >::const_iterator tit = issue.tags.find(ee.id);
+        if (tit != issue.tags.end()) {
+
             classTagged = "sm_entry_tagged";
             std::set<std::string>::iterator tag;
-            FOREACH(tag, ee.tags) {
+            FOREACH(tag, tit->second) {
                 // check that this tag is declared in project config
                 if (pconfig.tags.find(*tag) != pconfig.tags.end()) {
                     classTagged += "sm_entry_tag_" + *tag + " ";
@@ -1588,8 +1677,8 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
             }
         }
 
-        ctx.req->printf("<div class=\"sm_entry %s %s\" id=\"%s\">\n", classNoContents,
-                        urlEncode(classTagged).c_str(), urlEncode(ee.id).c_str());
+        ctx.req->printf("<div class=\"sm_entry %s %s %s\" id=\"%s\">\n", classNoContents,
+                        urlEncode(classTagged).c_str(), styleBeingAmended, urlEncode(ee.id).c_str());
 
         ctx.req->printf("<div class=\"sm_entry_header\">\n");
         ctx.req->printf("<span class=\"sm_entry_author\">%s</span>", htmlEscape(ee.author).c_str());
@@ -1597,24 +1686,39 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
         // conversion of date in javascript
         // document.write(new Date(%d)).toString());
 
-        // delete button
+        // edit button
         time_t delta = time(0) - ee.ctime;
         if ( (delta < DELETE_DELAY_S) && (ee.author == ctx.user.username) &&
-             (e == issue.latest) && e->prev &&
-             (ctx.userRole == ROLE_ADMIN || ctx.userRole == ROLE_RW) ) {
+             (ctx.userRole == ROLE_ADMIN || ctx.userRole == ROLE_RW) &&
+             !ee.isAmending()) {
             // entry was created less than 10 minutes ago, and by same user, and is latest in the issue
-            ctx.req->printf("<a href=\"#\" class=\"sm_entry_delete\" title=\"Delete this entry (at most %d minutes after posting)\" ", (DELETE_DELAY_S/60));
-            ctx.req->printf(" onclick=\"deleteEntry('/%s/issues/%s', '%s');return false;\">\n",
-                            ctx.getProject().getUrlName().c_str(), enquoteJs(issue.id).c_str(), enquoteJs(ee.id).c_str());
-            ctx.req->printf("&#10008; delete");
+            ctx.req->printf("<a href=\"%s/%s/issues/%s?amend=%s\" class=\"sm_entry_edit\" "
+                            "title=\"Edit this message (at most %d minutes after posting)\">",
+                            MongooseServerContext::getInstance().getUrlRewritingRoot().c_str(),
+                            ctx.getProject().getUrlName().c_str(), enquoteJs(issue.id).c_str(),
+                            enquoteJs(ee.id).c_str(), (DELETE_DELAY_S/60));
+            ctx.req->printf("&#9998; %s", _("edit"));
             ctx.req->printf("</a>\n");
         }
 
         // link to raw entry
-        ctx.req->printf("(<a href=\"%s/%s/issues/%s/%s\" class=\"sm_entry_raw\">%s</a>)\n",
+        ctx.req->printf("(<a href=\"%s/%s/" RESOURCE_FILES "/%s\" class=\"sm_entry_raw\">%s</a>",
                         MongooseServerContext::getInstance().getUrlRewritingRoot().c_str(),
                         ctx.getProject().getUrlName().c_str(),
-                        urlEncode(issue.id).c_str(), urlEncode(ee.id).c_str(), _("raw"));
+                        urlEncode(ee.id).c_str(), _("raw"));
+        // link to possible amendments
+        int i = 1;
+        std::map<std::string, std::list<std::string> >::const_iterator as = issue.amendments.find(ee.id);
+        if (as != issue.amendments.end()) {
+            std::list<std::string>::const_iterator a;
+            FOREACH(a, as->second) {
+                ctx.req->printf(", <a href=\"/%s/" RESOURCE_FILES "/%s\" class=\"sm_entry_raw\">%s%d</a>",
+                                ctx.getProject().getUrlName().c_str(),
+                                urlEncode(*a).c_str(), _("amend"), i);
+                i++;
+            }
+        }
+        ctx.req->printf(")");
 
         // display the tags of the entry
         if (!pconfig.tags.empty()) {
@@ -1623,14 +1727,15 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
                 TagSpec tag = tagIt->second;
                 LOG_DEBUG("tag: id=%s, label=%s", tag.id.c_str(), tag.label.c_str());
                 std::string tagStyle = "sm_entry_notag";
-                if (ee.tags.find(tag.id) != ee.tags.end()) tagStyle = "sm_entry_tagged " + urlEncode("sm_entry_tag_" + tag.id);
+                bool tagged = issue.hasTag(ee.id, tag.id);
+                if (tagged) tagStyle = "sm_entry_tagged " + urlEncode("sm_entry_tag_" + tag.id);
 
                 if (ctx.userRole == ROLE_ADMIN || ctx.userRole == ROLE_RW) {
                     const char *tagTitle = _("Click to tag/untag");
 
-                    ctx.req->printf("<a href=\"#\" onclick=\"tagEntry('/%s/tags/%s', '%s', '%s');return false;\""
+                    ctx.req->printf("<a href=\"#\" onclick=\"tagEntry('/%s/tags', '%s', '%s');return false;\""
                                     " title=\"%s\" class=\"sm_entry_tag\">",
-                                    ctx.getProject().getUrlName().c_str(), enquoteJs(issue.id).c_str(), enquoteJs(ee.id).c_str(),
+                                    ctx.getProject().getUrlName().c_str(), enquoteJs(ee.id).c_str(),
                                     enquoteJs(tag.id).c_str(), tagTitle);
 
                     // the tag itself
@@ -1644,7 +1749,7 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
                 } else {
                     // read-only
                     // if tag is not active, do not display
-                    if (ee.tags.find(tag.id) != ee.tags.end()) {
+                    if (tagged) {
                         ctx.req->printf("<span class=\"%s\">", tagStyle.c_str());
                         ctx.req->printf("[%s]", htmlEscape(tag.label).c_str());
                         ctx.req->printf("</span>\n");
@@ -1659,11 +1764,11 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
         ctx.req->printf("</div>\n"); // end header
 
         std::string m = ee.getMessage();
-        if (! m.empty()) {
+        if (! m.empty() && !ee.isAmending()) {
             ctx.req->printf("<div class=\"sm_entry_message\">");
             ctx.req->printf("%s\n", convertToRichText(htmlEscape(m)).c_str());
             ctx.req->printf("</div>\n"); // end message
-        }
+        } // else, do not display
 
 
         // uploaded / attached files
@@ -1672,22 +1777,19 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
             ctx.req->printf("<div class=\"sm_entry_files\">\n");
             std::list<std::string>::iterator f;
             FOREACH(f, files->second) {
-                std::string shortName = *f;
-                // remove the id: up to first dot .
-                size_t dot = shortName.find_first_of('.');
-                if (dot != std::string::npos) {
-                    shortName = shortName.substr(dot+1);
-                }
+                std::string objectId = popToken(*f, '/');
+                std::string basename = *f;
 
+                std::string href = RESOURCE_FILES "/" + urlEncode(objectId) + "/" + urlEncode(basename);
                 ctx.req->printf("<div class=\"sm_entry_file\">\n");
-                ctx.req->printf("<a href=\"../%s/%s\" class=\"sm_entry_file\">", K_UPLOADED_FILES_DIR,
-                                urlEncode(*f).c_str());
+                ctx.req->printf("<a href=\"../%s\" class=\"sm_entry_file\">", href.c_str());
                 if (isImage(*f)) {
-                    ctx.req->printf("<img src=\"../files/%s\" class=\"sm_entry_file\"><br>", urlEncode(*f).c_str());
+                    // do not escape slashes
+                    ctx.req->printf("<img src=\"../%s\" class=\"sm_entry_file\"><br>", href.c_str());
                 }
-                ctx.req->printf("%s", htmlEscape(shortName).c_str());
+                ctx.req->printf("%s", htmlEscape(basename).c_str());
                 // size of the file
-                std::string path = ctx.project->getPathUploadedFiles()+'/'+(*f);
+                std::string path = ctx.project->getObjectsDir() + '/' + Object::getSubpath(objectId);
                 std::string size = getFileSize(path);
                 ctx.req->printf("<span> (%s)</span>", size.c_str());
                 ctx.req->printf("</a>");
@@ -1724,17 +1826,18 @@ void RHtml::printIssue(const ContextParameters &ctx, const Issue &issue)
 
         ctx.req->printf("</div>\n"); // end entry
 
-        e = e->next;
+        e = e->getNext();
     } // end of entries
 
     ctx.req->printf("</div>\n");
 
 }
 
-void RHtml::printPageIssue(const ContextParameters &ctx, const Issue &issue)
+void RHtml::printPageIssue(const ContextParameters &ctx, const Issue &issue, const Entry *eToBeAmended)
 {
     VariableNavigator vn("issue.html", ctx);
     vn.currentIssue = &issue;
+    vn.entryToBeAmended = eToBeAmended;
     vn.printPage();
 
     // update the next/previous links
@@ -1743,6 +1846,10 @@ void RHtml::printPageIssue(const ContextParameters &ctx, const Issue &issue)
     const char* SM_ISSUE_NEXT = "sm_issue_next";
     const char* SM_ISSUE_PREVIOUS = "sm_issue_previous";
     ctx.req->printf("<script>");
+    if (eToBeAmended) {
+        // give the focus to the message
+        ctx.req->printf("document.getElementsByName('+message')[0].focus();");
+    }
     if (ctx.originView == 0) {
         // disable the next/previous links
         ctx.req->printf("updateHref('%s', null);\n", SM_ISSUE_NEXT);
@@ -1769,8 +1876,61 @@ void RHtml::printPageNewIssue(const ContextParameters &ctx)
     vn.printPage();
 }
 
+void RHtml::printFormMessage(const ContextParameters &ctx, const std::string &contents)
+{
+    ctx.req->printf("<tr>\n");
+    ctx.req->printf("<td class=\"sm_issue_plabel sm_issue_plabel_message\" >%s: </td>\n",
+                    htmlEscape(_("Message")).c_str());
+    ctx.req->printf("<td colspan=\"3\">\n");
+    ctx.req->printf("<textarea class=\"sm_issue_pinput sm_issue_pinput_message\" placeholder=\"%s\" name=\"%s\" wrap=\"hard\" cols=\"80\">\n",
+                    _("Enter a message"), K_MESSAGE);
+    ctx.req->printf("%s", htmlEscape(contents).c_str());
+    ctx.req->printf("</textarea>\n");
+    ctx.req->printf("</td></tr>\n");
+
+    // check box "enable long lines"
+    ctx.req->printf("<tr><td></td>\n");
+    ctx.req->printf("<td class=\"sm_issue_longlines\" colspan=\"3\">\n");
+    ctx.req->printf("<label><input type=\"checkbox\" onclick=\"changeWrapping();\">\n");
+    ctx.req->printf("%s\n", _("Enable long lines"));
+    ctx.req->printf("</label></td></tr>\n");
+}
+
+void RHtml::printEditMessage(const ContextParameters &ctx, const Issue *issue,
+                             const Entry &eToBeAmended)
+{
+    if (!issue) {
+        LOG_ERROR("printEditMessage: Invalid null issue");
+        return;
+    }
+    if (ctx.userRole != ROLE_ADMIN && ctx.userRole != ROLE_RW) {
+        return;
+    }
+    ctx.req->printf("<div class=\"sm_amend\">%s: %s</div>", _("Amend Messsage"), urlEncode(eToBeAmended.id).c_str());
+    ctx.req->printf("<form enctype=\"multipart/form-data\" method=\"post\"  class=\"sm_issue_form\">");
+    ctx.req->printf("<input type=\"hidden\" value=\"%s\" name=\"%s\">", urlEncode(eToBeAmended.id).c_str(), K_AMEND);
+    ctx.req->printf("<table class=\"sm_issue_properties\">");
+
+    printFormMessage(ctx, eToBeAmended.getMessage());
+
+    ctx.req->printf("<tr><td></td>\n");
+    ctx.req->printf("<td colspan=\"3\">\n");
+    ctx.req->printf("<button onclick=\"previewMessage(); return false;\">%s</button>\n", htmlEscape(_("Preview")).c_str());
+    ctx.req->printf("<input type=\"submit\" value=\"%s\">\n", htmlEscape(_("Post")).c_str());
+    ctx.req->printf("</td></tr>\n");
+
+    ctx.req->printf("</table>\n");
+    ctx.req->printf("</form>");
+
+}
 
 /** print form for adding a message / modifying the issue
+  *
+  * @param autofocus
+  *    Give focus to the summary field. Used mainly when creating a new issue.
+  *    (not used for existing issues, as it would force the browser to scroll
+  *    down to the summary field, and do not let the user read the top of
+  *    the page first)
   */
 void RHtml::printIssueForm(const ContextParameters &ctx, const Issue *issue, bool autofocus)
 {
@@ -1785,13 +1945,15 @@ void RHtml::printIssueForm(const ContextParameters &ctx, const Issue *issue, boo
     const ProjectConfig &pconfig = ctx.projectConfig;
 
     ctx.req->printf("<form enctype=\"multipart/form-data\" method=\"post\"  class=\"sm_issue_form\">");
-    // print the fields of the issue in a two-column table
 
     // The form is made over a table with 4 columns.
     // each row is made of 1 label, 1 input, 1 label, 1 input (4 columns)
     // except for the summary.
     // summary
     ctx.req->printf("<table class=\"sm_issue_properties\">");
+
+    // properties of the issue
+    // summary
     ctx.req->printf("<tr>\n");
     ctx.req->printf("<td class=\"sm_issue_plabel sm_issue_plabel_summary\">%s: </td>\n",
                     htmlEscape(pconfig.getLabelOfProperty("summary")).c_str());
@@ -1803,6 +1965,8 @@ void RHtml::printIssueForm(const ContextParameters &ctx, const Issue *issue, boo
     ctx.req->printf(">");
     ctx.req->printf("</td>\n");
     ctx.req->printf("</tr>\n");
+
+    // other properties
 
     int workingColumn = 1;
     const uint8_t MAX_COLUMNS = 2;
@@ -1951,21 +2115,11 @@ void RHtml::printIssueForm(const ContextParameters &ctx, const Issue *issue, boo
         // add 2 empty cells
         ctx.req->printf("<td></td><td></td></tr>\n");
     }
-    ctx.req->printf("<tr>\n");
-    ctx.req->printf("<td class=\"sm_issue_plabel sm_issue_plabel_message\" >%s: </td>\n",  htmlEscape(_("Message")).c_str());
-    ctx.req->printf("<td colspan=\"3\">\n");
-    ctx.req->printf("<textarea class=\"sm_issue_pinput sm_issue_pinput_message\" placeholder=\"%s\" name=\"%s\" wrap=\"hard\" cols=\"80\">\n",
-                    _("Enter a message"), K_MESSAGE);
-    ctx.req->printf("</textarea>\n");
-    ctx.req->printf("</td></tr>\n");
 
-    // check box "enable long lines"
-    ctx.req->printf("<tr><td></td>\n");
-    ctx.req->printf("<td class=\"sm_issue_longlines\" colspan=\"3\">\n");
-    ctx.req->printf("<label><input type=\"checkbox\" onclick=\"changeWrapping();\">\n");
-    ctx.req->printf("%s\n", _("Enable long lines"));
-    ctx.req->printf("</label></td></tr>\n");
+    // end of other properties
 
+    // message
+    printFormMessage(ctx, "");
 
     // add file upload input
     ctx.req->printf("<tr>\n");
@@ -1981,7 +2135,6 @@ void RHtml::printIssueForm(const ContextParameters &ctx, const Issue *issue, boo
     ctx.req->printf("</td></tr>\n");
 
     ctx.req->printf("</table>\n");
-
     ctx.req->printf("</form>");
 
 }

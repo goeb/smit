@@ -1,0 +1,42 @@
+Issue 1: first issue
+---- Properties ----------------------------------------------------------------
+    freeText                  : textServer2
+    manager                   : hector
+    status                    : open
+--------------------------------------------------------------------------------
+Modified Properties:
+    freeText: creation of issue1
+    summary: first issue
+--------------------------------------------------------------------------------
+Message:
+    some text....
+Modified Properties:
+    status: open
+--------------------------------------------------------------------------------
+Message:
+    amendment of msg server 2
+Modified Properties:
+    freeText: textServer0
+--------------------------------------------------------------------------------
+Message:
+    message server 1
+Modified Properties:
+    freeText: textServer1
+--------------------------------------------------------------------------------
+Message:
+    message server 2
+Modified Properties:
+    freeText: textServer2
+--------------------------------------------------------------------------------
+Message:
+    local msg 1
+Modified Properties:
+    manager: john smith
+--------------------------------------------------------------------------------
+Message:
+    local msg 2
+Modified Properties:
+    manager: hector
+--------------------------------------------------------------------------------
+Message:
+    local msg 3

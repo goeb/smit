@@ -1,0 +1,69 @@
+Issue 1: first issue
+Issue 2: second issue
+Issue 3: third issue
+Issue 4: local conflicting issue
+Issue 1: first issue
+---- Properties ----------------------------------------------------------------
+    freeText                  : newValueLocal
+    status                    : open
+--------------------------------------------------------------------------------
+Modified Properties:
+    freeText: creation of issue1
+    summary: first issue
+--------------------------------------------------------------------------------
+Message:
+    some text....
+Modified Properties:
+    status: open
+--------------------------------------------------------------------------------
+Modified Properties:
+    freeText: dummyValueServer
+--------------------------------------------------------------------------------
+Message:
+    local conflicting entry
+Modified Properties:
+    freeText: dummyValueLocal
+--------------------------------------------------------------------------------
+Modified Properties:
+    freeText: newValueLocal
+Issue 2: second issue
+---- Properties ----------------------------------------------------------------
+    freeText                  : creation of issue2
+    status                    : open
+--------------------------------------------------------------------------------
+Modified Properties:
+    freeText: creation of issue2
+    summary: second issue
+--------------------------------------------------------------------------------
+Message:
+    some text (issue2)....
+Modified Properties:
+    status: open
+--------------------------------------------------------------------------------
+Message:
+    add a file
+Modified Properties:
+    +file: 0123/a_file.txt
+Issue 3: third issue
+---- Properties ----------------------------------------------------------------
+    freeText                  : x2server
+--------------------------------------------------------------------------------
+Modified Properties:
+    freeText: x1server
+    summary: third issue
+--------------------------------------------------------------------------------
+Modified Properties:
+    freeText: x2server
+Issue 4: local conflicting issue
+---- Properties ----------------------------------------------------------------
+    freeText                  : x3local
+--------------------------------------------------------------------------------
+Modified Properties:
+    freeText: x1local
+    summary: local conflicting issue
+--------------------------------------------------------------------------------
+Modified Properties:
+    freeText: x2local
+--------------------------------------------------------------------------------
+Modified Properties:
+    freeText: x3local

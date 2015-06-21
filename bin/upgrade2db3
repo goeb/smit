@@ -1,0 +1,375 @@
+#!/bin/sh
+#set -e
+usage() {
+    echo "Usage: upgrade2db3 <src-repo> <dst-repo>"
+    echo ""
+    echo "Upgrade a v2 smit repository to a v3 format."
+    echo "The environment variable SMPARSER must give the path to smparser."
+    exit 1
+}
+
+
+# migrateObject
+# $1 : source file
+# $2 : directory where the file is to be moved
+#
+# Eg: migrateObject 01020304.x a/b/c
+# => file will be moved to a/b/c/01/020304.x
+migrateObject() {
+    file="$1"
+    dest="$2"
+    basefile=$(basename -- "$file")
+
+    prefix=$(echo $basefile | sed -e "s/\(..\).*/\\1"/)
+    suffix=$(echo $basefile | sed -e "s/^..//")
+    if [ -z $suffix ]; then
+        echo "Cannot migrate file $file: suffix too short"
+        exit 1
+    fi
+    mkdir -p "$dest/$prefix"
+    mv $file "$dest/$prefix/$suffix"
+}
+
+TEMPLATES="issue.html issuesAccross.html issues.html newIssue.html project.html projects.html signin.html user.html view.html views.html"
+
+# Replace SM_ vars, etc.
+# $1 : file to be updated in-place
+migrateTemplateVars() {
+    file="$1"
+    sed -i -e "s/SM_REWRITE_ROOT/SM_URL_ROOT/g" \
+        -e "s/SM_HTML_PROJECT_NAME/SM_HTML_PROJECT/g" \
+        -e "s/sm_user_superadmin_zone/sm_zone_superadmin/g" \
+        -e "s/roles_on_projects/sm_permissions/g" \
+        -e "s/passwd1/sm_passwd1/g" \
+        -e "s/passwd2/sm_passwd2/g" \
+        -e "s/SM_SCRIPT_PROJECT_CONFIG_UPDATE/SM_SCRIPT/g" \
+        "$file"
+}
+
+# Migrate the templates of the repository
+# $1 : smit repository to be migrated
+migrateRepoTemplates() {
+    local repo="$1"
+    local templates="$repo/.smit/templates"
+    mkdir -p "$templates"
+    for page in $TEMPLATES; do
+        mv "$repo/public/$page" "$templates/." 2>/dev/null
+        migrateTemplateVars "$templates/$page"
+    done
+
+    # copy new page users.html
+    # TODO
+}
+
+# Migrate the templates of a project
+# $1 : project to be migrated
+migrateProjectTemplates() {
+    local pDir="$1"
+    local templates="$pDir/.smip/templates"
+    mkdir -p "$templates"
+    for page in $TEMPLATES; do
+        mv "$pDir/html/$page" "$templates/." 2>/dev/null
+        [ -f "$templates/$page" ] && migrateTemplateVars "$templates/$page"
+    done
+}
+
+# $1 : working directory of the project (where the migration is being done)
+# $2 : path to the issue directory
+migrateIssue() {
+
+    local pDir="$1"
+    local issue="$2"
+
+    # get the latest entry: ie the one that is not referenced as a parent
+    latest=""
+    echo "examining issue: $issue..."
+    for e in $(ls -- "$issue"); do
+        ref=$(basename -- $e)
+
+        if [ "$ref" = "_del" ]; then
+            continue
+        fi
+
+        grep -- "+parent *$ref" "$issue"/* > /dev/null 2>&1
+        if [ $? -ne 0 ]; then
+            # pattern, not found, thus we found an entry unreferenced
+            if [ -n "$latest" ]; then
+                echo "ERROR: found 2 possible latest in $issue"
+                echo "    $latest"
+                echo "    $ref"
+                echo "Choosing $ref..."
+            fi
+            latest=$ref
+            break
+        fi
+    done
+    if [ -z "$latest" ]; then
+        echo "ERROR: no latest found in $issue"
+    else
+        # draw the link
+        issueId=$(basename -- "$issue")
+        echo $latest > "$pDir/.smip/refs/issues/$issueId"
+    fi
+}
+# migrateFileRefs
+# Update the files references in a entry
+# Eg: JV4cgfKVwujvGPsXaEpWTAXnAWo.pic1.png
+#  -> JV4cgfKVwujvGPsXaEpWTAXnAWo/pic1.png
+#                                ^
+# $1 : entry to be updated with the new files references
+migrateFileRefs() {
+    local entry="$1"
+    chmod u+w "$entry"
+    # assume that there is only one +file line
+    n=$(grep "^+file" "$entry" | wc -l)
+    if [ $n -gt 1 ]; then
+        echo "Error: entry $entry has more than one +file"
+        exit 1
+    elif [ $n -eq 1 ]; then
+        # replace the first dot in file references by a slash
+        newFiles=$(mktemp)
+        echo -n "+file" > $newFiles
+        # smparser give this kind of output
+        # smp.1.1 +file
+        # smp.1.2 JV4cgfKVwujvGPsXaEpWTAXnAWo.pic1.png
+        # smp.1.3 JV4cgfKVwujvGPsXaEpWTAXnAWo.pic2.png
+        grep "^+file" "$entry" | $SMPARSER - | grep -v "smp.1.1 +file" | sed -e "s/^smp\.[0-9]*\.[0-9]* //" | while read filename; do
+            newF=$(echo -n $filename | sed -e "s;\.;/;" | $SMPARSER -e)
+            echo -n " $newF" >> $newFiles
+        done
+        newFilesT=$(cat $newFiles)
+        echo -n "oldFiles: "
+        grep "^+file" "$entry"
+        echo "newFilesT: $newFilesT"
+        sed -i -e "/^+file /d" "$entry"
+        echo "$newFilesT" >> "$entry"
+        rm $newFiles # rm temporary file
+    fi
+}
+
+# migrate the 'trigger' file
+# $1 : project dir
+migrateTrigger() {
+    local pDir="$1"
+    if [ -f "$pDir/trigger" ]; then 
+        mv "$pDir/trigger" "$pDir/.smip/refs/trigger"
+    fi
+}
+
+# migrate the 'views' file
+# $1 : project dir
+migrateViews() {
+    local pDir="$1"
+    local views="$pDir/views"
+    chmod u+w "$views"
+
+    objectId=$(sha1sum "$views" | sed -e "s/ .*//")
+    mv "$views" "$pDir/$objectId"
+    migrateObject "$pDir/$objectId" "$pDir/.smip/objects"
+    echo $objectId > "$pDir/.smip/refs/views"
+}
+
+# migrate the 'project' configuration file
+# $1 : project dir
+migrateProjectConfig() {
+    local pDir="$1"
+    local project="$pDir/project"
+    chmod u+w "$project"
+    # add parent 'null', timestamp, author
+    echo "+parent null" >> "$project"
+    timestamp=$(date +%s)
+    echo "+ctime $timestamp" >> "$project"
+    echo "+author upgrade2db3" >> "$project"
+
+    objectId=$(sha1sum "$project" | sed -e "s/ .*//")
+    mv "$project" "$pDir/$objectId"
+    migrateObject "$pDir/$objectId" "$pDir/.smip/objects"
+    echo $objectId > "$pDir/.smip/refs/project"
+}
+
+# Migrate the tags of a project
+# $1 : project dir
+migrateTags() {
+
+    pDir="$1"
+
+    if [ ! -d "$pDir/tags" ]; then
+        return
+    fi
+
+    latest="null"
+    find "$pDir/tags" -type f > "$pDir/tmp/.files"
+    while read file; do
+        # old tag format is an empty file named <entry-id>.<tag-name>
+        echo "tag-file: $file"
+        oldTag=$(basename -- "$file")
+        newTagFile="$pDir/.smip/tmp/.tag.current"
+        echo "+parent $latest" > $newTagFile
+        echo "+author upgrade2db3" >> $newTagFile
+        timestamp=$(date +%s)
+        echo "+ctime $timestamp" >> $newTagFile
+        # handle unnamed tags (old versions)
+        echo "+tag $oldTag" |
+            sed -e 's/\([^ ]*\)\.\([^ ]*\)/\2 \1/' \
+                -e 's/+tag \([^ ]*\)$/+tag tag \1/' >> $newTagFile
+        id=$(sha1sum $newTagFile | sed -e "s/ .*//")
+        mv $newTagFile "$pDir/.smip/tmp/$id"
+        migrateObject "$pDir/.smip/tmp/$id" "$pDir/.smip/objects"
+        latest="$id"
+    done < "$pDir/tmp/.files"
+    # write latest
+    if [ "$latest" != "null" ]; then
+        echo "$latest" >  "$pDir/.smip/refs/tags"
+    fi
+}
+
+# Migrate file "users" to users/auth and users/permissions
+# $1 : smit repository to be modified
+migrateUsers() {
+    repo="$1"
+    # smparser output is like:
+    # smp.14.1 addUser
+    # smp.14.2 toto
+    # smp.14.3 sha1
+    # smp.14.4 308392258c55acae06b3a1afffe2a78e690f743e
+    # smp.14.5 -salt
+    # smp.14.6 b8cc575242c2b4c
+    # smp.14.7 project
+    # smp.14.8 a b c
+    # smp.14.9 ro
+
+    local usersdir="$repo/.smit/users"
+    mkdir -p "$usersdir"
+
+    $SMPARSER "$repo/users" | sed -e "s/^smp[^ ]* //" > "$repo/users.tokens"
+    while read token; do
+        if [ "$token" = "addUser" ]; then
+            # purge previous user details, if any
+            if [ -n "$username" ]; then
+                echo -n "adduser \"$username\"" >> "$usersdir/auth"
+                if [ -n "$sha1" ]; then echo -n " -type sha1 -hash $sha1" >> "$usersdir/auth"; fi
+                if [ -n "$salt" ]; then echo -n " -salt $salt" >> "$usersdir/auth"; fi
+                echo >> "$usersdir/auth"
+            fi
+            read username
+            superadmin=""
+
+        elif [ "$token" = "sha1" ]; then read sha1
+        elif [ "$token" = "-salt" ]; then read salt
+        elif [ "$token" = "superadmin" ]; then
+            echo "setperm \"$username\" superadmin" >> "$usersdir/permissions"
+        elif [ "$token" = "project" ]; then
+            read projectname
+            read role
+            echo "setperm \"$username\" $role \"$projectname\"" >> "$usersdir/permissions"
+
+        elif [ "$token" = "+smv" ]; then
+            read smv # ignored
+        fi
+        
+    done <  "$repo/users.tokens"
+    # purge last user
+    if [ -n "$username" ]; then
+        echo -n "adduser \"$username\"" >> "$usersdir/auth"
+        if [ -n "$sha1" ]; then echo -n " -type sha1 -hash $sha1" >> "$usersdir/auth"; fi
+        if [ -n "$salt" ]; then echo -n " -salt $salt" >> "$usersdir/auth"; fi
+        echo >> "$usersdir/auth"
+    fi
+    #rm  "$repo/users.tokens"
+    rm "$repo/users"
+}
+
+# main -------------------------------------------------------------------------
+
+
+srcDir=$1
+dstDir=$2
+
+[ -z "$srcDir" ] && usage
+[ -z "$dstDir" ] && usage
+
+if [ ! -x "$SMPARSER" ]; then
+    echo "Error: SMPARSER not defined."
+    usage
+fi
+
+# check that destination dir does not exist
+if [ -e "$dstDir" ]; then
+    echo "Error: Destination repository must not exist"
+    exit 1
+fi
+
+# first copy everything
+cp -a "$srcDir" "$dstDir"
+
+migrateUsers "$dstDir"
+migrateRepoTemplates "$dstDir"
+
+# then upgrade each project
+find "$dstDir" -name project | while read p; do
+
+    # migrate the project
+
+    pDir=$(dirname "$p")
+    echo "project: $pDir..."
+    mkdir -p "$pDir/.smip/objects"
+    mkdir -p "$pDir/.smip/refs/issues"
+    mkdir -p "$pDir/.smip/tmp"
+
+    # change issues to .../<p>/.smip/refs/issues/1
+    find "$pDir/issues" -type d -maxdepth 1 | while read issue; do
+
+        if [ "$issue" = "$pDir/issues" ]; then
+            # this is not an issue
+            continue
+        fi
+
+        migrateIssue "$pDir" "$issue" 
+    done
+
+    # change entries to .../<p>/.smip/objects/73/97ca1fb539d0ecff232eadb8a9e26f16049da2
+    find "$pDir/issues" -maxdepth 2 -type f | while read entry; do
+        migrateObject $entry "$pDir/.smip/objects"
+    done
+
+    # change files references in the entries
+    # at this moment, the objects are all the entries
+    # <sha1>.file.pdf => <sha1>/file.pdf
+    find "$pDir/.smip/objects" -type f | while read entry; do
+
+        migrateFileRefs "$entry"
+    done
+
+    # change files
+    find "$pDir/files" -type f | while read file; do
+        f=$(basename -- "$file")
+        newId=$(echo "$f" | sed -e "s/\..*//")
+        prefix=$(echo "$newId" | sed -e "s/\(..\).*/\\1"/)
+        suffix=$(echo "$newId" | sed -e "s/^..//")
+
+        mkdir -p "$pDir/.smip/objects/$prefix"
+        mv "$file" "$pDir/.smip/objects/$prefix/$suffix"
+    done
+
+    migrateTags "$pDir"
+
+    migrateProjectConfig "$pDir"
+
+    migrateViews "$pDir"
+    migrateTrigger "$pDir"
+
+    migrateProjectTemplates "$pDir"
+
+    # remove old directories files, issues, tags
+    rm -rf "$pDir/files"
+    rm -rf "$pDir/issues"
+    rm -rf "$pDir/tags"
+
+done
+
+echo "Manual actions you should do:"
+echo "- copy template SMIT_SRC/data/templates/users.html to your new smit repo"
+echo "- update REPO/public/style.css to take into account the new styles from SMIT_SRC/public/style.css"
+
+
+

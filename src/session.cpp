@@ -24,6 +24,7 @@
 #include "parseConfig.h"
 #include "db.h"
 #include "AuthSha1.h"
+#include "fnmatch.h"
 
 #ifdef KERBEROS_ENABLED
   #include "AuthKrb5.h"
@@ -48,38 +49,68 @@ User::User()
     authHandler = 0;
 }
 
-std::string User::serialize()
+User::User(const User &other)
+{
+    *this = other;
+}
+User& User::operator=(const User &rhs)
+{
+    username = rhs.username;
+    if (rhs.authHandler) authHandler = rhs.authHandler->createCopy();
+    else authHandler = 0;
+    rolesOnProjects = rhs.rolesOnProjects;
+    superadmin = rhs.superadmin;
+    permissions = rhs.permissions;
+    return *this;
+}
+User::~User()
+{
+    if (authHandler) delete authHandler;
+    authHandler = 0;
+}
+
+
+std::string User::serializeAuth()
+{
+    std::string auth = "adduser " + serializeSimpleToken(username);
+
+    if (authHandler) {
+        auth += " -type ";
+        std::string s = authHandler->serialize();
+        auth += s;
+    }
+    auth += "\n";
+    return auth;
+}
+
+std::string User::serializePermissions() const
 {
     std::string result;
 
-    result += "addUser ";
-    result += serializeSimpleToken(username) + " ";
-    if (superadmin) result += "superadmin \\\n";
-    if (authHandler) {
-        result += "    " + authHandler->serialize();
-        result += " \\\n";
+    if (superadmin) {
+        result += "setperm " + serializeSimpleToken(username) + " superadmin\n";
     }
 
-    std::map<std::string, enum Role>::const_iterator role;
-    FOREACH(role, rolesOnProjects) {
-        std::string p = "    project " + serializeSimpleToken(role->first) + " ";
-        p += roleToString(role->second);
-        result += p + " \\\n";
+    std::map<std::string, enum Role>::const_iterator perm;
+    FOREACH(perm, permissions) {
+        std::string p = "setperm " + serializeSimpleToken(username);
+        p += " " + roleToString(perm->second) + " ";
+        p += serializeSimpleToken(perm->first) + "\n";
+        result += p;
     }
-    result += "\n\n";
     return result;
 }
 
-/** Load a configuration for a user
+/** Load a authentication config for a user
   *
-  * The tokens are those found after the verb "addUser".
-  * The verb "addUser" must not be included.
+  * The tokens are those found after the verb "adduser".
+  * The verb "adduser" must not be included.
   *
   * @return
   *     0 success
   *    -1 error
   */
-int User::load(std::list<std::string> &tokens, bool checkProject)
+int User::loadAuth(std::list<std::string> &tokens)
 {
     username = popListToken(tokens);
     if (username.empty()) {
@@ -89,83 +120,31 @@ int User::load(std::list<std::string> &tokens, bool checkProject)
 
     while (! tokens.empty()) {
         std::string token = popListToken(tokens);
-        if (token == "project") {
-            // get project name and access right
-            std::string project = popListToken(tokens);
-            std::string role = popListToken(tokens);
-            if (project.empty() || role.empty()) {
-                LOG_ERROR("Incomplete project access %s/%s", project.c_str(), role.c_str());
-                return -1;
-            }
-            // check if project exists
-            if (checkProject) {
-                const Project *p = Database::getProject(project);
-                if (!p) {
-                    LOG_ERROR("Invalid project name '%s' for user %s",
-                              project.c_str(), username.c_str());
-                    continue; // ignore this project
+        if (token == "-type") {
+            token = popListToken(tokens);
+
+            if (token == AUTH_SHA1) {
+                Auth *ah = AuthSha1::deserialize(tokens);
+                if (!ah) {
+                    LOG_ERROR("Cannot load auth for user '%s'", username.c_str());
                 }
-            }
-
-            Role r = stringToRole(role);
-            if (r == ROLE_NONE) {
-                LOG_ERROR("Invalid role '%s'", role.c_str());
-                return -1;
-            }
-            rolesOnProjects[project] = r;
-
-        } else if (token == AUTH_SHA1) {
-            AuthSha1 *ah = new AuthSha1();
-            ah->type = AUTH_SHA1;
-            ah->hash = popListToken(tokens);
-            if (ah->hash.empty()) {
-                LOG_ERROR("Empty hash for user %s", username.c_str());
-                delete ah;
-                return -1;
-            }
-            authHandler = ah;
+                authHandler = ah;
 
 #ifdef KERBEROS_ENABLED
-        } else if (token == AUTH_KRB5) {
-            AuthKrb5 *ah = new AuthKrb5();
-            ah->type = AUTH_KRB5;
-            // single sign-on authentication via a kerberos server
-            ah->realm = popListToken(tokens);
-            if (ah->realm.empty()) {
-                LOG_ERROR("Empty kerberos realm for user '%s'", username.c_str());
-                delete ah;
-                return -1;
-            }
-            authHandler = ah;
+            } else if (token == AUTH_KRB5) {
+                authHandler = AuthKrb5::deserialize(tokens);
 #endif
 #ifdef LDAP_ENABLED
-        } else if (token == AUTH_LDAP) {
-            // single sign-on authentication via a ldap server
-            AuthLdap *ah = new AuthLdap();
-            ah->type = token;
-            ah->dname = popListToken(tokens);
-            ah->uri = popListToken(tokens);
-            if (ah->uri.empty()) {
-                LOG_ERROR("Empty ldap server for user %s", username.c_str());
-                delete ah;
-                return -1;
-            }
-            authHandler = ah;
+            } else if (token == AUTH_LDAP) {
+                // single sign-on authentication via a ldap server
+                authHandler = AuthLdap::deserialize(tokens);
 #endif
-        } else if (token == "-salt") {
-            // meaningful only with sha1 authentication type
-            if (authHandler && authHandler->type == AUTH_SHA1) {
-                AuthSha1 *ah = dynamic_cast<AuthSha1*>(authHandler);
-                ah->salt = popListToken(tokens);
-            } else {
-                LOG_ERROR("Invalid option '%s' for user '%s'", token.c_str(), username.c_str());
             }
-
-        } else if (token == "superadmin") superadmin = true;
-        else {
+        } else {
             LOG_ERROR("Unexpected token '%s' for user '%s'", token.c_str(), username.c_str());
         }
     }
+    if (authHandler) authHandler->username = username;
     return 0; // success
 }
 
@@ -176,12 +155,14 @@ std::string getNewSalt()
     return randomStr.str();
 }
 
+/** Set authentication scheme SHA1 and set password
+  */
 void User::setPasswd(const std::string &password)
 {
-    AuthSha1 *ah = new AuthSha1();
-    ah->type = AUTH_SHA1;
-    ah->salt = getNewSalt();
-    ah->hash = getSha1(password + ah->salt);
+    std::string salt = getNewSalt();
+    std::string hash = getSha1(password + salt);
+    AuthSha1 *ah = new AuthSha1("", hash, salt);
+    if (authHandler) delete authHandler;
     authHandler = ah;
 }
 
@@ -198,6 +179,41 @@ int User::authenticate(char *passwd)
     } else {
         LOG_ERROR("Unknown authentication scheme for user '%s'", username.c_str());
         return -1;
+    }
+}
+
+
+/** Consolidate roles on projects after the permissions
+  *
+  * The for each known project, examine the permissions
+  * of the users on this project.
+  *
+  * If several wildcard expressions match for a given project,
+  * then the most restrictive permission is chosen.
+  */
+void User::consolidateRoles()
+{
+    //std::list<Permission> permissions;
+    Project *p = Database::Db.getNextProject(0);
+    while (p) {
+        std::map<std::string, Role>::iterator perm;
+        Role roleOnThisProject = ROLE_NONE;
+        FOREACH(perm, permissions) {
+            int r = fnmatch(perm->first.c_str(), p->getName().c_str(), 0);
+            if (r == 0) {
+                // match
+                // keep the most restrictive permission if several wildcard match
+                if (roleOnThisProject == ROLE_NONE) roleOnThisProject = perm->second;
+                else if (perm->second > roleOnThisProject) roleOnThisProject = perm->second;
+            }
+        }
+        if (roleOnThisProject != ROLE_NONE) {
+            LOG_DIAG("Role of user '%s' on project '%s': %s", username.c_str(),
+                     p->getName().c_str(), roleToString(roleOnThisProject).c_str());
+            rolesOnProjects[p->getName()] = roleOnThisProject;
+        }
+
+        p = Database::Db.getNextProject(p);
     }
 }
 
@@ -230,74 +246,157 @@ std::list<std::string> getAvailableRoles()
     return result;
 }
 
-/** Load the users from file storage
+/** Load user authentication parameters and permissions
+  *
+  * @param[out] users
+  *
+  * @return
+  *    0 ok
+  *   -1 configuration error
   */
-int UserBase::init(const char *path, bool checkProject)
+int UserBase::load(const std::string &path, std::map<std::string, User*> &users)
 {
-    // init random seed
-    srand(time(0));
-
     Repository = path;
-    std::string file = Repository;
-    file += "/";
-    file += FILE_USERS;
+
+    // load the 'auth' file
+    std::string auth = std::string(path) + "/" PATH_REPO "/" PATH_AUTH;
+
     std::string data;
-    int n = loadFile(file.c_str(), data);
+    int n = loadFile(auth.c_str(), data);
     if (n != 0) {
-        LOG_ERROR("Could not load user file.");
-        return -1;
-    }
+        LOG_ERROR("Could not load file '%s': %s", auth.c_str(), strerror(errno));
 
-    std::list<std::list<std::string> > lines = parseConfigTokens(data.c_str(), data.size());
+    } else {
+        std::list<std::list<std::string> > lines = parseConfigTokens(data.c_str(), data.size());
 
-    std::list<std::list<std::string> >::iterator line;
-    for (line = lines.begin(); line != lines.end(); line++) {
-        std::string verb = popListToken(*line);
-        if (verb == K_SMIT_VERSION) {
-            std::string v = popListToken(*line);
-            LOG_DEBUG("Smit version for user file: %s", v.c_str());
-
-        } else if (verb == "addUser") {
-            User u;
-            int r = u.load(*line, checkProject);
-            if (r == 0) {
-                // add user in database
-                LOG_DIAG("Loaded user: '%s' on %lu projects", u.username.c_str(), L(u.rolesOnProjects.size()));
-                UserBase::addUserInArray(u);
+        std::list<std::list<std::string> >::iterator line;
+        FOREACH(line, lines) {
+            std::string verb = popListToken(*line);
+            if (verb == "adduser") {
+                User u;
+                int r = u.loadAuth(*line);
+                if (r == 0) {
+                    // add user in database
+                    LOG_DIAG("Loaded user: '%s'", u.username.c_str());
+                    users[u.username] = new User(u);
+                }
+            } else {
+                LOG_ERROR("Invalid token '%s' in %s", verb.c_str(), auth.c_str());
+                return -1;
             }
         }
     }
+
+    // load the 'permissions' file
+    std::string filePermissions = std::string(path) + "/" PATH_REPO "/" PATH_PERMISSIONS;
+    n = loadFile(filePermissions.c_str(), data);
+    if (n != 0) {
+        LOG_ERROR("Could not load file '%s': %s", filePermissions.c_str(), strerror(errno));
+
+    } else {
+        std::list<std::list<std::string> > lines = parseConfigTokens(data.c_str(), data.size());
+        std::list<std::list<std::string> >::iterator line;
+        FOREACH(line, lines) {
+            std::string verb = popListToken(*line);
+            if (verb == "setperm") {
+                std::string username = popListToken(*line);
+                if (username.empty()) {
+                    LOG_ERROR("Invalid 'setperm' with no username: %s", filePermissions.c_str());
+                    continue;
+                }
+                std::map<std::string, User*>::iterator uit = users.find(username);
+
+                if (uit == users.end()) {
+                    LOG_ERROR("Unknown user '%s' referenced from '%s'", username.c_str(),
+                              filePermissions.c_str());
+                    continue;
+                }
+
+                std::string roleStr = popListToken(*line);
+                if (roleStr == "superadmin") {
+                    uit->second->superadmin = true;
+                } else {
+                    Role role = stringToRole(roleStr);
+                    std::string projectWildcard = popListToken(*line);
+                    uit->second->permissions[projectWildcard] = role;
+                }
+
+            } else {
+                LOG_ERROR("Invalid token '%s' in %s", verb.c_str(), filePermissions.c_str());
+                return -1;
+            }
+        }
+    }
+
+    // for each user, consolidate its roles after the wildcarded permissions
+    std::map<std::string, User*>::iterator u;
+    FOREACH(u, users) {
+        u->second->consolidateRoles();
+    }
+
     return 0;
+
 }
 
-void UserBase::setLocalUserInterface()
+/** Load the users of a repository
+  */
+int UserBase::init(const char *path)
+{
+    return load(path, UserDb.configuredUsers);
+}
+
+void UserBase::setLocalUserInterface(const std::string username)
 {
     localUserInterface = true;
+    // create a user with all permissions
+    User u;
+    u.username = username;
+    u.permissions["*"] = ROLE_ADMIN;
+    addUser(u);
 }
 
+/** Create the files of the user database
+  *
+  * The files are:
+  * - 'auth'
+  * - 'permissions'
+  */
 int UserBase::initUsersFile(const char *repository)
 {
+    // init file 'auth'
     std::string path = repository;
-    path += "/";
-    path += FILE_USERS;
+    path += "/" PATH_REPO "/" PATH_AUTH;
+    mkdirs(getDirname(path));
+    int r = writeToFile(path, "");
+    if (r < 0) return r;
 
-    return writeToFile(path.c_str(), "");
+    // init file 'permissions'
+    path = repository;
+    path += "/" PATH_REPO "/" PATH_PERMISSIONS;
+    mkdirs(getDirname(path));
+    return writeToFile(path, "");
 }
 
-
+/** Store the user configuration to the filesystem
+  *
+  */
 int UserBase::store(const std::string &repository)
 {
-    std::string result;
-    result = K_SMIT_VERSION " " VERSION "\n";
+    std::string permissions; // this will be stored into file 'permissions'
+    std::string auth; // and this will be stored into file 'auth'
 
     std::map<std::string, User*>::iterator uit;
     FOREACH(uit, UserDb.configuredUsers) {
-        result += uit->second->serialize();
+        permissions += uit->second->serializePermissions();
+        auth += uit->second->serializeAuth();
     }
-    std::string path = repository;
-    path += "/";
-    path += FILE_USERS;
-    return writeToFile(path.c_str(), result);
+    std::string pathPermissions = repository + "/" PATH_REPO "/" PATH_PERMISSIONS;
+    int r = writeToFile(pathPermissions, permissions);
+    if (r < 0) return r;
+
+    std::string pathAuth = repository + "/" PATH_REPO "/" PATH_AUTH;
+    r = writeToFile(pathAuth, auth);
+    return r;
 }
 
 
@@ -311,7 +410,7 @@ User* UserBase::getUser(const std::string &username)
 
 /** Add a new user in database
   */
-void UserBase::addUserInArray(User newUser)
+User *UserBase::addUserInArray(User newUser)
 {
     User *u = new User;
     *u = newUser;
@@ -321,6 +420,7 @@ void UserBase::addUserInArray(User newUser)
     if (uit != UserDb.configuredUsers.end()) delete uit->second;
 
     UserDb.configuredUsers[u->username] = u;
+    return u;
 }
 
 /** Add a new user in database and store it.
@@ -329,6 +429,8 @@ int UserBase::addUser(User newUser)
 {
     if (newUser.username.empty()) return -1;
 
+    ScopeLocker scopeLocker(UserDb.locker, LOCK_READ_WRITE);
+
     // check if user already exists
 
     std::map<std::string, User*>::iterator uit = UserDb.configuredUsers.find(newUser.username);
@@ -336,10 +438,71 @@ int UserBase::addUser(User newUser)
         return -2;
     }
 
-    ScopeLocker scopeLocker(UserDb.locker, LOCK_READ_WRITE);
-    addUserInArray(newUser);
-    return store(Repository);
+    User *u = addUserInArray(newUser);
+    int r = store(Repository);
+    if (r < 0) return r;
+
+    u->consolidateRoles();
+    return 0;
 }
+
+int UserBase::deleteUser(const std::string &username)
+{
+    if (username.empty()) return -1;
+
+    LOCK_SCOPE(UserDb.locker, LOCK_READ_WRITE);
+
+    std::map<std::string, User*>::iterator uit = UserDb.configuredUsers.find(username);
+
+    if (uit == UserDb.configuredUsers.end()) {
+        LOG_ERROR("Cannot delete user '%s': no such user", username.c_str());
+        return -1;
+    }
+
+    UserDb.configuredUsers.erase(uit);
+
+    // store
+    int r = store(Repository);
+    if (r < 0) {
+        LOG_ERROR("Cannot store deletion of user '%s'", username.c_str());
+    }
+
+    return r;
+
+}
+
+/** Reload the user database (authentication parameters and permissions)
+  */
+int UserBase::hotReload()
+{
+    LOG_INFO("Hot reload of users");
+
+    std::map<std::string, User*> newUsers;
+    int r = load(UserDb.Repository, newUsers);
+    if (r != 0) {
+        // delete the allocated objects
+        std::map<std::string, User*>::iterator u;
+        FOREACH(u, newUsers) {
+            delete u->second;
+        }
+        return -1;
+    }
+
+    // Ok, the files were loaded successfully.
+
+    LOCK_SCOPE(UserDb.locker, LOCK_READ_WRITE);
+
+    // free the old objects
+    std::map<std::string, User*>::iterator u;
+    FOREACH(u, UserDb.configuredUsers) {
+        delete u->second;
+    }
+
+    UserDb.configuredUsers = newUsers;
+
+    return 0;
+}
+
 
 /** Get the list of users that are at stake in the given project
   */
@@ -412,34 +575,40 @@ int UserBase::updateUser(const std::string &username, User newConfig)
 
     ScopeLocker scopeLocker(UserDb.locker, LOCK_READ_WRITE);
 
-    std::map<std::string, User*>::iterator u;
+    std::map<std::string, User*>::iterator existingUser;
 
-    // if modified name, check that the new name does not exist
     if (newConfig.username != username) {
-        u = UserDb.configuredUsers.find(newConfig.username);
-        if (u != UserDb.configuredUsers.end()) return -2;
+        // Case of a renaming
+        // Check that the new name does not exist
+        existingUser = UserDb.configuredUsers.find(newConfig.username);
+        if (existingUser != UserDb.configuredUsers.end()) return -2;
     }
 
     // check that modified user exists
-    u = UserDb.configuredUsers.find(username);
-    if (u == UserDb.configuredUsers.end()) return -3;
+    existingUser = UserDb.configuredUsers.find(username);
+    if (existingUser == UserDb.configuredUsers.end()) return -3;
 
-    if (newConfig.authHandler) {
-        // keep the same as before
-        newConfig.authHandler = u->second->authHandler;
-    } else if (u->second->authHandler) {
-        // delete old
-        delete u->second->authHandler;
+    if (!newConfig.authHandler) {
+        // keep same authentication parameters as before
+        newConfig.authHandler = existingUser->second->authHandler;
+    } else if (existingUser->second->authHandler) {
+        // delete old authentication parameters, that will be replaced by the new ones
+        delete existingUser->second->authHandler;
+        existingUser->second->authHandler = 0;
     }
-    *(u->second) = newConfig;
+    *(existingUser->second) = newConfig;
 
     // change the key in the map if name of user was modified
     if (username != newConfig.username) {
-        UserDb.configuredUsers[newConfig.username] = u->second;
+        UserDb.configuredUsers[newConfig.username] = existingUser->second;
         UserDb.configuredUsers.erase(username);
     }
 
-    return store(Repository);
+    int r = store(Repository);
+    if (r < 0) return r;
+
+    existingUser->second->consolidateRoles();
+    return 0;
 }
 
 int UserBase::updatePassword(const std::string &username, const std::string &password)
@@ -448,6 +617,7 @@ int UserBase::updatePassword(const std::string &username, const std::string &pas
     std::map<std::string, User*>::iterator u = UserDb.configuredUsers.find(username);
     if (u == UserDb.configuredUsers.end()) return -1;
 
+    LOG_DIAG("updatePassword for %s", username.c_str());
     u->second->setPasswd(password);
     return store(Repository);
 }
@@ -456,12 +626,19 @@ std::list<User> UserBase::getAllUsers()
 {
     std::list<User> result;
 
-    if (localUserInterface) return result;
 
     ScopeLocker scopeLocker(UserDb.locker, LOCK_READ_ONLY);
     std::map<std::string, User*>::const_iterator u;
     FOREACH(u, UserDb.configuredUsers) {
         result.push_back(*(u->second));
+
+        if (localUserInterface) {
+            // Case of 'smit ui' command: the users are supposed
+            // to contain only one user.
+            // So we return after the first user encountered.
+            return result;
+        }
+
     }
     return result;
 }
@@ -475,8 +652,6 @@ std::map<std::string, User*> configuredUsers;
   */
 enum Role User::getRole(const std::string &project) const
 {
-    if (UserBase::isLocalUserInterface()) return ROLE_RO;
-
     std::map<std::string, enum Role>::const_iterator r = rolesOnProjects.find(project);
     if (r == rolesOnProjects.end()) return ROLE_NONE;
     else return r->second;
@@ -490,7 +665,9 @@ std::list<std::pair<std::string, std::string> > User::getProjects() const
     std::list<std::pair<std::string, std::string> > result;
     std::map<std::string, enum Role>::const_iterator r;
     for (r = rolesOnProjects.begin(); r != rolesOnProjects.end(); r++) {
-        result.push_back(std::make_pair(r->first, roleToString(r->second)));
+        if (r->second <= ROLE_RO) {
+            result.push_back(std::make_pair(r->first, roleToString(r->second)));
+        }
     }
     return result;
 }
@@ -498,6 +675,8 @@ std::list<std::pair<std::string, std::string> > User::getProjects() const
 
 /** Check user credentials and initiate a session
   *
+  * @return
+  *    The session id on success, otherwise, an empty string.
   */
 std::string SessionBase::requestSession(const std::string &username, char *passwd)
 {
@@ -524,14 +703,23 @@ std::string SessionBase::requestSession(const std::string &username, char *passw
 
 /** Return a user object
   *
-  * If no valid user if found, then the returned object has an empty username.
+  * @return
+  *     If no valid user if found, then the returned object has an empty username.
   */
 User SessionBase::getLoggedInUser(const std::string &sessionId)
 {
     if (UserBase::isLocalUserInterface()) {
-        User u;
-        u.username = "local user";
-        return u;
+        // case of a command 'smit ui'
+        // return the first user in database (there should be only one when the repo is a clone)
+        std::list<User> users = UserBase::getAllUsers();
+
+        std::list<User>::iterator uit = users.begin();
+        if (uit == users.end()) {
+            LOG_ERROR("getLoggedInUser: Cannot get local user");
+            User u;
+            return u;
+        }
+        return *(uit);
     }
 
     LOG_DEBUG("getLoggedInUser(%s)...", sessionId.c_str());
@@ -554,6 +742,7 @@ User SessionBase::getLoggedInUser(const std::string &sessionId)
             // else session found, but related user no longer exists
         }
     }
+
     LOG_DEBUG("no valid logged-in user");
     return User();
 }
@@ -578,10 +767,12 @@ std::string SessionBase::createSession(const std::string &username)
     LOCK_SCOPE(locker, LOCK_READ_WRITE);
 
     std::stringstream randomStr;
-    randomStr << std::hex << rand() << rand() << rand();
+    randomStr << std::hex << rand() << rand();
     Session s;
     s.ctime = time(0);
-    s.id = randomStr.str();
+    // use sha1 in order to make difficult to predict session-id from previous session-ids
+    // (an attacker cannot know the randoms, and thus cannot predict the next randoms)
+    s.id = getSha1(randomStr.str());
     LOG_DEBUG("session-id: %s", s.id.c_str());
     s.username = username;
     s.duration = SESSION_DURATION;

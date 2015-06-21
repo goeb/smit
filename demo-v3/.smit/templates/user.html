@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html><head>
+        <title>Configuration of User</title>
+        <link rel="icon" type="image/x-icon" href="/public/favicon.ico"/>
+        <link href="SM_URL_ROOT/public/style.css" type="text/css" rel="stylesheet">
+        <meta content="text/html;charset=UTF-8" http-equiv="Content-Type">
+        <script src="SM_URL_ROOT/sm/smit.js"></script>
+        <script type="text/javascript">
+            function selectAuth(item) {
+                showOrHideClasses('box_auth', false);
+                showOrHideClasses('box_auth_' + item.value, true);
+            }
+</script>
+    </head>
+    <body>
+        <div style="padding-top: 15px;">
+            <table><tr><td><img src="SM_URL_ROOT/public/logo.png" class="logo" alt="Logo"></td>
+                    <td>SM_DIV_NAVIGATION_GLOBAL</td></tr></table>
+        </div>
+
+        <br>
+        <br>
+        <br>
+        <br>
+        <form action="" method="POST">
+            <h1>User Configuration</h1>
+            <div class="sm_zone_non_superadmin">
+                <h2>Password</h2>
+                <table><tr><td>Password:</td><td>
+                            <input name="sm_passwd1" type="password" size="30" placeholder="leave empty to keep unchanged">
+                    </td></tr>
+                    <tr><td>Re-enter password:</td><td>
+                            <input name="sm_passwd2" type="password" size="30">
+                </td></tr></table>
+            </div>
+            <div class="sm_zone_superadmin">
+                <table>
+                    <tr><td>User name:</td><td><input id="name" name="name" type="text" required="required"></td></tr>
+                    <tr><td><label for="superadmin">Superadmin:</label></td><td><input id="superadmin" name="sm_superadmin" type="checkbox"></td></tr>
+                </table>
+                <br>
+                <h2>Authentication</h2>
+                <label><input onclick="selectAuth(this);" type="radio" name="sm_auth_type" value="sha1">Password</label>
+                <label><input onclick="selectAuth(this);" type="radio" name="sm_auth_type" value="krb5">Kerberos</label>
+                <label><input onclick="selectAuth(this);" type="radio" name="sm_auth_type" value="ldap">LDAP</label>
+                <div class="box_auth_sha1 box_auth">
+                    <table><tr><td>Password:</td><td>
+                                <input name="sm_passwd1" type="password" size="30" placeholder="leave empty to keep unchanged">
+                        </td></tr>
+                        <tr><td>Re-enter password:</td><td>
+                                <input name="sm_passwd2" type="password" size="30">
+                    </td></tr></table>
+                </div>
+                <div class="box_auth_krb5 box_auth">
+                    <table><tr><td>Kerberos name:</td><td>
+                                <input name="sm_krb5_primary" type="text" size="30"> (if different from the username)
+                        </td></tr>
+                        <tr><td>Kerberos Realm:</td><td>
+                                <input name="sm_krb5_realm" type="text" placeholder="EXAMPLE.COM" size="30"> (must be upper case)
+                    </td></tr></table>
+                </div>
+                <div class="box_auth_ldap box_auth">
+                    <table><tr><td>LDAP URI:</td><td>
+                                <input name="sm_ldap_uri" type="text" placeholder="ldaps://example.com:636" size="30">
+                        </td></tr>
+                        <tr><td>LDAP Distinguished Name:</td><td>
+                                <input name="sm_ldap_dname" type="text" placeholder="cn=John Doe,ou=People,dc=example,dc=com" size="60">
+                    </td></tr></table>
+                </div>
+                <br>
+                <br>
+                <h2>Configure Permissions on Projects</h2>
+                <div id="sm_permissions"></div>
+                <div onclick="addPermission('sm_permissions', '', '');" class="clickable">+ Click for more...</div>
+                <br>
+
+            </div>
+            <input type="submit" value="Apply">
+        </form>
+        <br>
+        <h2>Permissions</h2>
+SM_TABLE_USER_PERMISSIONS
+        <br>
+        <div class="sm_zone_superadmin">
+            <button type="button" onclick="sm_deleteResource('./');">Delete this user</button>
+        </div>
+        SM_SCRIPT
+</body></html>

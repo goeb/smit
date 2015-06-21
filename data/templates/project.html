@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Project configuration</title>
+        <link rel="icon" type="image/x-icon" href="/public/favicon.ico"/>
+        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+        <link rel="stylesheet" type="text/css" href="SM_URL_ROOT/public/style.css">
+        <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/>
+        <script src="SM_URL_ROOT/sm/smit.js"></script>
+    </head>
+    <body>
+        <div style="position: fixed; top: 0; padding-top: 15px; width: 100%; background: white;">
+            <table><tr><td><img src="SM_URL_ROOT/public/logo.png" class="logo" alt="Logo"></td>
+                    <td>SM_DIV_NAVIGATION_GLOBAL SM_DIV_NAVIGATION_ISSUES</td></tr></table>
+        </div>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+
+        <h1>Configuration of project <span class="tag">SM_HTML_PROJECT</span></h1>
+(<a href="SM_URL_ROOT/SM_URL_PROJECT_NAME">SM_HTML_PROJECT</a>)
+
+        <form method="POST" action="">
+            <div class="sm_zone_superadmin">
+                Project name:
+                <input type="text" size="50" id="projectName" name="projectName" required="required"> 
+                <br>
+                Creating a new project or modifying the name of a project requires superadmin capability.
+            </div>
+            <h2>Properties</h2>
+            Edit here the properties that you want in your issues.<br>
+            Each property has:
+            <ul><li>a logical name, that must be unique among the properties of the project. This logical name is used in the address (query string) for filters and sorting.</li>
+                <li>a label, that is a more human friendly representation of the property, displayed in the pages. If the label is empty, then the logical name is used instead.</li>
+                <li>a type: <code>text</code>,
+                <code>select</code>,
+                <code>multiselect</code>,
+                <code>selectUser</code>,
+                <code>textarea</code>,
+                <code>textarea2</code>,
+                <code>association</code>
+                </li>
+                <li>a list of possible values, for types <code>select</code> and <code>multiselect</code></li>
+            </ul>
+            You cannot use the following logical names as they are reserved:
+            <code>id</code>,
+            <code>ctime</code>,
+            <code>mtime</code>,
+            <code>summary</code>
+            . However you may assign a human-readable label to these, as well as for any other.
+            <br>
+            <br>
+            <noscript>You must enable Javascript to continue...</noscript>
+
+            <table id="sm_config_properties" style="vertical-align: top;">
+                <tr><th></th><th>Logical Name</th><th>Label</th><th>Type</th></tr>
+            </table>
+            <br>
+            <div onclick="addMoreProperties(3);" class="clickable">+ Click for more properties...</div>
+            <br>
+            <table id="sm_config_tags" style="vertical-align: top;">
+                <tr><th></th><th>Tag Logical Name</th><th>Tag Label</th><th>Display in Issue Header</th></tr>
+            </table>
+            <br>
+            <div onclick="addMoreTags(2);" class="clickable">+ Click for more tags...</div>
+            <br>
+            <input type="submit" value="Apply Configuration">
+            <br>
+            <br>
+            <br>
+        </form>
+        <form onsubmit="return confirm('Really reload project?');" method="post" action="reload">
+            <input type="submit" value="Reload Project From Disk Storage">
+        </form>
+        SM_SCRIPT
+    </body>
+</html>

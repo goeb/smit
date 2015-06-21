@@ -1,5 +1,10 @@
 
-v2.4.0, 21 June 2015
+v3.0.0
+    - Suggested values for search filters (filters in/out)
+      (filters with exact word matching)
+    - Clone / Pull / Push
+
+v2.4.0
 
     - fix crash when missing content-type in POST request
     - html: fix elapsed time "0 year" when > 1 year

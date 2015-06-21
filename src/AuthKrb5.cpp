@@ -15,7 +15,9 @@
   */
 int AuthKrb5::authenticate(char *password)
 {
-    LOG_DIAG("krbAuthenticate(%s@%s)", username.c_str(), realm.c_str());
+    std::string localUsername = username;
+    if (!alternateUsername.empty()) localUsername = alternateUsername;
+    LOG_DIAG("krbAuthenticate(%s@%s)", localUsername.c_str(), realm.c_str());
     krb5_context ctx;
     memset(&ctx, 0, sizeof(ctx));
 
@@ -84,7 +86,38 @@ int AuthKrb5::authenticate(char *password)
 std::string AuthKrb5::serialize()
 {
     std::string result;
-    result += serializeSimpleToken(AUTH_KRB5) + " ";
-    result += serializeSimpleToken(realm);
+    result += serializeSimpleToken(AUTH_KRB5);
+    result += " -realm " + serializeSimpleToken(realm);
+    if (!alternateUsername.empty()) {
+        result += " -primary " + serializeSimpleToken(alternateUsername);
+    }
     return result;
 }
+
+Auth *AuthKrb5::createCopy()
+{
+    AuthKrb5 *ah = new AuthKrb5(*this);
+    return ah;
+}
+Auth *AuthKrb5::deserialize(std::list<std::string> &tokens)
+{
+    std::string realm;
+    std::string alternateUsername;
+    std::string token;
+    while (!tokens.empty()) {
+        token = popListToken(tokens);
+        if (token == "-realm") realm = popListToken(tokens);
+        else if (token == "-primary") alternateUsername = popListToken(tokens);
+        else {
+            LOG_ERROR("Invalid token '%s'", token.c_str());
+            return 0;
+        }
+    }
+    if (realm.empty()) {
+        LOG_ERROR("AuthKrb5: empty realm");
+        return 0;
+    }
+
+    return new AuthKrb5("", realm, alternateUsername);
+}
+

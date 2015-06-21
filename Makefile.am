@@ -31,6 +31,11 @@ endif
 bin_PROGRAMS = smit
 smit_SOURCES = \
 			   src/db.cpp  \
+			   src/Entry.cpp  \
+			   src/Issue.cpp  \
+			   src/Project.cpp  \
+			   src/View.cpp  \
+			   src/Tag.cpp  \
 			   src/parseConfig.cpp \
 			   src/identifiers.cpp \
 			   src/main.cpp \
@@ -47,10 +52,16 @@ smit_SOURCES = \
 			   src/Trigger.cpp \
 			   src/filesystem.cpp \
 			   src/clone.cpp \
+			   src/httpClient.cpp \
 			   src/console.cpp \
 			   src/HttpContext.cpp \
+			   src/localClient.cpp \
+			   src/Args.cpp \
+			   src/ProjectConfig.cpp \
+			   src/Object.cpp \
 			   src/AuthSha1.cpp \
-			   mongoose/mongoose.c 
+			   src/third-party/mongoose.c \
+			   src/third-party/fnmatch.c
 
 if KERBEROS_ENABLED
 smit_SOURCES += src/AuthKrb5.cpp
@@ -66,7 +77,7 @@ BUILT_SOURCES = embedcpio.c embedcpio.h
 CLEANFILES = embedcpio.c embedcpio.h convertToC
 X = embedded_data
 SM_VERSION = $(X)/sm/version
-embedcpio.c embedcpio.h: @srcdir@/tools/convertToC.cpp
+embedcpio.c embedcpio.h: @srcdir@/tools/convertToC.cpp @srcdir@/data/sm/smit.js
 	rm -rf $(X)
 	cp -r @srcdir@/data $(X)
 	@# generate sm/version
@@ -79,13 +90,13 @@ embedcpio.c embedcpio.h: @srcdir@/tools/convertToC.cpp
 	@# build convertToC with gcc
 	@# I do not know how to make this portable with the GNU autotools
 	g++ -o ./convertToC @srcdir@/tools/convertToC.cpp
-	./convertToC embedcpio
+	./convertToC embedcpio `date +%s`
 
 .PHONY: clean-local-embedded-data
 clean-local-embedded-data:
 	rm -rf $(X)
 
-smit_CPPFLAGS = -I @srcdir@/mongoose @OPENSSL_CFLAGS@ @CURL_CFLAGS@
+smit_CPPFLAGS = -I@srcdir@/src/third-party @OPENSSL_CFLAGS@ @CURL_CFLAGS@
 smit_LDADD = @OPENSSL_LIBS@ @CURL_LIBS@
 
 if KERBEROS_ENABLED

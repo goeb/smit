@@ -16,9 +16,33 @@
 #include <string.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <libgen.h>
 
 #include "stringTools.h"
 #include "global.h"
+
+std::string bin2hex(const ustring & in)
+{
+    return bin2hex(in.data(), in.size());
+}
+
+std::string bin2hex(const uint8_t *buffer, size_t len)
+{
+    const char hexTable[] = { '0', '1', '2', '3',
+                              '4', '5', '6', '7',
+                              '8', '9', 'a', 'b',
+                              'c', 'd', 'e', 'f' };
+    std::string hexResult;
+    size_t i;
+    for (i=0; i<len; i++) {
+        int c = buffer[i];
+        hexResult += hexTable[c >> 4];
+        hexResult += hexTable[c & 0x0f];
+    }
+    return hexResult;
+}
+
 
 /** take first token name out of uri
   * Examples:
@@ -131,6 +155,22 @@ std::string urlDecode(const std::string &src, int is_form_url_encoded, char mark
     return dst;
 }
 
+/** Characters reserved by rfc3986 (Uniform Resource Identifier (URI): Generic Syntax)
+  *
+  *   reserved    = gen-delims / sub-delims
+  *
+  *   gen-delims  = ":" / "/" / "?" / "#" / "[" / "]" / "@"
+  *
+  *   sub-delims  = "!" / "$" / "&" / "'" / "(" / ")"
+  *               / "*" / "+" / "," / ";" / "="
+  *
+  *  "%" and " " are also added.
+  */
+const char *getReservedUriCharacters()
+{
+    return ":/?#[]@!$&'()*+,;=% ";
+}
+
 /** Encode a string for URL
   *
   * Used typically for a parameter in the query string.
@@ -143,12 +183,18 @@ std::string urlEncode(const std::string &src, char mark, const char *dontEscape)
     size_t n = src.size();
     size_t i;
     for (i = 0; i < n; i++) {
-        if (isalnum((unsigned char) src[i]) ||
-                strchr(dontEscape, (unsigned char) src[i]) != NULL) dst += src[i];
-        else {
+        char c = src[i];
+        if (strchr(dontEscape, c)) dst += src[i]; // do not escape
+        else if (strchr(getReservedUriCharacters(), c)) {
+            // Do escape reserved characters
+            // 'c' is a supposed to have a value 0 <= c < 128
             dst += mark;
-            dst += hex[((const unsigned char) src[i]) >> 4];
-            dst += hex[((const unsigned char) src[i]) & 0xf];
+            dst += hex[c >> 4];
+            dst += hex[c & 0xf];
+        } else {
+            // Do not escape other characters.
+            // UTF-8 characters fall into this category.
+            dst += src[i];
         }
     }
     return dst;
@@ -174,7 +220,7 @@ std::string pop(std::list<std::string> & L)
     return token;
 }
 
-std::string getProperty(const std::map<std::string, std::list<std::string> > &properties, const std::string &name)
+std::string getProperty(const PropertiesMap &properties, const std::string &name)
 {
     std::map<std::string, std::list<std::string> >::const_iterator t = properties.find(name);
     std::string propertyValue = "";
@@ -243,10 +289,10 @@ std::string toJavascriptArray(const std::list<std::string> &items)
 
 }
 
-std::vector<std::string> split(const std::string &s, const char *c, int limit)
+std::list<std::string> split(const std::string &s, const char *c, int limit)
 {
     // use limit = -1 for no limit (almost)
-    std::vector<std::string> tokens;
+    std::list<std::string> tokens;
     size_t found;
 
     int index = 0;
@@ -263,7 +309,6 @@ std::vector<std::string> split(const std::string &s, const char *c, int limit)
 
     return tokens;
 }
-
 
 std::list<std::string> splitLinesAndTrimBlanks(const std::string &s)
 {
@@ -318,6 +363,18 @@ std::string getBasename(const std::string &path)
     else return path.substr(i+1);
 }
 
+std::string getDirname(const std::string &path)
+{
+    char *buf = (char*)malloc(path.size()+1);
+    memcpy(buf, path.data(), path.size());
+    buf[path.size()] = 0;
+
+    char *dir = dirname(buf);
+    std::string result = dir;
+
+    free(buf);
+    return result;
+}
 
 
 /** If uri is "x=y&a=bc+d" and param is "a"
@@ -366,4 +423,18 @@ std::list<std::string> getParamListFromQueryString(const std::string & queryStri
         }
     }
     return result;
+}
+
+/** Indent lines of a text
+  */
+void printfIndent(const char *text, const char *indent)
+{
+    size_t n = strlen(text);
+    size_t i;
+    for (i = 0; i < n; i++) {
+        if (text[i] == '\r') continue; // skip this
+        if (i==0) printf("%s", indent); // indent first line of message
+        printf("%c", text[i]);
+        if (text[i] == '\n') printf("%s", indent); // indent each new line
+    }
 }

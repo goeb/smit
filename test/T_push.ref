@@ -1,0 +1,37 @@
+diff clone1/p1 clone2/p1
+OK
+Issue 1: first issue
+---- Properties ----------------------------------------------------------------
+    status                    : open
+--------------------------------------------------------------------------------
+Modified Properties:
+    summary: first issue
+--------------------------------------------------------------------------------
+Message:
+    some message
+Modified Properties:
+    status: open
+Issue 2: issue-2
+---- Properties ----------------------------------------------------------------
+    freeText                  : free-text-issue2
+    status                    : open
+--------------------------------------------------------------------------------
+Modified Properties:
+    status: open
+    summary: second issue
+--------------------------------------------------------------------------------
+Modified Properties:
+    freeText: free-text-issue2
+    summary: issue-2
+Issue 3: third issue
+---- Properties ----------------------------------------------------------------
+    freeText                  : y1y2
+--------------------------------------------------------------------------------
+Modified Properties:
+    freeText: this is xyz
+    summary: issue of clone1
+--------------------------------------------------------------------------------
+Modified Properties:
+    +file: 5ab64de1bcfb3d5500b2a95145f44f74aa6ed72f/file2.txt
+    freeText: y1y2
+    summary: third issue

@@ -1,0 +1,90 @@
+
+# common functions and environment variables
+
+REPO=trepo
+
+# project 1
+PROJECT1=p1
+USER1=tuser1
+PASSWD1=tpasswd1
+
+# project 2
+PROJECT2=p2
+USER2=tuser2
+PASSWD2=tpasswd2
+
+PORT=8099
+SMIT=../smit
+
+
+initTest() {
+    TEST_NAME=`basename $0`
+    # remove suffix .sh
+    TEST_NAME=`echo $TEST_NAME | sed -e "s/\.sh//"`
+    exec > $TEST_NAME.log 2>&1
+}
+
+# create a smit repository with 1 project
+initRepo() {
+    mkdir $REPO
+    $SMIT init $REPO
+    $SMIT project -c $REPO/$PROJECT1
+    $SMIT project $REPO/$PROJECT1 addProperty "freeText text"
+
+    $SMIT user $USER1 --passwd $PASSWD1 --project $PROJECT1:rw -d $REPO
+
+    # create some entries
+    # create issue 1
+    $SMIT issue $REPO/$PROJECT1 -a - "summary=first issue"
+    $SMIT issue $REPO/$PROJECT1 -a 1 status=open +message="some message"
+    # create issue 2
+    $SMIT issue $REPO/$PROJECT1 -a - "summary=second issue" status=open
+}
+initRepoGlobalNumbering() {
+    mkdir $REPO
+    $SMIT init $REPO
+
+    # project 1
+    $SMIT project -c $REPO/$PROJECT1
+    $SMIT project $REPO/$PROJECT1 addProperty "freeText text"
+    $SMIT project $REPO/$PROJECT1 numberIssues global
+
+    $SMIT user $USER1 --passwd $PASSWD1 --project $PROJECT1:rw -d $REPO
+
+    # project 2
+    $SMIT project -c $REPO/$PROJECT2
+    $SMIT project $REPO/$PROJECT2 addProperty "freeText text"
+    $SMIT project $REPO/$PROJECT2 numberIssues global
+
+    $SMIT user $USER2 --passwd $PASSWD2 --project $PROJECT2:rw -d $REPO
+}
+cleanRepo() {
+    echo "cleanRepo $REPO"
+    REPO=trepo # just to be sure before the rm -rf
+    rm -rf $REPO
+    rm -rf clone1
+    rm -rf clone2
+}
+
+startServer() {
+    $SMIT serve $REPO --listen-port $PORT > server.log 2>&1 &
+    smitServerPid=$!
+    sleep 0.5 # wait for the server to start
+}
+stopServer() {
+    echo killing smitServerPid=$smitServerPid
+    kill $smitServerPid
+}
+
+fail() {
+    echo "ERROR: $1"
+    [ -n "$pid" ] && kill $pid
+    exit 1
+}
+
+checkFileExists() {
+    file="$1"
+    [ -f $file ] || fail "missing file '$file'"
+    echo "$file: ok"
+}
+
