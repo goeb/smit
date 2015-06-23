@@ -1488,7 +1488,7 @@ Entry *Project::amendEntry(const std::string &entryId, const std::string &userna
         return 0;
     }
 
-    // in case of tuther error, we should delete the entry
+    // in case of further error, we should delete the entry
     // TODO (memory leak at the moment)
 
     int r = addNewEntry(amendingEntry);

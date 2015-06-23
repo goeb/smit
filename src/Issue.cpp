@@ -454,20 +454,23 @@ bool Issue::searchFullText(const char *text) const
     // look through the entries
     Entry *e = first;
     while (e) {
-        if (mg_strcasestr(e->getMessage().c_str(), text)) return true; // found
+        // do not search through amending entries
+        if (!e->isAmending()) {
+            // look through the message
+            if (mg_strcasestr(e->getMessage().c_str(), text)) return true; // found
 
-        // look through uploaded files
-        PropertiesIt files = e->properties.find(K_FILE);
-        if (files != e->properties.end()) {
-            std::list<std::string>::const_iterator f;
-            FOREACH(f, files->second) {
-                if (mg_strcasestr(f->c_str(), text)) return true; // found
+            // look through uploaded files
+            PropertiesIt files = e->properties.find(K_FILE);
+            if (files != e->properties.end()) {
+                std::list<std::string>::const_iterator f;
+                FOREACH(f, files->second) {
+                    if (mg_strcasestr(f->c_str(), text)) return true; // found
+                }
             }
+
+            // look at the author of the entry
+            if (mg_strcasestr(e->author.c_str(), text)) return true; // found
         }
-
-        // look at the author
-        if (mg_strcasestr(e->author.c_str(), text)) return true; // found
-
         e = e->getNext();
     }
 
