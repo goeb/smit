@@ -253,6 +253,10 @@ a:link.sm_issues_sort_cumulative { color: #344; }
 a:visited.sm_issues_sort_cumulative { color: #344; }
 a.sm_issues_sort { }
 
+a:link.sm_issues_delete_col { color: #344; }
+a:visited.sm_issues_delete_col { color: #344; }
+a.sm_issues_delete_col { }
+
 .sm_entry_edit, .sm_entry_edit form {
     vertical-align: top;
     font-size: small;

@@ -842,39 +842,58 @@ void RHtml::printPageProjectList(const ContextParameters &ctx,
 
 /** Modify the query string by removing the given property from the colspec
   *
+  * @param qs
+  *    The input query string
+  *
+  * @param property
+  *    The property to be removed
+  *
+  * @param defaultCols
+  *    The default list of columns to use, when no colspec is contained in the query string
   *
   */
-std::string getQsRemoveColumn(std::string qs, const std::string &property)
+std::string getQsRemoveColumn(std::string qs, const std::string &property, const std::list<std::string> &defaultCols)
 {
     LOG_DEBUG("getQsRemoveColumn: in=%s", qs.c_str());
     std::string result;
 
     const char *COLSPEC_HEADER = "colspec=";
-    std::string newColspec = "";
+    bool colspecFound = false;
 
     while (qs.size() > 0) {
         std::string part = popToken(qs, '&');
         if (0 == strncmp(COLSPEC_HEADER, part.c_str(), strlen(COLSPEC_HEADER))) {
             // This is the colspec part, that we want to alter
+            colspecFound = true;
+
             popToken(part, '=');
             std::list<std::string> cols = split(part, " +");
-            std::list<std::string>::iterator c;
-            FOREACH(c, cols) {
-                if (*c == property) break;
-            }
-            // erase the given property from the colspec
-            if (c != cols.end()) cols.erase(c);
-
+            cols.remove(property);
             // build the new colspec
-            // TODO if colspec empty, display all ?
-            newColspec = join(cols, "+");
-            part = COLSPEC_HEADER + newColspec;
+            if (cols.empty()) part = "";
+            else {
+                std::string newColspec = join(cols, "+");
+                part = COLSPEC_HEADER + newColspec;
+            }
 
         } // else, keep the part unchanged
 
         // append to the result
-        if (result == "") result = part;
-        else result = result + '&' + part;
+        if (!part.empty()) {
+            if (result == "") result = part;
+            else result = result + '&' + part;
+        }
+    }
+    if (!colspecFound) {
+        // do as if the query string had a colspec equal to defaultCols
+        std::list<std::string> cols = defaultCols; // make a copy
+        cols.remove(property);
+        if (!cols.empty()) {
+            std::string newColspec = join(cols, "+");
+            std::string part = COLSPEC_HEADER + newColspec;
+            if (result == "") result = part;
+            else result = result + '&' + part;
+        }
     }
 
     LOG_DEBUG("getQsRemoveColumn: result=%s", result.c_str());
@@ -1206,8 +1225,9 @@ void RHtml::printIssueList(const ContextParameters &ctx, const std::vector<Issue
         ctx.req->printf("title=\"%s\">&gt;&gt;&gt;</a>",
                         _("Sort while preserving order of other columns\n(or invert current column if already sorted-by)"));
 
-        newQueryString = getQsRemoveColumn(ctx.req->getQueryString(), *colname);
-        ctx.req->printf(" <a href=\"?%s\" title=\"%s\">&#10008;</a>\n", newQueryString.c_str(),
+        std::list<std::string> defaultCols = ctx.projectConfig.getPropertiesNames();
+        newQueryString = getQsRemoveColumn(ctx.req->getQueryString(), *colname, defaultCols);
+        ctx.req->printf(" <a href=\"?%s\" class=\"sm_issues_delete_col\" title=\"%s\">&#10008;</a>\n", newQueryString.c_str(),
                         _("Remove this column"));
         ctx.req->printf("</th>\n");
     }

@@ -1468,7 +1468,6 @@ void httpGetListOfIssues(const RequestContext *req, const Project &p, User u)
         return;
     }
 
-
     std::string full = getFirstParamFromQueryString(q, "full"); // full-contents indicator
 
     // get the colspec
