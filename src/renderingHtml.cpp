@@ -840,8 +840,54 @@ void RHtml::printPageProjectList(const ContextParameters &ctx,
     vn.printPage();
 }
 
+/** Modify the query string by removing the given property from the colspec
+  *
+  *
+  */
+std::string getQsRemoveColumn(std::string qs, const std::string &property)
+{
+    LOG_DEBUG("getQsRemoveColumn: in=%s", qs.c_str());
+    std::string result;
+
+    const char *COLSPEC_HEADER = "colspec=";
+    std::string newColspec = "";
+
+    while (qs.size() > 0) {
+        std::string part = popToken(qs, '&');
+        if (0 == strncmp(COLSPEC_HEADER, part.c_str(), strlen(COLSPEC_HEADER))) {
+            // This is the colspec part, that we want to alter
+            popToken(part, '=');
+            std::list<std::string> cols = split(part, " +");
+            std::list<std::string>::iterator c;
+            FOREACH(c, cols) {
+                if (*c == property) break;
+            }
+            // erase the given property from the colspec
+            if (c != cols.end()) cols.erase(c);
+
+            // build the new colspec
+            // TODO if colspec empty, display all ?
+            newColspec = join(cols, "+");
+            part = COLSPEC_HEADER + newColspec;
+
+        } // else, keep the part unchanged
+
+        // append to the result
+        if (result == "") result = part;
+        else result = result + '&' + part;
+    }
+
+    LOG_DEBUG("getQsRemoveColumn: result=%s", result.c_str());
+
+    return result;
+}
+
+
 /** Build a new query string based on the current one, and update the sorting part
   *
+  *
+  * @param qs
+  *     The query string to be modified.
   *
   * Example:
   * In: current query string is sort=xx&filterin=...&whatever...
@@ -856,10 +902,9 @@ void RHtml::printPageProjectList(const ContextParameters &ctx,
   * - else, the property is added after the others
   *
   */
-std::string getNewSortingSpec(const RequestContext *req, const std::string property, bool exclusive)
+std::string getQsSubSorting(std::string qs, const std::string &property, bool exclusive)
 {
-    std::string qs = req->getQueryString();
-    LOG_DEBUG("getNewSortingSpec: in=%s, exclusive=%d", qs.c_str(), exclusive);
+    LOG_DEBUG("getSubSortingSpec: in=%s, exclusive=%d", qs.c_str(), exclusive);
     std::string result;
 
     const char *SORT_SPEC_HEADER = "sort=";
@@ -868,7 +913,7 @@ std::string getNewSortingSpec(const RequestContext *req, const std::string prope
     while (qs.size() > 0) {
         std::string part = popToken(qs, '&');
         if (0 == strncmp(SORT_SPEC_HEADER, part.c_str(), strlen(SORT_SPEC_HEADER))) {
-            // sorting spec, that we want to alter
+            // This is the sorting spec part, that we want to alter
             popToken(part, '=');
 
             if (exclusive) {
@@ -921,7 +966,7 @@ std::string getNewSortingSpec(const RequestContext *req, const std::string prope
                 newSortingSpec = newSortingSpec.insert(0, SORT_SPEC_HEADER); // add the "sort=" at the beginning
             }
             part = newSortingSpec;
-        }
+        } // else, keep the part unchanged
 
         // append to the result
         if (result == "") result = part;
@@ -936,8 +981,7 @@ std::string getNewSortingSpec(const RequestContext *req, const std::string prope
         if (result == "") result = newSortingSpec;
         else result = result + '&' + newSortingSpec;
     }
-    LOG_DEBUG("getNewSortingSpec: result=%s", result.c_str());
-
+    LOG_DEBUG("getSubSortingSpec: result=%s", result.c_str());
 
     return result;
 }
@@ -1154,14 +1198,18 @@ void RHtml::printIssueList(const ContextParameters &ctx, const std::vector<Issue
     for (colname = colspec.begin(); colname != colspec.end(); colname++) {
 
         std::string label = ctx.projectConfig.getLabelOfProperty(*colname);
-        std::string newQueryString = getNewSortingSpec(ctx.req, *colname, true);
+        std::string newQueryString = getQsSubSorting(ctx.req->getQueryString(), *colname, true);
         ctx.req->printf("<th class=\"sm_issues\"><a class=\"sm_issues_sort\" href=\"?%s\" title=\"Sort ascending\">%s</a>\n",
                         newQueryString.c_str(), htmlEscape(label).c_str());
-        newQueryString = getNewSortingSpec(ctx.req, *colname, false);
+        newQueryString = getQsSubSorting(ctx.req->getQueryString(), *colname, false);
         ctx.req->printf("\n<br><a href=\"?%s\" class=\"sm_issues_sort_cumulative\" ", newQueryString.c_str());
-        ctx.req->printf("title=\"%s\">&gt;&gt;&gt;</a></th>\n",
+        ctx.req->printf("title=\"%s\">&gt;&gt;&gt;</a>",
                         _("Sort while preserving order of other columns\n(or invert current column if already sorted-by)"));
 
+        newQueryString = getQsRemoveColumn(ctx.req->getQueryString(), *colname);
+        ctx.req->printf(" <a href=\"?%s\" title=\"%s\">&#10008;</a>\n", newQueryString.c_str(),
+                        _("Remove this column"));
+        ctx.req->printf("</th>\n");
     }
     ctx.req->printf("</tr>\n");
 
