@@ -788,9 +788,10 @@ void httpPostUser(const RequestContext *request, User signedInUser, const std::s
 
         } else {
             // superadmin: update all parameters of the user's configuration
-            if (authType == "sha1" && !passwd1.empty()) newUserConfig.setPasswd(passwd1);
+            if (authType == "sha1" && !passwd1.empty()) {
+                newUserConfig.setPasswd(passwd1);
 #ifdef LDAP_ENABLED
-            else if (authType == "ldap") {
+            } else if (authType == "ldap") {
                 if (ldapUri.empty() || ldapDname.empty()) {
                     sendHttpHeader400(request, "Missing parameter. Check the LDAP URI and Distinguished Name.");
                     return;

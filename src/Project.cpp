@@ -158,7 +158,7 @@ int Project::load()
 
     loadTags();
 
-    LOG_INFO("Project %s loaded: %d issues", path.c_str(), issues.size());
+    LOG_INFO("Project %s loaded: %ld issues", path.c_str(), L(issues.size()));
 
     computeAssociations();
 
@@ -234,7 +234,7 @@ int Project::loadIssues()
 
         // update the maximum id
         int intId = atoi(issueId.c_str());
-        if (intId > 0 && (uint32_t)intId > localMaxId) localMaxId = intId;
+        if (intId > 0 && intId > localMaxId) localMaxId = intId;
 
         // store the issue in memory
         issue->id = issueId;
