@@ -150,7 +150,7 @@ void Args::parse(int argc, char **argv)
         i++;
     }
 
-    if ( (nonOptionLimit >= 0) && (nonOptionvalues.size() > nonOptionLimit) ) {
+    if ( (nonOptionLimit >= 0) && (nonOptionvalues.size() > (size_t)nonOptionLimit) ) {
         fprintf(stderr, "Too many arguments.\n\n");
         usage();
     }

@@ -358,13 +358,18 @@ void RHtml::printPageUser(const ContextParameters &ctx, const User *u)
         vn.script +=  "addPermission('sm_permissions', '', '');\n";
         vn.script +=  "addPermission('sm_permissions', '', '');\n";
         if (u && u->authHandler) {
-            if (u->authHandler->type == "sha1") vn.script += "setAuthSha1();\n";
-            else if (u->authHandler->type == "krb5") {
+            if (u->authHandler->type == "sha1") {
+                vn.script += "setAuthSha1();\n";
+#ifdef KERBEROS_ENABLED
+            } else if (u->authHandler->type == "krb5") {
                 AuthKrb5 *ah = dynamic_cast<AuthKrb5*>(u->authHandler);
                 vn.script += "setAuthKrb5('" + enquoteJs(ah->alternateUsername) + "', '" + enquoteJs(ah->realm) + "');\n";
+#endif
+#ifdef LDAP_ENABLED
             } else if (u->authHandler->type == "ldap") {
                 AuthLdap *ah = dynamic_cast<AuthLdap*>(u->authHandler);
                 vn.script += "setAuthLdap('" + enquoteJs(ah->uri) + "', '" + enquoteJs(ah->dname) + "');\n";
+#endif
             }
             // else, it may be empty, if no auth type is assigned
         }
