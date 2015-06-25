@@ -26,17 +26,27 @@ Issues are to be understood in the broad sense: tasks, ideas, requests, experime
 
 Some of the main features of Smit are:
 
-- Easy customization of properties
-- "One-click" multi-column sorting
-- Uploaded images displayed as thumbnails
-- Customizable associations between issues (parenthood, duplicates, etc.)
-- Advanced searching (including full text searching)
-- Rich text, with preview
+- Management of several projects and users' permissions
+- Easy administration
+    * Easy customization of properties
+    * Customizable associations between issues (parenthood, duplicates, etc.)
+    * Easy customization of HTML pages
+- Efficient usage
+    * "One-click" multi-column sorting
+    * Uploaded images displayed as thumbnails
+    * Advanced searching (including full text searching)
+    * Rich text, with preview
+    * Modification of recent messages (for fixing misspellings,...)
+    * Bookmark-friendly URL
+    * Concise web GUI
+    * History of the modifications in the message flow
 - Exporting contents to HTML, CSV, PDF (via the browser's capability)
-- Multiple projects support
-- Bookmark-friendly URL
+    * Full-contents view of the issues
+    * Print preview (hyper-text links become hidden)
+- Cloning, local web GUI, pulling, pushing
 - Trigger of external program on new entry
-- Custom tags on entries
+    * for email notification, with PGP-encrypted emails
+- Tags on entries
 - Self-Contained: Smit is a single stand-alone executable
 
 ## Supported platforms

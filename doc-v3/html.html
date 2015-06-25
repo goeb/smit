@@ -100,13 +100,14 @@ public/print.css</code></pre>
 <p>Modify the <code>$REPO/public/logo.png</code>, or modify the HTML templates to point to another image.</p>
 <h2 id="sm-variables">SM variables</h2>
 <p>In order to let a maximum customization freedom, Smit lets the user define the global structure of the HTML pages, and inserts the dynamic contents at users' defined places, indicated by SM variables:</p>
-<p><code>SM_DIV_NAVIGATION_GLOBAL</code></p>
+<pre><code>SM_DIV_NAVIGATION_GLOBAL
+SM_URL_ROOT</code></pre>
 <p>Insert a navigation bar, that gives links to project list, project configuration (when relevant), predefined views (when relevant), signing-out and user's profile.</p>
 <h3 id="inside-a-project">Inside a project</h3>
 <p><code>SM_DIV_NAVIGATION_ISSUES</code></p>
 <p>Insert a navigation bar for browsing through the issues of a project.</p>
 <pre><code>SM_HTML_PROJECT_NAME
-SM_URL_PROJECT_NAME</code></pre>
+SM_URL_PROJECT</code></pre>
 <p>Insert the name of the project, either for printing on the screen, or for an hyperlink.</p>
 <h3 id="page-issue">Page Issue</h3>
 <pre><code>SM_RAW_ISSUE_ID
@@ -130,7 +131,7 @@ SM_SCRIPT_PROJECT_CONFIG_UPDATE</code></pre>
 </div>
         </div> <!-- div class page -->
         <div class="footer">
-            Page updated on 25 Apr 2015
+            Page updated on 25 Jun 2015
         </div>
     </body>
 </html>
