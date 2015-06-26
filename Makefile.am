@@ -28,7 +28,7 @@ endif
 
 
 # Main program
-bin_PROGRAMS = smit
+bin_PROGRAMS = smit smparser
 smit_SOURCES = \
 			   src/db.cpp  \
 			   src/Entry.cpp  \
@@ -109,13 +109,19 @@ smit_LDADD += @LDAP_LIBS@
 smit_CPPFLAGS += @LDAP_CFLAGS@ -DLDAP_ENABLED
 endif
 
-
-
 if WINDOWS
 smit_LDADD += -lws2_32 -lgdi32
 else
 smit_LDADD += -ldl
 endif
+
+smparser_SOURCES = \
+				   src/parseConfig.cpp \
+				   src/filesystem.cpp \
+				   src/stringTools.cpp
+
+smparser_CPPFLAGS = -DSM_PARSER -DSM_NO_LOGGING
+
 
 
 # specific subdirs

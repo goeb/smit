@@ -45,7 +45,7 @@ target_triplet = @target@
 @WINDOWS_TRUE@am__append_7 = -static -static-libgcc -Dopenssl_EXPORTS
 @WINDOWS_TRUE@am__append_8 = -static -static-libgcc -Dopenssl_EXPORTS
 @WINDOWS_FALSE@am__append_9 = -pthread
-bin_PROGRAMS = smit$(EXEEXT)
+bin_PROGRAMS = smit$(EXEEXT) smparser$(EXEEXT)
 @KERBEROS_ENABLED_TRUE@am__append_10 = src/AuthKrb5.cpp
 @LDAP_ENABLED_TRUE@am__append_11 = src/AuthLdap.cpp
 @KERBEROS_ENABLED_TRUE@am__append_12 = @KRB5_LIBS@
@@ -112,6 +112,11 @@ smit_OBJECTS = $(am_smit_OBJECTS) $(nodist_smit_OBJECTS)
 am__DEPENDENCIES_1 =
 smit_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+am_smparser_OBJECTS = src/smparser-parseConfig.$(OBJEXT) \
+	src/smparser-filesystem.$(OBJEXT) \
+	src/smparser-stringTools.$(OBJEXT)
+smparser_OBJECTS = $(am_smparser_OBJECTS)
+smparser_LDADD = $(LDADD)
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)/src
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -146,8 +151,8 @@ am__v_CXXLD_0 = @echo "  CXXLD " $@;
 AM_V_GEN = $(am__v_GEN_@AM_V@)
 am__v_GEN_ = $(am__v_GEN_@AM_DEFAULT_V@)
 am__v_GEN_0 = @echo "  GEN   " $@;
-SOURCES = $(smit_SOURCES) $(nodist_smit_SOURCES)
-DIST_SOURCES = $(am__smit_SOURCES_DIST)
+SOURCES = $(smit_SOURCES) $(nodist_smit_SOURCES) $(smparser_SOURCES)
+DIST_SOURCES = $(am__smit_SOURCES_DIST) $(smparser_SOURCES)
 RECURSIVE_TARGETS = all-recursive check-recursive dvi-recursive \
 	html-recursive info-recursive install-data-recursive \
 	install-dvi-recursive install-exec-recursive \
@@ -374,6 +379,12 @@ smit_CPPFLAGS = -I@srcdir@/src/third-party @OPENSSL_CFLAGS@ \
 	@CURL_CFLAGS@ $(am__append_13) $(am__append_15)
 smit_LDADD = @OPENSSL_LIBS@ @CURL_LIBS@ $(am__append_12) \
 	$(am__append_14) $(am__append_16) $(am__append_17)
+smparser_SOURCES = \
+				   src/parseConfig.cpp \
+				   src/filesystem.cpp \
+				   src/stringTools.cpp
+
+smparser_CPPFLAGS = -DSM_PARSER -DSM_NO_LOGGING
 
 # specific subdirs
 SUBDIRS = test
@@ -558,6 +569,15 @@ src/smit-AuthLdap.$(OBJEXT): src/$(am__dirstamp) \
 smit$(EXEEXT): $(smit_OBJECTS) $(smit_DEPENDENCIES) $(EXTRA_smit_DEPENDENCIES) 
 	@rm -f smit$(EXEEXT)
 	$(AM_V_CXXLD)$(CXXLINK) $(smit_OBJECTS) $(smit_LDADD) $(LIBS)
+src/smparser-parseConfig.$(OBJEXT): src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
+src/smparser-filesystem.$(OBJEXT): src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
+src/smparser-stringTools.$(OBJEXT): src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
+smparser$(EXEEXT): $(smparser_OBJECTS) $(smparser_DEPENDENCIES) $(EXTRA_smparser_DEPENDENCIES) 
+	@rm -f smparser$(EXEEXT)
+	$(AM_V_CXXLD)$(CXXLINK) $(smparser_OBJECTS) $(smparser_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -593,6 +613,9 @@ mostlyclean-compile:
 	-rm -f src/smit-renderingText.$(OBJEXT)
 	-rm -f src/smit-session.$(OBJEXT)
 	-rm -f src/smit-stringTools.$(OBJEXT)
+	-rm -f src/smparser-filesystem.$(OBJEXT)
+	-rm -f src/smparser-parseConfig.$(OBJEXT)
+	-rm -f src/smparser-stringTools.$(OBJEXT)
 	-rm -f src/third-party/smit-fnmatch.$(OBJEXT)
 	-rm -f src/third-party/smit-mongoose.$(OBJEXT)
 
@@ -632,6 +655,9 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-renderingText.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-session.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-stringTools.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smparser-filesystem.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smparser-parseConfig.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smparser-stringTools.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/third-party/$(DEPDIR)/smit-fnmatch.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/third-party/$(DEPDIR)/smit-mongoose.Po@am__quote@
 
@@ -1156,6 +1182,48 @@ src/smit-AuthLdap.obj: src/AuthLdap.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/AuthLdap.cpp' object='src/smit-AuthLdap.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/smit-AuthLdap.obj `if test -f 'src/AuthLdap.cpp'; then $(CYGPATH_W) 'src/AuthLdap.cpp'; else $(CYGPATH_W) '$(srcdir)/src/AuthLdap.cpp'; fi`
+
+src/smparser-parseConfig.o: src/parseConfig.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smparser_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/smparser-parseConfig.o -MD -MP -MF src/$(DEPDIR)/smparser-parseConfig.Tpo -c -o src/smparser-parseConfig.o `test -f 'src/parseConfig.cpp' || echo '$(srcdir)/'`src/parseConfig.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/smparser-parseConfig.Tpo src/$(DEPDIR)/smparser-parseConfig.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/parseConfig.cpp' object='src/smparser-parseConfig.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smparser_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/smparser-parseConfig.o `test -f 'src/parseConfig.cpp' || echo '$(srcdir)/'`src/parseConfig.cpp
+
+src/smparser-parseConfig.obj: src/parseConfig.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smparser_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/smparser-parseConfig.obj -MD -MP -MF src/$(DEPDIR)/smparser-parseConfig.Tpo -c -o src/smparser-parseConfig.obj `if test -f 'src/parseConfig.cpp'; then $(CYGPATH_W) 'src/parseConfig.cpp'; else $(CYGPATH_W) '$(srcdir)/src/parseConfig.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/smparser-parseConfig.Tpo src/$(DEPDIR)/smparser-parseConfig.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/parseConfig.cpp' object='src/smparser-parseConfig.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smparser_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/smparser-parseConfig.obj `if test -f 'src/parseConfig.cpp'; then $(CYGPATH_W) 'src/parseConfig.cpp'; else $(CYGPATH_W) '$(srcdir)/src/parseConfig.cpp'; fi`
+
+src/smparser-filesystem.o: src/filesystem.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smparser_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/smparser-filesystem.o -MD -MP -MF src/$(DEPDIR)/smparser-filesystem.Tpo -c -o src/smparser-filesystem.o `test -f 'src/filesystem.cpp' || echo '$(srcdir)/'`src/filesystem.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/smparser-filesystem.Tpo src/$(DEPDIR)/smparser-filesystem.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/filesystem.cpp' object='src/smparser-filesystem.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smparser_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/smparser-filesystem.o `test -f 'src/filesystem.cpp' || echo '$(srcdir)/'`src/filesystem.cpp
+
+src/smparser-filesystem.obj: src/filesystem.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smparser_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/smparser-filesystem.obj -MD -MP -MF src/$(DEPDIR)/smparser-filesystem.Tpo -c -o src/smparser-filesystem.obj `if test -f 'src/filesystem.cpp'; then $(CYGPATH_W) 'src/filesystem.cpp'; else $(CYGPATH_W) '$(srcdir)/src/filesystem.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/smparser-filesystem.Tpo src/$(DEPDIR)/smparser-filesystem.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/filesystem.cpp' object='src/smparser-filesystem.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smparser_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/smparser-filesystem.obj `if test -f 'src/filesystem.cpp'; then $(CYGPATH_W) 'src/filesystem.cpp'; else $(CYGPATH_W) '$(srcdir)/src/filesystem.cpp'; fi`
+
+src/smparser-stringTools.o: src/stringTools.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smparser_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/smparser-stringTools.o -MD -MP -MF src/$(DEPDIR)/smparser-stringTools.Tpo -c -o src/smparser-stringTools.o `test -f 'src/stringTools.cpp' || echo '$(srcdir)/'`src/stringTools.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/smparser-stringTools.Tpo src/$(DEPDIR)/smparser-stringTools.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/stringTools.cpp' object='src/smparser-stringTools.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smparser_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/smparser-stringTools.o `test -f 'src/stringTools.cpp' || echo '$(srcdir)/'`src/stringTools.cpp
+
+src/smparser-stringTools.obj: src/stringTools.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smparser_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/smparser-stringTools.obj -MD -MP -MF src/$(DEPDIR)/smparser-stringTools.Tpo -c -o src/smparser-stringTools.obj `if test -f 'src/stringTools.cpp'; then $(CYGPATH_W) 'src/stringTools.cpp'; else $(CYGPATH_W) '$(srcdir)/src/stringTools.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/smparser-stringTools.Tpo src/$(DEPDIR)/smparser-stringTools.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/stringTools.cpp' object='src/smparser-stringTools.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smparser_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/smparser-stringTools.obj `if test -f 'src/stringTools.cpp'; then $(CYGPATH_W) 'src/stringTools.cpp'; else $(CYGPATH_W) '$(srcdir)/src/stringTools.cpp'; fi`
 install-dist_pkgdataDATA: $(dist_pkgdata_DATA)
 	@$(NORMAL_INSTALL)
 	test -z "$(pkgdatadir)" || $(MKDIR_P) "$(DESTDIR)$(pkgdatadir)"

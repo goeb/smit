@@ -1,6 +1,6 @@
 #!/bin/sh
 
-SM_PARSER=./smparser
+SM_PARSER=../smparser
 if [ ! -x $SM_PARSER ]; then echo "ERROR: $SM_PARSER not found Build it first."
 fi
 REF=$srcdir/T_smparser1.ref

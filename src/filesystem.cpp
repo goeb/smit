@@ -24,7 +24,17 @@
 #include <string.h>
 
 #include "filesystem.h"
+
+#ifdef SM_NO_LOGGING
+
+  #define LOG_DEBUG(...)
+  #define LOG_INFO(...)
+  #define LOG_ERROR(...)
+
+#else
 #include "logging.h"
+#endif
+
 #include "global.h"
 #include "stringTools.h"
 

@@ -29,7 +29,7 @@
 #include "stringTools.h"
 
 // SM_PARSER is a small executable than helps parsing smit config file and smit entries.
-#ifndef SM_PARSER
+#ifndef SM_NO_LOGGING
 
 #include "logging.h"
 
