@@ -22,7 +22,8 @@
 </ul>
 </li>
 <li><a href='admin.html'>Administration</a></li>
-<li><a href='user_guide.html'>User Guide</a></li>
+<li><a href='cli.html'>Command Line</a></li>
+<li><a href='user_guide.html'></a></li>
 <li><a href='html.html'>Customize HTML</a></li>
 <li><a href='api.html'>Smit API</a></li>
 <li><a href='developers.html'>Developer Guide</a></li>
@@ -39,16 +40,19 @@
 <p>Requirements:</p>
 <ul>
 <li>OpenSSL</li>
+<li>Libcurl</li>
 </ul>
 <p>Installation instructions:</p>
 <pre><code>git clone http://github.com/goeb/smit
 cd smit
-make</code></pre>
+make
+make check
+make install</code></pre>
 <p>And copy the compiled executable <code>smit</code> to your PATH (for example /usr/bin).</p>
 </div>
         </div> <!-- div class page -->
         <div class="footer">
-            Page updated on 24 Jun 2015
+            Page updated on 26 Jun 2015
         </div>
     </body>
 </html>

@@ -1,6 +1,6 @@
 # Administration
 
-The commands given in this chapter are to be issued in a shell in a Linux OS. They may need some adaptation on Windows.
+The commands given in this chapter are to be issued in a shell in a Linux OS. For a Windows Os, they may need some adaptation.
 
 ## Initiate a Repository
 
@@ -41,26 +41,6 @@ Start smit:
 smit serve --ssl-cert cacert.pem
 ```
 
-
-## Command Line Usage
-(TODO)
-
-```
-Usage: smit <command> [<args>]
-
-The smit commands are:
-
-  clone       Clone a smit repository
-  init        Initialise a smit repository
-  project     List, create, or update a smit project
-  serve       Start a smit web server
-  user        List, create, or update a smit user
-  ui          Browse a local smit repository (read-only)
-  version     Print the version
-  help
-
-See 'smit help <command>' for more information on a specific command.
-```
 
 
 ## Smit Repository Layout

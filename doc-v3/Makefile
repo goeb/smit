@@ -3,7 +3,8 @@
 SRCS += index.md
 SRCS += install.md
 SRCS += admin.md
-SRCS += user_guide.md
+SRCS += cli.md
+SRCS += web_user_guide.md
 SRCS += html.md
 SRCS += api.md
 SRCS += developers.md
@@ -16,7 +17,7 @@ DEPENDS = header.html footer.html ../gen_menu.sh
 
 all: $(HTMLS)
 
-%.html: %.md $(DEPENDS) $(SRCS)
+%.html: %.md $(DEPENDS)
 	sh ../gen_menu.sh --header header.html --footer footer.html --page $< -- $(SRCS) > $@
 	
 clean:

@@ -1,4 +1,4 @@
-# User Guide
+# Web User Guide
 
 ## Getting Started
 
