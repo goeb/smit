@@ -1183,14 +1183,15 @@ int Project::storeEntry(const Entry *e)
   *     - a new issue is created
   *     - its id is returned within parameter 'issueId'
   *
-  * @param entry IN/OUT
+  * @param[in/out] issueId
+  * @param[out]    entry
   *
   * @return
   *     0 if no error. The entryId is fullfilled.
   *    >0 no entry was created due to no change.
   *    -1 error
   */
-int Project::addEntry(PropertiesMap properties, const std::string &issueId,
+int Project::addEntry(PropertiesMap properties, std::string &issueId,
                       Entry *&entry, std::string username)
 {
     ScopeLocker scopeLocker(locker, LOCK_READ_WRITE);
@@ -1294,6 +1295,7 @@ int Project::addEntry(PropertiesMap properties, const std::string &issueId,
         i = createNewIssue();
         if (!i) return -1;
         i->project = getName();
+        issueId = i->id; // update @param[out]
     }
 
     // create the new entry object

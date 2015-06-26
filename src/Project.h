@@ -50,7 +50,7 @@ public:
     int storeRefIssue(const std::string &issueId, const std::string &entryId);
 
     // methods for handling entries
-    int addEntry(PropertiesMap properties, const std::string &iid, Entry *&entry, std::string username);
+    int addEntry(PropertiesMap properties, std::string &iid, Entry *&entry, std::string username);
     int pushEntry(std::string &issueId, const std::string &entryId,
                   const std::string &user, const std::string &tmpPath);
 
