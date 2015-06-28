@@ -37,7 +37,12 @@ The configuration may be modified in two ways:
     - hot reload 
 - via editing directly the configuration file, and performing a hot reload via the web interface
 
-The configuration of a project is stored in the object referenced by the file `<p>/.smip/refs/project`. It can be displayed like this:
+The configuration of a project is stored in the object referenced by the file `<p>/.smip/refs/project`.
+
+
+### View the project configuration
+
+It can be displayed like this:
 
 ```
 smit project -l demo-v3/things_to_do

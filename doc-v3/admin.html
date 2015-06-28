@@ -22,14 +22,13 @@
 <li><a href='#create-a-project'>Create a Project</a></li>
 <li><a href='#start-a-smit-web-server'>Start a smit web server</a></li>
 <li><a href='#setup-a-smit-web-server-over-ssltls'>Setup a smit web server over SSL/TLS</a></li>
-<li><a href='#project-configuration'>Project Configuration</a></li>
 <li><a href='#set-up-a-trigger'>Set up a trigger</a></li>
 <li><a href='#make-a-backup'>Make a Backup</a></li>
 <li><a href='#setup-behind-a-reverse-proxy'>Setup behind a reverse proxy</a></li>
 <li><a href='#faq'>FAQ</a></li>
 </ul>
 </li>
-<li><a href='cli.html'>Command Line</a></li>
+<li><a href='experts.html'>Experts</a></li>
 <li><a href='web_user_guide.html'>Web User Guide</a></li>
 <li><a href='html.html'>Customize HTML</a></li>
 <li><a href='api.html'>Smit API</a></li>
@@ -57,68 +56,6 @@ openssl req -new -x509 -key privkey.pem -out cacert.pub.pem -days 1095
 cat privkey.pem cacert.pub.pem &gt; cacert.pem</code></pre>
 <p>Start smit:</p>
 <pre><code>smit serve --ssl-cert cacert.pem</code></pre>
-<h2 id="project-configuration">Project Configuration</h2>
-<p>The project configuration defines:</p>
-<ul>
-<li>the properties of the issues</li>
-<li>the tags</li>
-<li>the numbering scheme of the issues (local or global to several projects)</li>
-</ul>
-<p>The configuration may be modified in two ways:</p>
-<ul>
-<li>via the web interface
-<ul>
-<li>only the properties may be managed this way</li>
-<li>hot reload</li>
-</ul></li>
-<li>via editing directly the configuration file, and performing a hot reload via the web interface</li>
-</ul>
-<p>The configuration of a project is given by the file <code>project</code> in the directory of the project.</p>
-<h3 id="addproperty">addProperty</h3>
-<pre><code>addProperty &lt;id&gt; [-label &lt;label&gt;] [-help &lt;help&gt;] &lt;type&gt; [values ...]</code></pre>
-<p><code>addProperty</code> defines a property.</p>
-<ul>
-<li><code>&lt;id&gt;</code> is an identifier (only characters a-z, A-Z, 0-9, -, _)</li>
-<li><code>&lt;label&gt;</code> is the text that will be displayed in the HTML pages (optional)</li>
-<li><code>&lt;help&gt;</code> is a tooltip for properties inputs, displayed above properties labels (optional)</li>
-<li><p><code>&lt;type&gt;</code> is one of text, select, multiselect, selectUser, textarea, textarea2</p>
-<ul>
-<li><code>text</code>: free text</li>
-<li><code>select</code>: selection among a list if given values</li>
-<li><code>multiselect</code>: same as select, but several may be selected at the same time</li>
-<li><code>selectUser</code>: selection among the users of the project</li>
-<li><code>textarea</code>: free text, multi-lines</li>
-<li><code>textarea2</code>: same as textarea, but spanned on 2 columns in the HTML</li>
-</ul></li>
-<li><p><code>value</code> indicates the allowed values for types select and multiselect.</p></li>
-</ul>
-<h3 id="setpropertylabel">setPropertyLabel</h3>
-<pre><code>setPropertyLabel &lt;propety-id&gt; &lt;label&gt;</code></pre>
-<p><code>setPropertyLabel</code> defines the label for a property. This is used for mandatory properties that are not defined by <code>addProperty</code>: id, ctime, mtime, summary.</p>
-<h3 id="numberissues">numberIssues</h3>
-<pre><code>numberIssues global</code></pre>
-<p><code>numberIssues</code> defines the numbering policy of the issues.</p>
-<p>If not defined, the issues are numbered reletively to their project: 1, 2, 3,...</p>
-<p>If <code>global</code> is set, then the numbering is shared by all the projects that have this policy.</p>
-<h3 id="tag">tag</h3>
-<p>Entries may be tagged.</p>
-<pre><code>tag &lt;id&gt; -label &lt;text&gt; [-display]</code></pre>
-<ul>
-<li><code>&lt;id&gt;</code> may contain only letters, digits and underscores.</li>
-<li><code>&lt;text&gt;</code> is the text to display in the HTML page</li>
-<li><code>-display</code> requires the display of a box in the headers of issues, that indicates if at least one entry of the current issue is tagged (this may be seen as a checkbox, to quickly verify that some quality criterion is met).</li>
-</ul>
-<h3 id="full-example">Full example</h3>
-<pre><code>setPropertyLabel id &quot;The ID&quot;
-
-addProperty status -label &quot;The Status&quot; select open closed
-addProperty owner -label &quot;The owner&quot; selectUser
-
-numberIssues global
-
-tag test -label &quot;Test Proof&quot; -display
-
-trigger public/sendEmail.sh</code></pre>
 <h2 id="set-up-a-trigger">Set up a trigger</h2>
 <p>A trigger defines an external program to be launched after each new entry. It is typically useful for sending email notifications when some condition occur.</p>
 <p>Triggers are not supported on Windows.</p>
