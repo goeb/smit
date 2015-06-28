@@ -43,10 +43,6 @@ smit serve --ssl-cert cacert.pem
 
 
 
-## Smit Repository Layout
-
-(TODO)
-
 ## Project Configuration
 
 The project configuration defines:

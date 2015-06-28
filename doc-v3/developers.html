@@ -17,14 +17,15 @@
 <li><a href='index.html'>Inroduction</a></li>
 <li><a href='install.html'>Installation</a></li>
 <li><a href='admin.html'>Administration</a></li>
-<li><a href='user_guide.html'>User Guide</a></li>
+<li><a href='cli.html'>Command Line</a></li>
+<li><a href='web_user_guide.html'>Web User Guide</a></li>
 <li><a href='html.html'>Customize HTML</a></li>
 <li><a href='api.html'>Smit API</a></li>
 <li class='active'>Developer Guide
 <ul class=menu_level2>
 <li><a href='#software-architecture'>Software Architecture</a></li>
 <li><a href='#directories-and-files'>Directories and files</a></li>
-<li><a href='#roadmap'>Roadmap</a></li>
+<li><a href='#objects'>Objects</a></li>
 </ul>
 </li>
 </ul>
@@ -40,55 +41,45 @@
 <h2 id="directories-and-files">Directories and files</h2>
 <p>The database is made of directories and files. The layout is as follows:</p>
 <pre><code>$REPO
- ├── users
- │
  ├── project-A
- │   ├── files   : uploaded files
- │   ├── issues  : issues
- │   ├── html    : cutomized HTML pages
- │   ├── project : plain text project description
- │   ├── tmp     : temporary dir for uploaded files
- │   └── views   : plain text description of predefined views
- │
- ├── project-B
- │
- ├── project-C
- │
- └── public
-     ├── javascript files
-     ├── css files
-     ├── HTML files
-     └── logo</code></pre>
-<p>The issues are organized as follow:</p>
-<pre><code>issues
-├── 1
-│   ├── lEf-tTqa7wWoX-sJVnu-1U_4ADI
-│   ├── 4M6CY0RqvL4L7ZrDe1r0FQY-tE8
-│   ...
-│   ├── lEf-tTqa7wWoX-sJVnu-1U_4ADI
-│   └── _del : directory where deleted entries are moved
-│
-├── 2
-├── 3
-...</code></pre>
-<p>An issue is made up of successive immutable entries.</p>
-<p>The first entry is the one that has a null parent. The last entry is the one that is referenced as the parent of no other entry.</p>
+ │   └── .smip
+ │       ├── objects/
+ │       ├── refs
+ │       │   ├── issues/
+ │       │   ├── project
+ │       │   ├── tags/
+ │       │   ├── trigger
+ │       │   └── views
+ │       └── templates/
+ ├── project-B/
+ ├── .../
+ ├── public/
+ └── .smit
+     ├── templates/
+     └── users
+         ├── auth
+         └── permissions</code></pre>
+<p>An issue is made up of successive immutable entries. The lastest entry is referenced by <code>.smip/refs/issues/&lt;id&gt;</code> (where <code>&lt;id&gt;</code> is the identifier of the issue).</p>
 <h3 id="sample-entry-of-an-issue">Sample entry of an issue</h3>
 <p>Entries are text files with straightforward key-value syntax.</p>
 <pre><code>+parent null
 +author Fred
 +ctime 1379878590
 +message &lt; -----------endofmsg---
-This page will allow the user to select the search parameters.
-The output will use the parameters of the querystring: 
-search, filterin, filterout, sort
+&quot;Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
+incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis
+nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu
+fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in
+culpa qui officia deserunt mollit anim id est laborum.&quot;
 -----------endofmsg---
++file a8fdc205a9f19cc1c7507a60c4f01b13d11d7fd0/a_file.txt
 status open
 target_version v1.0
-summary &quot;HTML page (form) for advanced search&quot;</code></pre>
+summary &quot;Lorem ipsum dolor sit amet&quot;</code></pre>
 <p>Keys with a <code>+</code> sign are specific to the entry and are not taken for the consolidation of the issue properties.</p>
-<h3 id="sample-project-file">Sample <code>project</code> file</h3>
-<p>This file describes the structure of the properties.</p>
+<h3 id="file-project">File <code>project</code></h3>
+<p>This file describes the structure of the properties of the project.</p>
 <pre><code>setPropertyLabel id &quot;#&quot;
 setPropertyLabel ctime Created
 setPropertyLabel mtime Modified
@@ -96,25 +87,40 @@ setPropertyLabel summary Description
 addProperty status -label &quot;The status&quot; select open closed deleted
 addProperty target_version select v1.1 v1.2 v2.0 other
 addProperty owner selectUser</code></pre>
-<h3 id="sample-users-file">Sample <code>users</code> file</h3>
-<p>This file describes the users and their priviledges.</p>
-<pre><code>addUser &quot;John Smith&quot; sha1 e61a3587b3f7a142b8c7b9263c82f8119398ecb7 \
-    project things_to_do rw 
-
-addUser alice sha1 522b276a356bdf39013dfabea2cd43e141ecc9e8 \
-    project things_to_do ro </code></pre>
-<h2 id="roadmap">Roadmap</h2>
+<h3 id="file-usersauth">File <code>users/auth</code></h3>
+<p>This file describes how the users authenticate.</p>
+<pre><code>adduser &quot;John Smith&quot; -type sha1 -hash e61a3587b3f7a142b8c7b9263c82f8119398ecb7 \
+    -salt b3f7a1
+adduser alice -type krb5 -realm EXAMPLE.COM
+adduser homer -type ldap -uri ldaps://example.com:389 \
+    -dname &quot;cn=homer,ou=People,dc=example,dc=com&quot;</code></pre>
+<h3 id="file-userspermissions">File <code>users/permissions</code></h3>
+<p>This file describes the permissions of the users.</p>
+<p>Example:</p>
+<pre><code>setperm &quot;John Smith&quot; rw project-*
+setperm &quot;John Smith&quot; superadmin
+setperm &quot;John Smith&quot; ro project-B
+setperm alice rw project-A</code></pre>
+<h3 id="directory-public">Directory <code>public</code></h3>
+<p>This directory contains public material, such as logo, <code>style.css</code>, and any contents that you wish to make available publicly.</p>
+<h2 id="objects">Objects</h2>
+<p><code>objects</code> is a database that stores:</p>
 <ul>
-<li>v2.0
-<ul>
-<li>i18n (gettext)</li>
-<li>branch and merge repositories</li>
-</ul></li>
+<li>the entries</li>
+<li>the attached files</li>
+<li>the configuration of the project</li>
+<li>the views</li>
 </ul>
+<p>An object is stored after is the SHA1 sum of its contents. Example :</p>
+<pre><code>sha1sum a_file.txt
+a8fdc205a9f19cc1c7507a60c4f01b13d11d7fd0 a_file.txt</code></pre>
+<p>This file shall be stored at this location:</p>
+<pre><code>.smip/objects/a8/fdc205a9f19cc1c7507a60c4f01b13d11d7fd0</code></pre>
+<p>The original names of the files are not known in the <code>objects</code> database layout. The names of attached files are kept in the entries that reference the files.</p>
 </div>
         </div> <!-- div class page -->
         <div class="footer">
-            Page updated on 24 Jun 2015
+            Page updated on 28 Jun 2015
         </div>
     </body>
 </html>
