@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Experts</title>
+        <link rel="stylesheet" type="text/css" href="../style.css">
+        <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/>
+    </head>
+
+    <body>
+        <div class="header">
+            <img src="../logo.png" alt="Logo" width="150">
+            <span class="header_text">The Small Issue Tracker - Documentation Smit v3.x</span>
+        </div>
+        <div class="page">
+<aside class='menu'>
+<ul>
+<li><a href='index.html'>Inroduction</a></li>
+<li><a href='install.html'>Installation</a></li>
+<li><a href='admin.html'>Administration</a></li>
+<li class='active'>Experts
+<ul class=menu_level2>
+<li><a href='#command-line'>Command Line</a></li>
+<li><a href='#project-configuration'>Project Configuration</a></li>
+</ul>
+</li>
+<li><a href='web_user_guide.html'>Web User Guide</a></li>
+<li><a href='html.html'>Customize HTML</a></li>
+<li><a href='api.html'>Smit API</a></li>
+<li><a href='developers.html'>Developer Guide</a></li>
+</ul>
+</aside>
+<div class='contents'>
+<h1 id="experts">Experts</h1>
+<h2 id="command-line">Command Line</h2>
+<pre><code>Usage: smit &lt;command&gt; [&lt;args&gt;]
+
+The smit commands are:
+
+  clone       Clone a smit repository
+  init        Initialise a smit repository
+  issue       Print or modify an issue in a local project
+  project     List, create, or update a smit project
+  pull        Fetch from and merge with a remote repository
+  push        Push local changes to a remote repository
+  serve       Start a smit web server
+  user        List, create, or update a smit user
+  ui          Browse a local smit repository (read-only)
+  version     Print the version
+  help
+
+See &#39;smit help &lt;command&gt;&#39; for more information on a specific command.</code></pre>
+<h2 id="project-configuration">Project Configuration</h2>
+<p>The project configuration defines:</p>
+<ul>
+<li>the properties of the issues</li>
+<li>the tags</li>
+<li>the numbering scheme of the issues (local or global to several projects)</li>
+</ul>
+<p>The configuration may be modified in two ways:</p>
+<ul>
+<li>via the web interface
+<ul>
+<li>only the properties may be managed this way</li>
+<li>hot reload</li>
+</ul></li>
+<li>via editing directly the configuration file, and performing a hot reload via the web interface</li>
+</ul>
+<p>The configuration of a project is stored in the object referenced by the file <code>&lt;p&gt;/.smip/refs/project</code>. It can be displayed like this:</p>
+<pre><code>smit project -l demo-v3/things_to_do
++smv 3.0.0
++parent null
++ctime 1432927321
++author upgrade2db3
+setPropertyLabel id &quot;#&quot;
+setPropertyLabel ctime Created
+setPropertyLabel mtime Modified
+setPropertyLabel summary Description
+addProperty status -label Status select open closed deleted
+addProperty in_charge -label &quot;Person in charge&quot; selectUser
+addProperty due_date -label &quot;Due date&quot; select &quot;&quot; &quot;asap&quot; &quot;next week&quot; &quot;next month&quot;
+addProperty parent -label &quot;Parent Issue&quot; association -reverseLabel Children
+tag tested -label Tested -display
+numberIssues global
+
+1 project(s)</code></pre>
+<h3 id="addproperty">addProperty</h3>
+<pre><code>addProperty &lt;id&gt; [-label &lt;label&gt;] [-help &lt;help&gt;] &lt;type&gt; [values ...]</code></pre>
+<p><code>addProperty</code> defines a property.</p>
+<ul>
+<li><code>&lt;id&gt;</code> is an identifier (only characters a-z, A-Z, 0-9, -, _)</li>
+<li><code>&lt;label&gt;</code> is the text that will be displayed in the HTML pages (optional)</li>
+<li><p><code>&lt;type&gt;</code> is one of:</p>
+<ul>
+<li><code>text</code>: free text</li>
+<li><code>select</code>: selection among a list if given values</li>
+<li><code>multiselect</code>: same as select, but several may be selected at the same time</li>
+<li><code>selectUser</code>: selection among the users of the project</li>
+<li><code>textarea</code>: free text, multi-lines</li>
+<li><code>textarea2</code>: same as textarea, but spanned on 2 columns in the HTML</li>
+<li><code>association</code>: references to one or several other issues</li>
+</ul></li>
+<li><p><code>value</code> indicates the allowed values for types select and multiselect.</p></li>
+</ul>
+<h3 id="setpropertylabel">setPropertyLabel</h3>
+<pre><code>setPropertyLabel &lt;propety-id&gt; &lt;label&gt;</code></pre>
+<p><code>setPropertyLabel</code> defines the label for a property. This is used for mandatory properties that are not defined by <code>addProperty</code>: id, ctime, mtime, summary.</p>
+<h3 id="numberissues">numberIssues</h3>
+<pre><code>numberIssues global</code></pre>
+<p><code>numberIssues</code> defines the numbering policy of the issues.</p>
+<p>If not defined, the issues are numbered reletively to their project: 1, 2, 3,...</p>
+<p>If <code>global</code> is set, then the numbering is shared by all the projects that have this policy.</p>
+<h3 id="tag">tag</h3>
+<p>Entries may be tagged.</p>
+<pre><code>tag &lt;id&gt; -label &lt;text&gt; [-display]</code></pre>
+<ul>
+<li><code>&lt;id&gt;</code>: identifier of the tag, may contain only letters, digits and underscores.</li>
+<li><code>&lt;text&gt;</code>: text to display in the HTML page</li>
+<li><code>-display</code>: set the display of a box in the headers of the issues, that indicates if at least one entry of the current issue is tagged</li>
+</ul>
+<p>Tags can be used to tag entries with special importance or meaning. Examples :</p>
+<ul>
+<li>&quot;Analysis&quot; to indicate that an entry is a relevant analysis of the issue</li>
+<li>&quot;Action&quot; to indicate that an entry describes the actions to be taken</li>
+<li>...</li>
+</ul>
+<h3 id="full-example">Full example</h3>
+<pre><code>setPropertyLabel id &quot;The ID&quot;
+
+addProperty status -label &quot;The Status&quot; select open closed
+addProperty owner -label &quot;The owner&quot; selectUser
+
+numberIssues global
+
+tag test -label &quot;Test Proof&quot; -display
+
+trigger public/sendEmail.sh</code></pre>
+</div>
+        </div> <!-- div class page -->
+        <div class="footer">
+            Page updated on 28 Jun 2015
+        </div>
+    </body>
+</html>

@@ -3,7 +3,7 @@
 SRCS += index.md
 SRCS += install.md
 SRCS += admin.md
-SRCS += cli.md
+SRCS += experts.md
 SRCS += web_user_guide.md
 SRCS += html.md
 SRCS += api.md
