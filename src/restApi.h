@@ -1,6 +1,7 @@
 #ifndef _restApi_h
 #define _restApi_h
 
+#include <string>
 
 // resources under the project
 // <p>/...
@@ -14,6 +15,42 @@
 
 // resources under the root
 #define RSRC_USERS "users"
+
+#define COOKIE_SESSID "sessid"
+#define COOKIE_PREFIX "smit-"
+inline std::string mangleCookieName(const std::string &name, const std::string &listeningPort)
+{
+    std::string result = COOKIE_PREFIX;
+    result += listeningPort;
+    result += "-";
+    result += name;
+    return result;
+}
+
+
+inline void unmangleCookieName(std::string &cookieName)
+{
+    size_t lenPrefix = strlen(COOKIE_PREFIX);
+
+    if (cookieName.size() < lenPrefix) return;
+
+    if (0 != cookieName.compare(0, lenPrefix, COOKIE_PREFIX)) {
+        // not starting by COOKIE_PREFIX
+        // return unchanged
+        return;
+    }
+
+    // remove the prefix
+    // find the second "-" after the prefix
+    size_t offset = cookieName.find("-", lenPrefix);
+    if (offset != std::string::npos) {
+        cookieName = cookieName.substr(offset+1);
+    } else {
+        // "-" not found. simply remove the prefix
+        cookieName = cookieName.substr(lenPrefix);
+    }
+}
+
 
 
 #endif

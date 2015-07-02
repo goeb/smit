@@ -594,7 +594,8 @@ int serveRepository(int argc, char **argv)
     }
 
     if (!repo) repo = ".";
-    if (certificatePemFile) listenPort += 's'; // force HTTPS listening
+    std::string mongooseListeningPort = listenPort;
+    if (certificatePemFile) mongooseListeningPort += 's'; // force HTTPS listening
 
     // Load all projects
     int r = dbLoad(repo);
@@ -612,6 +613,7 @@ int serveRepository(int argc, char **argv)
 
     MongooseServerContext &mc = MongooseServerContext::getInstance();
     mc.setRequestHandler(begin_request_handler);
+    mc.setListeningPort(listenPort);
 
     if (urlRewritingRoot) mc.setUrlRewritingRoot(urlRewritingRoot);
     std::string serverMsg = "Starting http server on port " + listenPort;
@@ -619,7 +621,7 @@ int serveRepository(int argc, char **argv)
     LOG_INFO("%s", serverMsg.c_str());
 
     mc.addParam("listening_ports");
-    mc.addParam(listenPort.c_str());
+    mc.addParam(mongooseListeningPort.c_str());
     mc.addParam("document_root");
     mc.addParam(repo);
     mc.addParam("enable_directory_listing");

@@ -871,10 +871,20 @@ std::string signin(const std::string &rooturl, const std::string &user,
     // get the sessiond id
     std::string sessid;
     std::map<std::string, Cookie>::iterator c;
-    c = hr.cookies.find(SESSID);
+    std::string cookieSessidName = mangleCookieName(COOKIE_SESSID, ctx.serverPort);
+    c = hr.cookies.find(cookieSessidName);
     if (c != hr.cookies.end()) sessid = c->second.value;
 
     return sessid;
+}
+
+void parseUrl(std::string url, std::string &scheme, std::string &host, std::string &port, std::string &resource)
+{
+    scheme = popToken(url, ':');
+    std::string hostAndPort = popToken(url, '/');
+    host = popToken(hostAndPort, ':');
+    port = hostAndPort;
+    resource = url;
 }
 
 int cmdClone(int argc, char * const *argv)
@@ -937,6 +947,14 @@ int cmdClone(int argc, char * const *argv)
         return helpClone();
     }
 
+    std::string scheme;
+    std::string host;
+    std::string port;
+    std::string resource;
+
+    parseUrl(url, scheme, host, port, resource);
+    ctx.serverPort = port;
+
     if (username.empty()) username = getString("Username: ", false);
 
     std::string password;
@@ -949,7 +967,7 @@ int cmdClone(int argc, char * const *argv)
     curl_global_init(CURL_GLOBAL_ALL);
 
     std::string sessid = signin(url, username, password, ctx);
-    LOG_DEBUG("%s=%s", SESSID, sessid.c_str());
+    LOG_DEBUG("sessid=%s", sessid.c_str());
 
     if (sessid.empty()) {
         fprintf(stderr, "Authentication failed\n");
@@ -1049,6 +1067,14 @@ int cmdGet(int argc, char * const *argv)
         return helpGet();
     }
 
+    std::string scheme;
+    std::string host;
+    std::string port;
+    std::string unused;
+
+    parseUrl(rooturl, scheme, host, port, unused);
+    ctx.serverPort = port;
+
     curl_global_init(CURL_GLOBAL_ALL);
     std::string sessid;
     std::string password;
@@ -1082,7 +1108,7 @@ int cmdGet(int argc, char * const *argv)
         }
     }
 
-    LOG_DEBUG("%s=%s", SESSID, ctx.sessid.c_str());
+    LOG_DEBUG("sessid=%s", ctx.sessid.c_str());
 
     // pull new entries and new attached files of all projects
     HttpRequest hr(ctx);
@@ -1190,6 +1216,13 @@ int cmdPull(int argc, char * const *argv)
         LOG_CLI("Cannot get remote url.\n");
         exit(1);
     }
+    std::string scheme;
+    std::string host;
+    std::string port;
+    std::string resource;
+
+    parseUrl(url, scheme, host, port, resource);
+    pullCtx.httpCtx.serverPort = port;
 
     curl_global_init(CURL_GLOBAL_ALL);
     std::string password;
@@ -1223,7 +1256,7 @@ int cmdPull(int argc, char * const *argv)
         }
     }
 
-    LOG_DEBUG("%s=%s", SESSID, pullCtx.httpCtx.sessid.c_str());
+    LOG_DEBUG("sessid=%s", pullCtx.httpCtx.sessid.c_str());
 
     if (pullCtx.httpCtx.sessid.empty()) {
         fprintf(stderr, "Authentication failed\n");
@@ -1511,6 +1544,14 @@ int establishSession(const char *dir, const char *username, const char *password
         return -1;
     }
 
+    std::string scheme;
+    std::string host;
+    std::string port;
+    std::string resource;
+
+    parseUrl(url, scheme, host, port, resource);
+    ctx.httpCtx.serverPort = port;
+
     ctx.rooturl = url;
 
     bool redoSigin = false;
@@ -1547,7 +1588,7 @@ int establishSession(const char *dir, const char *username, const char *password
         }
     }
 
-    LOG_DEBUG("%s=%s", SESSID, ctx.httpCtx.sessid.c_str());
+    LOG_DEBUG("sessid=%s", ctx.httpCtx.sessid.c_str());
 
     if (ctx.httpCtx.sessid.empty()) {
         fprintf(stderr, "Authentication failed\n");

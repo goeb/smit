@@ -29,6 +29,7 @@
 #include "console.h"
 #include "filesystem.h"
 #include "logging.h"
+#include "restApi.h"
 
 HttpClientContext::HttpClientContext()
 {
@@ -519,7 +520,8 @@ HttpRequest::HttpRequest(const HttpClientContext &ctx)
     headerList = 0;
     headerList = curl_slist_append(headerList, "Accept: " APP_X_SMIT);
     if (!httpCtx.sessid.empty()) {
-        std::string cookie = "Cookie: " SESSID "=" + httpCtx.sessid;
+        std::string cookieSessidName = mangleCookieName(COOKIE_SESSID, ctx.serverPort);
+        std::string cookie = "Cookie: " + cookieSessidName + "=" + httpCtx.sessid;
         headerList = curl_slist_append(headerList, cookie.c_str());
     }
 

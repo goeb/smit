@@ -58,6 +58,8 @@ public:
 
     void setUrlRewritingRoot(const std::string &r) { urlRewritingRoot = r; }
     std::string getUrlRewritingRoot() { return urlRewritingRoot; }
+    inline void setListeningPort(const std::string &p) { listeningPort = p; }
+    inline std::string getListeningPort() { return listeningPort; }
 
 private:
     struct mg_context *mongooseCtx; // mongoose inetrnal context, returned by mg_start
@@ -65,6 +67,7 @@ private:
     const char *params[PARAMS_SIZE];
     static int (*requestHandler)(const RequestContext*);
     std::string urlRewritingRoot;
+    std::string listeningPort;
 };
 
 

@@ -57,6 +57,7 @@
 
 #define K_ME "me"
 #define MAX_SIZE_UPLOAD (10*1024*1024)
+#define COOKIE_ORIGIN_VIEW "view"
 
 enum { REQUEST_NOT_PROCESSED = 0, // let Mongoose handle the request
        REQUEST_COMPLETED = 1      // do not let Mongoose handle the request
@@ -247,10 +248,23 @@ int sendHttpRedirect(const RequestContext *request, const std::string &redirectU
 std::string getServerCookie(const std::string &name, const std::string &value, int maxAgeSeconds)
 {
     std::ostringstream s;
-    s << "Set-Cookie: " << name << "=" << value;
+    s << "Set-Cookie: ";
+    s << mangleCookieName(name, MongooseServerContext::getInstance().getListeningPort());
+    s << "=" << value;
     s << "; Path=" << MongooseServerContext::getInstance().getUrlRewritingRoot() << "/";
     if (maxAgeSeconds > 0) s << ";  Max-Age=" << maxAgeSeconds;
     return s.str();
+}
+
+std::string getDeletedCookieString(const std::string &name)
+{
+    std::string cookieString;
+    cookieString = "Set-Cookie: ";
+    cookieString += mangleCookieName(name, MongooseServerContext::getInstance().getListeningPort());
+    cookieString += "=deleted";
+    cookieString += ";Path=" + MongooseServerContext::getInstance().getUrlRewritingRoot() + "/" ;
+    cookieString += ";expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    return cookieString;
 }
 
 void sendCookie(const RequestContext *request, const std::string &name, const std::string &value, int duration)
@@ -379,11 +393,11 @@ int httpPostSignin(const RequestContext *request)
         }
 
         if (format == X_SMIT) {
-            std::string cookieSessid = getServerCookie(SESSID, sessionId.c_str(), SESSION_DURATION);
+            std::string cookieSessid = getServerCookie(COOKIE_SESSID, sessionId.c_str(), SESSION_DURATION);
             sendHttpHeader204(request, cookieSessid.c_str());
         } else {
             if (redirect.empty()) redirect = "/";
-            setCookieAndRedirect(request, SESSID, sessionId.c_str(), redirect.c_str());
+            setCookieAndRedirect(request, COOKIE_SESSID, sessionId.c_str(), redirect.c_str());
         }
 
     } else {
@@ -393,22 +407,13 @@ int httpPostSignin(const RequestContext *request)
     return REQUEST_COMPLETED;
 }
 
-std::string getDeletedCookieString(const std::string &name)
-{
-    std::string cookieString;
-    cookieString = "Set-Cookie: " + name + "=deleted";
-    cookieString += ";Path=" + MongooseServerContext::getInstance().getUrlRewritingRoot() + "/" ;
-    cookieString += ";expires=Thu, 01 Jan 1970 00:00:00 GMT";
-    return cookieString;
-}
-
 void redirectToSignin(const RequestContext *request, const char *resource = 0)
 {
     LOG_DIAG("redirectToSignin");
     sendHttpHeader200(request);
 
     // delete session cookie
-    request->printf("%s\r\n", getDeletedCookieString(SESSID).c_str());
+    request->printf("%s\r\n", getDeletedCookieString(COOKIE_SESSID).c_str());
 
     // prepare the redirection parameter
     std::string url;
@@ -433,7 +438,7 @@ void httpPostSignout(const RequestContext *request, const std::string &sessionId
 
     } else {
         // delete session cookie
-        std::string cookieSessid = getDeletedCookieString(SESSID);
+        std::string cookieSessid = getDeletedCookieString(COOKIE_SESSID);
         sendHttpHeader204(request, cookieSessid.c_str());
 
     }
@@ -853,25 +858,26 @@ void httpPostUser(const RequestContext *request, User signedInUser, const std::s
   */
 int getFromCookie(const RequestContext *request, const std::string &key, std::string &value)
 {
-    const char *cookie = request->getHeader("Cookie");
+    const char *cookies = request->getHeader("Cookie");
     // There is a most 1 cookie as stated in rfc6265 "HTTP State Management Mechanism":
     //     When the user agent generates an HTTP request, the user agent MUST
     //     NOT attach more than one Cookie header field.
-    if (cookie) {
-        LOG_DEBUG("Cookie found: %s", cookie);
-        std::string c = cookie;
+    if (cookies) {
+        LOG_DEBUG("Cookie found: %s", cookies);
+        std::string c = cookies;
         while (c.size() > 0) {
-            std::string name = popToken(c, '=');
+            std::string cookie = popToken(c, ';');
+            std::string name = popToken(cookie, '=');
+            LOG_DIAG("Got cookie %s = %s", name.c_str(), cookie.c_str());
             trim(name, " "); // remove spaces around
-            if (c.size() > 0 && c[0] == ';') {
-                value = ""; // manage following case: "Cookie: key1=; key2=other"
-                c = c.substr(1); // skip ';'
-            } else value = popToken(c, ';');
 
-            trim(value, " "); // remove spaces around
-
-            LOG_DEBUG("Cookie: name=%s, value=%s", name.c_str(), value.c_str());
-            if (name == key) return 0;
+            LOG_DIAG("Cookie: name=%s, value=%s", name.c_str(), value.c_str());
+            unmangleCookieName(name);
+            LOG_DIAG("Cookie: unmangled-name=%s,  value=%s", name.c_str(), value.c_str());
+            if (name == key) {
+                value = cookie; // remaining part after the =
+                return 0;
+            }
         }
     }
     LOG_DEBUG("no Cookie found");
@@ -1464,7 +1470,7 @@ void httpGetListOfIssues(const RequestContext *req, const Project &p, User u)
         // clean the query string from next=, previous=
         std::string newQs = removeParam(q, QS_GOTO_NEXT);
         newQs = removeParam(newQs, QS_GOTO_PREVIOUS);
-        std::string cookie = getServerCookie(QS_ORIGIN_VIEW, newQs, -1);
+        std::string cookie = getServerCookie(COOKIE_ORIGIN_VIEW, newQs, -1);
         sendHttpRedirect(req, redirectionUrl.c_str(), cookie.c_str());
         return;
     }
@@ -1502,7 +1508,7 @@ void httpGetListOfIssues(const RequestContext *req, const Project &p, User u)
         if (full == "1") {
             RHtml::printPageIssuesFullContents(ctx, issueList);
         } else {
-            sendCookie(req, QS_ORIGIN_VIEW, q, COOKIE_VIEW_DURATION);
+            sendCookie(req, COOKIE_ORIGIN_VIEW, q, COOKIE_VIEW_DURATION);
             RHtml::printPageIssueList(ctx, issueList, cols);
         }
     }
@@ -1566,9 +1572,9 @@ void httpGetView(const RequestContext *req, Project &p, const std::string &view,
             // in this case (unknown or unnamed view, ie: advanced search)
             // handle the optional origin view
             std::string originView;
-            int r = getFromCookie(req, QS_ORIGIN_VIEW, originView);
+            int r = getFromCookie(req, COOKIE_ORIGIN_VIEW, originView);
             if (r == 0) {
-                // build a view from QS_ORIGIN_VIEW
+                // build a view from origin view
                 pv = PredefinedView::loadFromQueryString(originView);
             }
         }
@@ -1907,13 +1913,13 @@ int httpGetIssue(const RequestContext *req, Project &p, const std::string &issue
 
             ContextParameters ctx = ContextParameters(req, u, p);
             std::string originView;
-            int r = getFromCookie(req, QS_ORIGIN_VIEW, originView);
+            int r = getFromCookie(req, COOKIE_ORIGIN_VIEW, originView);
             if (r == 0) ctx.originView = originView.c_str();
 
             // clear this cookie, so that getting any other issue
             // without coming from a view does not display get/next
             // (get/next use a redirection from a view, so the cookie will be set for these)
-            req->printf("%s\r\n", getDeletedCookieString(QS_ORIGIN_VIEW).c_str());
+            req->printf("%s\r\n", getDeletedCookieString(COOKIE_ORIGIN_VIEW).c_str());
             if (ctx.originView) LOG_DEBUG("originView=%s", ctx.originView);
             RHtml::printPageIssue(ctx, issue, entryToBeAmended);
         }
@@ -2380,7 +2386,7 @@ int begin_request_handler(const RequestContext *req)
 
     // get signed-in user
     std::string sessionId;
-    getFromCookie(req, SESSID, sessionId);
+    getFromCookie(req, COOKIE_SESSID, sessionId);
     // even if cookie not found, call getLoggedInUser in order to manage
     // local user interface case (smit ui)
     User user = SessionBase::getLoggedInUser(sessionId);

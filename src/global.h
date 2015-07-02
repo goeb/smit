@@ -5,8 +5,6 @@
 
 #define K_SMIT_VERSION "+smv"
 
-#define SESSID "smit-sessid"
-
 // prepare for gettext
 #define _(String) (String)
 

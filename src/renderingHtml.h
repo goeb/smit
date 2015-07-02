@@ -12,7 +12,6 @@
 
 #define QS_GOTO_NEXT "next"
 #define QS_GOTO_PREVIOUS "previous"
-#define QS_ORIGIN_VIEW "view"
 
 
 /** SmitData is used to manage the values in the HTML
