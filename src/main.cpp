@@ -616,7 +616,7 @@ int serveRepository(int argc, char **argv)
     mc.setListeningPort(listenPort);
 
     if (urlRewritingRoot) mc.setUrlRewritingRoot(urlRewritingRoot);
-    std::string serverMsg = "Starting http server on port " + listenPort;
+    std::string serverMsg = "Starting http server on port " + mongooseListeningPort;
     if (urlRewritingRoot) serverMsg += std::string(" --url-rewrite-root ") + urlRewritingRoot;
     LOG_INFO("%s", serverMsg.c_str());
 
