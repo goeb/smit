@@ -118,7 +118,7 @@ int helpClone()
 
 int testSessid(const std::string url, const HttpClientContext &ctx)
 {
-    LOG_DEBUG("testSessid(%s, %s)", url.c_str(), ctx.sessid.c_str());
+    LOG_DEBUG("testSessid(%s, %s)", url.c_str(), ctx.cookieSessid.c_str());
 
     HttpRequest hr(ctx);
     hr.setUrl(url + "/");
@@ -219,7 +219,7 @@ int pullFiles(const PullContext &ctx, const std::string &srcResource,
   */
 int getProjects(const std::string &rooturl, const std::string &destdir, const HttpClientContext &ctx)
 {
-    LOG_DEBUG("getProjects(%s, %s, %s)", rooturl.c_str(), destdir.c_str(), ctx.sessid.c_str());
+    LOG_DEBUG("getProjects(%s, %s, %s)", rooturl.c_str(), destdir.c_str(), ctx.cookieSessid.c_str());
 
     PullContext cloneCtx;
     cloneCtx.httpCtx = ctx;
@@ -784,7 +784,8 @@ void createSmitDir(const std::string &dir)
     }
 
 }
-// store sessid in .smit/sessid
+/** Store the cookie of the sessid in .smit/sessid
+  */
 void storeSessid(const std::string &dir, const std::string &sessid)
 {
     LOG_DEBUG("storeSessid(%s, %s)...", dir.c_str(), sessid.c_str());
@@ -819,6 +820,8 @@ std::string loadUsername(const std::string &clonedRepo)
     return username;
 }
 
+/** Load the cookie of the sessid
+  */
 std::string loadSessid(const std::string &dir)
 {
     std::string path = dir + "/" PATH_SESSID;
@@ -852,7 +855,11 @@ std::string loadUrl(const std::string &dir)
     return url;
 }
 
-
+/** Sign-in and return the sessid cookie
+  *
+  * @return
+  *    The format is the cookie format: key=value
+  */
 std::string signin(const std::string &rooturl, const std::string &user,
                    const std::string &passwd, const HttpClientContext &ctx)
 {
@@ -868,14 +875,19 @@ std::string signin(const std::string &rooturl, const std::string &user,
     params += urlEncode(passwd);
     hr.post(params);
 
-    // get the sessiond id
-    std::string sessid;
+    // Get the sessiond id
+    // Look for the cookie smit-sessid-*
     std::map<std::string, Cookie>::iterator c;
-    std::string cookieSessidName = mangleCookieName(COOKIE_SESSID, ctx.serverPort);
-    c = hr.cookies.find(cookieSessidName);
-    if (c != hr.cookies.end()) sessid = c->second.value;
+    FOREACH(c, hr.cookies) {
+        std::string cookie = c->first; // name of the cookie
+        if (0 == cookie.compare(0, strlen(COOKIE_SESSID_PREFIX), COOKIE_SESSID_PREFIX)) {
+            // Got it
+            cookie += "=" + c->second.value;
+            return cookie;
+        }
+    }
 
-    return sessid;
+    return "";
 }
 
 void parseUrl(std::string url, std::string &scheme, std::string &host, std::string &port, std::string &resource)
@@ -966,14 +978,14 @@ int cmdClone(int argc, char * const *argv)
 
     curl_global_init(CURL_GLOBAL_ALL);
 
-    std::string sessid = signin(url, username, password, ctx);
-    LOG_DEBUG("sessid=%s", sessid.c_str());
+    std::string cookieSessid = signin(url, username, password, ctx);
+    LOG_DEBUG("cookieSessid: %s", cookieSessid.c_str());
 
-    if (sessid.empty()) {
+    if (cookieSessid.empty()) {
         fprintf(stderr, "Authentication failed\n");
         exit(1);
     }
-    ctx.sessid = sessid;
+    ctx.cookieSessid = cookieSessid;
 
     int r = getProjects(url, dir, ctx);
     if (r < 0) {
@@ -983,7 +995,7 @@ int cmdClone(int argc, char * const *argv)
 
     // create persistent configuration of the local clone
     createSmitDir(dir);
-    storeSessid(dir, ctx.sessid);
+    storeSessid(dir, ctx.cookieSessid);
     storeUsername(dir, username);
     storeUrl(dir, url);
 
@@ -1076,13 +1088,12 @@ int cmdGet(int argc, char * const *argv)
     ctx.serverPort = port;
 
     curl_global_init(CURL_GLOBAL_ALL);
-    std::string sessid;
     std::string password;
     bool redoSigin = false;
 
     if (useSigninCookie) {
         // check if the sessid is valid
-        ctx.sessid = loadSessid(".");
+        ctx.cookieSessid = loadSessid(".");
         int r = testSessid(rooturl, ctx);
 
         if (r < 0) {
@@ -1101,14 +1112,14 @@ int cmdGet(int argc, char * const *argv)
     }
 
     if (redoSigin) {
-        ctx.sessid = signin(rooturl, username, password, ctx);
-        if (sessid.empty()) {
+        ctx.cookieSessid = signin(rooturl, username, password, ctx);
+        if (ctx.cookieSessid.empty()) {
             fprintf(stderr, "Authentication failed\n");
             return 1; // authentication failed
         }
     }
 
-    LOG_DEBUG("sessid=%s", ctx.sessid.c_str());
+    LOG_DEBUG("cookieSessid: %s", ctx.cookieSessid.c_str());
 
     // pull new entries and new attached files of all projects
     HttpRequest hr(ctx);
@@ -1230,7 +1241,7 @@ int cmdPull(int argc, char * const *argv)
 
     if (username.empty()) {
         // check if the sessid is valid
-        pullCtx.httpCtx.sessid = loadSessid(dir);
+        pullCtx.httpCtx.cookieSessid = loadSessid(dir);
         int r = testSessid(url, pullCtx.httpCtx);
 
         if (r < 0) {
@@ -1249,16 +1260,16 @@ int cmdPull(int argc, char * const *argv)
     }
 
     if (redoSigin) {
-        pullCtx.httpCtx.sessid = signin(url, username, password, pullCtx.httpCtx);
-        if (!pullCtx.httpCtx.sessid.empty()) {
-            storeSessid(dir, pullCtx.httpCtx.sessid);
+        pullCtx.httpCtx.cookieSessid = signin(url, username, password, pullCtx.httpCtx);
+        if (!pullCtx.httpCtx.cookieSessid.empty()) {
+            storeSessid(dir, pullCtx.httpCtx.cookieSessid);
             storeUrl(dir, url);
         }
     }
 
-    LOG_DEBUG("sessid=%s", pullCtx.httpCtx.sessid.c_str());
+    LOG_DEBUG("cookieSessid: %s", pullCtx.httpCtx.cookieSessid.c_str());
 
-    if (pullCtx.httpCtx.sessid.empty()) {
+    if (pullCtx.httpCtx.cookieSessid.empty()) {
         fprintf(stderr, "Authentication failed\n");
         return 1; // authentication failed
     }
@@ -1560,7 +1571,7 @@ int establishSession(const char *dir, const char *username, const char *password
     std::string pass;
     if (!username) {
         // check if the sessid is valid
-        ctx.httpCtx.sessid = loadSessid(dir);
+        ctx.httpCtx.cookieSessid = loadSessid(dir);
         int r = testSessid(url, ctx.httpCtx);
 
         if (r < 0) {
@@ -1581,16 +1592,16 @@ int establishSession(const char *dir, const char *username, const char *password
     if (redoSigin && !password) pass = getString("Password: ", true);
 
     if (redoSigin) {
-        ctx.httpCtx.sessid = signin(url, user, pass, ctx.httpCtx);
-        if (!ctx.httpCtx.sessid.empty()) {
-            storeSessid(dir, ctx.httpCtx.sessid);
+        ctx.httpCtx.cookieSessid = signin(url, user, pass, ctx.httpCtx);
+        if (!ctx.httpCtx.cookieSessid.empty()) {
+            storeSessid(dir, ctx.httpCtx.cookieSessid);
             storeUrl(dir, url);
         }
     }
 
-    LOG_DEBUG("sessid=%s", ctx.httpCtx.sessid.c_str());
+    LOG_DEBUG("cookieSessid: %s", ctx.httpCtx.cookieSessid.c_str());
 
-    if (ctx.httpCtx.sessid.empty()) {
+    if (ctx.httpCtx.cookieSessid.empty()) {
         fprintf(stderr, "Authentication failed\n");
         return -1; // authentication failed
     }

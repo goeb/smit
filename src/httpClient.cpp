@@ -519,9 +519,8 @@ HttpRequest::HttpRequest(const HttpClientContext &ctx)
 
     headerList = 0;
     headerList = curl_slist_append(headerList, "Accept: " APP_X_SMIT);
-    if (!httpCtx.sessid.empty()) {
-        std::string cookieSessidName = mangleCookieName(COOKIE_SESSID, ctx.serverPort);
-        std::string cookie = "Cookie: " + cookieSessidName + "=" + httpCtx.sessid;
+    if (!httpCtx.cookieSessid.empty()) {
+        std::string cookie = "Cookie: " + httpCtx.cookieSessid;
         headerList = curl_slist_append(headerList, cookie.c_str());
     }
 

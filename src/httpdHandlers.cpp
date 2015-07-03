@@ -57,7 +57,7 @@
 
 #define K_ME "me"
 #define MAX_SIZE_UPLOAD (10*1024*1024)
-#define COOKIE_ORIGIN_VIEW "view"
+#define COOKIE_ORIGIN_VIEW "view-"
 
 enum { REQUEST_NOT_PROCESSED = 0, // let Mongoose handle the request
        REQUEST_COMPLETED = 1      // do not let Mongoose handle the request
@@ -245,22 +245,29 @@ int sendHttpRedirect(const RequestContext *request, const std::string &redirectU
     return REQUEST_COMPLETED;
 }
 
-std::string getServerCookie(const std::string &name, const std::string &value, int maxAgeSeconds)
+std::string mangleCookieName(const std::string &prefix)
+{
+    std::string result = prefix;
+    result += MongooseServerContext::getInstance().getListeningPort();
+    return result;
+}
+
+std::string getServerCookie(const std::string &prefix, const std::string &value, int maxAgeSeconds)
 {
     std::ostringstream s;
     s << "Set-Cookie: ";
-    s << mangleCookieName(name, MongooseServerContext::getInstance().getListeningPort());
+    s << mangleCookieName(prefix);
     s << "=" << value;
     s << "; Path=" << MongooseServerContext::getInstance().getUrlRewritingRoot() << "/";
     if (maxAgeSeconds > 0) s << ";  Max-Age=" << maxAgeSeconds;
     return s.str();
 }
 
-std::string getDeletedCookieString(const std::string &name)
+std::string getDeletedCookieString(const std::string &prefix)
 {
     std::string cookieString;
     cookieString = "Set-Cookie: ";
-    cookieString += mangleCookieName(name, MongooseServerContext::getInstance().getListeningPort());
+    cookieString += mangleCookieName(prefix);
     cookieString += "=deleted";
     cookieString += ";Path=" + MongooseServerContext::getInstance().getUrlRewritingRoot() + "/" ;
     cookieString += ";expires=Thu, 01 Jan 1970 00:00:00 GMT";
@@ -274,10 +281,10 @@ void sendCookie(const RequestContext *request, const std::string &name, const st
     request->printf("%s\r\n", s.c_str());
 }
 
-void setCookieAndRedirect(const RequestContext *request, const char *name, const char *value, const char *redirectUrl)
+void setCookieAndRedirect(const RequestContext *request, const char *prefix, const char *value, const char *redirectUrl)
 {
     LOG_FUNC();
-    std::string s = getServerCookie(name, value, SESSION_DURATION);
+    std::string s = getServerCookie(prefix, value, SESSION_DURATION);
     sendHttpRedirect(request, redirectUrl, s.c_str());
 }
 
@@ -393,11 +400,11 @@ int httpPostSignin(const RequestContext *request)
         }
 
         if (format == X_SMIT) {
-            std::string cookieSessid = getServerCookie(COOKIE_SESSID, sessionId.c_str(), SESSION_DURATION);
+            std::string cookieSessid = getServerCookie(COOKIE_SESSID_PREFIX, sessionId, SESSION_DURATION);
             sendHttpHeader204(request, cookieSessid.c_str());
         } else {
             if (redirect.empty()) redirect = "/";
-            setCookieAndRedirect(request, COOKIE_SESSID, sessionId.c_str(), redirect.c_str());
+            setCookieAndRedirect(request, COOKIE_SESSID_PREFIX, sessionId.c_str(), redirect.c_str());
         }
 
     } else {
@@ -413,7 +420,7 @@ void redirectToSignin(const RequestContext *request, const char *resource = 0)
     sendHttpHeader200(request);
 
     // delete session cookie
-    request->printf("%s\r\n", getDeletedCookieString(COOKIE_SESSID).c_str());
+    request->printf("%s\r\n", getDeletedCookieString(COOKIE_SESSID_PREFIX).c_str());
 
     // prepare the redirection parameter
     std::string url;
@@ -438,7 +445,7 @@ void httpPostSignout(const RequestContext *request, const std::string &sessionId
 
     } else {
         // delete session cookie
-        std::string cookieSessid = getDeletedCookieString(COOKIE_SESSID);
+        std::string cookieSessid = getDeletedCookieString(COOKIE_SESSID_PREFIX);
         sendHttpHeader204(request, cookieSessid.c_str());
 
     }
@@ -852,29 +859,28 @@ void httpPostUser(const RequestContext *request, User signedInUser, const std::s
 }
 
 /** Get a cookie after its name.
+  *
   * @return
-  * 0 if cookie found
-  * -1 if no such cookie found
+  *     0 if cookie found
+  *    -1 if no such cookie found
   */
-int getFromCookie(const RequestContext *request, const std::string &key, std::string &value)
+int getFromCookie(const RequestContext *request, const std::string &prefix, std::string &value)
 {
     const char *cookies = request->getHeader("Cookie");
     // There is a most 1 cookie as stated in rfc6265 "HTTP State Management Mechanism":
     //     When the user agent generates an HTTP request, the user agent MUST
     //     NOT attach more than one Cookie header field.
     if (cookies) {
-        LOG_DEBUG("Cookie found: %s", cookies);
+        std::string wantedCookie = mangleCookieName(prefix);
+
+        LOG_DEBUG("Cookies found: %s", cookies);
         std::string c = cookies;
         while (c.size() > 0) {
             std::string cookie = popToken(c, ';');
             std::string name = popToken(cookie, '=');
-            LOG_DIAG("Got cookie %s = %s", name.c_str(), cookie.c_str());
             trim(name, " "); // remove spaces around
-
             LOG_DIAG("Cookie: name=%s, value=%s", name.c_str(), value.c_str());
-            unmangleCookieName(name);
-            LOG_DIAG("Cookie: unmangled-name=%s,  value=%s", name.c_str(), value.c_str());
-            if (name == key) {
+            if (name == wantedCookie) {
                 value = cookie; // remaining part after the =
                 return 0;
             }
@@ -2386,7 +2392,7 @@ int begin_request_handler(const RequestContext *req)
 
     // get signed-in user
     std::string sessionId;
-    getFromCookie(req, COOKIE_SESSID, sessionId);
+    getFromCookie(req, COOKIE_SESSID_PREFIX, sessionId);
     // even if cookie not found, call getLoggedInUser in order to manage
     // local user interface case (smit ui)
     User user = SessionBase::getLoggedInUser(sessionId);
