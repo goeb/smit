@@ -407,7 +407,7 @@ int main(int argc, char **argv)
     const char *file = argv[1];
     const char *key = 0;
     if (argc >= 2) key = argv[2];
-    int n = 1;
+    uint16_t n = 1;
     if (argc == 4) n = atoi(argv[3]);
 
     std::string data;
