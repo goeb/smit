@@ -38,9 +38,11 @@
 #include "global.h"
 #include "identifiers.h"
 #include "filesystem.h"
-#include "clone.h"
 #include "localClient.h"
 
+#ifdef CURL_ENABLED
+  #include "clone.h"
+#endif
 
 void usage()
 {
@@ -48,12 +50,16 @@ void usage()
            "\n"
            "The smit commands are:\n"
            "\n"
+#ifdef CURL_ENABLED
            "  clone       Clone a smit repository\n"
+#endif
            "  init        Initialise a smit repository\n"
            "  issue       Print or modify an issue in a local project\n"
            "  project     List, create, or update a smit project\n"
+#ifdef CURL_ENABLED
            "  pull        Fetch from and merge with a remote repository\n"
            "  push        Push local changes to a remote repository\n"
+#endif
            "  serve       Start a smit web server\n"
            "  user        List, create, or update a smit user\n"
            "  ui          Browse a local smit repository (read-only)\n"
@@ -889,7 +895,7 @@ int main(int argc, char **argv)
 
         } else if (0 == strcmp(command, "issue")) {
             return cmdIssue(argc-1, argv+1);
-
+#ifdef CURL_ENABLED
         } else if (0 == strcmp(command, "clone")) {
             return cmdClone(argc-1, argv+1);
 
@@ -901,7 +907,7 @@ int main(int argc, char **argv)
 
         } else if (0 == strcmp(command, "get")) {
             return cmdGet(argc-1, argv+1);
-
+#endif
         } else if (0 == strcmp(command, "ui")) {
             return cmdUi(argc-1, argv+1);
 
@@ -914,10 +920,12 @@ int main(int argc, char **argv)
                 else if (0 == strcmp(help, "user")) return helpUser();
                 else if (0 == strcmp(help, "serve")) return helpServe();
                 else if (0 == strcmp(help, "ui")) return helpUi();
+#ifdef CURL_ENABLED
                 else if (0 == strcmp(help, "clone")) return helpClone();
                 else if (0 == strcmp(help, "pull")) return helpPull();
                 else if (0 == strcmp(help, "push")) return helpPush(0);
                 else if (0 == strcmp(help, "get")) return helpGet();
+#endif
                 else {
                     printf("No help for '%s'\n", help);
                     exit(1);

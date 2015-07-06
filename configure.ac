@@ -34,6 +34,21 @@ AM_CONDITIONAL(WINDOWS, test x$WINDOWS = xyes)
 AM_CONDITIONAL(CYGWIN, test x$MINGW = xyes)
 AM_CONDITIONAL(MINGW, test x$MINGW = xyes)
 
+# curl
+AC_ARG_ENABLE([curl],
+              [AS_HELP_STRING([--disable-curl],
+                              [Disable Smit HTTP client - clone, pull, push (not needed for the server)]
+                             )
+              ],
+              [],
+              [enable_curl=yes]
+             )
+AM_CONDITIONAL([CURL_ENABLED],[test x$enable_curl = xyes])
+
+if test x$enable_curl = xyes; then
+    PKG_CHECK_MODULES(CURL, libcurl)
+fi
+
 # ldap 
 AC_ARG_ENABLE([ldap],
   [AS_HELP_STRING([--enable-ldap],
@@ -65,7 +80,6 @@ if test x$WINDOWS = xyes; then
     PKG_CONFIG="$PKG_CONFIG --static"
 fi
 PKG_CHECK_MODULES(OPENSSL, openssl)
-PKG_CHECK_MODULES(CURL, libcurl)
 
 
 AC_ARG_ENABLE([gcov],

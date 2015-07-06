@@ -51,8 +51,6 @@ smit_SOURCES = \
 			   src/logging.cpp \
 			   src/Trigger.cpp \
 			   src/filesystem.cpp \
-			   src/clone.cpp \
-			   src/httpClient.cpp \
 			   src/console.cpp \
 			   src/HttpContext.cpp \
 			   src/localClient.cpp \
@@ -62,6 +60,12 @@ smit_SOURCES = \
 			   src/AuthSha1.cpp \
 			   src/third-party/mongoose.c \
 			   src/third-party/fnmatch.c
+
+if CURL_ENABLED
+smit_SOURCES += \
+			   src/clone.cpp \
+			   src/httpClient.cpp
+endif
 
 if KERBEROS_ENABLED
 smit_SOURCES += src/AuthKrb5.cpp
@@ -99,14 +103,19 @@ clean-local-embedded-data:
 smit_CPPFLAGS = -I@srcdir@/src/third-party @OPENSSL_CFLAGS@ @CURL_CFLAGS@
 smit_LDADD = @OPENSSL_LIBS@ @CURL_LIBS@
 
-if KERBEROS_ENABLED
-smit_LDADD += @KRB5_LIBS@
-smit_CPPFLAGS += @KRB5_CFLAGS@ -DKERBEROS_ENABLED
+if CURL_ENABLED
+smit_LDADD += @CURL_LIBS@
+smit_CPPFLAGS += @CURL_CFLAGS@ -DCURL_ENABLED
 endif
 
 if LDAP_ENABLED
 smit_LDADD += @LDAP_LIBS@
 smit_CPPFLAGS += @LDAP_CFLAGS@ -DLDAP_ENABLED
+endif
+
+if KERBEROS_ENABLED
+smit_LDADD += @KRB5_LIBS@
+smit_CPPFLAGS += @KRB5_CFLAGS@ -DKERBEROS_ENABLED
 endif
 
 if WINDOWS

@@ -16,7 +16,6 @@
 #include <string>
 #include <list>
 #include <stdio.h>
-#include <curl/curl.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -45,6 +44,29 @@ bool Verbose_localClient = false;
 #define PRINT_FULL_HISTORY 0x0004
 
 #define INDENT "    "
+
+void storeUsername(const std::string &dir, const std::string &username)
+{
+    LOG_DEBUG("storeUsername(%s, %s)...", dir.c_str(), username.c_str());
+    std::string path = dir + "/" PATH_USERNAME;
+    int r = writeToFile(path, username + "\n");
+    if (r < 0) {
+        fprintf(stderr, "Abort.\n");
+        exit(1);
+    }
+}
+std::string loadUsername(const std::string &clonedRepo)
+{
+    std::string path = clonedRepo + "/" PATH_USERNAME;
+    std::string username;
+    int r = loadFile(path.c_str(), username);
+    if (r < 0) {
+        username = "Anonymous";
+        fprintf(stderr, "Cannot load username. Set '%s'\n", username.c_str());
+    }
+    trim(username); // remove trailing \n
+    return username;
+}
 
 void printSeparation()
 {

@@ -40,6 +40,7 @@
 #include "Args.h"
 #include "restApi.h"
 #include "Project.h"
+#include "localClient.h"
 
 #define LOG_CLI(...) { printf(__VA_ARGS__); fflush(stdout);}
 
@@ -784,76 +785,6 @@ void createSmitDir(const std::string &dir)
     }
 
 }
-/** Store the cookie of the sessid in .smit/sessid
-  */
-void storeSessid(const std::string &dir, const std::string &sessid)
-{
-    LOG_DEBUG("storeSessid(%s, %s)...", dir.c_str(), sessid.c_str());
-    std::string path = dir + "/" PATH_SESSID;
-    int r = writeToFile(path, sessid + "\n");
-    if (r < 0) {
-        fprintf(stderr, "Abort.\n");
-        exit(1);
-    }
-}
-
-void storeUsername(const std::string &dir, const std::string &username)
-{
-    LOG_DEBUG("storeUsername(%s, %s)...", dir.c_str(), username.c_str());
-    std::string path = dir + "/" PATH_USERNAME;
-    int r = writeToFile(path, username + "\n");
-    if (r < 0) {
-        fprintf(stderr, "Abort.\n");
-        exit(1);
-    }
-}
-std::string loadUsername(const std::string &clonedRepo)
-{
-    std::string path = clonedRepo + "/" PATH_USERNAME;
-    std::string username;
-    int r = loadFile(path.c_str(), username);
-    if (r < 0) {
-        username = "Anonymous";
-        fprintf(stderr, "Cannot load username. Set '%s'\n", username.c_str());
-    }
-    trim(username); // remove trailing \n
-    return username;
-}
-
-/** Load the cookie of the sessid
-  */
-std::string loadSessid(const std::string &dir)
-{
-    std::string path = dir + "/" PATH_SESSID;
-    std::string sessid;
-    loadFile(path.c_str(), sessid);
-    trim(sessid);
-
-    return sessid;
-}
-
-// store url in .smit/remote
-void storeUrl(const std::string &dir, const std::string &url)
-{
-    LOG_DEBUG("storeUrl(%s, %s)...", dir.c_str(), url.c_str());
-    std::string path = dir + "/" PATH_URL;
-
-    int r = writeToFile(path, url + "\n");
-    if (r < 0) {
-        fprintf(stderr, "Abort.\n");
-        exit(1);
-    }
-}
-
-std::string loadUrl(const std::string &dir)
-{
-    std::string path = dir + "/" PATH_URL;
-    std::string url;
-    loadFile(path.c_str(), url);
-    trim(url);
-
-    return url;
-}
 
 /** Sign-in and return the sessid cookie
   *
@@ -897,6 +828,54 @@ void parseUrl(std::string url, std::string &scheme, std::string &host, std::stri
     host = popToken(hostAndPort, ':');
     port = hostAndPort;
     resource = url;
+}
+
+/** Store the cookie of the sessid in .smit/sessid
+  */
+void storeSessid(const std::string &dir, const std::string &sessid)
+{
+    LOG_DEBUG("storeSessid(%s, %s)...", dir.c_str(), sessid.c_str());
+    std::string path = dir + "/" PATH_SESSID;
+    int r = writeToFile(path, sessid + "\n");
+    if (r < 0) {
+        fprintf(stderr, "Abort.\n");
+        exit(1);
+    }
+}
+
+/** Load the cookie of the sessid
+  */
+std::string loadSessid(const std::string &dir)
+{
+    std::string path = dir + "/" PATH_SESSID;
+    std::string sessid;
+    loadFile(path.c_str(), sessid);
+    trim(sessid);
+
+    return sessid;
+}
+
+// store url in .smit/remote
+void storeUrl(const std::string &dir, const std::string &url)
+{
+    LOG_DEBUG("storeUrl(%s, %s)...", dir.c_str(), url.c_str());
+    std::string path = dir + "/" PATH_URL;
+
+    int r = writeToFile(path, url + "\n");
+    if (r < 0) {
+        fprintf(stderr, "Abort.\n");
+        exit(1);
+    }
+}
+
+std::string loadUrl(const std::string &dir)
+{
+    std::string path = dir + "/" PATH_URL;
+    std::string url;
+    loadFile(path.c_str(), url);
+    trim(url);
+
+    return url;
 }
 
 int cmdClone(int argc, char * const *argv)
