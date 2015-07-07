@@ -1427,6 +1427,30 @@ void httpCloneIssues(const RequestContext *req, const Project &p)
         req->printf("%s\n", i->id.c_str());
     }
 }
+/** Get the list of issues at the moment indicated by the snapshot
+  *
+  * @param snapshot
+  *     Seconds since 1 Jan 1970 (Epoch) UTC.
+  *
+  * When taking a snapshot, the following query-string parameters are ignored:
+  *   - filterin
+  *   - filterout
+  *   - search
+  *   - sort
+  */
+void httpGetListOfIssues(const RequestContext *req, const Project &p, User u, const std::string &snapshot)
+{
+    std::vector<Issue> issueList;
+    std::map<std::string, std::list<std::string> > emptyFilter;
+
+    p.search(0, emptyFilter, emptyFilter, 0, issueList);
+
+    // TODO
+    // for each returned issue:
+    // - update the issue according to the snapshot datetime
+    // - if the ctime is after the snapshot datetime, then remove the issue
+
+}
 
 void httpGetListOfIssues(const RequestContext *req, const Project &p, User u)
 {
@@ -1450,6 +1474,13 @@ void httpGetListOfIssues(const RequestContext *req, const Project &p, User u)
         sendHttpRedirect(req, redirectUrl.c_str(), 0);
         return;
     }
+
+    std::string snapshot = getFirstParamFromQueryString(q, "snapshot");
+    if (!snapshot.empty()) {
+        httpGetListOfIssues(req, p, u, snapshot);
+        return;
+    }
+
 
     // should use loadViewFromQueryString (code maintainability improvement)
     PredefinedView v = PredefinedView::loadFromQueryString(q); // unamed view, used as handler on the viewing parameters
