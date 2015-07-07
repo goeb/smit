@@ -22,7 +22,6 @@ struct HttpClientContext {
     std::string cookieSessid; // session identifier
     bool tlsInsecure;
     const char *tlsCacert; // certificate file to verify the peer, in PEM format
-    std::string serverPort;
 };
 
 

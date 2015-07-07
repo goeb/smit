@@ -938,14 +938,6 @@ int cmdClone(int argc, char * const *argv)
         return helpClone();
     }
 
-    std::string scheme;
-    std::string host;
-    std::string port;
-    std::string resource;
-
-    parseUrl(url, scheme, host, port, resource);
-    ctx.serverPort = port;
-
     if (username.empty()) username = getString("Username: ", false);
 
     std::string password;
@@ -1057,14 +1049,6 @@ int cmdGet(int argc, char * const *argv)
         LOG_CLI("Missing url.\n");
         return helpGet();
     }
-
-    std::string scheme;
-    std::string host;
-    std::string port;
-    std::string unused;
-
-    parseUrl(rooturl, scheme, host, port, unused);
-    ctx.serverPort = port;
 
     curl_global_init(CURL_GLOBAL_ALL);
     std::string password;
@@ -1206,13 +1190,6 @@ int cmdPull(int argc, char * const *argv)
         LOG_CLI("Cannot get remote url.\n");
         exit(1);
     }
-    std::string scheme;
-    std::string host;
-    std::string port;
-    std::string resource;
-
-    parseUrl(url, scheme, host, port, resource);
-    pullCtx.httpCtx.serverPort = port;
 
     curl_global_init(CURL_GLOBAL_ALL);
     std::string password;
@@ -1533,14 +1510,6 @@ int establishSession(const char *dir, const char *username, const char *password
         LOG_CLI("Cannot get remote url.\n");
         return -1;
     }
-
-    std::string scheme;
-    std::string host;
-    std::string port;
-    std::string resource;
-
-    parseUrl(url, scheme, host, port, resource);
-    ctx.httpCtx.serverPort = port;
 
     ctx.rooturl = url;
 
