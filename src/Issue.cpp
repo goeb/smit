@@ -214,11 +214,6 @@ void Issue::consolidateAmendment(Entry *e)
   */
 void Issue::consolidate()
 {
-    if (!latest) {
-        // missign latest
-        LOG_ERROR("Cannot consolidate issue '%s': missing latest", id.c_str());
-        return;
-    }
     // starting from the head, walk through all entries
     // following the _parent properties.
 
