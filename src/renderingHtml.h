@@ -53,8 +53,8 @@ public:
                                      const std::map<std::string, std::map<Role, std::set<std::string> > > &userRolesByProject);
 
     static void printProjectConfig(const ContextParameters &ctx);
-    static void printPageIssuesFullContents(const ContextParameters &ctx, std::vector<Issue> &issueList);
-    static void printPageIssueList(const ContextParameters &ctx, std::vector<Issue> &issueList,
+    static void printPageIssuesFullContents(const ContextParameters &ctx, const std::vector<Issue> &issueList);
+    static void printPageIssueList(const ContextParameters &ctx, const std::vector<Issue> &issueList,
                                    std::list<std::string> colspec);
     static void printPageIssueAccrossProjects(const ContextParameters &ctx,
                                              std::vector<Issue> &issues,
@@ -88,7 +88,7 @@ public:
     static void printIssueNext(const ContextParameters &ctx, const Issue &issue);
     static void printIssuePrevious(const ContextParameters &ctx, const Issue &issue);
     static void printIssue(const ContextParameters &ctx, const Issue &issue, const std::string &entryToBeAmended);
-    static void printIssueListFullContents(const ContextParameters &ctx, std::vector<Issue> &issueList);
+    static void printIssueListFullContents(const ContextParameters &ctx, const std::vector<Issue> &issueList);
     static void printIssueList(const ContextParameters &ctx, const std::vector<Issue> &issueList,
                                const std::list<std::string> &colspec, bool showOtherFormats);
     static void printIssuesAccrossProjects(ContextParameters ctx,

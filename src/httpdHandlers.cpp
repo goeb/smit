@@ -1427,6 +1427,53 @@ void httpCloneIssues(const RequestContext *req, const Project &p)
         req->printf("%s\n", i->id.c_str());
     }
 }
+
+void httpSendIssueList(const RequestContext *req, const Project &p,
+                       const User &u, const std::vector<Issue> &issueList)
+{
+    std::string q = req->getQueryString();
+    PredefinedView v = PredefinedView::loadFromQueryString(q);
+
+    // get the colspec
+    std::list<std::string> cols;
+    std::list<std::string> allCols = p.getConfig().getPropertiesNames();
+    if (v.colspec.size() > 0) {
+        cols = parseColspec(v.colspec.c_str(), allCols);
+    } else {
+        // prevent having no columns, by forcing all of them
+        cols = allCols;
+    }
+    enum RenderingFormat format = getFormat(req);
+
+    sendHttpHeader200(req);
+
+    if (format == RENDERING_TEXT) RText::printIssueList(req, issueList, cols);
+    else if (format == RENDERING_CSV) {
+
+        std::string separator = getFirstParamFromQueryString(q, "sep");
+        separator = urlDecode(separator);
+        RCsv::printIssueList(req, issueList, cols, separator.c_str());
+    } else {
+        ContextParameters ctx = ContextParameters(req, u, p);
+        std::list<std::string> filterinRaw = getParamListFromQueryString(q, "filterin");
+        std::list<std::string> filteroutRaw = getParamListFromQueryString(q, "filterout");
+        // it would be better for code maintainability to pass v.filterin/out
+        ctx.filterin = filterinRaw;
+        ctx.filterout = filteroutRaw;
+        ctx.search = v.search;
+        ctx.sort = v.sort;
+
+        std::string full = getFirstParamFromQueryString(q, "full"); // full-contents indicator
+
+        if (full == "1") {
+            RHtml::printPageIssuesFullContents(ctx, issueList);
+        } else {
+            sendCookie(req, COOKIE_ORIGIN_VIEW, q, COOKIE_VIEW_DURATION);
+            RHtml::printPageIssueList(ctx, issueList, cols);
+        }
+    }
+}
+
 /** Get the list of issues at the moment indicated by the snapshot
   *
   * @param snapshot
@@ -1445,10 +1492,25 @@ void httpGetListOfIssues(const RequestContext *req, const Project &p, User u, co
 
     p.search(0, emptyFilter, emptyFilter, 0, issueList);
 
+    time_t datetime = atoi(snapshot.c_str());
+
     // TODO
     // for each returned issue:
     // - update the issue according to the snapshot datetime
     // - if the ctime is after the snapshot datetime, then remove the issue
+    std::vector<Issue>::iterator i = issueList.begin();
+    while (i != issueList.end()) {
+        int n = i->makeSnapshot(datetime);
+        if (n == 0) {
+            // Issue has not entry before datetime. ie: not existing.
+            // Remove it from the list.
+            i = issueList.erase(i);
+        } else {
+            i++;
+        }
+    }
+
+    httpSendIssueList(req, p, u, issueList);
 
 }
 
@@ -1481,15 +1543,12 @@ void httpGetListOfIssues(const RequestContext *req, const Project &p, User u)
         return;
     }
 
-
-    // should use loadViewFromQueryString (code maintainability improvement)
     PredefinedView v = PredefinedView::loadFromQueryString(q); // unamed view, used as handler on the viewing parameters
 
     // replace user "me" if any...
     replaceUserMe(v.filterin, p, u.username);
     replaceUserMe(v.filterout, p, u.username);
     if (v.search == "me") v.search = u.username;
-
 
     std::vector<Issue> issueList;
     p.search(v.search.c_str(), v.filterin, v.filterout, v.sort.c_str(), issueList);
@@ -1512,43 +1571,7 @@ void httpGetListOfIssues(const RequestContext *req, const Project &p, User u)
         return;
     }
 
-    std::string full = getFirstParamFromQueryString(q, "full"); // full-contents indicator
-
-    // get the colspec
-    std::list<std::string> cols;
-    std::list<std::string> allCols = p.getConfig().getPropertiesNames();
-    if (v.colspec.size() > 0) {
-        cols = parseColspec(v.colspec.c_str(), allCols);
-    } else {
-        // prevent having no columns, by forcing all of them
-        cols = allCols;
-    }
-    enum RenderingFormat format = getFormat(req);
-
-    sendHttpHeader200(req);
-
-    if (format == RENDERING_TEXT) RText::printIssueList(req, issueList, cols);
-    else if (format == RENDERING_CSV) {
-        std::string separator = getFirstParamFromQueryString(q, "sep");
-        separator = urlDecode(separator);
-        RCsv::printIssueList(req, issueList, cols, separator.c_str());
-    } else {
-        ContextParameters ctx = ContextParameters(req, u, p);
-        std::list<std::string> filterinRaw = getParamListFromQueryString(q, "filterin");
-        std::list<std::string> filteroutRaw = getParamListFromQueryString(q, "filterout");
-        // it would be better for code maintainability to pass v.filterin/out
-        ctx.filterin = filterinRaw;
-        ctx.filterout = filteroutRaw;
-        ctx.search = v.search;
-        ctx.sort = v.sort;
-
-        if (full == "1") {
-            RHtml::printPageIssuesFullContents(ctx, issueList);
-        } else {
-            sendCookie(req, COOKIE_ORIGIN_VIEW, q, COOKIE_VIEW_DURATION);
-            RHtml::printPageIssueList(ctx, issueList, cols);
-        }
-    }
+    httpSendIssueList(req, p, u, issueList);
 }
 
 void httpGetProject(const RequestContext *req, const Project &p, User u)

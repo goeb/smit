@@ -70,6 +70,7 @@ struct Issue {
     static void sort(std::vector<Issue> &inout, const std::list<std::pair<bool, std::string> > &sortingSpec);
 
     std::string getProperty(const std::string &propertyName) const;
+    int makeSnapshot(time_t datetime);
 
 };
 

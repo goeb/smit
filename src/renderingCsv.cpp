@@ -50,7 +50,7 @@ void RCsv::printProjectList(const RequestContext *req, const std::list<std::pair
     }
 }
 
-void RCsv::printIssueList(const RequestContext *req, std::vector<Issue> &issueList,
+void RCsv::printIssueList(const RequestContext *req, const std::vector<Issue> &issueList,
                           std::list<std::string> colspec, const char *separator)
 {
     req->printf("Content-Type: text/plain\r\n\r\n");

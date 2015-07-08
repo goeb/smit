@@ -128,9 +128,9 @@ int loadProjectPage(const RequestContext *req, const Project *project, const std
   */
 class VariableNavigator {
 public:
-    std::vector<Issue> *issueList;
+    const std::vector<Issue> *issueList;
     std::vector<Issue> *issuesOfAllProjects;
-    std::vector<Issue> *issueListFullContents;
+    const std::vector<Issue> *issueListFullContents;
     std::list<std::string> *colspec;
     const ContextParameters &ctx;
     const std::list<std::pair<std::string, std::string> > *projectList;
@@ -1144,7 +1144,7 @@ void printFilters(const ContextParameters &ctx)
     ctx.req->printf("</div>");
 }
 
-void RHtml::printIssueListFullContents(const ContextParameters &ctx, std::vector<Issue> &issueList)
+void RHtml::printIssueListFullContents(const ContextParameters &ctx, const std::vector<Issue> &issueList)
 {
     ctx.req->printf("<div class=\"sm_issues\">\n");
 
@@ -1309,7 +1309,7 @@ void RHtml::printIssuesAccrossProjects(ContextParameters ctx,
 /** Print HTML page with the given issues and their full contents
   *
   */
-void RHtml::printPageIssuesFullContents(const ContextParameters &ctx, std::vector<Issue> &issueList)
+void RHtml::printPageIssuesFullContents(const ContextParameters &ctx, const std::vector<Issue> &issueList)
 {
     VariableNavigator vn("issues.html", ctx);
     vn.issueListFullContents = &issueList;
@@ -1317,7 +1317,7 @@ void RHtml::printPageIssuesFullContents(const ContextParameters &ctx, std::vecto
 }
 
 void RHtml::printPageIssueList(const ContextParameters &ctx,
-                               std::vector<Issue> &issueList, std::list<std::string> colspec)
+                               const std::vector<Issue> &issueList, std::list<std::string> colspec)
 {
     VariableNavigator vn("issues.html", ctx);
     vn.issueList = &issueList;

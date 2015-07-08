@@ -249,6 +249,37 @@ std::string Issue::getProperty(const std::string &propertyName) const
     return ::getProperty(properties, propertyName);
 }
 
+/** Make a snapshot of the issue
+  *
+  * The issue is modified, so that only entries before the given
+  * datetime are taken into account.
+  *
+  */
+int Issue::makeSnapshot(time_t datetime)
+{
+    properties.clear();
+
+    int n = 0; // number of remaining entries after snapshot
+
+    Entry *e = first;
+
+    // ctime of the issue is ctime of its first entry
+    if (e) ctime = e->ctime;
+
+    while (e) {
+        if (e->ctime > datetime) {
+            // This entry newer than the given datetime, stop here.
+            break;
+        } else {
+            n++;
+            consolidateWithSingleEntry(e);
+            consolidateAmendment(e);
+            e = e->getNext();
+        }
+    }
+    return n;
+}
+
 
 /** Look if any value of the given multi-valued property is present in the given list
   *

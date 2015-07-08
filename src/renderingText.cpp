@@ -30,7 +30,7 @@ void RText::printProjectList(const RequestContext *req, const std::list<std::pai
     }
 }
 
-void RText::printIssueList(const RequestContext *req, std::vector<Issue> &issueList, std::list<std::string> colspec)
+void RText::printIssueList(const RequestContext *req, const std::vector<Issue> &issueList, std::list<std::string> colspec)
 {
     req->printf("Content-Type: text/plain\r\n\r\n");
 
