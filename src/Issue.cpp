@@ -210,27 +210,19 @@ void Issue::consolidateAmendment(Entry *e)
 
 /** Consolidate an issue by accumulating all its entries
   *
-  * This method must be called from a mutex-protected scope (no mutex is managed in here).
   */
 void Issue::consolidate()
 {
-    // starting from the head, walk through all entries
-    // following the _parent properties.
-
-    // clear properties before consolidating
-    // this is especially necessary when consolidating after a deleted entry
     properties.clear();
 
     Entry *e = first;
-    // the entries are walked through backwards (from most recent to oldest)
-    while (e) {
-        // for each property of the parent,
-        // create the same property in the issue, if not already existing
-        // (in order to have only most recent properties)
 
-        consolidateWithSingleEntry(e); // do not overwrite as we move from most recent to oldest
+    // ctime of the issue is ctime of its first entry
+    if (e) ctime = e->ctime;
+
+    while (e) {
+        consolidateWithSingleEntry(e);
         consolidateAmendment(e);
-        ctime = e->ctime; // the oldest entry will take precedence for ctime
         e = e->getNext();
     }
 }
