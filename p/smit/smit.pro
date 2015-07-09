@@ -39,7 +39,9 @@ SOURCES += \
     ../../src/AuthSha1.cpp \
     ../../src/AuthLdap.cpp \
     ../../src/third-party/mongoose.c \
-    ../../src/third-party/fnmatch.c
+    ../../src/third-party/fnmatch.c \
+    ../../src/renderingJson.cpp \
+    ../../src/json.cpp
     ../../src/ssoKerberos.cpp
 
 HEADERS += \
@@ -81,6 +83,8 @@ HEADERS += \
     ../../src/AuthLdap.h \
     ../../src/third-party/fnmatch.h \
     ../../src/mg_win32.h \
-    ../../src/Tag.h
+    ../../src/Tag.h \
+    ../../src/renderingJson.h \
+    ../../src/json.h
     ../../src/ssoKerberos.h
 

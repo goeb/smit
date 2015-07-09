@@ -41,10 +41,12 @@ smit_SOURCES = \
 			   src/main.cpp \
 			   src/httpdHandlers.cpp \
 			   src/renderingText.cpp \
+			   src/renderingJson.cpp \
 			   src/renderingCsv.cpp \
 			   src/renderingHtml.cpp \
 			   src/cpio.cpp \
 			   src/stringTools.cpp \
+			   src/json.cpp \
 			   src/mutexTools.cpp \
 			   src/session.cpp \
 			   src/dateTools.cpp \

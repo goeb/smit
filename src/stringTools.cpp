@@ -252,43 +252,6 @@ std::string replaceAll(const std::string &in, char c, const char *replaceBy)
     return out;
 }
 
-std::string enquoteJs(const std::string &in)
-{
-    size_t n = in.size();
-    std::string result;
-    size_t i;
-    for (i=0; i<n; i++) {
-        // keep alpha numeric and utf-8 characters unchanged, and escape all others with \x..
-        char c = in[i];
-        if (c >= '0' && c <= '9') result += c;
-        else if (c >= 'a' && c <= 'z') result += c;
-        else if (c >= 'A' && c <= 'Z') result += c;
-        else if ((c & 0x80) != 0) result += c; // do not escape utf-8 characters
-        else { // escape ohter characters
-            char ord[3];
-            snprintf(ord, sizeof(ord), "%02x", (uint8_t)c);
-            result += "\\x";
-            result += ord;
-        }
-    }
-    return result;
-}
-
-std::string toJavascriptArray(const std::list<std::string> &items)
-{
-    std::string jarray = "[";
-    std::list<std::string>::const_iterator v;
-    FOREACH(v, items) {
-        if (v != items.begin()) {
-            jarray += ", ";
-        }
-        jarray += '\'' + enquoteJs(*v) + '\'';
-    }
-    jarray += "]";
-    return jarray;
-
-}
-
 std::list<std::string> split(const std::string &s, const char *c, int limit)
 {
     // use limit = -1 for no limit (almost)
@@ -423,6 +386,14 @@ std::list<std::string> getParamListFromQueryString(const std::string & queryStri
         }
     }
     return result;
+}
+
+
+std::string toString(int n)
+{
+    char buffer[128];
+    sprintf(buffer, "%d", n);
+    return buffer;
 }
 
 /** Indent lines of a text

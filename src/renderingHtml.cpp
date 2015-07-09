@@ -28,6 +28,7 @@
 #include "global.h"
 #include "filesystem.h"
 #include "restApi.h"
+#include "json.h"
 
 #ifdef KERBEROS_ENABLED
   #include "AuthKrb5.h"

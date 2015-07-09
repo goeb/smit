@@ -36,6 +36,7 @@ std::string getBasename(const std::string &path);
 std::string getDirname(const std::string &path);
 std::string getFirstParamFromQueryString(const std::string & queryString, const char *param);
 std::list<std::string> getParamListFromQueryString(const std::string & queryString, const char *param);
+std::string toString(int n);
 
 /** Convert size_t and ssize_t types to unsigned long and long int
   * The purpose is to workaround the %zd and %zu formats that are not

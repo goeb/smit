@@ -35,6 +35,7 @@
 #include "renderingText.h"
 #include "renderingHtml.h"
 #include "renderingCsv.h"
+#include "renderingJson.h"
 #include "parseConfig.h"
 #include "stringTools.h"
 #include "session.h"
@@ -300,7 +301,7 @@ int sendHttpHeaderInvalidResource(const RequestContext *request)
 
 
 
-enum RenderingFormat { RENDERING_HTML, RENDERING_TEXT, RENDERING_CSV, X_SMIT };
+enum RenderingFormat { RENDERING_HTML, RENDERING_TEXT, RENDERING_CSV, RENDERING_JSON, X_SMIT };
 enum RenderingFormat getFormat(const RequestContext *request)
 {
     std::string q = request->getQueryString();
@@ -309,6 +310,7 @@ enum RenderingFormat getFormat(const RequestContext *request)
     if (format == "html") return RENDERING_HTML;
     else if (format == "csv") return RENDERING_CSV;
     else if (format == "text") return RENDERING_TEXT;
+    else if (format == "json") return RENDERING_JSON;
     else {
         // look at the Accept header
         const char *contentType = request->getHeader("Accept");
@@ -1448,6 +1450,7 @@ void httpSendIssueList(const RequestContext *req, const Project &p,
     sendHttpHeader200(req);
 
     if (format == RENDERING_TEXT) RText::printIssueList(req, issueList, cols);
+    else if (format == RENDERING_JSON) RJson::printIssueList(req, issueList, cols);
     else if (format == RENDERING_CSV) {
 
         std::string separator = getFirstParamFromQueryString(q, "sep");
@@ -1494,7 +1497,6 @@ void httpGetListOfIssues(const RequestContext *req, const Project &p, User u, co
 
     time_t datetime = atoi(snapshot.c_str());
 
-    // TODO
     // for each returned issue:
     // - update the issue according to the snapshot datetime
     // - if the ctime is after the snapshot datetime, then remove the issue
