@@ -4,6 +4,8 @@
 #include <list>
 #include <string>
 
+// TODO these do not produce JSON compatible syntax
+// They produce only javascript compatible syntax (strings delimited by simple quotes)
 std::string enquoteJs(const std::string &in);
 std::string toJavascriptArray(const std::list<std::string> &items);
 

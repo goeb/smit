@@ -33,7 +33,7 @@ void RJson::printIssueList(const RequestContext *req, const std::vector<Issue> &
     for (i=issueList.begin(); i!=issueList.end(); i++) {
 
         // render an issue as an array
-        // Eg: [ '1234', 'open' ]
+        // Eg: [ "1234", "open" ]
         std::string singleIssueJson = "[";
 
         std::list<std::string>::iterator c;
@@ -54,7 +54,7 @@ void RJson::printIssueList(const RequestContext *req, const std::vector<Issue> &
                 if (p != properties.end()) text = toString(p->second);
             }
             if (c != colspec.begin()) singleIssueJson += ", ";
-            singleIssueJson += "'" + enquoteJs(text) + "'";
+            singleIssueJson += "\"" + enquoteJs(text) + "\"";
 
         }
         singleIssueJson += "]";
