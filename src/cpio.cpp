@@ -60,7 +60,7 @@ int cpioGetNextFileHeader(const char *&offset, const char *end, std::string &fil
     if (header.c_magic == 0x71c7) { // 0o070707 == 0x71c7
         // ok
     } else {
-        LOG_ERROR("cpioExtract: Unsupported archive / endianess");
+        LOG_ERROR("cpioExtract: Unsupported archive / endianess (0x%x)", header.c_magic);
         return -5;
     }
 
@@ -105,7 +105,7 @@ int cpioGetNextFileHeader(const char *&offset, const char *end, std::string &fil
     LOG_DEBUG("cpioExtract: filepath=%s", filepathBuf);
     if (0 == strcmp(filepathBuf, "TRAILER!!!")) return -10; // end of archive
 
-    filesize = (header.c_filesize[0] << 8) + header.c_filesize[1];
+    filesize = (header.c_filesize[0] << 16) + header.c_filesize[1];
     filepath = filepathBuf;
     return 0;
 }
