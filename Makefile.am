@@ -46,11 +46,16 @@ smit_SOURCES = \
 			   src/logging.cpp \
 			   src/Trigger.cpp \
 			   src/filesystem.cpp \
-			   src/clone.cpp \
 			   src/console.cpp \
 			   src/HttpContext.cpp \
 			   src/AuthSha1.cpp \
 			   mongoose/mongoose.c 
+
+if CURL_ENABLED
+smit_SOURCES += \
+			   src/clone.cpp
+endif
+
 
 if KERBEROS_ENABLED
 smit_SOURCES += src/AuthKrb5.cpp
@@ -85,8 +90,13 @@ embedcpio.c embedcpio.h: @srcdir@/tools/convertToC.cpp
 clean-local-embedded-data:
 	rm -rf $(X)
 
-smit_CPPFLAGS = -I @srcdir@/mongoose @OPENSSL_CFLAGS@ @CURL_CFLAGS@
-smit_LDADD = @OPENSSL_LIBS@ @CURL_LIBS@
+smit_CPPFLAGS = -I @srcdir@/mongoose @OPENSSL_CFLAGS@
+smit_LDADD = @OPENSSL_LIBS@
+
+if CURL_ENABLED
+smit_LDADD += @CURL_LIBS@
+smit_CPPFLAGS += @CURL_CFLAGS@ -DCURL_ENABLED
+endif
 
 if KERBEROS_ENABLED
 smit_LDADD += @KRB5_LIBS@

@@ -38,8 +38,10 @@
 #include "global.h"
 #include "identifiers.h"
 #include "filesystem.h"
-#include "clone.h"
 
+#ifdef CURL_ENABLED
+  #include "clone.h"
+#endif
 
 void usage()
 {
@@ -47,10 +49,14 @@ void usage()
            "\n"
            "The smit commands are:\n"
            "\n"
+#ifdef CURL_ENABLED
            "  clone       Clone a smit repository\n"
+#endif
            "  init        Initialise a smit repository\n"
            "  project     List, create, or update a smit project\n"
+#ifdef CURL_ENABLED
            "  pull        Fetch from a remote repository\n"
+#endif
            "  serve       Start a smit web server\n"
            "  user        List, create, or update a smit user\n"
            "  ui          Browse a local smit repository (read-only)\n"
@@ -769,13 +775,13 @@ int main(int argc, char **argv)
 
         } else if (0 == strcmp(command, "user")) {
             return cmdUser(argc-1, argv+1);
-
+#ifdef CURL_ENABLED
         } else if (0 == strcmp(command, "clone")) {
             return cmdClone(argc-1, argv+1);
 
         } else if (0 == strcmp(command, "pull")) {
             return cmdPull(argc-1, argv+1);
-
+#endif
         } else if (0 == strcmp(command, "ui")) {
             return cmdUi(argc-1, argv+1);
 
@@ -787,7 +793,10 @@ int main(int argc, char **argv)
                 else if (0 == strcmp(help, "user")) return helpUser();
                 else if (0 == strcmp(help, "serve")) return helpServe();
                 else if (0 == strcmp(help, "ui")) return helpUi();
+#ifdef CURL_ENABLED
                 else if (0 == strcmp(help, "clone")) return helpClone();
+                else if (0 == strcmp(help, "pull")) return helpPull();
+#endif
                 else {
                     printf("No help for '%s'\n", help);
                     exit(1);

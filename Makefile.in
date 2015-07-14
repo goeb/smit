@@ -46,14 +46,19 @@ target_triplet = @target@
 @WINDOWS_TRUE@am__append_8 = -static -static-libgcc -Dopenssl_EXPORTS
 @WINDOWS_FALSE@am__append_9 = -pthread
 bin_PROGRAMS = smit$(EXEEXT)
-@KERBEROS_ENABLED_TRUE@am__append_10 = src/AuthKrb5.cpp
-@LDAP_ENABLED_TRUE@am__append_11 = src/AuthLdap.cpp
-@KERBEROS_ENABLED_TRUE@am__append_12 = @KRB5_LIBS@
-@KERBEROS_ENABLED_TRUE@am__append_13 = @KRB5_CFLAGS@ -DKERBEROS_ENABLED
-@LDAP_ENABLED_TRUE@am__append_14 = @LDAP_LIBS@
-@LDAP_ENABLED_TRUE@am__append_15 = @LDAP_CFLAGS@ -DLDAP_ENABLED
-@WINDOWS_TRUE@am__append_16 = -lws2_32 -lgdi32
-@WINDOWS_FALSE@am__append_17 = -ldl
+@CURL_ENABLED_TRUE@am__append_10 = \
+@CURL_ENABLED_TRUE@			   src/clone.cpp
+
+@KERBEROS_ENABLED_TRUE@am__append_11 = src/AuthKrb5.cpp
+@LDAP_ENABLED_TRUE@am__append_12 = src/AuthLdap.cpp
+@CURL_ENABLED_TRUE@am__append_13 = @CURL_LIBS@
+@CURL_ENABLED_TRUE@am__append_14 = @CURL_CFLAGS@ -DCURL_ENABLED
+@KERBEROS_ENABLED_TRUE@am__append_15 = @KRB5_LIBS@
+@KERBEROS_ENABLED_TRUE@am__append_16 = @KRB5_CFLAGS@ -DKERBEROS_ENABLED
+@LDAP_ENABLED_TRUE@am__append_17 = @LDAP_LIBS@
+@LDAP_ENABLED_TRUE@am__append_18 = @LDAP_CFLAGS@ -DLDAP_ENABLED
+@WINDOWS_TRUE@am__append_19 = -lws2_32 -lgdi32
+@WINDOWS_FALSE@am__append_20 = -ldl
 subdir = .
 DIST_COMMON = README $(am__configure_deps) $(dist_pkgdata_DATA) \
 	$(srcdir)/Makefile.am $(srcdir)/Makefile.in \
@@ -79,12 +84,13 @@ am__smit_SOURCES_DIST = src/db.cpp src/parseConfig.cpp \
 	src/renderingHtml.cpp src/cpio.cpp src/stringTools.cpp \
 	src/mutexTools.cpp src/session.cpp src/dateTools.cpp \
 	src/logging.cpp src/Trigger.cpp src/filesystem.cpp \
-	src/clone.cpp src/console.cpp src/HttpContext.cpp \
-	src/AuthSha1.cpp mongoose/mongoose.c src/AuthKrb5.cpp \
+	src/console.cpp src/HttpContext.cpp src/AuthSha1.cpp \
+	mongoose/mongoose.c src/clone.cpp src/AuthKrb5.cpp \
 	src/AuthLdap.cpp
 am__dirstamp = $(am__leading_dot)dirstamp
-@KERBEROS_ENABLED_TRUE@am__objects_1 = src/smit-AuthKrb5.$(OBJEXT)
-@LDAP_ENABLED_TRUE@am__objects_2 = src/smit-AuthLdap.$(OBJEXT)
+@CURL_ENABLED_TRUE@am__objects_1 = src/smit-clone.$(OBJEXT)
+@KERBEROS_ENABLED_TRUE@am__objects_2 = src/smit-AuthKrb5.$(OBJEXT)
+@LDAP_ENABLED_TRUE@am__objects_3 = src/smit-AuthLdap.$(OBJEXT)
 am_smit_OBJECTS = src/smit-db.$(OBJEXT) src/smit-parseConfig.$(OBJEXT) \
 	src/smit-identifiers.$(OBJEXT) src/smit-main.$(OBJEXT) \
 	src/smit-httpdHandlers.$(OBJEXT) \
@@ -94,15 +100,16 @@ am_smit_OBJECTS = src/smit-db.$(OBJEXT) src/smit-parseConfig.$(OBJEXT) \
 	src/smit-stringTools.$(OBJEXT) src/smit-mutexTools.$(OBJEXT) \
 	src/smit-session.$(OBJEXT) src/smit-dateTools.$(OBJEXT) \
 	src/smit-logging.$(OBJEXT) src/smit-Trigger.$(OBJEXT) \
-	src/smit-filesystem.$(OBJEXT) src/smit-clone.$(OBJEXT) \
-	src/smit-console.$(OBJEXT) src/smit-HttpContext.$(OBJEXT) \
-	src/smit-AuthSha1.$(OBJEXT) mongoose/smit-mongoose.$(OBJEXT) \
-	$(am__objects_1) $(am__objects_2)
+	src/smit-filesystem.$(OBJEXT) src/smit-console.$(OBJEXT) \
+	src/smit-HttpContext.$(OBJEXT) src/smit-AuthSha1.$(OBJEXT) \
+	mongoose/smit-mongoose.$(OBJEXT) $(am__objects_1) \
+	$(am__objects_2) $(am__objects_3)
 nodist_smit_OBJECTS = smit-embedcpio.$(OBJEXT)
 smit_OBJECTS = $(am_smit_OBJECTS) $(nodist_smit_OBJECTS)
 am__DEPENDENCIES_1 =
 smit_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)/src
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -349,18 +356,18 @@ smit_SOURCES = src/db.cpp src/parseConfig.cpp src/identifiers.cpp \
 	src/renderingCsv.cpp src/renderingHtml.cpp src/cpio.cpp \
 	src/stringTools.cpp src/mutexTools.cpp src/session.cpp \
 	src/dateTools.cpp src/logging.cpp src/Trigger.cpp \
-	src/filesystem.cpp src/clone.cpp src/console.cpp \
-	src/HttpContext.cpp src/AuthSha1.cpp mongoose/mongoose.c \
-	$(am__append_10) $(am__append_11)
+	src/filesystem.cpp src/console.cpp src/HttpContext.cpp \
+	src/AuthSha1.cpp mongoose/mongoose.c $(am__append_10) \
+	$(am__append_11) $(am__append_12)
 nodist_smit_SOURCES = embedcpio.c embedcpio.h 
 BUILT_SOURCES = embedcpio.c embedcpio.h
 CLEANFILES = embedcpio.c embedcpio.h convertToC
 X = embedded_data
 SM_VERSION = $(X)/sm/version
-smit_CPPFLAGS = -I @srcdir@/mongoose @OPENSSL_CFLAGS@ @CURL_CFLAGS@ \
-	$(am__append_13) $(am__append_15)
-smit_LDADD = @OPENSSL_LIBS@ @CURL_LIBS@ $(am__append_12) \
-	$(am__append_14) $(am__append_16) $(am__append_17)
+smit_CPPFLAGS = -I @srcdir@/mongoose @OPENSSL_CFLAGS@ $(am__append_14) \
+	$(am__append_16) $(am__append_18)
+smit_LDADD = @OPENSSL_LIBS@ $(am__append_13) $(am__append_15) \
+	$(am__append_17) $(am__append_19) $(am__append_20)
 
 # specific subdirs
 SUBDIRS = test
@@ -498,8 +505,6 @@ src/smit-Trigger.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/smit-filesystem.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
-src/smit-clone.$(OBJEXT): src/$(am__dirstamp) \
-	src/$(DEPDIR)/$(am__dirstamp)
 src/smit-console.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/smit-HttpContext.$(OBJEXT): src/$(am__dirstamp) \
@@ -514,6 +519,8 @@ mongoose/$(DEPDIR)/$(am__dirstamp):
 	@: > mongoose/$(DEPDIR)/$(am__dirstamp)
 mongoose/smit-mongoose.$(OBJEXT): mongoose/$(am__dirstamp) \
 	mongoose/$(DEPDIR)/$(am__dirstamp)
+src/smit-clone.$(OBJEXT): src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
 src/smit-AuthKrb5.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/smit-AuthLdap.$(OBJEXT): src/$(am__dirstamp) \
@@ -860,20 +867,6 @@ src/smit-filesystem.obj: src/filesystem.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/smit-filesystem.obj `if test -f 'src/filesystem.cpp'; then $(CYGPATH_W) 'src/filesystem.cpp'; else $(CYGPATH_W) '$(srcdir)/src/filesystem.cpp'; fi`
 
-src/smit-clone.o: src/clone.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/smit-clone.o -MD -MP -MF src/$(DEPDIR)/smit-clone.Tpo -c -o src/smit-clone.o `test -f 'src/clone.cpp' || echo '$(srcdir)/'`src/clone.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/smit-clone.Tpo src/$(DEPDIR)/smit-clone.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/clone.cpp' object='src/smit-clone.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/smit-clone.o `test -f 'src/clone.cpp' || echo '$(srcdir)/'`src/clone.cpp
-
-src/smit-clone.obj: src/clone.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/smit-clone.obj -MD -MP -MF src/$(DEPDIR)/smit-clone.Tpo -c -o src/smit-clone.obj `if test -f 'src/clone.cpp'; then $(CYGPATH_W) 'src/clone.cpp'; else $(CYGPATH_W) '$(srcdir)/src/clone.cpp'; fi`
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/smit-clone.Tpo src/$(DEPDIR)/smit-clone.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/clone.cpp' object='src/smit-clone.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/smit-clone.obj `if test -f 'src/clone.cpp'; then $(CYGPATH_W) 'src/clone.cpp'; else $(CYGPATH_W) '$(srcdir)/src/clone.cpp'; fi`
-
 src/smit-console.o: src/console.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/smit-console.o -MD -MP -MF src/$(DEPDIR)/smit-console.Tpo -c -o src/smit-console.o `test -f 'src/console.cpp' || echo '$(srcdir)/'`src/console.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/smit-console.Tpo src/$(DEPDIR)/smit-console.Po
@@ -915,6 +908,20 @@ src/smit-AuthSha1.obj: src/AuthSha1.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/AuthSha1.cpp' object='src/smit-AuthSha1.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/smit-AuthSha1.obj `if test -f 'src/AuthSha1.cpp'; then $(CYGPATH_W) 'src/AuthSha1.cpp'; else $(CYGPATH_W) '$(srcdir)/src/AuthSha1.cpp'; fi`
+
+src/smit-clone.o: src/clone.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/smit-clone.o -MD -MP -MF src/$(DEPDIR)/smit-clone.Tpo -c -o src/smit-clone.o `test -f 'src/clone.cpp' || echo '$(srcdir)/'`src/clone.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/smit-clone.Tpo src/$(DEPDIR)/smit-clone.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/clone.cpp' object='src/smit-clone.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/smit-clone.o `test -f 'src/clone.cpp' || echo '$(srcdir)/'`src/clone.cpp
+
+src/smit-clone.obj: src/clone.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/smit-clone.obj -MD -MP -MF src/$(DEPDIR)/smit-clone.Tpo -c -o src/smit-clone.obj `if test -f 'src/clone.cpp'; then $(CYGPATH_W) 'src/clone.cpp'; else $(CYGPATH_W) '$(srcdir)/src/clone.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/smit-clone.Tpo src/$(DEPDIR)/smit-clone.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/clone.cpp' object='src/smit-clone.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/smit-clone.obj `if test -f 'src/clone.cpp'; then $(CYGPATH_W) 'src/clone.cpp'; else $(CYGPATH_W) '$(srcdir)/src/clone.cpp'; fi`
 
 src/smit-AuthKrb5.o: src/AuthKrb5.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/smit-AuthKrb5.o -MD -MP -MF src/$(DEPDIR)/smit-AuthKrb5.Tpo -c -o src/smit-AuthKrb5.o `test -f 'src/AuthKrb5.cpp' || echo '$(srcdir)/'`src/AuthKrb5.cpp
