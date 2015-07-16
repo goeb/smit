@@ -515,7 +515,8 @@ function showOrHideClasses(className, show) {
     var items = document.getElementsByClassName(className);
     for (var i=0; i<items.length; i++) {
         var item = items[i];
-        if (item.classList.contains(className)) {
+        var classList = item.className.split(' '); // IE 9 does not support classList
+        if (classList.indexOf(className) > -1) {
             if (show) item.style.display='block';
             else item.style.display='none';
 
