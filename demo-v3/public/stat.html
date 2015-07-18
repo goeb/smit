@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html><head>
+        <title>Statistics</title>
+        <link rel="icon" type="image/x-icon" href="/public/favicon.ico"/>
+        <link href="style.css" type="text/css" rel="stylesheet">
+        <meta content="text/html;charset=UTF-8" http-equiv="Content-Type">
+        <script src="Chart.js"></script>
+        <script src="ajax.js"></script>
+        <script>
+            /** Get a sample
+              * @return 
+              * Ex: { "open": 34, "closed": 321, "other": 7 }
+              */
+            function getSample(resource, timestamp, property) {
+                var url = resource + '?format=json&snapshot=' + timestamp;
+                url = url + '&colspec=' + property;
+                rsp = ajaxSend(url, 'GET');
+
+                if (rsp[0] != "ok") alert("Error: " + rsp[0]);
+                jsonString = rsp[1];
+                console.log("jsonString="+jsonString);
+                data = JSON.parse(jsonString);
+                var len = data.length;
+                consolidatedData = {};
+                for (var i=0; i<len; i++) {
+                    var key = data[i][0];
+                    if (key in consolidatedData) consolidatedData[key] ++;
+                    else consolidatedData[key] = 1;
+                }
+                console.log("consolidatedData=" + JSON.stringify(consolidatedData));
+                return consolidatedData;
+            }
+
+            function getOptions() {
+                var options = {
+                    scaleShowGridLines : true,
+                    scaleGridLineColor : "rgba(0,0,0,.05)",
+                    scaleGridLineWidth : 1,
+                    scaleShowHorizontalLines: true,
+                    scaleShowVerticalLines: true,
+                    bezierCurve : false,
+                    //bezierCurveTension : 0.4,
+                    pointDot : true,
+                    pointDotRadius : 4,
+                    pointDotStrokeWidth : 1,
+                    pointHitDetectionRadius : 20,
+                    datasetStroke : true,
+                    datasetStrokeWidth : 2,
+                    datasetFill : false,
+                    multiTooltipTemplate: "<%= datasetLabel %> - <%= value %>",
+                    legendTemplate : "<ul class=\"<%=name.toLowerCase()%>-legend\"><% for (var i=0; i<datasets.length; i++){%><li><span style=\"background-color:<%=datasets[i].strokeColor%>\"></span><%if(datasets[i].label){%><%=datasets[i].label%><%}%></li><%}%></ul>"
+                };
+                return options;
+            }
+            /** build the datasets and make the chart
+             *
+             *  xArray: [ datetime, ... ]
+             *  datasetsTitles: [ key1, key2, ... ]
+             *  samples: [ { key1: n1, key2: n2, ... }, ... ]
+             */
+            function renderChart(xArray, datasetsTitles, samples) {
+                datasets = [];
+                console.log("datasetsTitles=" + JSON.stringify(datasetsTitles));
+                for (var title in datasetsTitles) {
+                    var label = datasetsTitles[title];
+                    if (label == '') label = "(empty)";
+                    // build data
+                    var data = [];
+                    for (var sample in samples) {
+                        var value = samples[sample][label];
+                        if (value == undefined) value = 0;
+                        data.push(value);
+                    }
+                    datasets.push({ "label": label, "data": data });
+                }
+                console.log("datasets=" + JSON.stringify(datasets));
+
+                var labels = [];
+                for (m in xArray) {
+                    var d = new Date(xArray[m]*1000);
+                    var dateStr = "" + d.getFullYear() + "-" + d.getMonth() + "-" + d.getDay();
+                    labels.push(dateStr);
+                }
+                var ctx = document.getElementById("myChart").getContext("2d");
+                var myLineChart = new Chart(ctx).Line({ "labels": labels, "datasets": datasets}, getOptions());
+                var legendBox = document.getElementById('legend');
+                legendBox.innerHTML = myLineChart.generateLegend();
+
+            }
+            function getAllSamples() {
+                var serverBox = document.getElementById('server');
+                var projectBox = document.getElementById('project_name');
+                var propertyBox = document.getElementById('property_name');
+                var resource = serverBox.value + "/" + projectBox.value + "/issues/"
+                //"http://127.0.0.1:8090/myproject/issues/";
+
+                var secondsSinceEpoch = Math.floor((new Date).getTime()/1000);
+                var moments = [ ];
+                // build list of 12 last months
+                for (var i = 0; i < 12; i++) {
+                    var ts = secondsSinceEpoch - 30*24*60*60*i;
+                    moments.unshift(ts);
+                }
+                console.log("moments=" + JSON.stringify(moments));
+
+                var samples = [];
+                var propertyValues = [];
+                for (var m = 0; m < moments.length; m++) {
+                    var sample = getSample(resource, moments[m], propertyBox.value);
+                    samples.push(sample);
+                    // update the propertyValues
+                    for (value in sample) {
+                        if (propertyValues.indexOf(value) == -1) propertyValues.push(value);
+                    }
+                }
+                printResults(samples);
+                printResults(propertyValues);
+
+                renderChart(moments, propertyValues, samples);
+            }
+            function printResults(data) {
+                console.log(JSON.stringify(data))
+                
+            }
+        </script>
+    </head>
+    <body>
+        <form>
+            Server Root: <input type="text" id="server" value="http://127.0.0.1:8090"><br>
+            Project Name: <input type="text" id="project_name" value="myproject"><br>
+            Property Name: <input type="text" id="property_name" value="status"><br>
+            <button type="button" onclick="getAllSamples();">test</button>
+        <form/>
+            <canvas id="myChart" width="400" height="400"></canvas>
+            <div id="legend"></div>
+</body></html>
