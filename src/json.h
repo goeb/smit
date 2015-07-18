@@ -9,5 +9,7 @@
 std::string enquoteJs(const std::string &in);
 std::string toJavascriptArray(const std::list<std::string> &items);
 
+std::string toJsonString(const std::string &in);
+
 
 #endif

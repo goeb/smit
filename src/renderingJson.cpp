@@ -54,7 +54,7 @@ void RJson::printIssueList(const RequestContext *req, const std::vector<Issue> &
                 if (p != properties.end()) text = toString(p->second);
             }
             if (c != colspec.begin()) singleIssueJson += ", ";
-            singleIssueJson += "\"" + enquoteJs(text) + "\"";
+            singleIssueJson += toJsonString(text);
 
         }
         singleIssueJson += "]";

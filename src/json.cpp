@@ -53,3 +53,33 @@ std::string toJavascriptArray(const std::list<std::string> &items)
 
 }
 
+/** Convert a C++ std::string to a JSON string
+  *
+  * @return quote-delimited JSON string
+  *     - control characters are discarded, except: \b \f \n \r \t
+  *     - utf-8 encoded unicode characters are kept unchanged, except:
+  *     " \ / (they are \-escaped)
+  */
+std::string toJsonString(const std::string &in)
+{
+    size_t n = in.size();
+    std::string result = "\"";
+    size_t i;
+    for (i=0; i<n; i++) {
+        unsigned char c = in[i];
+        if (c < ' ') {
+            // this is a control character
+            if (c == '\b') result += "\\b";
+            else if (c == '\f') result += "\\f";
+            else if (c == '\n') result += "\\n";
+            else if (c == '\r') result += "\\r";
+            else if (c == '\t') result += "\\t";
+            // else the character is discarded
+        }
+        else if (c == '"') result += "\\\"";
+        else if (c == '\\') result += "\\\\";
+        else result += c;
+    }
+    result += '"'; // closing double-quote
+    return result;
+}
