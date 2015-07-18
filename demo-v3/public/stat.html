@@ -33,6 +33,7 @@
 
             function getOptions() {
                 var options = {
+                    animation : false,
                     scaleShowGridLines : true,
                     scaleGridLineColor : "rgba(0,0,0,.05)",
                     scaleGridLineWidth : 1,
@@ -48,7 +49,7 @@
                     datasetStrokeWidth : 2,
                     datasetFill : false,
                     multiTooltipTemplate: "<%= datasetLabel %> - <%= value %>",
-                    legendTemplate : "<ul class=\"<%=name.toLowerCase()%>-legend\"><% for (var i=0; i<datasets.length; i++){%><li><span style=\"background-color:<%=datasets[i].strokeColor%>\"></span><%if(datasets[i].label){%><%=datasets[i].label%><%}%></li><%}%></ul>"
+                    legendTemplate : "<ul class=\"<%=name.toLowerCase()%>-legend\"><% for (var i=0; i<datasets.length; i++){%><li><span style=\"background-color:<%=datasets[i].strokeColor%>\">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span> <%if(datasets[i].label){%><%=datasets[i].label%><%}%></li><%}%></ul>"
                 };
                 return options;
             }
@@ -61,6 +62,7 @@
             function renderChart(xArray, datasetsTitles, samples) {
                 datasets = [];
                 console.log("datasetsTitles=" + JSON.stringify(datasetsTitles));
+                var colors = [ "#cc0", "#d00", "#bad", "#326", "#0c0", "#e8a", "#a4c", "#7a6", "#356" ];
                 for (var title in datasetsTitles) {
                     var label = datasetsTitles[title];
                     if (label == '') label = "(empty)";
@@ -71,7 +73,15 @@
                         if (value == undefined) value = 0;
                         data.push(value);
                     }
-                    datasets.push({ "label": label, "data": data });
+                    var color = colors[title];
+                    datasets.push({
+                        "label": label,
+                        "data": data,
+                        "fillColor": color,
+                        "strokeColor": color,
+                        "pointStrokeColor": color,
+                        "pointColor": color,
+                        "pointHighlightStroke": "#000" });
                 }
                 console.log("datasets=" + JSON.stringify(datasets));
 
