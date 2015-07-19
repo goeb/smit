@@ -1,14 +1,14 @@
-#ifndef _json_h
-#define _json_h
+#ifndef _jTools_h
+#define _jTools_h
 
 #include <list>
 #include <string>
 
-// TODO these do not produce JSON compatible syntax
-// They produce only javascript compatible syntax (strings delimited by simple quotes)
+// Javascript conversion functions
 std::string enquoteJs(const std::string &in);
 std::string toJavascriptArray(const std::list<std::string> &items);
 
+// JSON conversion functions
 std::string toJsonString(const std::string &in);
 
 

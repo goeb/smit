@@ -46,7 +46,7 @@ smit_SOURCES = \
 			   src/renderingHtml.cpp \
 			   src/cpio.cpp \
 			   src/stringTools.cpp \
-			   src/json.cpp \
+			   src/jTools.cpp \
 			   src/mutexTools.cpp \
 			   src/session.cpp \
 			   src/dateTools.cpp \

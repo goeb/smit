@@ -41,7 +41,8 @@ SOURCES += \
     ../../src/third-party/mongoose.c \
     ../../src/third-party/fnmatch.c \
     ../../src/renderingJson.cpp \
-    ../../src/json.cpp
+    ../../src/json.cpp \
+    ../../src/jTools.cpp
     ../../src/ssoKerberos.cpp
 
 HEADERS += \
@@ -85,6 +86,7 @@ HEADERS += \
     ../../src/mg_win32.h \
     ../../src/Tag.h \
     ../../src/renderingJson.h \
-    ../../src/json.h
+    ../../src/json.h \
+    ../../src/jTools.h
     ../../src/ssoKerberos.h
 

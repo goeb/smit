@@ -2,7 +2,7 @@
 #include "global.h"
 #include <stdio.h>
 
-#include "json.h"
+#include "jTools.h"
 
 /** Convert a string to a javascript-compatible string
   *
