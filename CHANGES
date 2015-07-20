@@ -1,4 +1,7 @@
 
+v2.4.1
+    - page user: fix lost password after updating permissions
+
 v2.4.0, 21 June 2015
 
     - fix crash when missing content-type in POST request
