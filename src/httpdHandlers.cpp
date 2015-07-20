@@ -1683,6 +1683,14 @@ void httpGetHeadObject(const RequestContext *req, Project &p, std::string object
     }
 }
 
+void httpGetStat(const RequestContext *req, Project &p, const User &u)
+{
+    sendHttpHeader200(req);
+    ContextParameters ctx = ContextParameters(req, u, p);
+    // only HTML format is supported
+    RHtml::printPageStat(ctx, u);
+}
+
 /** Handle the pushing of a file
   *
   * If the file already exists, then do not overwrite it.
@@ -2527,6 +2535,7 @@ int begin_request_handler(const RequestContext *req)
         else if ( (resource == RESOURCE_FILES) && (method == "POST") ) httpPushAttachedFile(req, *p, uri, user);
         else if ( (resource == RESOURCE_FILES) && (method == "GET") ) httpGetObject(req, *p, uri);
         else if ( (resource == RESOURCE_FILES) && (method == "HEAD") ) httpGetHeadObject(req, *p, uri);
+        else if ( (resource == "stat") && (method == "GET") ) httpGetStat(req, *p, user);
         else handled = false;
 
     }

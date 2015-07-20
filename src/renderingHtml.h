@@ -71,6 +71,7 @@ public:
     static void printIssueForm(const ContextParameters &ctx, const Issue *issue, bool autofocus);
     static void printPageSignin(const ContextParameters &ctx, const char *redirect);
 
+    static void printPageStat(const ContextParameters &ctx, const User &u);
     static void printPageUser(const ContextParameters &ctx, const User *u);
 
     static void printPageView(const ContextParameters &ctx, const PredefinedView &pv);

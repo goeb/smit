@@ -8,10 +8,10 @@ function changeWrapping() {
 function ajaxSend(url, method) {
     var request = new XMLHttpRequest();
     request.open(method, url, false); // synchronous
-    request.send(null);
+    request.send();
     var status = request.status;
-    if (status == 200) return 'ok';
-    else return request.responseText;
+    if (status == 200) return ['ok', request.responseText];
+    else return ['error', request.responseText];
 }
 function previewMessage() {
     var divPreview = document.getElementById('sm_entry_preview');
@@ -31,16 +31,16 @@ function previewMessage() {
 
 function sm_deleteResource(redirect) {
     var r = confirm("Confirm delete?");
-    if (r==true) {
+    if (r == true) {
         r = ajaxSend('#', 'DELETE');
-        if (r != 'ok') alert(r);
+        if (r[0] != 'ok') alert(r[1]);
         else window.location.href = redirect;
     }
 }
 
 function tagEntry(urlPrefix, entryId, tagId) {
     var r = ajaxSend(urlPrefix + '/' + entryId + '/' + tagId, 'POST');
-    if (r == 'ok') {
+    if (r[0] == 'ok') {
         var etag = document.getElementById('sm_tag_' + entryId + "_" + tagId);
         var doTag = false;
         taggedStyle = 'sm_entry_tag_' + tagId;
@@ -79,7 +79,7 @@ function tagEntry(urlPrefix, entryId, tagId) {
             else box.className = 'sm_issue_notag';
         }
 
-    } else alert('error');
+    } else alert('error: ' + r[1]);
 }
 
 function updateFileInput(classname) {

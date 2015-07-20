@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Project Statistics</title>
+        <link rel="icon" type="image/x-icon" href="SM_URL_ROOT/public/favicon.ico"/>
+        <link rel="stylesheet" type="text/css" href="SM_URL_ROOT/public/style.css">
+        <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/>
+        <script src="SM_URL_ROOT/sm/smit.js"></script>
+        <script src="SM_URL_ROOT/sm/Chart.min.js"></script>
+    </head>
+    <body>
+        <div style="position: fixed; top: 0; padding-top: 15px; width: 100%; background: white;">
+            <table><tr><td><img src="SM_URL_ROOT/public/logo.png" class="logo" alt="Logo"></td>
+                    <td>SM_DIV_NAVIGATION_GLOBAL SM_DIV_NAVIGATION_ISSUES</td></tr></table>
+        </div>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+
+        <script>
+            /** Get a sample
+              * @return 
+              * Ex: { "open": 34, "closed": 321, "other": 7 }
+              */
+            function getSample(resource, timestamp, property) {
+                var url = resource + '?format=json&snapshot=' + timestamp;
+                url = url + '&colspec=' + property;
+                rsp = ajaxSend(url, 'GET');
+
+                if (rsp[0] != "ok") alert("Error: " + rsp[0]);
+                jsonString = rsp[1];
+                //console.log("jsonString="+jsonString);
+                data = JSON.parse(jsonString);
+                var len = data.length;
+                consolidatedData = {};
+                for (var i=0; i<len; i++) {
+                    var key = data[i][0];
+                    if (key in consolidatedData) consolidatedData[key] ++;
+                    else consolidatedData[key] = 1;
+                }
+                //console.log("consolidatedData=" + JSON.stringify(consolidatedData));
+                return consolidatedData;
+            }
+
+            function getOptions() {
+                var options = {
+                    animation : false,
+                    scaleShowGridLines : true,
+                    scaleGridLineColor : "rgba(0,0,0,.05)",
+                    scaleGridLineWidth : 1,
+                    scaleShowHorizontalLines: true,
+                    scaleShowVerticalLines: true,
+                    bezierCurve : false,
+                    //bezierCurveTension : 0.4,
+                    pointDot : true,
+                    pointDotRadius : 4,
+                    pointDotStrokeWidth : 1,
+                    pointHitDetectionRadius : 20,
+                    datasetStroke : true,
+                    datasetStrokeWidth : 2,
+                    datasetFill : false,
+                    multiTooltipTemplate: "<%= datasetLabel %> - <%= value %>",
+                    legendTemplate : "<ul class=\"<%=name.toLowerCase()%>-legend\"><% for (var i=0; i<datasets.length; i++){%><li><span style=\"background-color:<%=datasets[i].strokeColor%>\">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span> <%if(datasets[i].label){%><%=datasets[i].label%><%}%></li><%}%></ul>"
+                };
+                return options;
+            }
+            /** Get a random color in the format: #fff */
+            function getRandomColor() {
+                var chars = '0123456789abcdef';
+                var result = '#';
+                for (var i = 0; i < 3; i++) result += chars[Math.round(Math.random() * (chars.length - 1))];
+                return result;
+            }
+            /** build the datasets and make the chart
+             *
+             *  xArray: [ datetime, ... ]
+             *  datasetsTitles: [ key1, key2, ... ]
+             *  samples: [ { key1: n1, key2: n2, ... }, ... ]
+             */
+            function renderChart(xArray, datasetsTitles, samples) {
+                datasets = [];
+                //console.log("datasetsTitles=" + JSON.stringify(datasetsTitles));
+                var colors = [ "#aa0", "#d00", "#b8a8d8", "#436", "#0d5", "#d79", "#a4c", "#5a6", "#356", "#333" ];
+                for (var title in datasetsTitles) {
+                    var label = datasetsTitles[title];
+                    if (label == '') label = "(empty)";
+                    // build data
+                    var data = [];
+                    for (var sample in samples) {
+                        var value = samples[sample][label];
+                        if (value == undefined) value = 0;
+                        data.push(value);
+                    }
+                    var color = colors[title];
+                    if (color == undefined) color = getRandomColor();
+                    datasets.push({
+                        "label": label,
+                        "data": data,
+                        "fillColor": color,
+                        "strokeColor": color,
+                        "pointStrokeColor": color,
+                        "pointColor": color,
+                        "pointHighlightStroke": "#000" });
+                }
+                //console.log("datasets=" + JSON.stringify(datasets));
+
+                var labels = [];
+                for (m in xArray) {
+                    var d = new Date(xArray[m]*1000);
+                    var dateStr = "" + d.getFullYear() + "-" + d.getMonth() + "-" + d.getDay();
+                    labels.push(dateStr);
+                }
+                var ctx = document.getElementById("myChart").getContext("2d");
+                var myLineChart = new Chart(ctx).Line({ "labels": labels, "datasets": datasets}, getOptions());
+                var legendBox = document.getElementById('legend');
+                legendBox.innerHTML = myLineChart.generateLegend();
+
+            }
+            function getAllSamples() {
+                var propertyBox = document.getElementById('property_name');
+                var resource = "issues/"
+
+                var secondsSinceEpoch = Math.floor((new Date).getTime()/1000);
+                var moments = [ ];
+                // build list of 12 last months
+                for (var i = 0; i < 12; i++) {
+                    var ts = secondsSinceEpoch - 30*24*60*60*i;
+                    moments.unshift(ts);
+                }
+                //console.log("moments=" + JSON.stringify(moments));
+
+                var samples = [];
+                var propertyValues = [];
+                for (var m = 0; m < moments.length; m++) {
+                    var sample = getSample(resource, moments[m], propertyBox.value);
+                    samples.push(sample);
+                    // update the propertyValues
+                    for (value in sample) {
+                        if (propertyValues.indexOf(value) == -1) propertyValues.push(value);
+                    }
+                }
+
+                renderChart(moments, propertyValues, samples);
+                return false;
+            }
+        </script>
+    </head>
+    <body>
+        <form onsubmit="return getAllSamples();">
+            Property Name: <input type="text" id="property_name" value="status">
+            <input type="submit" value="Apply">
+        <form/>
+            <br>
+            <canvas id="myChart" width="400" height="400"></canvas>
+            <div id="legend"></div>
+            <script>getAllSamples();</script>
+    </body>
+</html>

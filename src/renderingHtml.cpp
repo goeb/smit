@@ -315,6 +315,11 @@ void RHtml::printPageSignin(const ContextParameters &ctx, const char *redirect)
                 enquoteJs(redirect).c_str());
 }
 
+void RHtml::printPageStat(const ContextParameters &ctx, const User &u)
+{
+    VariableNavigator vn("stat.html", ctx);
+    vn.printPage();
+}
 
 void RHtml::printPageUser(const ContextParameters &ctx, const User *u)
 {
@@ -610,7 +615,7 @@ void RHtml::printNavigationGlobal(const ContextParameters &ctx)
         HtmlNode linkToModify("a");
         linkToModify.addAttribute("class", "sm_link_modify_project");
         linkToModify.addAttribute("href", "/%s/config", ctx.getProject().getUrlName().c_str());
-        linkToModify.addContents("%s", _("Project configuration"));
+        linkToModify.addContents("%s", _("Project config"));
         div.addContents(" ");
         div.addContents(linkToModify);
 
@@ -618,7 +623,7 @@ void RHtml::printNavigationGlobal(const ContextParameters &ctx)
         HtmlNode linkToViews("a");
         linkToViews.addAttribute("class", "sm_link_views");
         linkToViews.addAttribute("href", "/%s/views/", ctx.getProject().getUrlName().c_str());
-        linkToViews.addContents("%s", _("Predefined Views"));
+        linkToViews.addContents("%s", _("Views"));
         div.addContents(" ");
         div.addContents(linkToViews);
     }
