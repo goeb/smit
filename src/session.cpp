@@ -424,8 +424,8 @@ int UserBase::updateUser(const std::string &username, User newConfig)
     u = UserDb.configuredUsers.find(username);
     if (u == UserDb.configuredUsers.end()) return -3;
 
-    if (newConfig.authHandler) {
-        // keep the same as before
+    if (!newConfig.authHandler) {
+        // No new authentication handler. Keep the same as before.
         newConfig.authHandler = u->second->authHandler;
     } else if (u->second->authHandler) {
         // delete old
