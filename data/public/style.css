@@ -253,6 +253,10 @@ a:link.sm_issues_sort_cumulative { color: #344; }
 a:visited.sm_issues_sort_cumulative { color: #344; }
 a.sm_issues_sort { }
 
+a:link.sm_issues_delete_col { color: #344; }
+a:visited.sm_issues_delete_col { color: #344; }
+a.sm_issues_delete_col { }
+
 .sm_entry_edit, .sm_entry_edit form {
     vertical-align: top;
     font-size: small;
@@ -322,7 +326,7 @@ table.sm_projects tr:hover, table.sm_users tr:hover {
     padding: 3px;
     margin: 0.5em;
 }
-.sm_link_projects, .sm_link_modify_project, .sm_link_views, .sm_link_users {
+.sm_link_projects, .sm_link_users, .sm_link_modify_project, .sm_link_views, .sm_link_users {
     padding: 3px;
     margin: 0.5em;
     font-weight: bold;
