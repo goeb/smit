@@ -15,7 +15,7 @@ for i in `seq 1 $N`; do
     ./get_random_value $i >> $TMP.ref
     echo >> $TMP.ref
 
-    ./get_random_value $i | ./smparser -e | ./smparser - > $TMP
+    ./get_random_value $i | ../smparser -e | ../smparser - > $TMP
 
     diff $TMP.ref $TMP
 done

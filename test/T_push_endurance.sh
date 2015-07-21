@@ -72,7 +72,7 @@ checkClone() {
     echo "-- $clone --" >> $TEST_NAME.out
     $SMIT issue $clone/${project} | 
         sed -e "s/^Issue [0-9]*:/Issue ...:/" |
-        sort >> $TEST_NAME.out
+        sort -V >> $TEST_NAME.out
 }
 
 N_CLONES=5
