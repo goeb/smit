@@ -111,7 +111,7 @@
                 var labels = [];
                 for (m in xArray) {
                     var d = new Date(xArray[m]*1000);
-                    var dateStr = "" + d.getFullYear() + "-" + d.getMonth() + "-" + d.getDay();
+                    var dateStr = "" + d.getFullYear() + "-" + (1+d.getMonth()) + "-" + d.getDate();
                     labels.push(dateStr);
                 }
                 var ctx = document.getElementById("myChart").getContext("2d");
@@ -122,13 +122,17 @@
             }
             function getAllSamples() {
                 var propertyBox = document.getElementById('property_name');
-                var resource = "issues/"
+                var nSamplesBox = document.getElementById('n_past_dates');
+                var nSamples = parseInt(nSamplesBox.value);
+                var deltaDaysBox = document.getElementById('delta_days');
+                var deltaDays = parseInt(deltaDaysBox.value);
+                var resource = "issues/";
 
                 var secondsSinceEpoch = Math.floor((new Date).getTime()/1000);
                 var moments = [ ];
-                // build list of 12 last months
-                for (var i = 0; i < 12; i++) {
-                    var ts = secondsSinceEpoch - 30*24*60*60*i;
+                // build list of n samples
+                for (var i = 0; i < nSamples; i++) {
+                    var ts = secondsSinceEpoch - deltaDays*24*60*60*i;
                     moments.unshift(ts);
                 }
                 //console.log("moments=" + JSON.stringify(moments));
@@ -151,7 +155,13 @@
     </head>
     <body>
         <form onsubmit="return getAllSamples();">
-            Property Name: <input type="text" id="property_name" value="status">
+            <table><tr>
+                    <td>Property Name:</td><td><input type="text" id="property_name" value="status"></td>
+                    </tr><tr>
+                    <td>Number of Past Dates:</td><td><input type="text" id="n_past_dates" value="12"></td>
+                    </tr><tr>
+                    <td>Delta between Past Dates (days):</td><td><input type="text" id="delta_days" value="30"></td>
+            </tr></table>
             <input type="submit" value="Apply">
         <form/>
             <br>
