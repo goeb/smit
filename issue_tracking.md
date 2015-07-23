@@ -2,32 +2,30 @@
 
 Issue Tracking is the art of managing issues in order to get a clear status of unresolved issues and a history of what happened about all issues.
 
-> *&#8984; Vocabulary*
-> 
-> An issue database is more or less a 3D matrix:
+> An issue database is approximately a 3D matrix:
 >
 > - a row for each *issue*
-> - a column for each *property* (eg: a status is a property)
-> - a depth axis for the *history*
+> - a column for each *property* (eg: status, priority, ...)
+> - a depth axis for the *history* of messages
 > 
 
 The main pitfalls that issue tracker software have to tackle are:
 
-- information is lost in a mass of issues
-- issue forms are encumbered with countless properties
-- interoperability is needed
-- reactivity of the screen interface
+- information lost in a mass of issues
+- cumbersome countless properties
+- interoperability with existing tools
+- reactivity of the GUI
 
 This page explains how Smit has been designed to overcome these pitfalls.
 
 ## A mass of issues
-It is normal for an organization to have a mass of issues (thousands or tens of thousands). It is thus hard to find a particular issue by reading all.
+It is usual for an organization to have a mass of issues (thousands or tens of thousands). It is thus hard to find a particular issue by reading all.
 
 To deal with this mass of issues Smit features:
 
 - a "one-click" multi-property sorting interface
 - full text searching, that searches through all messages and properties
-- modular properties that enable adding tag properties easily
+- an agile property model that can be updated online when necessary
 
 ## Countless properties
 Some organizations' issue trackers have a great number of properties 
