@@ -30,22 +30,22 @@ Some of the main features of Smit are:
 - Easy administration
     * Easy customization of properties
     * Customizable associations between issues (parenthood, duplicates, etc.)
-    * Easy customization of HTML pages
+    * Simple customization of HTML pages
 - Efficient usage
     * "One-click" multi-column sorting
     * Uploaded images displayed as thumbnails
     * Advanced searching (including full text searching)
-    * Rich text, with preview
+    * Messages in rich text, with preview
     * Modification of recent messages (for fixing misspellings,...)
     * Bookmark-friendly URL
     * Concise web GUI
-    * History of the modifications in the message flow
+    * History of the modifications in the messages flow
 - Exporting contents to HTML, CSV, PDF (via the browser's capability)
     * Full-contents view of the issues
     * Print preview (hyper-text links become hidden)
 - Cloning, local web GUI, pulling, pushing
 - Trigger of external program on new entry
-    * for email notification, with PGP-encrypted emails
+    * for email notification (PGP-encryption possible)
 - Tags on entries
 - Self-Contained: Smit is a single stand-alone executable
 
