@@ -14,7 +14,7 @@ The main pitfalls that issue tracker software have to tackle are:
 - information lost in a mass of issues
 - cumbersome countless properties
 - interoperability with existing tools
-- reactivity of the GUI
+- responsiveness of the GUI
 
 This page explains how Smit has been designed to overcome these pitfalls.
 
@@ -28,13 +28,11 @@ To deal with this mass of issues Smit features:
 - an agile property model that can be updated online when necessary
 
 ## Countless properties
-Some organizations' issue trackers have a great number of properties 
-because they want to deal with all possible cases. But this has the following disadvantages:
+Some organizations' issue trackers have a great number of properties in their model because they want to deal with all possible cases. Some properties are not needed now, but they have been added to the model just in case they may be used in the future.
 
-- issues are encumbered with many properties, and that slows down the reading of the issues
-- some properties have been put there in case they are used in the future, but they are never used
+But this has the following disadvantages: issues are encumbered with many properties, and that slows down the reading of the issues, and also the creation of a new issue as the author spends some time to wonder how to fulfill all these properties.
 
-Smit tackles this pitfall as follows: it is really easy to add or modify properties at any time, and therefore there is no point in adding properties for future use.
+With Smit it is easy to modify the issue model: add, modify or delete properties at any time, online. Therefore there is no point in adding properties for future use.
 
 Note that modifying a property in Smit does not threaten the integrity of existing issues.
 
@@ -45,19 +43,16 @@ Organizations that care for sustainable activity do not want to be bound to a so
 
 Organizations that care for business or industrial efficiency want to have their databases and software cooperate (talk together).
 
-Smit's database is made of simple text files, easy to read and parse.
-Its format is publicly known as Smit is released under an open-source license.
-
-Smit also provides:
+Smit provides:
 
 - CSV format, for exportation to Excel or Calc
 - a full-contents view, suitable for printing or PDF export
 
-## High reactivity
+## High Responsiveness
 
 Workers do not want to be slowed down by software. Nobody wants to wait for 10 seconds for the page to be displayed.
 
-Smit is really fast. You do not have to wait, even when the database contains tens of thousands of issues.
+Smit is really fast and does not use heavy images and javascript.
 
 
 
