@@ -1,5 +1,5 @@
 
-SMIT=../build_linux86/smit
+SMIT=../linux/smit
 SMITC=../bin/smitc
 
 set -e 
@@ -14,7 +14,7 @@ init() {
     REPO=testdir # just to be sure before the rm -rf
     rm -rf $REPO && mkdir $REPO
     $SMIT init $REPO
-    $SMIT project -c $PROJECT -d $REPO
+    $SMIT project -c $REPO/$PROJECT
     $SMIT user $USER --passwd $PASSWD --project $PROJECT:rw -d $REPO
 }
 start() {

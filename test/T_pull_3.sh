@@ -30,8 +30,12 @@ init() {
     # create issue 1
     $SMIT issue $REPO/$PROJECT1 -a - "summary=first issue" freeText="creation of issue1"
     $SMIT issue $REPO/$PROJECT1 -a 1 status=open +message="some text...."
-    tobeAmended=$($SMIT issue $REPO/$PROJECT1 -a 1 freeText=textServer0 +message="message server 0" | sed -e "s/.*Entry *//")
+    tobeAmended=$($SMIT issue $REPO/$PROJECT1 -a 1 freeText=textServer0 +message="message server 0")
     echo tobeAmended=$tobeAmended
+    # tobeAmended format: 1/xxxxx
+    # keep only the xxx part (ie: the entry id)
+    tobeAmended=$(echo $tobeAmended | sed -e "s;.*/;;")
+    echo "tobeAmended.entry=$tobeAmended"
 
 }
 cleanup() {
