@@ -26,11 +26,16 @@ enum LogLevel {
   */
 inline std::string getStrerror(int errnum)
 {
+#ifndef _WIN32
     char buffer[512];
     char *s = strerror_r(errnum, buffer, sizeof(buffer));
 
     if (s) return std::string(s);
     else return std::string("strerror_r returned null");
+#else
+    // strerror_r does not exist on Windows and looks like thread-safe
+    return strerror(errnum);
+#endif
 }
 
 #define STRERROR(_x) getStrerror(_x).c_str()
