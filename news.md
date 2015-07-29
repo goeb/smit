@@ -1,5 +1,18 @@
 # News
 
+## 29 July 2015
+
+Smit v3.0.0 is released.
+
+Smit v3 is not compatible with a smit-v2 database. You need to migrate using the script 'upgrade2db3' (bash-compatible shell needed).
+
+Other major changes are:
+
+- Clone / Pull / Push Capabilities
+- Page Advanced Search: Suggested values for search filters (filters in/out)
+
+
+
 ## 1 April 2015
 
 Smit v2.3.0 is released.

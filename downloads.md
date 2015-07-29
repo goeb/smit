@@ -6,6 +6,7 @@
 *Latest Stable:*
 
 - [smit-2.3.0-setup.exe](downloads/smit-2.3.0-setup.exe)
+- [smit-3.0.0-setup.exe](downloads/smit-3.0.0-setup.exe)
 
 
 *Older Versions:*
