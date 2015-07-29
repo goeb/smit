@@ -66,6 +66,6 @@ $SMIT push clone1 >> $TEST_NAME.out 2>&1
 
 stopServer
 
-# 
+# Remove \r and filter out entries identifiers
 sed -e "s///" -e "s;/[0-9a-f]\{40\}$;/...;" $TEST_NAME.out > $TEST_NAME.out.fil
 diff $srcdir/$TEST_NAME.ref $TEST_NAME.out.fil

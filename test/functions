@@ -88,3 +88,6 @@ checkFileExists() {
     echo "$file: ok"
 }
 
+dostep() {
+    echo "step> $*"
+}

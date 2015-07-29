@@ -18,14 +18,18 @@ usage() {
     exit 1
 }
 
-
 signin() {
-    echo "signin... args=$@"
+    #echo "signin... args=$@"
     serverurl="$1"
     username="$2"
     passwd="$3"
 
-    curl -X POST -d "username=$username&password=$passwd" -c $SMITC_COOKIE "$serverurl/signin?format=text"
+    curl -X POST -s -w "%{http_code}\n" --show-error -d "username=$username&password=$passwd" -c $SMITC_COOKIE "$serverurl/signin?format=text"
+}
+
+signout() {
+    serverurl="$1"
+    curl -X POST -s -w "%{http_code}\n" --show-error -b $SMITC_COOKIE "$serverurl/signout?format=text"
 }
 
 get() {
@@ -64,7 +68,7 @@ postconfig() {
         data="$data --data-urlencode $1"
         shift
     done
-    curl -X POST -H Expect: -s $data -b $SMITC_COOKIE "$uri?format=text"
+    curl -X POST -s -w "%{http_code}\n" --show-error -H Expect: -s $data -b $SMITC_COOKIE "$uri?format=text"
 }
 
 # main

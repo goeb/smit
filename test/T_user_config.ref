@@ -1,0 +1,20 @@
+step> sign in as USER1
+204
+step> modify USER1 password (nominal case)
+204
+step> post empty password for USER1
+204
+step> post USER1 password: error, passwords do not match
+400 Bad Request
+passwords 1 and 2 do not match
+400
+step> sign out
+204
+step> post USER1 password, expect error, not signed in
+403 Forbidden
+403
+step> sign in: check old password tpasswd1, expect error
+403 Forbidden
+403
+step> sign in: check new password xxx, expect OK
+204

@@ -1,10 +1,12 @@
 Modification of project config by authorized user
+204
+204
 Configuration of project 'trepo/p1':
 +smv ...
 +parent ...
 +ctime ...
 +author user2
-addProperty propx -label the text
+addProperty propx -label the-label-of-propx text
 
 Configuration of project 'trepo/p1/sub1':
 +smv ...
@@ -16,13 +18,15 @@ addProperty propx_sub1 select option-one
 2 project(s)
 Modification of project config by unauthorized user
 403 Forbidden
+403
 403 Forbidden
+403
 Configuration of project 'trepo/p1':
 +smv ...
 +parent ...
 +ctime ...
 +author user2
-addProperty propx -label the text
+addProperty propx -label the-label-of-propx text
 
 Configuration of project 'trepo/p1/sub1':
 +smv ...

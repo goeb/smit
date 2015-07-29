@@ -43,7 +43,7 @@ $SMITC postconfig "http://127.0.0.1:$PORT/p1/config" \
     projectName=p1 \
     propertyName=propx \
     type=text \
-    label="the label of propx" \
+    label="the-label-of-propx" \
     >> $TEST_NAME.out
 $SMITC postconfig "http://127.0.0.1:$PORT/p1/sub1/config" \
     projectName=p1/sub1 \
@@ -61,7 +61,7 @@ $SMITC postconfig "http://127.0.0.1:$PORT/p1/config" \
     projectName=p1 \
     propertyName=prop-yy \
     type=text \
-    label="the label of prop-yy" \
+    label="the-label-of-prop-yy" \
     >> $TEST_NAME.out
 $SMITC postconfig "http://127.0.0.1:$PORT/p1/sub1/config" \
     projectName=p1/sub1 \

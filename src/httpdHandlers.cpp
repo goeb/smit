@@ -371,25 +371,6 @@ int httpPostSignin(const RequestContext *request)
             return sendHttpHeader400(request, "Missing password");
         }
 
-        std::string redirect;
-        enum RenderingFormat format = getFormat(request);
-        if (format != RENDERING_HTML) {
-            // no need to get the redirect location
-
-        } else {
-            // get the redirect page
-            r = mg_get_var(postData.c_str(), postData.size(),
-                           "redirect", buffer, SIZ);
-
-            if (r<0) {
-                // error: empty, or too long, or not present
-                LOG_DEBUG("Cannot get redirect. r=%d, postData=%s", r, postData.c_str());
-                return sendHttpHeader400(request, "Cannot get redirection");
-            }
-            redirect = buffer;
-        }
-
-
         // check credentials
         std::string sessionId = SessionBase::requestSession(username, password);
         LOG_DIAG("User %s got sessid: %s", username.c_str(), sessionId.c_str());
@@ -401,10 +382,27 @@ int httpPostSignin(const RequestContext *request)
             return REQUEST_COMPLETED;
         }
 
-        if (format == X_SMIT) {
+        // Sign-in accepted
+
+        std::string redirect;
+        enum RenderingFormat format = getFormat(request);
+
+        if (format == X_SMIT || format == RENDERING_TEXT) {
             std::string cookieSessid = getServerCookie(COOKIE_SESSID_PREFIX, sessionId, SESSION_DURATION);
             sendHttpHeader204(request, cookieSessid.c_str());
         } else {
+            // HTML rendering
+            // Get the redirection page
+            r = mg_get_var(postData.c_str(), postData.size(),
+                           "redirect", buffer, SIZ);
+
+            if (r<0) {
+                // error: empty, or too long, or not present
+                LOG_DEBUG("Cannot get redirect. r=%d, postData=%s", r, postData.c_str());
+                return sendHttpHeader400(request, "Cannot get redirection");
+            }
+            redirect = buffer;
+
             if (redirect.empty()) redirect = "/";
             setCookieAndRedirect(request, COOKIE_SESSID_PREFIX, sessionId.c_str(), redirect.c_str());
         }
@@ -590,8 +588,6 @@ void httpGetUser(const RequestContext *request, const User &signedInUser, const 
 
     ContextParameters ctx = ContextParameters(request, signedInUser);
 
-    enum RenderingFormat format = getFormat(request);
-
     if (username == "_") {
         // display form for a new user
         // only a superadmin may do this
@@ -617,6 +613,7 @@ void httpGetUser(const RequestContext *request, const User &signedInUser, const 
 
             sendHttpHeader200(request);
 
+            enum RenderingFormat format = getFormat(request);
             if (format == X_SMIT) {
                 // print the permissions of the signed-in user
                 request->printf("Content-Type: text/plain\r\n\r\n");
@@ -715,149 +712,157 @@ void httpPostUser(const RequestContext *request, User signedInUser, const std::s
     // get the posted parameters
     const char *contentType = getContentType(request);
 
-    if (0 == strcmp("application/x-www-form-urlencoded", contentType)) {
-        // application/x-www-form-urlencoded
-        // post_data is "var1=val1&var2=val2...".
+    if (0 != strcmp("application/x-www-form-urlencoded", contentType)) {
+        LOG_ERROR("Bad contentType: %s", contentType);
+        return;
+    }
+    // application/x-www-form-urlencoded
+    // post_data is "var1=val1&var2=val2...".
 
-        std::string postData;
-        int rc = readMgreq(request, postData, 4096);
-        if (rc < 0) {
-            sendHttpHeader413(request, "You tried to upload too much data. Max is 4096 bytes.");
+    std::string postData;
+    int rc = readMgreq(request, postData, 4096);
+    if (rc < 0) {
+        sendHttpHeader413(request, "You tried to upload too much data. Max is 4096 bytes.");
+        return;
+    }
+
+    User newUserConfig;
+    std::string passwd1, passwd2;
+    std::string projectWildcard, role;
+    std::string authType = "sha1"; // default value
+    std::string ldapUri, ldapDname;
+    std::string krb5Primary, krb5Realm;
+
+    while (postData.size() > 0) {
+        std::string tokenPair = popToken(postData, '&');
+        std::string key = popToken(tokenPair, '=');
+        std::string value = urlDecode(tokenPair);
+
+        if (key == "name") newUserConfig.username = value;
+        else if (key == "sm_superadmin" && value == "on") newUserConfig.superadmin = true;
+        else if (key == "sm_auth_type") authType = value;
+        else if (key == "sm_passwd1") passwd1 = value;
+        else if (key == "sm_passwd2") passwd2 = value;
+        else if (key == "sm_ldap_uri") ldapUri = value;
+        else if (key == "sm_ldap_dname") ldapDname = value;
+        else if (key == "sm_krb5_primary") krb5Primary = value;
+        else if (key == "sm_krb5_realm") krb5Realm = value;
+        else if (key == "project_wildcard") projectWildcard = value;
+        else if (key == "role") role = value;
+        else {
+            LOG_ERROR("httpPostUsers: unexpected parameter '%s'", key.c_str());
+        }
+
+        // look if the pair project/role is complete
+        if (!projectWildcard.empty() && !role.empty()) {
+            Role r = stringToRole(role);
+            if (r != ROLE_NONE) newUserConfig.permissions[projectWildcard] = r;
+            projectWildcard.clear();
+            role.clear();
+        }
+    }
+
+    // Check that the username given in the form is not empty.
+    // Only superadmin has priviledge for modifying this.
+    // For other users, the disabled field makes the username empty.
+    if (signedInUser.superadmin) {
+        if (newUserConfig.username.empty() || newUserConfig.username == "_") {
+            LOG_INFO("Ignore user parameters as username is empty or '_'");
+            sendHttpHeader400(request, "Invalid user name");
             return;
         }
+    }
 
-        User newUserConfig;
-        std::string passwd1, passwd2;
-        std::string projectWildcard, role;
-        std::string authType = "sha1"; // default value
-        std::string ldapUri, ldapDname;
-        std::string krb5Primary, krb5Realm;
+    int r = 0;
+    std::string error;
 
-        while (postData.size() > 0) {
-            std::string tokenPair = popToken(postData, '&');
-            std::string key = popToken(tokenPair, '=');
-            std::string value = urlDecode(tokenPair);
-
-            if (key == "name") newUserConfig.username = value;
-            else if (key == "sm_superadmin" && value == "on") newUserConfig.superadmin = true;
-            else if (key == "sm_auth_type") authType = value;
-            else if (key == "sm_passwd1") passwd1 = value;
-            else if (key == "sm_passwd2") passwd2 = value;
-            else if (key == "sm_ldap_uri") ldapUri = value;
-            else if (key == "sm_ldap_dname") ldapDname = value;
-            else if (key == "sm_krb5_primary") krb5Primary = value;
-            else if (key == "sm_krb5_realm") krb5Realm = value;
-            else if (key == "project_wildcard") projectWildcard = value;
-            else if (key == "role") role = value;
-            else {
-                LOG_ERROR("httpPostUsers: unexpected parameter '%s'", key.c_str());
-            }
-
-            // look if the pair project/role is complete
-            if (!projectWildcard.empty() && !role.empty()) {
-                Role r = stringToRole(role);
-                if (r != ROLE_NONE) newUserConfig.permissions[projectWildcard] = r;
-                projectWildcard.clear();
-                role.clear();
-            }
-        }
-
-        // Check that the username given in the form is not empty.
-        // Only superadmin has priviledge for modifying this.
-        // For other users, the disabled field makes the username empty.
-        if (signedInUser.superadmin) {
-            if (newUserConfig.username.empty() || newUserConfig.username == "_") {
-                LOG_INFO("Ignore user parameters as username is empty or '_'");
-                sendHttpHeader400(request, "Invalid user name");
-                return;
-            }
-        }
-
-        int r = 0;
-        std::string error;
-
-        // check the parameters
-        if (passwd1 != passwd2) {
-            LOG_INFO("passwd1 (%s) != passwd2 (%s)", passwd1.c_str(), passwd2.c_str());
-            sendHttpHeader400(request, "passwords 1 and 2 do not match");
-            return;
-        }
+    // check the parameters
+    if (passwd1 != passwd2) {
+        LOG_INFO("passwd1 (%s) != passwd2 (%s)", passwd1.c_str(), passwd2.c_str());
+        sendHttpHeader400(request, "passwords 1 and 2 do not match");
+        return;
+    }
 
 
-        LOG_INFO("authType=%s", authType.c_str()); // TODO remove this debug
+    LOG_INFO("authType=%s", authType.c_str()); // TODO remove this debug
 
-        if (!signedInUser.superadmin) {
-            // if signedInUser is not superadmin, only password is updated
-            newUserConfig.username = username; // used below for redirection
+    if (!signedInUser.superadmin) {
+        // if signedInUser is not superadmin, only password is updated
+        newUserConfig.username = username; // used below for redirection
 
-            if (!passwd1.empty()) {
-                r = UserBase::updatePassword(username, passwd1);
-                if (r != 0) {
-                    LOG_ERROR("Cannot update password of user '%s'", username.c_str());
-                    error = "Cannot update password";
-                } else LOG_INFO("Password updated for user '%s'", username.c_str());
-            } else {
-                LOG_DEBUG("Password not changed (empty)");
-            }
-
+        if (!passwd1.empty()) {
+            r = UserBase::updatePassword(username, passwd1);
+            if (r != 0) {
+                LOG_ERROR("Cannot update password of user '%s'", username.c_str());
+                error = "Cannot update password";
+            } else LOG_INFO("Password updated for user '%s'", username.c_str());
         } else {
-            // superadmin: update all parameters of the user's configuration
-            if (authType == "sha1") {
-				if (!passwd1.empty()) newUserConfig.setPasswd(passwd1);
+            LOG_DEBUG("Password not changed (empty)");
+        }
+
+    } else {
+        // superadmin: update all parameters of the user's configuration
+        if (authType == "sha1") {
+            if (!passwd1.empty()) newUserConfig.setPasswd(passwd1);
 
 #ifdef LDAP_ENABLED
-            } else if (authType == "ldap") {
-                if (ldapUri.empty() || ldapDname.empty()) {
-                    sendHttpHeader400(request, "Missing parameter. Check the LDAP URI and Distinguished Name.");
-                    return;
-                }
-                newUserConfig.authHandler = new AuthLdap(newUserConfig.username, ldapUri, ldapDname);
-#endif
-#ifdef KERBEROS_ENABLED
-            } else if (authType == "krb5") {
-                if (krb5Realm.empty()) {
-                    sendHttpHeader400(request, "Empty parameter: Kerberos Realm.");
-                    return;
-                }
-                newUserConfig.authHandler = new AuthKrb5(newUserConfig.username, krb5Realm, krb5Primary);
-#endif
-            } else {
-                // unsupported authentication type
-                std::string msg = "Unsupported authentication type: " + authType;
-                sendHttpHeader400(request, msg.c_str());
+        } else if (authType == "ldap") {
+            if (ldapUri.empty() || ldapDname.empty()) {
+                sendHttpHeader400(request, "Missing parameter. Check the LDAP URI and Distinguished Name.");
                 return;
             }
-
-            if (username == "_") {
-                r = UserBase::addUser(newUserConfig);
-                if (r == -1) error = "Cannot create user with empty name";
-                else if (r == -2) error = "Cannot create new user as name already exists";
-
-            } else {
-                r = UserBase::updateUser(username, newUserConfig);
-                if (r == -1) error = "Cannot create user with empty name";
-                else if (r == -2) error = "Cannot change name as new name already exists";
-                else if (r < 0) error = "Cannot update non existing user";
-
+            newUserConfig.authHandler = new AuthLdap(newUserConfig.username, ldapUri, ldapDname);
+#endif
+#ifdef KERBEROS_ENABLED
+        } else if (authType == "krb5") {
+            if (krb5Realm.empty()) {
+                sendHttpHeader400(request, "Empty parameter: Kerberos Realm.");
+                return;
             }
-
-            if (r != 0) LOG_ERROR("Cannot update user '%s': %s", username.c_str(), error.c_str());
-            else if (newUserConfig.username != username) {
-                LOG_INFO("User '%s' renamed '%s'", username.c_str(), newUserConfig.username.c_str());
-            } else LOG_INFO("Parameters of user '%s' updated by '%s'", username.c_str(), signedInUser.username.c_str());
+            newUserConfig.authHandler = new AuthKrb5(newUserConfig.username, krb5Realm, krb5Primary);
+#endif
+        } else {
+            // unsupported authentication type
+            std::string msg = "Unsupported authentication type: " + authType;
+            sendHttpHeader400(request, msg.c_str());
+            return;
         }
 
-        if (r != 0) {
-            sendHttpHeader400(request, error.c_str());
+        if (username == "_") {
+            r = UserBase::addUser(newUserConfig);
+            if (r == -1) error = "Cannot create user with empty name";
+            else if (r == -2) error = "Cannot create new user as name already exists";
+
+        } else {
+            r = UserBase::updateUser(username, newUserConfig);
+            if (r == -1) error = "Cannot create user with empty name";
+            else if (r == -2) error = "Cannot change name as new name already exists";
+            else if (r < 0) error = "Cannot update non existing user";
+
+        }
+
+        if (r != 0) LOG_ERROR("Cannot update user '%s': %s", username.c_str(), error.c_str());
+        else if (newUserConfig.username != username) {
+            LOG_INFO("User '%s' renamed '%s'", username.c_str(), newUserConfig.username.c_str());
+        } else LOG_INFO("Parameters of user '%s' updated by '%s'", username.c_str(), signedInUser.username.c_str());
+    }
+
+    if (r != 0) {
+        sendHttpHeader400(request, error.c_str());
+
+    } else {
+        // POST accepted and processed ok
+        enum RenderingFormat format = getFormat(request);
+
+        if (format == RENDERING_TEXT) {
+            // No redirection
+            sendHttpHeader204(request, 0);
 
         } else {
             // ok, redirect
             std::string redirectUrl = "/users/" + urlEncode(newUserConfig.username);
             sendHttpRedirect(request, redirectUrl.c_str(), 0);
         }
-
-    } else {
-        LOG_ERROR("Bad contentType: %s", contentType);
     }
 }
 
@@ -1201,63 +1206,68 @@ void httpPostProjectConfig(const RequestContext *req, Project &p, User u)
 
     const char *contentType = getContentType(req);
 
-    if (0 == strcmp("application/x-www-form-urlencoded", contentType)) {
-        // application/x-www-form-urlencoded
-        // post_data is "var1=val1&var2=val2...".
+    if (0 != strcmp("application/x-www-form-urlencoded", contentType)) {
+        LOG_ERROR("httpPostProjectConfig: invalid content-type '%s'", contentType);
+        return;
+    }
 
-        int rc = readMgreq(req, postData, 4096);
-        if (rc < 0) {
-            sendHttpHeader413(req, "You tried to upload too much data. Max is 4096 bytes.");
+    // application/x-www-form-urlencoded
+    // post_data is "var1=val1&var2=val2...".
+
+    int rc = readMgreq(req, postData, 4096);
+    if (rc < 0) {
+        sendHttpHeader413(req, "You tried to upload too much data. Max is 4096 bytes.");
+        return;
+    }
+
+    LOG_DEBUG("postData=%s", postData.c_str());
+    ProjectConfig pc;
+    std::string projectName;
+    std::list<std::list<std::string> > tokens;
+    parsePostedProjectConfig(postData, tokens, projectName);
+
+    Project *ptr;
+    // check if project name is valid
+    if (!ProjectConfig::isValidProjectName(projectName)) {
+        sendHttpHeader400(req, "Invalid project name");
+        return;
+    }
+
+    if (p.getName().empty()) {
+        // request to create a new project
+        if (!u.superadmin) return sendHttpHeader403(req);
+        if (projectName.empty()) {
+            sendHttpHeader400(req, "Empty project name");
             return;
         }
 
-        LOG_DEBUG("postData=%s", postData.c_str());
-        ProjectConfig pc;
-        std::string projectName;
-        std::list<std::list<std::string> > tokens;
-        parsePostedProjectConfig(postData, tokens, projectName);
+        // request for creation of a new project
+        Project *newProject = Database::createProject(projectName);
+        if (!newProject) return sendHttpHeader500(req, "Cannot create project");
 
-        Project *ptr;
-        // check if project name is valid
-        if (!ProjectConfig::isValidProjectName(projectName)) {
-            sendHttpHeader400(req, "Invalid project name");
-            return;
+        ptr = newProject;
+
+    } else {
+        if (p.getName() != projectName) {
+            LOG_INFO("Renaming an existing project not supported at the moment (%s -> %s)",
+                     p.getName().c_str(), projectName.c_str());
         }
+        ptr = &p;
+    }
+    int r = ptr->modifyConfig(tokens, u.username);
 
-        if (p.getName().empty()) {
-            // request to create a new project
-            if (!u.superadmin) return sendHttpHeader403(req);
-            if (projectName.empty()) {
-                sendHttpHeader400(req, "Empty project name");
-                return;
-            }
-
-            // request for creation of a new project
-            Project *newProject = Database::createProject(projectName);
-            if (!newProject) return sendHttpHeader500(req, "Cannot create project");
-
-            ptr = newProject;
-
-        } else {
-            if (p.getName() != projectName) {
-                LOG_INFO("Renaming an existing project not supported at the moment (%s -> %s)",
-                         p.getName().c_str(), projectName.c_str());
-            }
-            ptr = &p;
-        }
-        int r = ptr->modifyConfig(tokens, u.username);
-
-        if (r == 0) {
+    if (r == 0) {
+        enum RenderingFormat format = getFormat(req);
+        if (format == RENDERING_HTML) {
             // success, redirect to
             std::string redirectUrl = "/" + ptr->getUrlName() + "/config";
             sendHttpRedirect(req, redirectUrl.c_str(), 0);
-
-        } else { // error
-            LOG_ERROR("Cannot modify project config");
-            sendHttpHeader500(req, "Cannot modify project config");
+        } else {
+            sendHttpHeader204(req, 0); // ok, no redirection
         }
-    } else {
-        LOG_ERROR("httpPostProjectConfig: invalid content-type '%s'", contentType);
+    } else { // error
+        LOG_ERROR("Cannot modify project config");
+        sendHttpHeader500(req, "Cannot modify project config");
     }
 }
 
