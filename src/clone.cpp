@@ -676,7 +676,7 @@ int pullProjectConfig(const PullContext &ctx, Project &p)
     // Check that the project config is valid.
     std::string configPath = p.getObjectsDir() + "/" + Object::getSubpath(id);
     ProjectConfig dlConfig;
-    r = ProjectConfig::load(localTmp, dlConfig, id);
+    r = ProjectConfig::load(configPath, dlConfig, id);
     if (r != 0) return -1;
     if (dlConfig.properties.empty()) {
         LOG_ERROR("Invalid remote project config: no properties");
@@ -762,7 +762,7 @@ int pullProjects(const PullContext &pullCtx)
         if (!p) {
             // the remote project was not locally cloned
             // do cloning now
-            std::string resource = "/" + p->getUrlName();
+            std::string resource = "/" + Project::urlNameEncode(*projectName);
             std::string destLocal = pullCtx.localRepo + "/" + *projectName;
             LOG_CLI("Pulling new project: %s\n", projectName->c_str());
             int counter = 0;

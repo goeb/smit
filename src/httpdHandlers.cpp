@@ -943,6 +943,7 @@ void httpGetProjects(const RequestContext *req, User u)
     if (!UserBase::isLocalUserInterface() && !u.superadmin) {
         // Get the list of the projects to which the user has permission
         pList = u.getProjects();
+
     } else {
         // Get the list of all projects
         // (case of a superadmin of a local user)
