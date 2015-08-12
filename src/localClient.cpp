@@ -308,12 +308,12 @@ int cmdIssue(int argc, char * const *argv)
         Entry *entry = 0;
         if (issueId == "-") issueId = "";
         int r = p->addEntry(properties, issueId, entry, username);
-        if (r == 0) {
+        if (r >= 0) {
             if (entry) {
                 printf("%s/%s\n", entry->issue->id.c_str(), entry->id.c_str());
             } else {
                 // no entry created, because no change
-                printf("%s/-\n", issueId.c_str());
+                printf("(no change)\n", issueId.c_str());
             }
         } else {
             printf("Error: cannot add entry\n");

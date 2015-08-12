@@ -162,7 +162,6 @@ int pullFiles(const PullContext &ctx, const std::string &srcResource,
 
     if (r == 0) {
         // Regular file downloaded successfully
-        counter++;
         // move it to the right place
         r = rename(localTmp.c_str(), destLocal.c_str());
         if (r != 0) {
@@ -171,7 +170,8 @@ int pullFiles(const PullContext &ctx, const std::string &srcResource,
             return -1;
         }
         LOG_DIAG("pulled file: %s", getBasename(srcResource).c_str()); // indicate progress
-        LOG_CLI("\r%d", counter);
+        counter++;
+        LOG_CLI("\rPulling files: %d", counter);
         unlink(localTmp.c_str());
 
     } else if (r == 1) {
@@ -230,9 +230,9 @@ int getProjects(const std::string &rooturl, const std::string &destdir, const Ht
     cloneCtx.localRepo = destdir;
     cloneCtx.mergeStrategy = MERGE_KEEP_LOCAL; // not used here (brut cloning)
     int counter = 0;
-    LOG_CLI("Cloning All Projects:\n");
+    LOG_CLI("Cloning All Projects...\n");
     int r = pullFiles(cloneCtx, "/", destdir, counter);
-    LOG_CLI("\nCloned: %d files\n", counter);
+    LOG_CLI("\n");
 
     return r;
 }
@@ -701,8 +701,8 @@ int pullProject(const PullContext &pullCtx, Project &p)
     std::string resource = p.getUrlName() + "/" RESOURCE_OBJECTS;
     int counter = 0;
     int r = pullFiles(pullCtx, resource, p.getObjectsDir(), counter);
+    if (counter > 0) LOG_CLI("\n");
     if (r < 0) return r;
-    LOG_CLI("\n%d files\n", counter);
 
     // get the remote issues
     HttpRequest hr(pullCtx.httpCtx);
@@ -767,8 +767,8 @@ int pullProjects(const PullContext &pullCtx)
             LOG_CLI("Pulling new project: %s\n", projectName->c_str());
             int counter = 0;
             int r = pullFiles(pullCtx, resource, destLocal, counter);
+            if (counter > 0) LOG_CLI("\n");
             if (r < 0) return r;
-            LOG_CLI("\n%d files\n", counter);
         } else {
             pullProject(pullCtx, *p);
         }
@@ -1289,7 +1289,7 @@ int pushFile(const PullContext &pushCtx, const std::string &localFile, const std
 int pushEntry(const PullContext &pushCtx, const Project &p, std::string &issue,
               const std::string &entry)
 {
-    LOG_CLI("Pushing entry: %s/issues/%s/%s\n", p.getName().c_str(), issue.c_str(), entry.c_str());
+    LOG_CLI("Pushing entry: %s / %s / %s\n", p.getName().c_str(), issue.c_str(), entry.c_str());
     // post the entry (which must be the first entry of an issue)
     // the result of the POST indicates the issue number that has been allocated
     std::string localFile = p.getObjectsDir() + '/' + Object::getSubpath(entry);
@@ -1465,7 +1465,7 @@ int pushIssue(const PullContext &pushCtx, Project &project, Issue localIssue)
 
 int pushProject(const PullContext &pushCtx, Project &project)
 {
-    LOG_CLI("pushing project %s...\n", project.getName().c_str());
+    LOG_CLI("Pushing project %s...\n", project.getName().c_str());
 
     // First, get a linear list of all issues
     // (we need a fixed list of the issues, and not a map, because some issues may be renamed)
