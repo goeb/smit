@@ -141,7 +141,7 @@ int testSessid(const std::string url, const HttpClientContext &ctx)
   *    -1 an error occurred and the recursive pulling aborted
   */
 int pullFiles(const PullContext &ctx, const std::string &srcResource,
-              const std::string &destLocal)
+              const std::string &destLocal, int &counter)
 {
     // Download the resource locally in a temporary location
     // and determine if it is a directory or a regular file
@@ -162,6 +162,7 @@ int pullFiles(const PullContext &ctx, const std::string &srcResource,
 
     if (r == 0) {
         // Regular file downloaded successfully
+        counter++;
         // move it to the right place
         r = rename(localTmp.c_str(), destLocal.c_str());
         if (r != 0) {
@@ -169,7 +170,8 @@ int pullFiles(const PullContext &ctx, const std::string &srcResource,
                       destLocal.c_str(), strerror(errno));
             return -1;
         }
-        printf("  < %s\n", getBasename(srcResource).c_str()); // indicate progress
+        LOG_DIAG("pulled file: %s", getBasename(srcResource).c_str()); // indicate progress
+        LOG_CLI("\r%d", counter);
         unlink(localTmp.c_str());
 
     } else if (r == 1) {
@@ -195,7 +197,7 @@ int pullFiles(const PullContext &ctx, const std::string &srcResource,
             std::string urlFilename = urlEncode(filename);
             std::string rsrc = srcResource + "/" + urlFilename;
             std::string dlocal = destLocal + "/" + filename;
-            r = pullFiles(ctx, rsrc, dlocal);
+            r = pullFiles(ctx, rsrc, dlocal, counter);
             if (r != 0) {
                 LOG_ERROR("Abort pulling.");
                 return r;
@@ -216,7 +218,7 @@ int pullFiles(const PullContext &ctx, const std::string &srcResource,
 }
 
 
-/** Get all the projects that we have read-access to.
+/** Get all the projects that we have read-access to
   */
 int getProjects(const std::string &rooturl, const std::string &destdir, const HttpClientContext &ctx)
 {
@@ -227,7 +229,10 @@ int getProjects(const std::string &rooturl, const std::string &destdir, const Ht
     cloneCtx.rooturl = rooturl;
     cloneCtx.localRepo = destdir;
     cloneCtx.mergeStrategy = MERGE_KEEP_LOCAL; // not used here (brut cloning)
-    int r = pullFiles(cloneCtx, "/", destdir);
+    int counter = 0;
+    LOG_CLI("Cloning All Projects:\n");
+    int r = pullFiles(cloneCtx, "/", destdir, counter);
+    LOG_CLI("\nCloned: %d files\n", counter);
 
     return r;
 }
@@ -694,8 +699,10 @@ int pullProject(const PullContext &pullCtx, Project &p)
 
     LOG_DEBUG("Pulling objects of %s", p.getName().c_str());
     std::string resource = p.getUrlName() + "/" RESOURCE_OBJECTS;
-    int r = pullFiles(pullCtx, resource, p.getObjectsDir());
+    int counter = 0;
+    int r = pullFiles(pullCtx, resource, p.getObjectsDir(), counter);
     if (r < 0) return r;
+    LOG_CLI("\n%d files\n", counter);
 
     // get the remote issues
     HttpRequest hr(pullCtx.httpCtx);
@@ -758,9 +765,10 @@ int pullProjects(const PullContext &pullCtx)
             std::string resource = "/" + p->getUrlName();
             std::string destLocal = pullCtx.localRepo + "/" + *projectName;
             LOG_CLI("Pulling new project: %s\n", projectName->c_str());
-
-            int r = pullFiles(pullCtx, resource, destLocal);
+            int counter = 0;
+            int r = pullFiles(pullCtx, resource, destLocal, counter);
             if (r < 0) return r;
+            LOG_CLI("\n%d files\n", counter);
         } else {
             pullProject(pullCtx, *p);
         }
