@@ -1102,7 +1102,7 @@ int cmdGet(int argc, char * const *argv)
     return 0;
 }
 
-int helpPull()
+int helpPull_old()
 {
     LOG_CLI("Usage: smit pull [<local-repository>]\n"
            "\n"
@@ -1129,66 +1129,65 @@ int helpPull()
     return 1;
 }
 
-
-int cmdPull(int argc, char * const *argv)
+Args *setupPullOptions()
 {
-    std::string username;
-    const char *passwd = 0;
-    const char *dir = "."; // default value is current directory
+    Args *args = new Args();
+    args->setDescription("Incorporates changes from a remote repository into a local copy.");
+    args->setUsage("smit pull [options] [<local-repository>]");
+    args->setOpt("verbose", 'v', "be verbose", 0);
+    args->setOpt("user", 0, "specify user name", 1);
+    args->setOpt("resolve-conflict", 0,
+                 "Resolve conflictual pulling automatically (no interactive choice).\n"
+                 "Possible values for <policy>:\n"
+                 "  keep-local : local modifications shall be kept as-is\n"
+                 "  drop-local : local modifications shall be deleted"
+                 ,
+                 1);
+    args->setOpt("passwd", 0, "specify password", 1);
+    args->setOpt("insecure", 0, "do not verify the server certificate", 0);
+    args->setOpt("cacert", 0,
+                 "specify the CA certificate, in PEM format, for authenticating the server\n"
+                 "(HTTPS only)", 1);
+    args->setNonOptionLimit(1);
+    return args;
+}
 
-    int c;
-    int optionIndex = 0;
+int helpPull(const Args *args)
+{
+    if (!args) args = setupPullOptions();
+    args->usage(true);
+    return 1;
+}
+
+int cmdPull(int argc, char **argv)
+{
     PullContext pullCtx;
-    pullCtx.mergeStrategy = MERGE_INTERACTIVE;
+    Args *args = setupPullOptions();
+    args->parse(argc-1, argv+1);
+    std::string username;
+    const char *u = args->get("user");
+    if (u) username = u;
+    else username = "";
+    const char *passwd = args->get("passwd");
+    const char *resolve = args->get("resolve-conflict");
+    if (!resolve) pullCtx.mergeStrategy = MERGE_INTERACTIVE;
+    else if (0 == strcmp(resolve, "keep-local")) pullCtx.mergeStrategy = MERGE_KEEP_LOCAL;
+    else if (0 == strcmp(resolve, "drop-local")) pullCtx.mergeStrategy = MERGE_DROP_LOCAL;
+    else {
+        LOG_CLI("invalid value for --resolve-conflict\n");
+        return helpPull(args);
+    }
+    if (args->get("insecure")) pullCtx.httpCtx.tlsInsecure = true;
+    pullCtx.httpCtx.tlsCacert = args->get("cacert");
+    if (args->get("verbose")) {
+        setLoggingLevel(LL_DEBUG);
+    } else {
+        setLoggingLevel(LL_ERROR);
+    }
 
-    struct option longOptions[] = {
-        {"user", 1, 0, 0},
-        {"passwd", 1, 0, 0},
-        {"resolve-conflict", 1, 0, 0},
-        {"insecure", 0, 0, 0},
-        {"cacert", 1, 0, 0},
-        {NULL, 0, NULL, 0}
-    };
-    while ((c = getopt_long(argc, argv, "v", longOptions, &optionIndex)) != -1) {
-        switch (c) {
-        case 0: // manage long options
-            if (0 == strcmp(longOptions[optionIndex].name, "user")) {
-                username = optarg;
-            } else if (0 == strcmp(longOptions[optionIndex].name, "passwd")) {
-                passwd = optarg;
-            } else if (0 == strcmp(longOptions[optionIndex].name, "resolve-conflict")) {
-                if (0 == strcmp(optarg, "keep-local")) pullCtx.mergeStrategy = MERGE_KEEP_LOCAL;
-                else if (0 == strcmp(optarg, "drop-local")) pullCtx.mergeStrategy = MERGE_DROP_LOCAL;
-                else {
-                    LOG_CLI("invalid value for --resolve-conflict\n");
-                    return helpPull();
-                }
-            } else if (0 == strcmp(longOptions[optionIndex].name, "insecure")) {
-                pullCtx.httpCtx.tlsInsecure = true;
-            } else if (0 == strcmp(longOptions[optionIndex].name, "cacert")) {
-                pullCtx.httpCtx.tlsCacert = optarg;
-            }
-            break;
-        case 'v':
-            setLoggingLevel(LL_DEBUG);
-            break;
-        case '?': // incorrect syntax, a message is printed by getopt_long
-            return helpPull();
-            break;
-        default:
-            LOG_CLI("?? getopt returned character code 0x%x ??\n", c);
-            return helpPull();
-        }
-    }
     // manage non-option ARGV elements
-    if (optind < argc) {
-        dir = argv[optind];
-        optind++;
-    }
-    if (optind < argc) {
-        LOG_CLI("Too many arguments.\n\n");
-        return helpPull();
-    }
+    const char *dir = args->pop();
+    if (!dir) dir = "."; // default value is current directory
 
     setLoggingOption(LO_CLI);
 

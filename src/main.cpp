@@ -922,7 +922,7 @@ int main(int argc, char **argv)
                 else if (0 == strcmp(help, "ui")) return helpUi();
 #ifdef CURL_ENABLED
                 else if (0 == strcmp(help, "clone")) return helpClone();
-                else if (0 == strcmp(help, "pull")) return helpPull();
+                else if (0 == strcmp(help, "pull")) return helpPull(0);
                 else if (0 == strcmp(help, "push")) return helpPush(0);
                 else if (0 == strcmp(help, "get")) return helpGet();
 #endif

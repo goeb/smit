@@ -45,6 +45,8 @@ void Args::setOpt(const char *longname, char shortname, const char *help, int ar
     if (longname || shortname) optionSpecs.push_back(as);
 }
 
+/** Specify how many arguments maximum (other that options)
+  */
 void Args::setNonOptionLimit(int n)
 {
     nonOptionLimit = n;
