@@ -1324,7 +1324,7 @@ int pushEntry(const PullContext &pushCtx, const Project &p, std::string &issue,
 
 /** Push the files attached to an entry
   */
-void pushAttachedFiles(const PullContext &pushCtx, const Project &p, const Entry &e)
+void pushAttachedFiles(const PullContext &pushCtx, const Project &p, const Entry &e, bool dryRun)
 {
     LOG_FUNC();
     LOG_DEBUG("Pushing files attached to entry %s", e.id.c_str());
@@ -1343,8 +1343,14 @@ void pushAttachedFiles(const PullContext &pushCtx, const Project &p, const Entry
             if (r != 0) {
                 // file does not exist on the server
                 // push the file
-                std::string localPath = p.getObjectsDir() + "/" + Object::getSubpath(id);
+
+                if (dryRun) {
+                    LOG_CLI("[DRY-RUN] Pushing file %s...\n", f->c_str());
+                    continue;
+                }
+
                 LOG_CLI("Pushing file %s...\n", f->c_str());
+                std::string localPath = p.getObjectsDir() + "/" + Object::getSubpath(id);
                 std::string url = pushCtx.rooturl + '/' + p.getUrlName() + "/" RESOURCE_FILES "/" + id;
                 std::string response;
                 int httpStatusCode = 0;
@@ -1356,10 +1362,15 @@ void pushAttachedFiles(const PullContext &pushCtx, const Project &p, const Entry
                 }
             }
         }
-    }
+    } // else no files attached to this entry
 }
 
-int pushIssue(const PullContext &pushCtx, Project &project, Issue localIssue)
+/** Pus an issue
+  *
+  * @param dryRun
+  *     If true, do not really push but show what should be pushed.
+  */
+int pushIssue(const PullContext &pushCtx, Project &project, Issue localIssue, bool dryRun)
 {
     LOG_DEBUG("pushIssue %s: %s", project.getName().c_str(), localIssue.id.c_str());
 
@@ -1378,6 +1389,14 @@ int pushIssue(const PullContext &pushCtx, Project &project, Issue localIssue)
     int r = getEntriesOfRemoteIssue(pushCtx, project, localIssue.id, remoteEntries);
     if (r != 0) {
         // no such remote issue
+
+        if (dryRun) {
+            LOG_CLI("[DRY-RUN] Pushing issue: %s / %s / %s\n", project.getName().c_str(),
+                    localIssue.id.c_str(), firstEntry.id.c_str());
+
+            return 0;
+        }
+
         // push first entry
         std::string issueId = localIssue.id;
         r = pushEntry(pushCtx, project, issueId, firstEntry.id);
@@ -1401,7 +1420,7 @@ int pushIssue(const PullContext &pushCtx, Project &project, Issue localIssue)
         }
 
         // recurse
-        return pushIssue(pushCtx, project, localIssue);
+        return pushIssue(pushCtx, project, localIssue, dryRun);
 
     } else if (remoteEntries.empty()) {
         // internal error, should not happen
@@ -1410,6 +1429,8 @@ int pushIssue(const PullContext &pushCtx, Project &project, Issue localIssue)
         exit(1);
 
     } else {
+        // the remote issue does exist
+
         // check if first entries match
         if (remoteEntries.front() != firstEntry.id) {
             LOG_CLI("%s: mismatch of first entries for issue %s: %s <> %s\n", project.getName().c_str(),
@@ -1418,13 +1439,25 @@ int pushIssue(const PullContext &pushCtx, Project &project, Issue localIssue)
             exit(1);
         }
 
+        // the remote and local issues are the same (same first entry)
+
         std::list<std::string>::iterator remoteEntryIt = remoteEntries.begin();
         // walk through entries and push missing ones
         while (localEntry) {
 
             if (remoteEntryIt == remoteEntries.end()) {
-                // push the local entry to the remote side
-                r = pushEntry(pushCtx, project, localIssue.id, localEntry->id);
+                // the remote issue has less entries than the local side
+
+                if (dryRun) {
+                    LOG_CLI("[DRY-RUN] Pushing entry: %s / %s / %s\n", project.getName().c_str(),
+                            localIssue.id.c_str(), localEntry->id.c_str());
+                    r = 0;
+
+                } else {
+                    // push the local entry to the remote side
+                    r = pushEntry(pushCtx, project, localIssue.id, localEntry->id);
+                }
+
                 if (r > 0) {
                     // the issue was renamed. this should not happen.
                     LOG_ERROR("pushEntry returned %d: localEntry=%s", r, localEntry->id.c_str());
@@ -1455,15 +1488,14 @@ int pushIssue(const PullContext &pushCtx, Project &project, Issue localIssue)
     // push attached files of this issue
     const Entry *e = localIssue.first;
     while (e) {
-        pushAttachedFiles(pushCtx, project, *e);
+        pushAttachedFiles(pushCtx, project, *e, dryRun);
         e = e->getNext();
     }
-
 
     return 0;
 }
 
-int pushProject(const PullContext &pushCtx, Project &project)
+int pushProject(const PullContext &pushCtx, Project &project, bool dryRun)
 {
     LOG_CLI("Pushing project %s...\n", project.getName().c_str());
 
@@ -1473,13 +1505,13 @@ int pushProject(const PullContext &pushCtx, Project &project)
     project.getAllIssues(issues);
     std::vector<Issue*>::iterator i;
     FOREACH(i, issues) {
-        int r = pushIssue(pushCtx, project, **i);
+        int r = pushIssue(pushCtx, project, **i, dryRun);
         if (r != 0) return r;
     }
     return 0;
 }
 
-int pushProjects(const PullContext &pushCtx)
+int pushProjects(const PullContext &pushCtx, bool dryRun)
 {
     // Load all local projects
     int r = dbLoad(pushCtx.localRepo.c_str());
@@ -1492,7 +1524,7 @@ int pushProjects(const PullContext &pushCtx)
 
     Project *p = Database::Db.getNextProject(0);
     while (p) {
-        pushProject(pushCtx, *p);
+        pushProject(pushCtx, *p, dryRun);
         p = Database::Db.getNextProject(p);
     }
     return 0;
@@ -1574,6 +1606,7 @@ Args *setupPushOptions()
     args->setDescription("Push local changes to a remote repository.");
     args->setUsage("smit push [options] [<local-repository>]");
     args->setOpt("verbose", 'v', "be verbose", 0);
+    args->setOpt("dry-run", 'n', "do not push, but show what would have been pushed", 0);
     args->setOpt("user", 0, "specify user name", 1);
     args->setOpt("passwd", 0, "specify password", 1);
     args->setOpt("insecure", 0, "do not verify the server certificate", 0);
@@ -1607,6 +1640,9 @@ int cmdPush(int argc, char **argv)
     } else {
         setLoggingLevel(LL_ERROR);
     }
+    bool dryRun = false;
+    if (args->get("dry-run")) dryRun = true;
+
     // manage non-option ARGV elements
     const char *dir = args->pop();
     if (!dir) dir = "."; // default value is current directory
@@ -1626,7 +1662,7 @@ int cmdPush(int argc, char **argv)
 
     // push new entries and new attached files of all projects
     pushCtx.localRepo = dir;
-    r = pushProjects(pushCtx);
+    r = pushProjects(pushCtx, dryRun);
 
     terminateSession();
 
