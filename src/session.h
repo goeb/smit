@@ -55,7 +55,7 @@ class UserBase {
 public:
     static int init(const char *repository);
     static int load(const std::string &repository, std::map<std::string, User*> &users);
-    static void setLocalUserInterface(const std::string username);
+    static void setLocalUserInterface(const std::string username, const std::string &repo);
     static int store(const std::string &repository);
     static int initUsersFile(const char *repository);
     static User* getUser(const std::string &username);

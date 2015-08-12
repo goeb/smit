@@ -345,13 +345,17 @@ int UserBase::init(const char *path)
     return load(path, UserDb.configuredUsers);
 }
 
-void UserBase::setLocalUserInterface(const std::string username)
+void UserBase::setLocalUserInterface(const std::string username, const std::string &repo)
 {
     localUserInterface = true;
+    UserBase::Repository = repo;
+    UserBase::initUsersFile(repo.c_str());
+
     // create a user with all permissions
     User u;
     u.username = username;
     u.permissions["*"] = ROLE_ADMIN;
+
     addUser(u);
 }
 

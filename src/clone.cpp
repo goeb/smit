@@ -1365,7 +1365,7 @@ void pushAttachedFiles(const PullContext &pushCtx, const Project &p, const Entry
     } // else no files attached to this entry
 }
 
-/** Pus an issue
+/** Push an issue
   *
   * @param dryRun
   *     If true, do not really push but show what should be pushed.
