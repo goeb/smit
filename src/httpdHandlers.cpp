@@ -1433,11 +1433,14 @@ void httpIssuesAccrossProjects(const RequestContext *req, User u, const std::str
   *
   * This service is useful only for cloning (or pulling) a smit repository.
   *
-  * Subdirectories readable by all users:
+  * Superadmin can clone all. Other users can read only:
   * - templates
+  *
   */
 int httpGetSmitRepo(const RequestContext *req, User u, std::string uri)
 {
+    if (u.superadmin) return httpGetFile(req);
+
     if (uri.empty()) {
         // Send the list of allowed sub-directories
         sendHttpHeader200(req);
