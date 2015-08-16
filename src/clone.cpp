@@ -785,7 +785,11 @@ void createSmitDir(const std::string &dir)
 {
     LOG_DEBUG("createSmitDir(%s)...", dir.c_str());
 
-    int r = mkdir(getSmitDir(dir));
+    std::string smitDir = getSmitDir(dir);
+
+    if (isDir(smitDir)) return; // Already exists
+
+    int r = mkdir(smitDir);
     if (r != 0) {
         fprintf(stderr, "Cannot create directory '%s': %s\n", getSmitDir(dir).c_str(), strerror(errno));
         fprintf(stderr, "Abort.\n");

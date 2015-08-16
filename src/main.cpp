@@ -149,7 +149,7 @@ int initRepository(int argc, char **argv)
     std::string templatesDir = directory;
     templatesDir += "/" PATH_REPO;
     mkdirs(templatesDir);
-    r = cpioExtractFile("templates", templatesDir.c_str());
+    r = cpioExtractFile(P_TEMPLATES, templatesDir.c_str());
     if (r < 0) {
         LOG_ERROR("Error while extracting 'templates/*': r=%d", r);
         return 4;

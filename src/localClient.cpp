@@ -313,7 +313,7 @@ int cmdIssue(int argc, char * const *argv)
                 printf("%s/%s\n", entry->issue->id.c_str(), entry->id.c_str());
             } else {
                 // no entry created, because no change
-                printf("(no change)\n", issueId.c_str());
+                printf("(no change)\n");
             }
         } else {
             printf("Error: cannot add entry\n");

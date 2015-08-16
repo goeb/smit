@@ -967,6 +967,7 @@ void httpGetProjects(const RequestContext *req, User u)
            req->printf("%s\n", p->first.c_str());
         }
         req->printf("public\n");
+        req->printf(PATH_REPO "\n");
 
     } else {
 
@@ -1424,6 +1425,41 @@ void httpIssuesAccrossProjects(const RequestContext *req, User u, const std::str
     // display page
 
 }
+
+/** Get some meta-data of the smit repository
+  *
+  * @param uri
+  *     - if empty, return the list of allowed sub-directories
+  *
+  * This service is useful only for cloning (or pulling) a smit repository.
+  *
+  * Subdirectories readable by all users:
+  * - templates
+  */
+int httpGetSmitRepo(const RequestContext *req, User u, std::string uri)
+{
+    if (uri.empty()) {
+        // Send the list of allowed sub-directories
+        sendHttpHeader200(req);
+        req->printf("Content-Type: text/directory\r\n\r\n");
+        req->printf("%s\n", P_TEMPLATES);
+        return REQUEST_COMPLETED;
+    }
+
+    // non empty resource (uri)
+
+    std::string subdir = popToken(uri, '/');
+
+    // Only the subdir "templates" can be accessed
+    if (subdir != P_TEMPLATES) {
+        sendHttpHeader400(req, "");
+        return REQUEST_COMPLETED;
+    }
+
+    // serve the template file
+    return httpGetFile(req);
+}
+
 
 void httpCloneIssues(const RequestContext *req, const Project &p)
 {
@@ -2419,6 +2455,7 @@ void httpPostEntry(const RequestContext *req, Project &pro, const std::string & 
   * /users/                            superadmin        management of users for all projects
   * /users/<user>           GET/POST   user, superadmin  management of a single user
   * /_                      GET/POST   superadmin        new project
+  * /.smit                  GET        user              .smit directory
   * /<p>/config             GET/POST   admin             configuration of the project
   * /<p>/views/             GET/POST   admin             list predefined views / create new view
   * /<p>/views/_            GET        admin             form for advanced search / new predefined view
@@ -2491,6 +2528,7 @@ int begin_request_handler(const RequestContext *req)
     else if ( (resource == "_") && (method == "GET") ) httpGetNewProject(req, user);
     else if ( (resource == "_") && (method == "POST") ) httpPostNewProject(req, user);
     else if ( (resource == "*") && (method == "GET") ) httpIssuesAccrossProjects(req, user, uri);
+    else if ( (resource == ".smit") && (method == "GET") ) return httpGetSmitRepo(req, user, uri);
     else {
         // Get the project given by the uri.
         // We need to concatenate back 'resource' and 'uri', as resource was
