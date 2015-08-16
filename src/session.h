@@ -12,7 +12,9 @@
 #define SESSION_DURATION (60*60*24) // 1 day
 #define COOKIE_VIEW_DURATION (60*60*24) // 1 day
 #define PATH_AUTH  "/users/auth"
-#define PATH_PERMISSIONS "/users/permissions"
+#define P_USERS       "users"
+#define P_PERMISSIONS "permissions"
+#define PATH_PERMISSIONS "/" P_USERS "/" P_PERMISSIONS
 
 // authentication schemes
 
@@ -54,8 +56,9 @@ public:
 class UserBase {
 public:
     static int init(const char *repository);
+    static int loadPermissions(const std::string &path, std::map<std::string, User*> &users);
     static int load(const std::string &repository, std::map<std::string, User*> &users);
-    static void setLocalUserInterface(const std::string username, const std::string &repo);
+    static void setLocalInterfaceUser(const std::string &username);
     static int store(const std::string &repository);
     static int initUsersFile(const char *repository);
     static User* getUser(const std::string &username);
@@ -68,7 +71,8 @@ public:
     static int updateUser(const std::string &username, User newConfig);
     static int updatePassword(const std::string &username, const std::string &password);
     static std::list<User> getAllUsers();
-    static inline bool isLocalUserInterface() {return localUserInterface;}
+    static inline bool isLocalUserInterface() {return !localInterfaceUsername.empty(); }
+    static const std::string getLocalInterfaceUser() { return localInterfaceUsername; }
 
 private:
     static UserBase UserDb;
@@ -77,9 +81,8 @@ private:
     static std::string Repository;
     static User *addUserInArray(User u);
 
-    // localUserInterface enables anonymous read access
-    // used for browsing a local clone of a smit repository
-    static bool localUserInterface;
+    // Local Interface refers to "smit ui command": browsing a local clone of a smit repository
+    static std::string localInterfaceUsername;
 };
 
 struct Session {

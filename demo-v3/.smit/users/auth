@@ -6,4 +6,5 @@ adduser fred -type sha1 -hash bb28a780a234b32ba4362b3a64b4e1297f29928c -salt 1f2
 adduser homer -type sha1 -hash 9c38e24cb7d4f0b73f8b9cdf4f6a3612f989ce2b -salt 6cc8be554574aa67
 adduser john1 -type sha1 -hash 9c38e24cb7d4f0b73f8b9cdf4f6a3612f989ce2b -salt 6cc8be554574aa67
 adduser john2 -type sha1 -hash 9c38e24cb7d4f0b73f8b9cdf4f6a3612f989ce2b -salt 6cc8be554574aa67
-adduser ldapToto -type ldap -uri x -dname xx
+adduser ldapToto
+adduser x/y

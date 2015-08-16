@@ -1,4 +1,8 @@
 
+v3.0.1
+    - smit clone: clone permissions of user
+    - smit clone/push/pull: some fixes
+
 v3.0.0
     - Suggested values for search filters (filters in/out)
       (filters with exact word matching)

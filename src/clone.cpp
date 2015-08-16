@@ -755,6 +755,7 @@ int pullProjects(const PullContext &pullCtx)
     std::list<std::string>::iterator projectName;
     FOREACH(projectName, hr.lines) {
         if ((*projectName) == "public") continue;
+        if ((*projectName) == PATH_REPO) continue;
         if (projectName->empty()) continue;
 
         // project name is mangled

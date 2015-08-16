@@ -614,7 +614,7 @@ void httpGetUser(const RequestContext *request, const User &signedInUser, const 
             sendHttpHeader200(request);
 
             enum RenderingFormat format = getFormat(request);
-            if (format == X_SMIT) {
+            if (format == X_SMIT || format == RENDERING_TEXT) {
                 // print the permissions of the signed-in user
                 request->printf("Content-Type: text/plain\r\n\r\n");
                 request->printf("%s\n", editedUser->serializePermissions().c_str());
@@ -1435,26 +1435,38 @@ void httpIssuesAccrossProjects(const RequestContext *req, User u, const std::str
   *
   * Superadmin can clone all. Other users can read only:
   * - templates
+  * - users/permissions (only the permissions of the signe-in user)
   *
   */
 int httpGetSmitRepo(const RequestContext *req, User u, std::string uri)
 {
-    if (u.superadmin) return httpGetFile(req);
+    if (u.superadmin) return httpGetFile(req); // Superadmin gets all
 
-    if (uri.empty()) {
+    std::string subdir = popToken(uri, '/');
+
+    if (subdir.empty()) {
         // Send the list of allowed sub-directories
         sendHttpHeader200(req);
         req->printf("Content-Type: text/directory\r\n\r\n");
         req->printf("%s\n", P_TEMPLATES);
+        req->printf("%s\n", P_USERS);
         return REQUEST_COMPLETED;
-    }
 
-    // non empty resource (uri)
+    } else if (subdir == P_USERS && uri.empty()) {
+        // Listing of the "users" directory
+        sendHttpHeader200(req);
+        req->printf("Content-Type: text/directory\r\n\r\n");
+        req->printf("%s\n", P_PERMISSIONS);
+        return REQUEST_COMPLETED;
 
-    std::string subdir = popToken(uri, '/');
+    } else if (subdir == P_USERS && uri == P_PERMISSIONS) {
+        // print the permissions of the signed-in user
+        sendHttpHeader200(req);
+        req->printf("Content-Type: text/plain\r\n\r\n");
+        req->printf("%s\n", u.serializePermissions().c_str());
+        return REQUEST_COMPLETED;
 
-    // Only the subdir "templates" can be accessed
-    if (subdir != P_TEMPLATES) {
+    } else if (subdir != P_TEMPLATES) {
         sendHttpHeader400(req, "");
         return REQUEST_COMPLETED;
     }

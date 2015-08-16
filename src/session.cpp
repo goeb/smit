@@ -39,7 +39,7 @@
 SessionBase SessionBase::SessionDb;
 UserBase UserBase::UserDb;
 std::string UserBase::Repository;
-bool UserBase::localUserInterface = false;
+std::string UserBase::localInterfaceUsername = "";
 
 const char *FILE_USERS = "users";
 
@@ -246,50 +246,13 @@ std::list<std::string> getAvailableRoles()
     return result;
 }
 
-/** Load user authentication parameters and permissions
-  *
-  * @param[out] users
-  *
-  * @return
-  *    0 ok
-  *   -1 configuration error
-  */
-int UserBase::load(const std::string &path, std::map<std::string, User*> &users)
+/** Load the 'permissions' file
+ */
+int UserBase::loadPermissions(const std::string &path, std::map<std::string, User*> &users)
 {
-    Repository = path;
-
-    // load the 'auth' file
-    std::string auth = std::string(path) + "/" PATH_REPO "/" PATH_AUTH;
-
-    std::string data;
-    int n = loadFile(auth.c_str(), data);
-    if (n != 0) {
-        LOG_ERROR("Could not load file '%s': %s", auth.c_str(), strerror(errno));
-
-    } else {
-        std::list<std::list<std::string> > lines = parseConfigTokens(data.c_str(), data.size());
-
-        std::list<std::list<std::string> >::iterator line;
-        FOREACH(line, lines) {
-            std::string verb = popListToken(*line);
-            if (verb == "adduser") {
-                User u;
-                int r = u.loadAuth(*line);
-                if (r == 0) {
-                    // add user in database
-                    LOG_DIAG("Loaded user: '%s'", u.username.c_str());
-                    users[u.username] = new User(u);
-                }
-            } else {
-                LOG_ERROR("Invalid token '%s' in %s", verb.c_str(), auth.c_str());
-                return -1;
-            }
-        }
-    }
-
-    // load the 'permissions' file
     std::string filePermissions = std::string(path) + "/" PATH_REPO "/" PATH_PERMISSIONS;
-    n = loadFile(filePermissions.c_str(), data);
+    std::string data;
+    int n = loadFile(filePermissions.c_str(), data);
     if (n != 0) {
         LOG_ERROR("Could not load file '%s': %s", filePermissions.c_str(), strerror(errno));
 
@@ -335,28 +298,70 @@ int UserBase::load(const std::string &path, std::map<std::string, User*> &users)
     }
 
     return 0;
+}
 
+/** Load user authentication parameters and permissions
+  *
+  * @param[out] users
+  *
+  * @return
+  *    0 ok
+  *   -1 configuration error
+  */
+int UserBase::load(const std::string &path, std::map<std::string, User*> &users)
+{
+    Repository = path;
+
+    // load the 'auth' file
+    std::string auth = std::string(path) + "/" PATH_REPO "/" PATH_AUTH;
+
+    std::string data;
+    int n = loadFile(auth.c_str(), data);
+    if (n != 0) {
+        LOG_ERROR("Could not load file '%s': %s", auth.c_str(), strerror(errno));
+
+    } else {
+        std::list<std::list<std::string> > lines = parseConfigTokens(data.c_str(), data.size());
+
+        std::list<std::list<std::string> >::iterator line;
+        FOREACH(line, lines) {
+            std::string verb = popListToken(*line);
+            if (verb == "adduser") {
+                User u;
+                int r = u.loadAuth(*line);
+                if (r == 0) {
+                    // add user in database
+                    LOG_DIAG("Loaded user: '%s'", u.username.c_str());
+                    users[u.username] = new User(u);
+                }
+            } else {
+                LOG_ERROR("Invalid token '%s' in %s", verb.c_str(), auth.c_str());
+                return -1;
+            }
+        }
+    }
+
+    return loadPermissions(path, users);
 }
 
 /** Load the users of a repository
   */
 int UserBase::init(const char *path)
 {
+
+    if (isLocalUserInterface()) {
+        // Initiate the local user in the database
+        // so that tha loadPermission will succeed (whereas the load 'auth' will fail)
+        User u;
+        u.username = localInterfaceUsername;
+        addUserInArray(u);
+    }
     return load(path, UserDb.configuredUsers);
 }
 
-void UserBase::setLocalUserInterface(const std::string username, const std::string &repo)
+void UserBase::setLocalInterfaceUser(const std::string &username)
 {
-    localUserInterface = true;
-    UserBase::Repository = repo;
-    UserBase::initUsersFile(repo.c_str());
-
-    // create a user with all permissions
-    User u;
-    u.username = username;
-    u.permissions["*"] = ROLE_ADMIN;
-
-    addUser(u);
+    localInterfaceUsername = username;
 }
 
 /** Create the files of the user database
@@ -513,7 +518,6 @@ int UserBase::hotReload()
 std::set<std::string> UserBase::getUsersOfProject(const std::string &project)
 {
     std::set<std::string> result;
-    if (localUserInterface) return result;
 
     ScopeLocker scopeLocker(UserDb.locker, LOCK_READ_ONLY);
 
@@ -531,7 +535,6 @@ std::set<std::string> UserBase::getUsersOfProject(const std::string &project)
 std::map<std::string, Role> UserBase::getUsersRolesOfProject(const std::string &project)
 {
     std::map<std::string, Role> result;
-    if (localUserInterface) return result;
 
     ScopeLocker scopeLocker(UserDb.locker, LOCK_READ_ONLY);
 
@@ -550,7 +553,6 @@ std::map<std::string, Role> UserBase::getUsersRolesOfProject(const std::string &
 std::map<Role, std::set<std::string> > UserBase::getUsersByRole(const std::string &project)
 {
     std::map<Role, std::set<std::string> > result;
-    if (localUserInterface) return result;
 
     ScopeLocker scopeLocker(UserDb.locker, LOCK_READ_ONLY);
 
@@ -630,19 +632,10 @@ std::list<User> UserBase::getAllUsers()
 {
     std::list<User> result;
 
-
     ScopeLocker scopeLocker(UserDb.locker, LOCK_READ_ONLY);
     std::map<std::string, User*>::const_iterator u;
     FOREACH(u, UserDb.configuredUsers) {
         result.push_back(*(u->second));
-
-        if (localUserInterface) {
-            // Case of 'smit ui' command: the users are supposed
-            // to contain only one user.
-            // So we return after the first user encountered.
-            return result;
-        }
-
     }
     return result;
 }
@@ -714,16 +707,14 @@ User SessionBase::getLoggedInUser(const std::string &sessionId)
 {
     if (UserBase::isLocalUserInterface()) {
         // case of a command 'smit ui'
-        // return the first user in database (there should be only one when the repo is a clone)
-        std::list<User> users = UserBase::getAllUsers();
+        User *u = UserBase::getUser(UserBase::getLocalInterfaceUser());
 
-        std::list<User>::iterator uit = users.begin();
-        if (uit == users.end()) {
+        if (!u) {
             LOG_ERROR("getLoggedInUser: Cannot get local user");
             User u;
             return u;
         }
-        return *(uit);
+        return *(u);
     }
 
     LOG_DEBUG("getLoggedInUser(%s)...", sessionId.c_str());
