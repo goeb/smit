@@ -628,6 +628,13 @@ void RHtml::printNavigationGlobal(const ContextParameters &ctx)
         div.addContents(linkToViews);
     }
 
+    HtmlNode linkToStat("a");
+    linkToStat.addAttribute("class", "sm_link_stat");
+    linkToStat.addAttribute("href", "/%s/stat", ctx.getProject().getUrlName().c_str());
+    linkToStat.addContents("%s", _("Stat"));
+    div.addContents(" ");
+    div.addContents(linkToStat);
+
     // signed-in
     HtmlNode userinfo("span");
     userinfo.addAttribute("class", "sm_userinfo");

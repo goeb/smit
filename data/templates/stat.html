@@ -7,20 +7,6 @@
         <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/>
         <script src="SM_URL_ROOT/sm/smit.js"></script>
         <script src="SM_URL_ROOT/sm/Chart.min.js"></script>
-    </head>
-    <body>
-        <div style="position: fixed; top: 0; padding-top: 15px; width: 100%; background: white;">
-            <table><tr><td><img src="SM_URL_ROOT/public/logo.png" class="logo" alt="Logo"></td>
-                    <td>SM_DIV_NAVIGATION_GLOBAL SM_DIV_NAVIGATION_ISSUES</td></tr></table>
-        </div>
-        <br>
-        <br>
-        <br>
-        <br>
-        <br>
-        <br>
-        <br>
-
         <script>
             /** Get a sample
               * @return 
@@ -111,7 +97,7 @@
                 var labels = [];
                 for (m in xArray) {
                     var d = new Date(xArray[m]*1000);
-                    var dateStr = "" + d.getFullYear() + "-" + d.getMonth() + "-" + d.getDay();
+                    var dateStr = "" + d.getFullYear() + "-" + (1+d.getMonth()) + "-" + d.getDate();
                     labels.push(dateStr);
                 }
                 var ctx = document.getElementById("myChart").getContext("2d");
@@ -122,13 +108,17 @@
             }
             function getAllSamples() {
                 var propertyBox = document.getElementById('property_name');
-                var resource = "issues/"
+                var nSamplesBox = document.getElementById('n_past_dates');
+                var nSamples = parseInt(nSamplesBox.value);
+                var deltaDaysBox = document.getElementById('delta_days');
+                var deltaDays = parseInt(deltaDaysBox.value);
+                var resource = "issues/";
 
                 var secondsSinceEpoch = Math.floor((new Date).getTime()/1000);
                 var moments = [ ];
-                // build list of 12 last months
-                for (var i = 0; i < 12; i++) {
-                    var ts = secondsSinceEpoch - 30*24*60*60*i;
+                // build list of n samples
+                for (var i = 0; i < nSamples; i++) {
+                    var ts = secondsSinceEpoch - deltaDays*24*60*60*i;
                     moments.unshift(ts);
                 }
                 //console.log("moments=" + JSON.stringify(moments));
@@ -150,8 +140,30 @@
         </script>
     </head>
     <body>
+        <div style="position: fixed; top: 0; padding-top: 15px; width: 100%; background: white;">
+            <table><tr><td><img src="SM_URL_ROOT/public/logo.png" class="logo" alt="Logo"></td>
+                    <td>SM_DIV_NAVIGATION_GLOBAL SM_DIV_NAVIGATION_ISSUES</td></tr></table>
+        </div>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <h1>Statistics for project <span class="tag">SM_HTML_PROJECT</span></h1>
+
+        Select to which property the statistics should be applied, and the frequency.
+        <br>
+        <br>
         <form onsubmit="return getAllSamples();">
-            Property Name: <input type="text" id="property_name" value="status">
+            <table><tr>
+                    <td>Property Name:</td><td><input type="text" id="property_name" value="status"></td>
+                    </tr><tr>
+                    <td>Number of Past Dates:</td><td><input type="text" id="n_past_dates" value="12"></td>
+                    </tr><tr>
+                    <td>Delta between Past Dates (days):</td><td><input type="text" id="delta_days" value="30"></td>
+            </tr></table>
             <input type="submit" value="Apply">
         <form/>
             <br>
