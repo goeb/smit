@@ -1,0 +1,13 @@
++smv 3.1.0
++parent 6b0f945eff6970498ec7d8dbf9cabfa5bc3a44a2
++author fred
++ctime 1439925779
++amend 04dee66f724b752d44c5774c1902c968216541e4
++message < boundary:110a0a0a0b0b0b0b
+.         o
+         -+-
+          |
+          |
+       ^  |  ^
+        \_|_/
+boundary:110a0a0a0b0b0b0b
