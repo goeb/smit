@@ -37,7 +37,7 @@
 #include "global.h"
 #include "stringTools.h"
 #include "mg_win32.h"
-
+#include "fnmatch.h"
 
 #define K_MERGE_PENDING ".merge-pending";
 #define K_ISSUE_ID "id"
@@ -293,7 +293,8 @@ bool isPropertyInFilter(const std::list<std::string> &propertyValue,
 
     FOREACH (fv, filteredValues) {
         FOREACH (v, propertyValue) {
-            if ((*v) == (*fv)) return true;
+            if (FNM_NOMATCH != fnmatch(fv->c_str(), v->c_str(), FNM_CASEFOLD)) return true;
+            //if ((*v) == (*fv)) return true;
         }
     }
     return false; // not found
@@ -308,7 +309,10 @@ bool isPropertyInFilter(const std::string &propertyValue,
 {
     std::list<std::string>::const_iterator fv;
 
-    FOREACH (fv, filteredValues) if (propertyValue == *fv) return true;
+    FOREACH (fv, filteredValues) {
+        if (FNM_NOMATCH != fnmatch(fv->c_str(), propertyValue.c_str(), FNM_CASEFOLD)) return true;
+        //if (propertyValue == *fv) return true;
+    }
 
     return false; // not found
 }
@@ -357,8 +361,7 @@ int compareProperties(const std::map<std::string, std::list<std::string> > &plis
   * Example:
   *    status:open, status:closed, author:john
   * is interpreted as:
-  *    status == open OR status == closed
-  *    AND author == john
+  *    ( status == open OR status == closed ) AND author == john
   *
   */
 bool Issue::isInFilter(const std::map<std::string, std::list<std::string> > &filter) const
@@ -369,19 +372,21 @@ bool Issue::isInFilter(const std::map<std::string, std::list<std::string> > &fil
 
     std::map<std::string, std::list<std::string> >::const_iterator f;
     FOREACH(f, filter) {
-        std::string filteredProperty = f->first;
+        std::string examinedProperty = f->first;
 
-        if (filteredProperty == K_ISSUE_ID) {
+        if (examinedProperty == K_ISSUE_ID) {
             // id
             // look if id matches one of the filter values
             if (!isPropertyInFilter(id, f->second)) return false;
 
         } else {
             std::map<std::string, std::list<std::string> >::const_iterator p;
-            p = properties.find(filteredProperty);
+            p = properties.find(examinedProperty);
             bool fs;
-            if (p == properties.end()) fs = isPropertyInFilter("", f->second);
-            else if (p->second.empty()) fs = isPropertyInFilter("", f->second);
+            // If the issue has no such property (1), or if the property of this issue has no value (2),
+            // then consider that the property has an empty value.
+            if (p == properties.end()) fs = isPropertyInFilter("", f->second); // (1)
+            else if (p->second.empty()) fs = isPropertyInFilter("", f->second); // (2)
             else fs = isPropertyInFilter(p->second, f->second);
 
             if (!fs) return false;

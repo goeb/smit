@@ -85,7 +85,8 @@
                         Notes on filters (filter-in or filter-out):
                         <ul><li>The keyword <span class="tag">me</span> may be used on selectUser-typed properties to indicate the current signed-in user.
 
-                            <li>The matching is case sensitive, on the exact word.
+                            <li>The matching is case insensitive.
+                            <li>The wildcard <span class="tag">*</span> may be used to indicate any characters (eg: john*).
                             <li>When several criteria, they are logically combined as follows:
                             <ul><li>criteria on same properties are combined with a logical OR
                                 <li>criteria on different properties are combined with a logical AND
