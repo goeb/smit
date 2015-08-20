@@ -52,7 +52,7 @@ The file `trigger` in a smit project defines the path to the external program, o
 Example:
 
 ```
-$ cat $REPO/project-X1/trigger
+$ cat $REPO/project-X1/.smip/refs/trigger
 notifyNewEntry.py
 ```
 
@@ -90,7 +90,7 @@ On creation or modification of an issue, the trigger will be called, and passed 
 }
 ```
 
-Example of trigger program is given: [notifyNewEntry.py](../downloads/notifyNewEntry.py)
+An example of trigger program is given in the "triggers" directory.
 
 ## Make a Backup
 
