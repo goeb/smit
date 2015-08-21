@@ -290,6 +290,7 @@ function addPermission(divname, selectedProject, selectedRole) {
     // input for the project name or wildcard
     var input = document.createElement('input');
     input.type = 'text';
+    input.size = '50';
     input.value = selectedProject;
     input.setAttribute('list', 'datalist_projects');
     input.name = 'project_wildcard';

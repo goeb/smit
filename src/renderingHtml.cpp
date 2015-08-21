@@ -1252,7 +1252,7 @@ void RHtml::printIssueList(const ContextParameters &ctx, const std::vector<Issue
         std::list<std::string> defaultCols = ctx.projectConfig.getPropertiesNames();
         newQueryString = getQsRemoveColumn(ctx.req->getQueryString(), *colname, defaultCols);
         ctx.req->printf(" <a href=\"?%s\" class=\"sm_issues_delete_col\" title=\"%s\">&#10008;</a>\n", newQueryString.c_str(),
-                        _("Remove this column"));
+                        _("Hide this column"));
         ctx.req->printf("</th>\n");
     }
     ctx.req->printf("</tr>\n");
