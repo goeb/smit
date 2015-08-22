@@ -32,7 +32,7 @@ function previewMessage() {
 function sm_deleteResource(redirect) {
     var r = confirm("Confirm delete?");
     if (r == true) {
-        r = ajaxSend('#', 'DELETE');
+        r = ajaxSend('', 'DELETE');
         if (r[0] != 'ok') alert(r[1]);
         else window.location.href = redirect;
     }
