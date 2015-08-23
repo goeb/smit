@@ -2,6 +2,10 @@
 v3.0.1
     - smit clone: clone permissions of user
     - smit clone/push/pull: some fixes
+    - wildcards in search filters
+    - page statistics
+    - smit push --dry-run
+    - fix delete user with client IE9
 
 v3.0.0
     - Suggested values for search filters (filters in/out)
