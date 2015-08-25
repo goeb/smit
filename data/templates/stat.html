@@ -100,7 +100,9 @@
                     var dateStr = "" + d.getFullYear() + "-" + (1+d.getMonth()) + "-" + d.getDate();
                     labels.push(dateStr);
                 }
-                var ctx = document.getElementById("myChart").getContext("2d");
+                var canvas = document.getElementById("myChart");
+                var ctx = canvas.getContext("2d");
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
                 var myLineChart = new Chart(ctx).Line({ "labels": labels, "datasets": datasets}, getOptions());
                 var legendBox = document.getElementById('legend');
                 legendBox.innerHTML = myLineChart.generateLegend();
@@ -165,7 +167,7 @@
                     <td>Delta between Past Dates (days):</td><td><input type="text" id="delta_days" value="30"></td>
             </tr></table>
             <input type="submit" value="Apply">
-        <form/>
+        </form>
             <br>
             <canvas id="myChart" width="400" height="400"></canvas>
             <div id="legend"></div>
