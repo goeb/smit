@@ -2407,13 +2407,12 @@ void httpPostEntry(const RequestContext *req, Project &pro, const std::string & 
     if (!amendedEntry.empty()) {
         // this post is an amendment to an existing entry
         std::string newMessage = getProperty(vars, K_MESSAGE);
-        entry = pro.amendEntry(amendedEntry, u.username, newMessage);
-        if (!entry) {
+        r = pro.amendEntry(amendedEntry, newMessage, entry, u.username);
+        if (r < 0) {
             // failure
-            LOG_INFO("amendEntry returned %d", r);
-            sendHttpHeader403(req);
-            r = -1;
-        } else r = 0;
+            LOG_ERROR("amendEntry returned %d", r);
+            sendHttpHeader500(req, "Cannot amend entry");
+        }
 
     } else {
         // nominal post
@@ -2430,18 +2429,15 @@ void httpPostEntry(const RequestContext *req, Project &pro, const std::string & 
         }
     }
 
-
-    if (r == 0) {
-        // entry correctly added or amended
-
 #if !defined(_WIN32)
-        // launch the trigger, if any
+    if (entry) {
         // launch the trigger only if a new entry was actually created
-        if (entry && ! UserBase::isLocalUserInterface()) Trigger::notifyEntry(pro, entry, isNewIssue);
-#endif
+        if (! UserBase::isLocalUserInterface()) Trigger::notifyEntry(pro, entry, isNewIssue);
     }
+#endif
 
     if (r >= 0) {
+        // redirect to the page of the issue
         if (getFormat(req) == RENDERING_HTML) {
             // HTTP redirect
             std::string redirectUrl = "/" + pro.getUrlName() + "/issues/" + id;
@@ -2454,7 +2450,6 @@ void httpPostEntry(const RequestContext *req, Project &pro, const std::string & 
             else req->printf("%s/(no change)\r\n", id.c_str());
         }
     }
-
 }
 
 

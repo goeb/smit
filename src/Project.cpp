@@ -1470,37 +1470,49 @@ std::map<std::string, PredefinedView> Project::getViews() const
 /** Amend the message of an existing entry
   *
   * This creates a new entry that contains the amendment.
+  *
+  * @param[out]    entry
+  *
+  * @return
+  *     0 success, an entry has been created
+  *    >0 no entry was created due to no change
+  *    <0 error
   */
-Entry *Project::amendEntry(const std::string &entryId, const std::string &username, const std::string &msg)
+int Project::amendEntry(const std::string &entryId, const std::string &msg, Entry *&entryOut, const std::string &username)
 {
     LOCK_SCOPE(locker, LOCK_READ_WRITE);
 
     Entry *e = getEntry(entryId);
-    if (!e) return 0;
+    if (!e) return -1;
 
-    if (time(0) - e->ctime > DELETE_DELAY_S) return 0;
-    else if (e->author != username) return 0;
-    else if (e->isAmending()) return 0; // one cannot amend an amending message
+    if (time(0) - e->ctime > DELETE_DELAY_S) return -1; // too late!
+
+    if (e->author != username) return -1; // one cannot amend the message of somebody else
+
+    if (e->isAmending()) return -1; // one cannot amend an amending message
+
+    if (msg == e->getMessage()) return 0; // no change (the message is the same)
 
     // ok, we can proceed
     Entry *amendingEntry = e->issue->amendEntry(entryId, msg, username);
     if (!amendingEntry) {
         // should never happen
         LOG_ERROR("amending entry: null");
-        return 0;
+        return -2;
     }
 
     // in case of further error, we should delete the entry
     // TODO (memory leak at the moment)
 
     int r = addNewEntry(amendingEntry);
-    if (r != 0) return 0;
+    if (r != 0) return -2;
 
     // update latest entry of issue on disk
     r = storeRefIssue(e->issue->id, amendingEntry->id);
-    if (r < 0) return 0;
+    if (r < 0) return -2;
 
-    return amendingEntry;
+    entryOut = amendingEntry;
+    return 0;
 }
 
 
