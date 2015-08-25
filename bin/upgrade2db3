@@ -253,6 +253,8 @@ migrateUsers() {
             fi
             read username
             superadmin=""
+            salt=""
+            sha1=""
 
         elif [ "$token" = "sha1" ]; then read sha1
         elif [ "$token" = "-salt" ]; then read salt
