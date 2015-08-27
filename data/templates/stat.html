@@ -61,6 +61,7 @@
                 for (var i = 0; i < 3; i++) result += chars[Math.round(Math.random() * (chars.length - 1))];
                 return result;
             }
+            var myLineChart;
             /** build the datasets and make the chart
              *
              *  xArray: [ datetime, ... ]
@@ -102,8 +103,8 @@
                 }
                 var canvas = document.getElementById("myChart");
                 var ctx = canvas.getContext("2d");
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                var myLineChart = new Chart(ctx).Line({ "labels": labels, "datasets": datasets}, getOptions());
+                if (myLineChart) myLineChart.destroy();
+                myLineChart = new Chart(ctx).Line({ "labels": labels, "datasets": datasets}, getOptions());
                 var legendBox = document.getElementById('legend');
                 legendBox.innerHTML = myLineChart.generateLegend();
 
