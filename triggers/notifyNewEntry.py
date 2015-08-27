@@ -118,15 +118,14 @@ def gpgEncrypt(text, addressees):
     #print "result=", result
     return result
 
-def escapeProjectName(pname):
-    'escape characters except alphanumerics and ._-'
+def urlEscapeProjectName(pname):
+    'escape characters for passing the project name in an URL'
     result = ''
-    dontEscape = '._-'
+    doEscape = ':?#[]@!$&"\'()*+,;=% '
     mark = '='
     for c in pname:
-        if c.isalnum(): result += c
-        elif c in dontEscape: result += c
-        else: result += mark + '%02x' % (ord(c))
+        if c in doEscape: result += mark + '%02x' % (ord(c))
+        else result += c
     return result
 
 def getMailBody(jsonMsg):
@@ -167,7 +166,7 @@ def getMailBody(jsonMsg):
         pass
     # link to the web server
     url = '%s/%s/issues/%s' % (WebConfig.rooturl,
-            escapeProjectName(jsonMsg['project']), jsonMsg['issue'] )
+            urlEscapeProjectName(jsonMsg['project']), jsonMsg['issue'] )
     body += '\r\n' + url + '\r\n'
 
     return body

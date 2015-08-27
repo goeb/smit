@@ -486,7 +486,7 @@ int Project::createProjectFiles(const std::string &repositoryPath, const std::st
         LOG_ERROR("Cannot create project over existing path: %s", newProjectPath.c_str());
         return -1;
     }
-    // TODO forbid .. in path part (prevent going out of repo)
+
     int r = mkdirs(newProjectPath);
     if (r != 0) {
         LOG_ERROR("Could not create directory '%s': %s", newProjectPath.c_str(), strerror(errno));

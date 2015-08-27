@@ -168,7 +168,7 @@ std::string urlDecode(const std::string &src, int is_form_url_encoded, char mark
   */
 const char *getReservedUriCharacters()
 {
-    return ":/?#[]@!$&'()*+,;=% ";
+    return ":/?#[]@!$&\"'()*+,;=% ";
 }
 
 /** Encode a string for URL

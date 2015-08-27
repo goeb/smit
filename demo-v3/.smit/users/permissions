@@ -8,12 +8,11 @@ setperm alice admin a:b:c
 setperm alice ro myproject
 setperm alice ro things_to_do
 setperm fred superadmin
-setperm fred admin myproject
-setperm fred ro myproject/yoyo
-setperm fred admin smit
+setperm fred admin myproject*
+setperm fred rw smit
 setperm fred admin things_to_do
-setperm fred rw toto
-setperm fred admin tutuut
+setperm fred admin toto
+setperm fred rw tutuut
 setperm homer superadmin
 setperm homer ro myproject
 setperm homer admin things_to_do
