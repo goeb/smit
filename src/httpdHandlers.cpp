@@ -795,7 +795,8 @@ void httpPostUser(const RequestContext *request, User signedInUser, const std::s
             if (r != 0) {
                 LOG_ERROR("Cannot update password of user '%s'", username.c_str());
                 error = "Cannot update password";
-            } else LOG_INFO("Password updated for user '%s'", username.c_str());
+            } else LOG_INFO("Password of user '%s' updated by '%s'", username.c_str(),
+                            signedInUser.username.c_str());
         } else {
             LOG_DEBUG("Password not changed (empty)");
         }
