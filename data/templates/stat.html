@@ -9,27 +9,50 @@
         <script src="SM_URL_ROOT/sm/Chart.min.js"></script>
         <script>
             /** Get a sample
-              * @return 
+              * @param moments: the async requests wait until all moments have been fulfilled
+              * @return
               * Ex: { "open": 34, "closed": 321, "other": 7 }
               */
-            function getSample(resource, timestamp, property) {
+            function getSample(resource, timestamp, property, samples, propertyValues, moments) {
                 var url = resource + '?format=json&snapshot=' + timestamp;
                 url = url + '&colspec=' + property;
-                rsp = ajaxSend(url, 'GET');
+                var xhr = new XMLHttpRequest();
+                xhr.open("GET", url, true);
+                xhr.onload = function (e) {
+                    if (xhr.readyState === 4) {
+                        if (xhr.status === 200) {
+                            jsonString = xhr.responseText;
+                            //console.log("jsonString="+jsonString);
+                            data = JSON.parse(jsonString);
+                            var len = data.length;
+                            consolidatedData = {};
+                            for (var i=0; i<len; i++) {
+                                var key = data[i][0];
+                                if (key in consolidatedData) consolidatedData[key] ++;
+                                else consolidatedData[key] = 1;
+                            }
+                            //console.log("consolidatedData=" + JSON.stringify(consolidatedData));
+                            samples[timestamp] = consolidatedData;
 
-                if (rsp[0] != "ok") alert("Error: " + rsp[0]);
-                jsonString = rsp[1];
-                //console.log("jsonString="+jsonString);
-                data = JSON.parse(jsonString);
-                var len = data.length;
-                consolidatedData = {};
-                for (var i=0; i<len; i++) {
-                    var key = data[i][0];
-                    if (key in consolidatedData) consolidatedData[key] ++;
-                    else consolidatedData[key] = 1;
+                            // update the propertyValues
+                            for (value in consolidatedData) {
+                                if (propertyValues.indexOf(value) == -1) propertyValues.push(value);
+                            }
+
+                            // if all samples have been received, do the chart
+                            if (moments.length == Object.keys(samples).length) {
+                                renderChart(moments, propertyValues, samples);
+                            }
+                        } else {
+                            console.error(xhr.statusText);
+                            alert("Error: " + xhr.statusText);
+                        }
+                    }
                 }
-                //console.log("consolidatedData=" + JSON.stringify(consolidatedData));
-                return consolidatedData;
+                xhr.onerror = function (e) {
+                    console.error(xhr.statusText);
+                };
+                xhr.send(null);
             }
 
             function getOptions() {
@@ -61,7 +84,6 @@
                 for (var i = 0; i < 3; i++) result += chars[Math.round(Math.random() * (chars.length - 1))];
                 return result;
             }
-            var myLineChart;
             /** build the datasets and make the chart
              *
              *  xArray: [ datetime, ... ]
@@ -101,10 +123,8 @@
                     var dateStr = "" + d.getFullYear() + "-" + (1+d.getMonth()) + "-" + d.getDate();
                     labels.push(dateStr);
                 }
-                var canvas = document.getElementById("myChart");
-                var ctx = canvas.getContext("2d");
-                if (myLineChart) myLineChart.destroy();
-                myLineChart = new Chart(ctx).Line({ "labels": labels, "datasets": datasets}, getOptions());
+                var ctx = document.getElementById("myChart").getContext("2d");
+                var myLineChart = new Chart(ctx).Line({ "labels": labels, "datasets": datasets}, getOptions());
                 var legendBox = document.getElementById('legend');
                 legendBox.innerHTML = myLineChart.generateLegend();
 
@@ -126,18 +146,13 @@
                 }
                 //console.log("moments=" + JSON.stringify(moments));
 
-                var samples = [];
+                var samples = {};
                 var propertyValues = [];
                 for (var m = 0; m < moments.length; m++) {
-                    var sample = getSample(resource, moments[m], propertyBox.value);
-                    samples.push(sample);
-                    // update the propertyValues
-                    for (value in sample) {
-                        if (propertyValues.indexOf(value) == -1) propertyValues.push(value);
-                    }
+                    // launch asynchronous request to get the sample
+                    getSample(resource, moments[m], propertyBox.value, samples, propertyValues, moments);
                 }
 
-                renderChart(moments, propertyValues, samples);
                 return false;
             }
         </script>
@@ -168,7 +183,7 @@
                     <td>Delta between Past Dates (days):</td><td><input type="text" id="delta_days" value="30"></td>
             </tr></table>
             <input type="submit" value="Apply">
-        </form>
+        <form/>
             <br>
             <canvas id="myChart" width="400" height="400"></canvas>
             <div id="legend"></div>
