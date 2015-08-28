@@ -125,7 +125,7 @@ def urlEscapeProjectName(pname):
     mark = '='
     for c in pname:
         if c in doEscape: result += mark + '%02x' % (ord(c))
-        else result += c
+        else: result += c
     return result
 
 def getMailBody(jsonMsg):
