@@ -404,7 +404,7 @@ int cmpContents(const char *contents, size_t size, const std::string &file)
     int r = loadFile(file.c_str(), data);
     if (r != 0) return r;
 
-    if (contents == data) return 0;
+    if (0 == data.compare(0, data.size(), contents, size)) return 0;
     else return -1;
 }
 
