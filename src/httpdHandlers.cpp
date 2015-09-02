@@ -1250,6 +1250,9 @@ void httpPostProjectConfig(const RequestContext *req, Project &p, User u)
 
         ptr = newProject;
 
+        // recalculate permissions of existing users against this new project
+        UserBase::computePermissions();
+
     } else {
         if (p.getName() != projectName) {
             LOG_INFO("Renaming an existing project not supported at the moment (%s -> %s)",

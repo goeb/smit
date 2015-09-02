@@ -512,6 +512,22 @@ int UserBase::hotReload()
     return 0;
 }
 
+/** Compute the permissions of all users
+  *
+  * Based on the permissions wildcards, this computes the roles
+  * of all the users on all the projects
+  */
+void UserBase::computePermissions()
+{
+    LOCK_SCOPE(UserDb.locker, LOCK_READ_WRITE);
+
+    // for each user, consolidate its roles after the wildcarded permissions
+    std::map<std::string, User*>::iterator u;
+    FOREACH(u, UserDb.configuredUsers) {
+        u->second->consolidateRoles();
+    }
+}
+
 
 /** Get the list of users that are at stake in the given project
   */
