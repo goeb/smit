@@ -1,5 +1,7 @@
 # Customize HTML
 
+(page needs update)
+
 ## Introduction
 
 This page deals with the look and feel of the web interface, and how the HTML pages may be customized.

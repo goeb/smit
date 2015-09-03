@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Cloning</title>
+        <link rel="stylesheet" type="text/css" href="../style.css">
+        <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/>
+    </head>
+
+    <body>
+        <div class="header">
+            <img src="../logo.png" alt="Logo" width="150">
+            <span class="header_text">The Small Issue Tracker - Documentation Smit v3.x</span>
+        </div>
+        <div class="page">
+<aside class='menu'>
+<ul>
+<li><a href='index.html'>Inroduction</a></li>
+<li><a href='install.html'>Installation</a></li>
+<li><a href='admin.html'>Administration</a></li>
+<li><a href='experts.html'>Advanced Admin</a></li>
+<li><a href='web_user_guide.html'>Web User Guide</a></li>
+<li class='active'>Cloning
+<ul class=menu_level2>
+<li><a href='#basic-principle'>Basic Principle</a></li>
+<li><a href='#how-conflicts-are-managed'>How Conflicts are Managed</a></li>
+</ul>
+</li>
+<li><a href='html.html'>Customize HTML</a></li>
+<li><a href='api.html'>Smit API</a></li>
+<li><a href='developers.html'>Developer Guide</a></li>
+</ul>
+</aside>
+<div class='contents'>
+<h1 id="cloning">Cloning</h1>
+<h2 id="basic-principle">Basic Principle</h2>
+<p>Smit lets you:</p>
+<ul>
+<li>clone a remote Smit repository to your local computer</li>
+<li>browse your local copy</li>
+<li>pull remote changes to your local copy</li>
+<li>make local changes: new issues, modify properties of issues,...</li>
+<li>push your local changes to the remote repository</li>
+</ul>
+<p>But, obviously, conflicts will happen: Alice will change a property on her laptop, and Bob will change the same property on his workstation. And when they will push the change to the same centralized repository, the second person to push will have a conflit.</p>
+<h2 id="how-conflicts-are-managed">How Conflicts are Managed</h2>
+<p>First, conflicts may be solved only during a pulling. Any attempt to push while conflicts remain will be rejected.</p>
+<p>When you pull from the server, the following conflicts may happen:</p>
+<ul>
+<li>you created a new issue identified by, say, &quot;421&quot;, but another new issue with the same id was created on the server.</li>
+<li>you modified the status of issue, says, &quot;888&quot;, but someone also modified this property on the server</li>
+</ul>
+<h3 id="new-issue-conflict">New Issue Conflict</h3>
+<p>In our example, you created a new issue identified by, say, &quot;421&quot;, but Alice already created a new issue &quot;421&quot; on the server.</p>
+<p>In this case, when you pull, Smit renames your local issue &quot;421&quot; to &quot;422&quot;.</p>
+<p>Note that only local issues may be renamed, and that issues on the server will never be renamed, so that the server is the reference.</p>
+<h3 id="same-property-conflict">Same Property Conflict</h3>
+<p>In our example, you modified the status of issue, says, &quot;888&quot;, but Alice also modified this property on the server.</p>
+<p>If you set the same value as Alice did, then there is no conflict. Both of you did the same thing. Your change is simply removed.</p>
+<p>But if you set a different value, then Smit prompts you to take a decision.</p>
+</div>
+        </div> <!-- div class page -->
+        <div class="footer">
+            Page updated on  3 Sep 2015
+        </div>
+    </body>
+</html>

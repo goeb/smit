@@ -5,6 +5,7 @@ SRCS += install.md
 SRCS += admin.md
 SRCS += experts.md
 SRCS += web_user_guide.md
+SRCS += cloning.md
 SRCS += html.md
 SRCS += api.md
 SRCS += developers.md

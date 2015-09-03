@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <title>Experts</title>
+        <title>Advanced Admin</title>
         <link rel="stylesheet" type="text/css" href="../style.css">
         <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/>
     </head>
@@ -17,38 +17,24 @@
 <li><a href='index.html'>Inroduction</a></li>
 <li><a href='install.html'>Installation</a></li>
 <li><a href='admin.html'>Administration</a></li>
-<li class='active'>Experts
+<li class='active'>Advanced Admin
 <ul class=menu_level2>
 <li><a href='#command-line'>Command Line</a></li>
 <li><a href='#project-configuration'>Project Configuration</a></li>
+<li><a href='#configuration-of-users'>Configuration of Users</a></li>
 </ul>
 </li>
 <li><a href='web_user_guide.html'>Web User Guide</a></li>
+<li><a href='cloning.html'>Cloning</a></li>
 <li><a href='html.html'>Customize HTML</a></li>
 <li><a href='api.html'>Smit API</a></li>
 <li><a href='developers.html'>Developer Guide</a></li>
 </ul>
 </aside>
 <div class='contents'>
-<h1 id="experts">Experts</h1>
+<h1 id="advanced-admin">Advanced Admin</h1>
 <h2 id="command-line">Command Line</h2>
-<pre><code>Usage: smit &lt;command&gt; [&lt;args&gt;]
-
-The smit commands are:
-
-  clone       Clone a smit repository
-  init        Initialise a smit repository
-  issue       Print or modify an issue in a local project
-  project     List, create, or update a smit project
-  pull        Fetch from and merge with a remote repository
-  push        Push local changes to a remote repository
-  serve       Start a smit web server
-  user        List, create, or update a smit user
-  ui          Browse a local smit repository (read-only)
-  version     Print the version
-  help
-
-See &#39;smit help &lt;command&gt;&#39; for more information on a specific command.</code></pre>
+<pre><code>smit help</code></pre>
 <h2 id="project-configuration">Project Configuration</h2>
 <p>The project configuration defines:</p>
 <ul>
@@ -66,6 +52,7 @@ See &#39;smit help &lt;command&gt;&#39; for more information on a specific comma
 <li>via editing directly the configuration file, and performing a hot reload via the web interface</li>
 </ul>
 <p>The configuration of a project is stored in the object referenced by the file <code>&lt;p&gt;/.smip/refs/project</code>.</p>
+<p>It can be modified with a text editor, and hot-reloaded from the <code>Project Config</code> web page.</p>
 <h3 id="view-the-project-configuration">View the project configuration</h3>
 <p>It can be displayed like this:</p>
 <pre><code>smit project -l demo-v3/things_to_do
@@ -136,10 +123,17 @@ numberIssues global
 tag test -label &quot;Test Proof&quot; -display
 
 trigger public/sendEmail.sh</code></pre>
+<h2 id="configuration-of-users">Configuration of Users</h2>
+<p>The users are configured in the Smit repository in the files:</p>
+<ul>
+<li><code>.smit/users/auth</code>: authentication parameters</li>
+<li><code>.smit/users/permissions</code>: roles on projects</li>
+</ul>
+<p>These files can be modified with a text editor, and hot-reloaded from the <code>Users</code> web page.</p>
 </div>
         </div> <!-- div class page -->
         <div class="footer">
-            Page updated on 23 Jul 2015
+            Page updated on  3 Sep 2015
         </div>
     </body>
 </html>

@@ -1,25 +1,9 @@
-# Experts
+# Advanced Admin
 
 ## Command Line
 
 ```
-Usage: smit <command> [<args>]
-
-The smit commands are:
-
-  clone       Clone a smit repository
-  init        Initialise a smit repository
-  issue       Print or modify an issue in a local project
-  project     List, create, or update a smit project
-  pull        Fetch from and merge with a remote repository
-  push        Push local changes to a remote repository
-  serve       Start a smit web server
-  user        List, create, or update a smit user
-  ui          Browse a local smit repository (read-only)
-  version     Print the version
-  help
-
-See 'smit help <command>' for more information on a specific command.
+smit help
 ```
 
 ## Project Configuration
@@ -39,8 +23,11 @@ The configuration may be modified in two ways:
 
 The configuration of a project is stored in the object referenced by the file `<p>/.smip/refs/project`.
 
+It can be modified with a text editor, and hot-reloaded from the `Project Config` web page.
 
 ### View the project configuration
+
+
 
 It can be displayed like this:
 
@@ -142,6 +129,13 @@ tag test -label "Test Proof" -display
 trigger public/sendEmail.sh
 ```
 
+## Configuration of Users
 
+The users are configured in the Smit repository in the files:
+
+- `.smit/users/auth`: authentication parameters
+- `.smit/users/permissions`: roles on projects
+
+These files can be modified with a text editor, and hot-reloaded from the `Users` web page.
 
 
