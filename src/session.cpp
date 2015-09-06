@@ -741,7 +741,7 @@ User SessionBase::getLoggedInUser(const std::string &sessionId)
     if (i != SessionDb.sessions.end()) {
         // session found
         Session s = i->second;
-        if (time(0) - s.ctime > s.duration) {
+        if (s.isExpired()) {
             // session expired
             LOG_DEBUG("getLoggedInUser: session expired: %s", sessionId.c_str());
         } else {
@@ -771,6 +771,24 @@ int SessionBase::destroySession(const std::string &sessionId)
     }
 
     return 0;
+}
+
+/** Delete expired sessions
+  */
+void SessionBase::garbageCollect()
+{
+    std::map<std::string, Session>::iterator s = SessionDb.sessions.begin();
+    std::map<std::string, Session>::iterator toBeErased;
+    int count = 0;
+    while(s != SessionDb.sessions.end()) {
+        toBeErased = s;
+        s ++;
+        if (toBeErased->second.isExpired()) {
+            SessionDb.sessions.erase(toBeErased);
+            count ++;
+        }
+    }
+    if (count > 0) LOG_INFO("Sessions garbage-collected: %d/%ld", count, L(SessionDb.sessions.size()));
 }
 
 std::string SessionBase::createSession(const std::string &username)

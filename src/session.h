@@ -92,6 +92,7 @@ struct Session {
     std::string username;
     time_t ctime;
     int duration; // seconds
+    inline bool isExpired() { if (time(0) - ctime > duration) return true; else return false; }
 };
 
 class SessionBase {
@@ -103,6 +104,7 @@ public:
 
 private:
     static SessionBase SessionDb;
+    void garbageCollect();
     std::string createSession(const std::string &username);
     std::map<std::string, Session> sessions;
     Locker locker;
