@@ -788,12 +788,14 @@ void SessionBase::garbageCollect()
             count ++;
         }
     }
-    if (count > 0) LOG_INFO("Sessions garbage-collected: %d/%ld", count, L(SessionDb.sessions.size()));
+    if (count > 0) LOG_INFO("Sessions garbage-collected: %d, remaining: %ld", count, L(SessionDb.sessions.size()));
 }
 
 std::string SessionBase::createSession(const std::string &username)
 {
     LOCK_SCOPE(locker, LOCK_READ_WRITE);
+
+    garbageCollect();
 
     std::stringstream randomStr;
     randomStr << std::hex << rand() << rand();
