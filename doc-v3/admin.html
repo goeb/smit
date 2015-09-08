@@ -14,17 +14,13 @@
         <div class="page">
 <aside class='menu'>
 <ul>
-<li><a href='index.html'>Inroduction</a></li>
+<li><a href='index.html'>Introduction</a></li>
 <li><a href='install.html'>Installation</a></li>
 <li class='active'>Administration
 <ul class=menu_level2>
-<li><a href='#initiate-a-repository'>Initiate a Repository</a></li>
+<li><a href='#create-a-user'>Create a User</a></li>
 <li><a href='#create-a-project'>Create a Project</a></li>
-<li><a href='#start-a-smit-web-server'>Start a smit web server</a></li>
-<li><a href='#setup-a-smit-web-server-over-ssltls'>Setup a smit web server over SSL/TLS</a></li>
-<li><a href='#set-up-a-trigger'>Set up a trigger</a></li>
-<li><a href='#make-a-backup'>Make a Backup</a></li>
-<li><a href='#setup-behind-a-reverse-proxy'>Setup behind a reverse proxy</a></li>
+<li><a href='#set-permissions-up'>Set Permissions Up</a></li>
 <li><a href='#faq'>FAQ</a></li>
 </ul>
 </li>
@@ -38,83 +34,79 @@
 </aside>
 <div class='contents'>
 <h1 id="administration">Administration</h1>
-<p>The commands given in this chapter are to be issued in a shell in a Linux OS. For a Windows Os, they may need some adaptation.</p>
-<h2 id="initiate-a-repository">Initiate a Repository</h2>
-<pre><code>REPO=/path/to/some/dir
-mkdir $REPO
-smit init $REPO</code></pre>
-<h2 id="create-a-project">Create a Project</h2>
-<pre><code>cd $REPO
-smit project -c &lt;project-name&gt;
-smit user &lt;user-name&gt; --passwd &lt;pass&gt;
-smit user &lt;user-name&gt; --project &lt;project-name&gt;:admin</code></pre>
-<h2 id="start-a-smit-web-server">Start a smit web server</h2>
-<pre><code>smit serve</code></pre>
-<h2 id="setup-a-smit-web-server-over-ssltls">Setup a smit web server over SSL/TLS</h2>
-<p>Create a self-signed certificate:</p>
-<pre><code>openssl genrsa &gt; privkey.pem
-openssl req -new -x509 -key privkey.pem -out cacert.pub.pem -days 1095
-cat privkey.pem cacert.pub.pem &gt; cacert.pem</code></pre>
-<p>Start smit:</p>
-<pre><code>smit serve --ssl-cert cacert.pem</code></pre>
-<h2 id="set-up-a-trigger">Set up a trigger</h2>
-<p>A trigger defines an external program to be launched after each new entry. It is typically useful for sending email notifications when some condition occur.</p>
-<p>Triggers are not supported on Windows.</p>
-<p>The file <code>trigger</code> in a smit project defines the path to the external program, on the first line.</p>
-<p>Example:</p>
-<pre><code>$ cat $REPO/project-X1/.smip/refs/trigger
-notifyNewEntry.py</code></pre>
-<p>Notes:</p>
+<p>Most administration tasks may be performed through the web interface, and require the role superadmin.</p>
+<h2 id="create-a-user">Create a User</h2>
+<p>To define a user's profile you must specify:</p>
 <ul>
-<li>if the path is relative, it is considered relatively to the smit repository</li>
-<li>the external program must be executable</li>
+<li>his/her identifier (typically his/her name, or an alias) that uniquely identifies him/her</li>
+<li>a password (expect for some cases described below)</li>
+<li>permissions on the projects</li>
 </ul>
-<p>On creation or modification of an issue, the trigger will be called, and passed a JSON structure on its standard input, like this example:</p>
-<pre><code>{
-&quot;project&quot;:&quot;myproject&quot;,
-&quot;issue&quot;:&quot;13&quot;,
-&quot;entry&quot;:&quot;ed3eda2976914998cf2fcd759adf71753d0aa5f8&quot;,
-&quot;author&quot;:&quot;fred&quot;,
-&quot;users&quot;:{
-  &quot;fred&quot;:&quot;admin&quot;,
-  &quot;not assigned&quot;:&quot;ref&quot;,
-  &quot;xxxt&quot;:&quot;rw&quot;},
-&quot;modified&quot;:[&quot;a-b-c&quot;,&quot;multi-a&quot;,&quot;new-ttt&quot;,&quot;owner&quot;,&quot;test-reload&quot;,&quot;textarea2&quot;,&quot;xx&quot;],
-&quot;properties&quot;:{
-  &quot;a-b-c&quot;:[&quot;a-b-xx66&quot;,&quot;&quot;],
-  &quot;multi-a&quot;:[&quot;%multi-h&quot;,&quot;42&quot;],
-  &quot;new-ttt&quot;:[&quot;new-ttt&quot;,&quot;&quot;],
-  &quot;owner&quot;:[&quot;owner&#39;44r%&quot;,&quot;fred&quot;],
-  &quot;summary&quot;:[&quot;summary&quot;,&quot;fatal error x8&quot;],
-  &quot;target_version&quot;:[&quot;target_version\&quot;22&quot;,&quot;v0.1&quot;],
-  &quot;test-reload&quot;:[&quot;test-reloadx&quot;,&quot;&quot;],
-  &quot;textarea2&quot;:[&quot;textarea2&quot;,&quot;&quot;],
-  &quot;xx&quot;:[&quot;xx(yy)__99&quot;,&quot;&quot;]
-},
-&quot;message&quot;:&quot;...&quot;
-}</code></pre>
-<p>An example of trigger program is given in the &quot;triggers&quot; directory.</p>
-<h2 id="make-a-backup">Make a Backup</h2>
-<p>Do a zip or tar of the repository, as follows:</p>
-<pre><code>tar cvfz $REPO.tar.gz $REPO</code></pre>
-<h2 id="setup-behind-a-reverse-proxy">Setup behind a reverse proxy</h2>
-<p>Use the <code>--url-rewrite-root</code> option. Eg:</p>
-<pre><code>linux/smit serve demo --url-rewrite-root /bugtracker</code></pre>
-<p>Example of reverse proxy configuration with lighttpd: (tested with lighttpd-1.4.35)</p>
-<pre><code>server.document-root = &quot;/tmp&quot;
-server.port = 3000
-server.modules += ( &quot;mod_proxy&quot; , &quot;mod_rewrite&quot;)
-
-$SERVER[&quot;socket&quot;] == &quot;:8092&quot; {
-    url.rewrite-once = ( &quot;^/bt/(.*)$&quot; =&gt; &quot;/$1&quot; )
-    proxy.server = ( &quot;&quot; =&gt; ( (
-        &quot;host&quot; =&gt; &quot;127.0.0.1&quot;,
-        &quot;port&quot; =&gt; 8090
-    ) )
-    )
-}
-</code></pre>
-<p>In this example, smit is available at address: <code>http://127.0.0.1:8092/bt/</code></p>
+<h2 id="create-a-project">Create a Project</h2>
+<h2 id="set-permissions-up">Set Permissions Up</h2>
+<p>Permissions of a user on some projects specifies which role the user will have on each project.</p>
+<table>
+<thead>
+<tr class="header">
+<th align="center">Role</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="center">admin</td>
+<td align="left">Allow user to edit project properties</td>
+</tr>
+<tr class="even">
+<td align="center">rw</td>
+<td align="left">Allow user to create new issues and contribute on existing issues</td>
+</tr>
+<tr class="odd">
+<td align="center">ro</td>
+<td align="left">Allow user to view issues</td>
+</tr>
+<tr class="even">
+<td align="center">ref</td>
+<td align="left">Do not allow user to do anything, but user appears in select-user drop-down lists</td>
+</tr>
+</tbody>
+</table>
+<p>Roles on projects (a.k.a the permissions) are specified by:</p>
+<ul>
+<li>a wildcard for the project(s)</li>
+<li>a role</li>
+</ul>
+<p>If any wildcard collisions describe more than one role on a project, then the most restrictive role applies.</p>
+<p>Examples:</p>
+<p>Wildcard Role Resulting Permissions</p>
+<table>
+<col width="18%" />
+<col width="22%" />
+<col width="15%" />
+<col width="30%" />
+<thead>
+<tr class="header">
+<th align="left"></th>
+<th align="left">Wildcard</th>
+<th align="left">Role</th>
+<th align="left">Resulting Permissions</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Example 1</td>
+<td align="left">Cookies-* Cookies-r21 Ribs-*</td>
+<td align="left">admin ro rw</td>
+<td align="left">Cookies-r21: ro Cookies-r22: admin Cookies-z3: admin Ribs-5: rw Ribs-6: rw</td>
+</tr>
+<tr class="even">
+<td align="left">Example 2</td>
+<td align="left">*</td>
+<td align="left">admin</td>
+<td align="left">Cookies-r21: admin Cookies-r22: admin Cookies-z3: admin Ribs-5: rw Ribs-6: rw</td>
+</tr>
+</tbody>
+</table>
 <h2 id="faq">FAQ</h2>
 <h3 id="why-cannot-i-create-a-project-named-public">Why cannot I create a project named 'public'?</h3>
 <p><code>public</code> is reserved for storing HTML pages that are public, such as the signin page.</p>
@@ -129,7 +121,7 @@ files</code></pre>
 </div>
         </div> <!-- div class page -->
         <div class="footer">
-            Page updated on  3 Sep 2015
+            Page updated on  8 Sep 2015
         </div>
     </body>
 </html>

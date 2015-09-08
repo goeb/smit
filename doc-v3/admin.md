@@ -1,133 +1,59 @@
 # Administration
 
-The commands given in this chapter are to be issued in a shell in a Linux OS. For a Windows Os, they may need some adaptation.
+Most administration tasks may be performed through the web interface, and require the role superadmin.
 
-## Initiate a Repository
+## Create a User
 
-```
-REPO=/path/to/some/dir
-mkdir $REPO
-smit init $REPO
-```
+To define a user's profile you must specify:
+
+- his/her identifier (typically his/her name, or an alias) that uniquely identifies him/her
+- a password (expect for some cases described below)
+- permissions on the projects
+
 
 ## Create a Project
 
-```
-cd $REPO
-smit project -c <project-name>
-smit user <user-name> --passwd <pass>
-smit user <user-name> --project <project-name>:admin
-```
 
-## Start a smit web server
+## Set Permissions Up
 
-```
-smit serve
-```
-
-## Setup a smit web server over SSL/TLS
-
-Create a self-signed certificate:
-
-```
-openssl genrsa > privkey.pem
-openssl req -new -x509 -key privkey.pem -out cacert.pub.pem -days 1095
-cat privkey.pem cacert.pub.pem > cacert.pem
-```
-
-Start smit:
-
-```
-smit serve --ssl-cert cacert.pem
-```
-
-## Set up a trigger
-
-A trigger defines an external program to be launched after each new entry. It is typically useful for sending email notifications when some condition occur.
-
-Triggers are not supported on Windows.
-
-The file `trigger` in a smit project defines the path to the external program, on the first line.
-
-Example:
-
-```
-$ cat $REPO/project-X1/.smip/refs/trigger
-notifyNewEntry.py
-```
+Permissions of a user on some projects specifies which role the user will have on each project.
 
 
-Notes:
+ Role    Description 
+-------  ------------
+admin    Allow user to edit project properties 
+rw       Allow user to create new issues and contribute on existing issues 
+ro       Allow user to view issues  
+ref      Do not allow user to do anything, but user appears in select-user drop-down lists 
+-------  ------------
 
-- if the path is relative, it is considered relatively to the smit repository
-- the external program must be executable
+Roles on projects (a.k.a the permissions) are specified by:
 
-On creation or modification of an issue, the trigger will be called, and passed a JSON structure on its standard input, like this example:
+- a wildcard for the project(s)
+- a role
 
-```
-{
-"project":"myproject",
-"issue":"13",
-"entry":"ed3eda2976914998cf2fcd759adf71753d0aa5f8",
-"author":"fred",
-"users":{
-  "fred":"admin",
-  "not assigned":"ref",
-  "xxxt":"rw"},
-"modified":["a-b-c","multi-a","new-ttt","owner","test-reload","textarea2","xx"],
-"properties":{
-  "a-b-c":["a-b-xx66",""],
-  "multi-a":["%multi-h","42"],
-  "new-ttt":["new-ttt",""],
-  "owner":["owner'44r%","fred"],
-  "summary":["summary","fatal error x8"],
-  "target_version":["target_version\"22","v0.1"],
-  "test-reload":["test-reloadx",""],
-  "textarea2":["textarea2",""],
-  "xx":["xx(yy)__99",""]
-},
-"message":"..."
-}
-```
+If any wildcard collisions describe more than one role on a project, then the most restrictive role applies.
 
-An example of trigger program is given in the "triggers" directory.
+Examples:
 
-## Make a Backup
+Wildcard   Role   Resulting Permissions
 
-Do a zip or tar of the repository, as follows:
 
-```
-tar cvfz $REPO.tar.gz $REPO
-```
-
-## Setup behind a reverse proxy
-
-Use the `--url-rewrite-root` option. Eg:
-
-```
-linux/smit serve demo --url-rewrite-root /bugtracker
-```
-
-Example of reverse proxy configuration with lighttpd:
-(tested with lighttpd-1.4.35)
-
-```
-server.document-root = "/tmp"
-server.port = 3000
-server.modules += ( "mod_proxy" , "mod_rewrite")
-
-$SERVER["socket"] == ":8092" {
-    url.rewrite-once = ( "^/bt/(.*)$" => "/$1" )
-    proxy.server = ( "" => ( (
-        "host" => "127.0.0.1",
-        "port" => 8090
-    ) )
-    )
-}
-
-```
-
-In this example, smit is available at address: `http://127.0.0.1:8092/bt/`
+--------------------------------------------------------------
+             Wildcard        Role       Resulting Permissions
+----------   -------------   --------   ----------------------
+Example 1    Cookies-*       admin      Cookies-r21: ro
+             Cookies-r21     ro         Cookies-r22: admin
+             Ribs-*          rw         Cookies-z3: admin
+                                        Ribs-5: rw
+                                        Ribs-6: rw
+             
+Example 2    *               admin      Cookies-r21: admin
+                                        Cookies-r22: admin
+                                        Cookies-z3: admin
+                                        Ribs-5: rw
+                                        Ribs-6: rw
+---------------------------------------------------------------------
 
 ## FAQ
 

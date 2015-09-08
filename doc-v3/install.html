@@ -14,11 +14,16 @@
         <div class="page">
 <aside class='menu'>
 <ul>
-<li><a href='index.html'>Inroduction</a></li>
+<li><a href='index.html'>Introduction</a></li>
 <li class='active'>Installation
 <ul class=menu_level2>
-<li><a href='#windows-platform'>Windows Platform</a></li>
-<li><a href='#linux'>Linux</a></li>
+<li><a href='#get-the-software'>Get the Software</a></li>
+<li><a href='#create-a-repository'>Create a Repository</a></li>
+<li><a href='#start-a-smit-web-server'>Start a Smit web server</a></li>
+<li><a href='#setup-a-smit-web-server-over-ssltls'>Setup a Smit web server over SSL/TLS</a></li>
+<li><a href='#set-up-a-trigger'>Set up a trigger</a></li>
+<li><a href='#make-a-backup'>Make a Backup</a></li>
+<li><a href='#setup-behind-a-reverse-proxy'>Setup behind a reverse proxy</a></li>
 </ul>
 </li>
 <li><a href='admin.html'>Administration</a></li>
@@ -32,12 +37,13 @@
 </aside>
 <div class='contents'>
 <h1 id="installation">Installation</h1>
-<h2 id="windows-platform">Windows Platform</h2>
+<h2 id="get-the-software">Get the Software</h2>
+<h3 id="windows-platform">Windows Platform</h3>
 <ul>
 <li>Unzip</li>
 <li><code>smit.exe</code> is ready to use</li>
 </ul>
-<h2 id="linux">Linux</h2>
+<h3 id="linux">Linux</h3>
 <p>Requirements:</p>
 <ul>
 <li>OpenSSL</li>
@@ -50,10 +56,81 @@ make
 make check
 make install</code></pre>
 <p>And copy the compiled executable <code>smit</code> to your PATH (for example /usr/bin).</p>
+<h2 id="create-a-repository">Create a Repository</h2>
+<pre><code>REPO=/path/to/some/dir
+mkdir $REPO
+smit init $REPO</code></pre>
+<h2 id="start-a-smit-web-server">Start a Smit web server</h2>
+<pre><code>smit serve</code></pre>
+<h2 id="setup-a-smit-web-server-over-ssltls">Setup a Smit web server over SSL/TLS</h2>
+<p>If you do not have a certificate yet, create a self-signed certificate:</p>
+<pre><code>openssl genrsa &gt; privkey.pem
+openssl req -new -x509 -key privkey.pem -out cacert.pub.pem -days 1095
+cat privkey.pem cacert.pub.pem &gt; cacert.pem</code></pre>
+<p>Start Smit:</p>
+<pre><code>smit serve --ssl-cert cacert.pem</code></pre>
+<h2 id="set-up-a-trigger">Set up a trigger</h2>
+<p>A trigger defines an external program to be launched after each new entry. It is typically useful for sending email notifications when some condition occur.</p>
+<p>Triggers are not supported on Windows.</p>
+<p>The file <code>trigger</code> in a Smit project defines the path to the external program, on the first line.</p>
+<p>Example:</p>
+<pre><code>$ cat $REPO/project-X1/.smip/refs/trigger
+notifyNewEntry.py</code></pre>
+<p>Notes:</p>
+<ul>
+<li>if the path is relative, it is considered relatively to the Smit repository</li>
+<li>the external program must be executable</li>
+</ul>
+<p>On creation or modification of an issue, the trigger will be called, and passed a JSON structure on its standard input, like this example:</p>
+<pre><code>{
+  &quot;project&quot;:&quot;myproject&quot;,
+  &quot;issue&quot;:&quot;13&quot;,
+  &quot;entry&quot;:&quot;ed3eda2976914998cf2fcd759adf71753d0aa5f8&quot;,
+  &quot;author&quot;:&quot;fred&quot;,
+  &quot;users&quot;:{
+    &quot;fred&quot;:&quot;admin&quot;,
+    &quot;not assigned&quot;:&quot;ref&quot;,
+    &quot;xxxt&quot;:&quot;rw&quot;},
+  &quot;modified&quot;:[&quot;a-b-c&quot;,&quot;multi-a&quot;,&quot;new-ttt&quot;,&quot;owner&quot;,&quot;test-reload&quot;,&quot;textarea2&quot;,&quot;xx&quot;],
+  &quot;properties&quot;:{
+    &quot;a-b-c&quot;:[&quot;a-b-xx66&quot;,&quot;&quot;],
+    &quot;multi-a&quot;:[&quot;%multi-h&quot;,&quot;42&quot;],
+    &quot;new-ttt&quot;:[&quot;new-ttt&quot;,&quot;&quot;],
+    &quot;owner&quot;:[&quot;owner&#39;44r%&quot;,&quot;fred&quot;],
+    &quot;summary&quot;:[&quot;summary&quot;,&quot;fatal error x8&quot;],
+    &quot;target_version&quot;:[&quot;target_version\&quot;22&quot;,&quot;v0.1&quot;],
+    &quot;test-reload&quot;:[&quot;test-reloadx&quot;,&quot;&quot;],
+    &quot;textarea2&quot;:[&quot;textarea2&quot;,&quot;&quot;],
+    &quot;xx&quot;:[&quot;xx(yy)__99&quot;,&quot;&quot;]
+  },
+  &quot;message&quot;:&quot;...&quot;
+}</code></pre>
+<p>An example of trigger program is given in the &quot;triggers&quot; directory.</p>
+<h2 id="make-a-backup">Make a Backup</h2>
+<p>Do a zip or tar of the repository, as follows:</p>
+<pre><code>tar cvfz $REPO.tar.gz $REPO</code></pre>
+<h2 id="setup-behind-a-reverse-proxy">Setup behind a reverse proxy</h2>
+<p>Use the <code>--url-rewrite-root</code> option. Eg:</p>
+<pre><code>linux/smit serve demo --url-rewrite-root /bugtracker</code></pre>
+<p>Example of reverse proxy configuration with lighttpd: (tested with lighttpd-1.4.35)</p>
+<pre><code>server.document-root = &quot;/tmp&quot;
+server.port = 3000
+server.modules += ( &quot;mod_proxy&quot; , &quot;mod_rewrite&quot;)
+
+$SERVER[&quot;socket&quot;] == &quot;:8092&quot; {
+    url.rewrite-once = ( &quot;^/bt/(.*)$&quot; =&gt; &quot;/$1&quot; )
+    proxy.server = ( &quot;&quot; =&gt; ( (
+        &quot;host&quot; =&gt; &quot;127.0.0.1&quot;,
+        &quot;port&quot; =&gt; 8090
+    ) )
+    )
+}
+</code></pre>
+<p>In this example, Smit is available at address: <code>http://127.0.0.1:8092/bt/</code></p>
 </div>
         </div> <!-- div class page -->
         <div class="footer">
-            Page updated on  3 Sep 2015
+            Page updated on  8 Sep 2015
         </div>
     </body>
 </html>
