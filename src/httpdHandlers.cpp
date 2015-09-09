@@ -2592,7 +2592,6 @@ int begin_request_handler(const RequestContext *req)
         else if ( (resource == "views") && (method == "GET") && !isdir && uri.empty()) return httpGetFile(req);
         else if ( (resource == "views") && (method == "GET")) httpGetView(req, *p, uri, user);
         else if ( (resource == "views") && (method == "POST") ) httpPostView(req, *p, uri, user);
-        else if ( (resource == "tags") && (method == "GET") ) return httpGetFile(req);
         else if ( (resource == "tags") && (method == "POST") ) httpPostTag(req, *p, uri, user);
         else if ( (resource == "reload") && (method == "POST") ) httpReloadProject(req, *p, user);
         else if ( (resource == RESOURCE_FILES) && (method == "POST") ) httpPushAttachedFile(req, *p, uri, user);

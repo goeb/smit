@@ -47,6 +47,9 @@ const char *Project::reservedNames[] = {
     "files",  // reserved for REST interface
     "reload", // reserved for REST interface
     "tags",   // reserved for REST interface
+    "sm",
+    "users",
+    "config",
     0
 };
 
@@ -119,7 +122,6 @@ bool Project::containsReservedName(std::string name)
     while (!name.empty()) {
         std::string part = popToken(name, '/');
         if (isReservedName(part)) return true;
-        if (part == "..") return true; // TODO name of function not relevant for this
     }
     return false;
 }
@@ -131,6 +133,10 @@ bool Project::isReservedName(const std::string &name)
         if (name == *ptr) return true;
         ptr++;
     }
+
+    // Names starting with a dot are reserved
+    if (name.size() > 0 && name[0] == '.') return true;
+
     return false;
 }
 
@@ -468,10 +474,6 @@ int Project::createProjectFiles(const std::string &repositoryPath, const std::st
 {
     if (projectName.empty()) {
         LOG_ERROR("Cannot create project with empty name");
-        return -1;
-    }
-    if (projectName[0] == '.') {
-        LOG_ERROR("Cannot create project with name starting with '.'");
         return -1;
     }
 
