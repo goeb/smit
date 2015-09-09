@@ -17,14 +17,7 @@ Project names cannot contain reserved "directory" parts.
 
 The "directory" parts are those separated by slashes '/'. The reserved parts are:
 
-- "files"
-- "issues"
-- "public"
-- "reload"
-- "sm"
-- "tags"
-- "users"
-- "views"
+- `config`, `files`, `issues`, `public`, `reload`, `sm`, `tags`, `users`, `views`
 - any name starting with a dot '.'
 
 Examples of forbidden project names:
