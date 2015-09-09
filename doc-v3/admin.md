@@ -13,6 +13,26 @@ To define a user's profile you must specify:
 
 ## Create a Project
 
+Project names cannot contain reserved "directory" parts.
+
+The "directory" parts are those separated by slashes '/'. The reserved parts are:
+
+- "files"
+- "issues"
+- "public"
+- "reload"
+- "sm"
+- "tags"
+- "users"
+- "views"
+- any name starting with a dot '.'
+
+Examples of forbidden project names:
+
+- some-tech-project/public
+- .cook
+- kitchen/.cook
+
 
 ## Set Permissions Up
 
@@ -34,42 +54,32 @@ Roles on projects (a.k.a the permissions) are specified by:
 
 If any wildcard collisions describe more than one role on a project, then the most restrictive role applies.
 
-Examples:
+In the examples below, the Smit repository has 3 projects:
 
-Wildcard   Role   Resulting Permissions
+- Cookies-A
+- Cookies-B
+- Ribs-6
 
+### Example 1
 
---------------------------------------------------------------
-             Wildcard        Role       Resulting Permissions
-----------   -------------   --------   ----------------------
-Example 1    Cookies-*       admin      Cookies-r21: ro
-             Cookies-r21     ro         Cookies-r22: admin
-             Ribs-*          rw         Cookies-z3: admin
-                                        Ribs-5: rw
-                                        Ribs-6: rw
-             
-Example 2    *               admin      Cookies-r21: admin
-                                        Cookies-r22: admin
-                                        Cookies-z3: admin
-                                        Ribs-5: rw
-                                        Ribs-6: rw
----------------------------------------------------------------------
+```
+Wildcards                 Resulting Permissions
+-----------------------------------------------
+Cookies-* : admin         Cookies-A : admin
+Cookies-B : ro            Cookies-B : ro
+                             Ribs-6 : none
+```
 
-## FAQ
+### Example 2
 
-### Why cannot I create a project named 'public'?
+```
+Wildcards                 Resulting Permissions
+-----------------------------------------------
+* : rw                    Cookies-A : rw
+                          Cookies-B : rw
+                             Ribs-6 : rw
+```
 
-`public` is reserved for storing HTML pages that are public, such as the signin page.
-
-The reserve keywords that cannot be used as project names are:
-
-    public
-    sm
-    users
-    views
-    .*
-    issues
-    files
 
 
 

@@ -21,7 +21,6 @@
 <li><a href='#create-a-user'>Create a User</a></li>
 <li><a href='#create-a-project'>Create a Project</a></li>
 <li><a href='#set-permissions-up'>Set Permissions Up</a></li>
-<li><a href='#faq'>FAQ</a></li>
 </ul>
 </li>
 <li><a href='experts.html'>Advanced Admin</a></li>
@@ -43,6 +42,25 @@
 <li>permissions on the projects</li>
 </ul>
 <h2 id="create-a-project">Create a Project</h2>
+<p>Project names cannot contain reserved &quot;directory&quot; parts.</p>
+<p>The &quot;directory&quot; parts are those separated by slashes '/'. The reserved parts are:</p>
+<ul>
+<li>&quot;files&quot;</li>
+<li>&quot;issues&quot;</li>
+<li>&quot;public&quot;</li>
+<li>&quot;reload&quot;</li>
+<li>&quot;sm&quot;</li>
+<li>&quot;tags&quot;</li>
+<li>&quot;users&quot;</li>
+<li>&quot;views&quot;</li>
+<li>any name starting with a dot '.'</li>
+</ul>
+<p>Examples of forbidden project names:</p>
+<ul>
+<li>some-tech-project/public</li>
+<li>.cook</li>
+<li>kitchen/.cook</li>
+</ul>
 <h2 id="set-permissions-up">Set Permissions Up</h2>
 <p>Permissions of a user on some projects specifies which role the user will have on each project.</p>
 <table>
@@ -77,51 +95,28 @@
 <li>a role</li>
 </ul>
 <p>If any wildcard collisions describe more than one role on a project, then the most restrictive role applies.</p>
-<p>Examples:</p>
-<p>Wildcard Role Resulting Permissions</p>
-<table>
-<col width="18%" />
-<col width="22%" />
-<col width="15%" />
-<col width="30%" />
-<thead>
-<tr class="header">
-<th align="left"></th>
-<th align="left">Wildcard</th>
-<th align="left">Role</th>
-<th align="left">Resulting Permissions</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td align="left">Example 1</td>
-<td align="left">Cookies-* Cookies-r21 Ribs-*</td>
-<td align="left">admin ro rw</td>
-<td align="left">Cookies-r21: ro Cookies-r22: admin Cookies-z3: admin Ribs-5: rw Ribs-6: rw</td>
-</tr>
-<tr class="even">
-<td align="left">Example 2</td>
-<td align="left">*</td>
-<td align="left">admin</td>
-<td align="left">Cookies-r21: admin Cookies-r22: admin Cookies-z3: admin Ribs-5: rw Ribs-6: rw</td>
-</tr>
-</tbody>
-</table>
-<h2 id="faq">FAQ</h2>
-<h3 id="why-cannot-i-create-a-project-named-public">Why cannot I create a project named 'public'?</h3>
-<p><code>public</code> is reserved for storing HTML pages that are public, such as the signin page.</p>
-<p>The reserve keywords that cannot be used as project names are:</p>
-<pre><code>public
-sm
-users
-views
-.*
-issues
-files</code></pre>
+<p>In the examples below, the Smit repository has 3 projects:</p>
+<ul>
+<li>Cookies-A</li>
+<li>Cookies-B</li>
+<li>Ribs-6</li>
+</ul>
+<h3 id="example-1">Example 1</h3>
+<pre><code>Wildcards                 Resulting Permissions
+-----------------------------------------------
+Cookies-* : admin         Cookies-A : admin
+Cookies-B : ro            Cookies-B : ro
+                             Ribs-6 : none</code></pre>
+<h3 id="example-2">Example 2</h3>
+<pre><code>Wildcards                 Resulting Permissions
+-----------------------------------------------
+* : rw                    Cookies-A : rw
+                          Cookies-B : rw
+                             Ribs-6 : rw</code></pre>
 </div>
         </div> <!-- div class page -->
         <div class="footer">
-            Page updated on  8 Sep 2015
+            Page updated on  9 Sep 2015
         </div>
     </body>
 </html>
