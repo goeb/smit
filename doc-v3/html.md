@@ -1,6 +1,6 @@
 # Customize HTML
 
-(page needs update)
+<div style="font-size:300%;">(&#9888; page not up-to-date)</div>
 
 ## Introduction
 
