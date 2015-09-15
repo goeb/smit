@@ -860,6 +860,15 @@ void RHtml::printPageProjectList(const ContextParameters &ctx,
     vn.printPage();
 }
 
+/** Add "filterout" to the query string
+ */
+std::string getQsAddFilterOut(std::string qs, const std::string &propertyName, const std::string &propertyValue)
+{
+	// TODO be more smart and do not add filterout if already there (but it might never happen)
+	qs += "&filterout=" + urlEncode(propertyName) + ":" + urlEncode(propertyValue);
+	return qs;
+}
+
 /** Modify the query string by removing the given property from the colspec
   *
   * @param qs
@@ -1109,14 +1118,18 @@ void RHtml::printProjectConfig(const ContextParameters &ctx)
 }
 
 /** Get the property name that will be used for grouping
-
+  *
   * Grouping will occur only :
   *     - on the first property sorted-by
   *     - and if this property is of type select, multiselect or selectUser
   *
   * If the grouping must not occur, then an empty  string is returned.
+  *
+  * @param[out] type
+  *      type of the first property sorted-by
+  *      undefined if property name not found
   */
-std::string getPropertyForGrouping(const ProjectConfig &pconfig, const std::string &sortingSpec)
+std::string getPropertyForGrouping(const ProjectConfig &pconfig, const std::string &sortingSpec, PropertyType &type)
 {
     const char* colspecDelimiters = "+- ";
     if (sortingSpec.empty()) return "";
@@ -1135,7 +1148,7 @@ std::string getPropertyForGrouping(const ProjectConfig &pconfig, const std::stri
 
     const PropertySpec *propertySpec = pconfig.getPropertySpec(property);
     if (!propertySpec) return "";
-    enum PropertyType type = propertySpec->type;
+    type = propertySpec->type;
 
     if (type == F_SELECT || type == F_MULTISELECT || type == F_SELECT_USER) return property;
     return "";
@@ -1230,7 +1243,8 @@ void RHtml::printIssueList(const ContextParameters &ctx, const std::vector<Issue
     ctx.req->printf("<div class=\"sm_issues_count\">%s: <span class=\"sm_issues_count\">%lu</span></div>\n",
                     _("Issues found"), L(issueList.size()));
 
-    std::string group = getPropertyForGrouping(ctx.projectConfig, ctx.sort);
+    PropertyType groupPropertyType;
+    std::string group = getPropertyForGrouping(ctx.projectConfig, ctx.sort, groupPropertyType);
     std::string currentGroup;
 
     ctx.req->printf("<table class=\"sm_issues\">\n");
@@ -1268,7 +1282,15 @@ void RHtml::printIssueList(const ContextParameters &ctx, const std::vector<Issue
             currentGroup = i->getProperty(group);
             ctx.req->printf("<td class=\"sm_group\" colspan=\"%lu\"><span class=\"sm_issues_group_label\">%s: </span>",
                             L(colspec.size()), htmlEscape(ctx.projectConfig.getLabelOfProperty(group)).c_str());
-            ctx.req->printf("<span class=\"sm_issues_group\">%s</span></td>\n", htmlEscape(currentGroup).c_str());
+            ctx.req->printf("<span class=\"sm_issues_group\">%s</span>", htmlEscape(currentGroup).c_str());
+
+            if (groupPropertyType == F_SELECT_USER || groupPropertyType == F_SELECT) {
+                // add an x to let the user hide this group (via a filterout)
+                std::string newQueryString = getQsAddFilterOut(ctx.req->getQueryString(), group, currentGroup);
+                ctx.req->printf(" <a href=\"?%s\" class=\"sm_issues_delete_col\" title=\"%s\">&#10008;</a>\n", newQueryString.c_str(),
+                        _("Hide this group"));
+			}
+            ctx.req->printf("</td>\n");
             ctx.req->printf("</tr>\n");
         }
 
