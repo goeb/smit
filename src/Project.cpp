@@ -886,8 +886,8 @@ void Project::search(const char *fulltextSearch,
 
         const Issue* issue = i->second;
         // 1. filters
-        if (!filterIn.empty() && !issue->isInFilter(filterIn)) continue;
-        if (!filterOut.empty() && issue->isInFilter(filterOut)) continue;
+        if (!filterIn.empty() && !issue->isInFilter(filterIn, FILTER_IN)) continue;
+        if (!filterOut.empty() && issue->isInFilter(filterOut, FILTER_OUT)) continue;
 
         // 2. search full text
         if (! issue->searchFullText(fulltextSearch)) {

@@ -27,6 +27,11 @@ enum PropertyType {
     F_ASSOCIATION
 };
 
+enum FilterMode {
+    FILTER_IN,
+    FILTER_OUT
+};
+
 class Project; // forward declaration
 
 // Issue
@@ -52,7 +57,7 @@ struct Issue {
     std::string getSummary() const;
     bool lessThan(const Issue &other, const std::list<std::pair<bool, std::string> > &sortingSpec) const;
     bool lessThan(const Issue *other, const std::list<std::pair<bool, std::string> > &sortingSpec) const;
-    bool isInFilter(const std::map<std::string, std::list<std::string> > &filter) const;
+    bool isInFilter(const std::map<std::string, std::list<std::string> > &filter, FilterMode mode) const;
 
     void consolidate();
     void consolidateWithSingleEntry(Entry *e);

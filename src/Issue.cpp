@@ -283,7 +283,7 @@ int Issue::makeSnapshot(time_t datetime)
 
 /** Look if any value of the given multi-valued property is present in the given list
   *
-  * Exact match
+  * Ignore case.
   */
 bool isPropertyInFilter(const std::list<std::string> &propertyValue,
                         const std::list<std::string> &filteredValues)
@@ -302,7 +302,7 @@ bool isPropertyInFilter(const std::list<std::string> &propertyValue,
 
 /** Look if the given value is present in the given list
   *
-  * Exact match
+  * Ignore case.
   */
 bool isPropertyInFilter(const std::string &propertyValue,
                         const std::list<std::string> &filteredValues)
@@ -349,22 +349,30 @@ int compareProperties(const std::map<std::string, std::list<std::string> > &plis
     return 0; // not reached normally
 }
 
-
-
-/**
-  * @return
-  *    true, if the issue does match the filter
-  *    false, if the issue does not match
+/** Applies a filter to the issue
   *
-  * A logical OR is done for the filters on the same property
+  * @return
+  *    true, the issue does match the filter
+  *    false, the issue does not match
+  *
+  * In mode FILTER_IN, a logical OR is done for the filters on the same property
   * and a logical AND is done between different properties.
   * Example:
   *    status:open, status:closed, author:john
   * is interpreted as:
   *    ( status == open OR status == closed ) AND author == john
   *
+  * However for mode FILTER_OUT, a logical OR is made for all items of the filter.
+  * Example:
+  *    status:open, status:closed, author:john
+  * is interpreted as:
+  *    status == open OR status == closed OR author == john
+  *
+  * The reason for this difference is that we want to get as few
+  * results as possible.
+  *
   */
-bool Issue::isInFilter(const std::map<std::string, std::list<std::string> > &filter) const
+bool Issue::isInFilter(const std::map<std::string, std::list<std::string> > &filter, FilterMode mode) const
 {
     if (filter.empty()) return false;
 
@@ -373,26 +381,31 @@ bool Issue::isInFilter(const std::map<std::string, std::list<std::string> > &fil
     std::map<std::string, std::list<std::string> >::const_iterator f;
     FOREACH(f, filter) {
         std::string examinedProperty = f->first;
+        bool doesMatch = false;
 
         if (examinedProperty == K_ISSUE_ID) {
             // id
             // look if id matches one of the filter values
-            if (!isPropertyInFilter(id, f->second)) return false;
+            doesMatch = isPropertyInFilter(id, f->second);
 
         } else {
             std::map<std::string, std::list<std::string> >::const_iterator p;
             p = properties.find(examinedProperty);
-            bool fs;
-            // If the issue has no such property (1), or if the property of this issue has no value (2),
+            // If the issue has no such property, or if the property of this issue has no value,
             // then consider that the property has an empty value.
-            if (p == properties.end()) fs = isPropertyInFilter("", f->second); // (1)
-            else if (p->second.empty()) fs = isPropertyInFilter("", f->second); // (2)
-            else fs = isPropertyInFilter(p->second, f->second);
-
-            if (!fs) return false;
+            if (p == properties.end() || p->second.empty()) {
+                doesMatch = isPropertyInFilter("", f->second);
+            } else {
+                doesMatch = isPropertyInFilter(p->second, f->second);
+            }
         }
+
+        if (FILTER_IN == mode && !doesMatch) return false; // this makes a AND between properties
+        else if (FILTER_OUT == mode && doesMatch) return true; // this makes a OR
+        // else continue looking at the other properties of the filter
     }
-    return true;
+    if (FILTER_IN == mode) return true;
+    else return false; // mode FILTER_OUT
 }
 
 bool Issue::lessThan(const Issue &other, const std::list<std::pair<bool, std::string> > &sortingSpec) const
