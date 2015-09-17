@@ -269,7 +269,10 @@ a.sm_issues_delete_col { }
     cursor: pointer;
     color: red;
 }
-.sm_issues_filters {
+span.sm_issues_filters {
+    font-weight: bold;
+}
+div.sm_issues_filters {
     color: #444;
     background-color: #E0E0E0;
     padding: 7px;

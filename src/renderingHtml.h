@@ -30,8 +30,8 @@ public:
     enum Role userRole;
     std::string search;
     std::string sort;
-    std::list<std::string> filterin;
-    std::list<std::string> filterout;
+    std::map<std::string, std::list<std::string> > filterin;
+    std::map<std::string, std::list<std::string> > filterout;
     const Project *project;
     ProjectConfig projectConfig;
     std::map<std::string, PredefinedView> predefinedViews;

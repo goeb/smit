@@ -1154,6 +1154,25 @@ std::string getPropertyForGrouping(const ProjectConfig &pconfig, const std::stri
     return "";
 }
 
+void printFilterLogicalExpr(const RequestContext *req,
+                            const std::map<std::string, std::list<std::string> > &filter, FilterMode mode)
+{
+    std::map<std::string, std::list<std::string> >::const_iterator f;
+    FOREACH(f, filter) {
+        if (f != filter.begin()) {
+            if (mode == FILTER_IN) req->printf(" AND ");
+            else req->printf(" OR ");
+        }
+        req->printf("(%s: ", htmlEscape(f->first).c_str()); // print property name
+        std::list<std::string>::const_iterator value;
+        FOREACH(value, f->second) {
+            if (value != f->second.begin()) req->printf(" OR ");
+            req->printf("%s", htmlEscape(*value).c_str());
+        }
+        req->printf(")");
+    }
+}
+
 /** print chosen filters and search parameters
   */
 void printFilters(const ContextParameters &ctx)
@@ -1165,10 +1184,18 @@ void printFilters(const ContextParameters &ctx)
         return;
     }
     ctx.req->printf("<div class=\"sm_issues_filters\">");
-    if (!ctx.search.empty()) ctx.req->printf("search: %s<br>", htmlEscape(ctx.search).c_str());
-    if (!ctx.filterin.empty()) ctx.req->printf("filterin: %s<br>", htmlEscape(toString(ctx.filterin)).c_str());
-    if (!ctx.filterout.empty()) ctx.req->printf("filterout: %s<br>", htmlEscape(toString(ctx.filterout)).c_str());
-    if (!ctx.sort.empty())  ctx.req->printf("sort: %s<br>", htmlEscape(ctx.sort).c_str());
+    if (!ctx.search.empty()) ctx.req->printf("<span class=\"sm_issues_filters\">search:</span> %s<br>", htmlEscape(ctx.search).c_str());
+    if (!ctx.filterin.empty()) {
+        ctx.req->printf("<span class=\"sm_issues_filters\">filterin:</span> ");
+        printFilterLogicalExpr(ctx.req, ctx.filterin, FILTER_IN);
+        ctx.req->printf("<br>");
+    }
+    if (!ctx.filterout.empty()) {
+        ctx.req->printf("<span class=\"sm_issues_filters\">filterout:</span> ");
+        printFilterLogicalExpr(ctx.req, ctx.filterout, FILTER_OUT);
+        ctx.req->printf("<br>");
+    }
+    if (!ctx.sort.empty())  ctx.req->printf("<span class=\"sm_issues_filters\">sort:</span> %s<br>", htmlEscape(ctx.sort).c_str());
     ctx.req->printf("</div>");
 }
 

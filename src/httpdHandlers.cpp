@@ -1416,11 +1416,8 @@ void httpIssuesAccrossProjects(const RequestContext *req, User u, const std::str
     else if (format == RENDERING_CSV) req->printf("\r\n\r\nnot supported\r\n");
     else {
         ContextParameters ctx = ContextParameters(req, u);
-        std::list<std::string> filterinRaw = getParamListFromQueryString(q, "filterin");
-        std::list<std::string> filteroutRaw = getParamListFromQueryString(q, "filterout");
-        // it would be better for code maintainability to pass v.filterin/out
-        ctx.filterin = filterinRaw;
-        ctx.filterout = filteroutRaw;
+        ctx.filterin = v.filterin;
+        ctx.filterout = v.filterout;
         ctx.search = v.search;
         ctx.sort = v.sort;
 
@@ -1525,11 +1522,8 @@ void httpSendIssueList(const RequestContext *req, const Project &p,
         RCsv::printIssueList(req, issueList, cols, separator.c_str());
     } else {
         ContextParameters ctx = ContextParameters(req, u, p);
-        std::list<std::string> filterinRaw = getParamListFromQueryString(q, "filterin");
-        std::list<std::string> filteroutRaw = getParamListFromQueryString(q, "filterout");
-        // it would be better for code maintainability to pass v.filterin/out
-        ctx.filterin = filterinRaw;
-        ctx.filterout = filteroutRaw;
+        ctx.filterin = v.filterin;
+        ctx.filterout = v.filterout;
         ctx.search = v.search;
         ctx.sort = v.sort;
 
