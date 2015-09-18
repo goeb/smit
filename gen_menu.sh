@@ -20,7 +20,7 @@ get_title() {
         echo "Unsupported extension '$extension' (supported: md)"
         exit 1
     fi
-    TITLE=`grep -m 1 "^#" "$file" | pandoc | grep "^<h1" | sed -e "s;</h1>;;" -e "s;.*>;;"`
+    TITLE=`grep -m 1 "^#" "$file" | pandoc --ascii | grep "^<h1" | sed -e "s;</h1>;;" -e "s;.*>;;"`
     printf "$TITLE"
 }
 
@@ -28,7 +28,7 @@ get_title() {
 generate_menu_L2() {
     currentFile="$1"
     echo "<ul class="menu_level2">"
-    grep "^##[^#]" $currentFile | pandoc | while read h2; do
+    grep "^##[^#]" $currentFile | pandoc --ascii | while read h2; do
         anchor=`echo $h2 | sed -e 's/.*id="//' -e 's/".*//'`
         title=`echo $h2 | sed -e "s;</h2>;;" -e "s;.*>;;"`
         echo "<li><a href='#$anchor'>$title</a></li>"
@@ -83,14 +83,14 @@ if [ -z "$PAGE" ]; then usage; fi
 
 # start outputting HTML
 
-TITLE=`grep -m 1 "^#" "$PAGE" | pandoc | grep "^<h1" | sed -e "s;</h1>;;" -e "s;.*>;;"`
+TITLE=`grep -m 1 "^#" "$PAGE" | pandoc --ascii | grep "^<h1" | sed -e "s;</h1>;;" -e "s;.*>;;"`
 perl -p -e "s/__TITLE__/$TITLE/g" < "$HEADER"
 
 generate_menu "$PAGE" $@
 
 # generate contents
 echo "<div class='contents'>"
-pandoc < $PAGE
+pandoc --ascii < $PAGE
 echo "</div>"
 
 sed -e "s;__DATE__;`date '+%e %b %Y'`;" < "$FOOTER"

@@ -28,7 +28,7 @@
 <li><a href='cloning.html'>Cloning</a></li>
 <li><a href='html.html'>Customize HTML</a></li>
 <li><a href='api.html'>Smit API</a></li>
-<li><a href='developers.html'>Developer Guide</a></li>
+<li><a href='developers.html'>Developers' Guide</a></li>
 </ul>
 </aside>
 <div class='contents'>
@@ -38,7 +38,7 @@
 <p>To define a user's profile you must specify:</p>
 <ul>
 <li>his/her identifier (typically his/her name, or an alias) that uniquely identifies him/her</li>
-<li>a password (expect for some cases described below)</li>
+<li>a password (except for some cases described below)</li>
 <li>permissions on the projects</li>
 </ul>
 <h2 id="create-a-project">Create a Project</h2>
@@ -46,13 +46,17 @@
 <p>The &quot;directory&quot; parts are those separated by slashes '/'. The reserved parts are:</p>
 <ul>
 <li><code>config</code>, <code>files</code>, <code>issues</code>, <code>public</code>, <code>reload</code>, <code>sm</code>, <code>tags</code>, <code>users</code>, <code>views</code></li>
-<li>any name starting with a dot '.'</li>
+<li>any name starting with a dot <code>.</code></li>
 </ul>
 <p>Examples of forbidden project names:</p>
 <ul>
 <li>some-tech-project/public</li>
 <li>.cook</li>
 <li>kitchen/.cook</li>
+</ul>
+<p>Note:</p>
+<ul>
+<li>When a new project is created, the permissions are updated according to the wildcards (see below). A new project can thus become automatically available to users if a wildcard matches.</li>
 </ul>
 <h2 id="set-permissions-up">Set Permissions Up</h2>
 <p>Permissions of a user on some projects specifies which role the user will have on each project.</p>
@@ -70,11 +74,11 @@
 </tr>
 <tr class="even">
 <td align="center">rw</td>
-<td align="left">Allow user to create new issues and contribute on existing issues</td>
+<td align="left">(read-write) Allow user to create new issues and contribute on existing issues</td>
 </tr>
 <tr class="odd">
 <td align="center">ro</td>
-<td align="left">Allow user to view issues</td>
+<td align="left">(read-only) Allow user to view issues</td>
 </tr>
 <tr class="even">
 <td align="center">ref</td>
@@ -82,7 +86,7 @@
 </tr>
 </tbody>
 </table>
-<p>Roles on projects (a.k.a the permissions) are specified by:</p>
+<p>Permissions on projects are specified by:</p>
 <ul>
 <li>a wildcard for the project(s)</li>
 <li>a role</li>
@@ -95,13 +99,13 @@
 <li>Ribs-6</li>
 </ul>
 <h3 id="example-1">Example 1</h3>
-<pre><code>Wildcards                 Resulting Permissions
+<pre><code>Wildcards : Roles         Resulting Permissions
 -----------------------------------------------
 Cookies-* : admin         Cookies-A : admin
 Cookies-B : ro            Cookies-B : ro
                              Ribs-6 : none</code></pre>
 <h3 id="example-2">Example 2</h3>
-<pre><code>Wildcards                 Resulting Permissions
+<pre><code>Wildcards : Roles         Resulting Permissions
 -----------------------------------------------
 * : rw                    Cookies-A : rw
                           Cookies-B : rw
@@ -109,7 +113,7 @@ Cookies-B : ro            Cookies-B : ro
 </div>
         </div> <!-- div class page -->
         <div class="footer">
-            Page updated on 13 Sep 2015
+            Page updated on 18 Sep 2015
         </div>
     </body>
 </html>

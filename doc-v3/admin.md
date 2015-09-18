@@ -7,7 +7,7 @@ Most administration tasks may be performed through the web interface, and requir
 To define a user's profile you must specify:
 
 - his/her identifier (typically his/her name, or an alias) that uniquely identifies him/her
-- a password (expect for some cases described below)
+- a password (except for some cases described below)
 - permissions on the projects
 
 
@@ -18,7 +18,7 @@ Project names cannot contain reserved "directory" parts.
 The "directory" parts are those separated by slashes '/'. The reserved parts are:
 
 - `config`, `files`, `issues`, `public`, `reload`, `sm`, `tags`, `users`, `views`
-- any name starting with a dot '.'
+- any name starting with a dot `.`
 
 Examples of forbidden project names:
 
@@ -26,6 +26,9 @@ Examples of forbidden project names:
 - .cook
 - kitchen/.cook
 
+Note:
+
+- When a new project is created, the permissions are updated according to the wildcards (see below). A new project can thus become automatically available to users if a wildcard matches.
 
 ## Set Permissions Up
 
@@ -35,12 +38,12 @@ Permissions of a user on some projects specifies which role the user will have o
  Role    Description 
 -------  ------------
 admin    Allow user to edit project properties 
-rw       Allow user to create new issues and contribute on existing issues 
-ro       Allow user to view issues  
+rw       (read-write) Allow user to create new issues and contribute on existing issues 
+ro       (read-only) Allow user to view issues  
 ref      Do not allow user to do anything, but user appears in select-user drop-down lists 
 -------  ------------
 
-Roles on projects (a.k.a the permissions) are specified by:
+Permissions on projects are specified by:
 
 - a wildcard for the project(s)
 - a role
@@ -56,7 +59,7 @@ In the examples below, the Smit repository has 3 projects:
 ### Example 1
 
 ```
-Wildcards                 Resulting Permissions
+Wildcards : Roles         Resulting Permissions
 -----------------------------------------------
 Cookies-* : admin         Cookies-A : admin
 Cookies-B : ro            Cookies-B : ro
@@ -66,7 +69,7 @@ Cookies-B : ro            Cookies-B : ro
 ### Example 2
 
 ```
-Wildcards                 Resulting Permissions
+Wildcards : Roles         Resulting Permissions
 -----------------------------------------------
 * : rw                    Cookies-A : rw
                           Cookies-B : rw

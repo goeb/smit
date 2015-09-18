@@ -1,4 +1,4 @@
-# Developer Guide
+# Developers' Guide
 
 ## Software Architecture
 
@@ -107,7 +107,7 @@ This directory contains public material, such as logo, `style.css`, and any cont
 - the configuration of the project
 - the views
 
-An object is stored after is the SHA1 sum of its contents. Example : 
+The file name of an object is based on the SHA1 sum of its contents. Example : 
 
     sha1sum a_file.txt
     a8fdc205a9f19cc1c7507a60c4f01b13d11d7fd0 a_file.txt
@@ -116,4 +116,4 @@ This file shall be stored at this location:
 
     .smip/objects/a8/fdc205a9f19cc1c7507a60c4f01b13d11d7fd0
 
-The original names of the files are not known in the `objects` database layout. The names of attached files are kept in the entries that reference the files.
+The original names of the files are not known in the `objects` database layout. The names of attached files are kept in the entries that reference the files (see the example of an entry, above).
