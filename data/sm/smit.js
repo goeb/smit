@@ -165,9 +165,9 @@ function addProperty(name, label, type, opts) {
     i.name = 'propertyName';
     i.className = 'sm_project_propname';
     i.value = name;
-    i.pattern = "[a-zA-Z_0-9]+";
+    i.pattern = "[a-zA-Z0-9][_a-zA-Z0-9]*"; // leading '_' is reserved
     i.placeholder = "logical_name";
-    i.title = "Allowed characters: letters, digits, underscore";
+    i.title = "Allowed characters: underscores (except as first character), letters, digits";
     if (type == 'reserved') {
         i.type = 'hidden';
         cell.appendChild(i);

@@ -187,7 +187,12 @@ ProjectConfig ProjectConfig::getDefaultConfig()
 }
 
 
-
+/** Parse the token to a PropertySpec structure
+  *
+  * @return
+  *     The resulting PropertySpec structure
+  *     On error, the returned structure has an empty name
+  */
 PropertySpec PropertySpec::parsePropertySpec(std::list<std::string> & tokens)
 {
     // Supported syntax:
@@ -200,7 +205,19 @@ PropertySpec PropertySpec::parsePropertySpec(std::list<std::string> & tokens)
     }
 
     pspec.name = tokens.front();
-    // check that property name contains only [a-zA-Z0-9-_]
+
+    if (pspec.name.empty()) {
+        LOG_ERROR("Invalid empty property name");
+        return pspec;
+    }
+    // Check that property name does not start with '_'
+    if (pspec.name[0] == '_') {
+        // invalid character
+        LOG_ERROR("Invalid property name: %s", pspec.name.c_str());
+        pspec.name = "";
+        return pspec;
+    }
+    // Check that property name contains only [a-zA-Z0-9-_]
     const char* allowedInPropertyName = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_";
     if (pspec.name.find_first_not_of(allowedInPropertyName) != std::string::npos) {
         // invalid character
