@@ -44,6 +44,8 @@ public:
                 const std::map<std::string, std::list<std::string> > &filterOut,
                 const char *sortingSpec,
                 std::vector<Issue> &returnedIssues) const;
+    void searchEntries(const char *sortingSpec, std::vector<Entry> &entries) const;
+
     int get(const std::string &issueId, Issue &issue) const;
     void getAllIssues(std::vector<Issue*> &issuesList);
     std::map<std::string, std::set<std::string> > getReverseAssociations(const std::string &issue) const;

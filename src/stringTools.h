@@ -47,4 +47,9 @@ inline long int L(ssize_t x) { return (long int)x; }
 
 void printfIndent(const char *text, const char *indent);
 
+int compareProperties(const std::map<std::string, std::list<std::string> > &plist1,
+                      const std::map<std::string, std::list<std::string> > &plist2,
+                      const std::string &name);
+
+
 #endif

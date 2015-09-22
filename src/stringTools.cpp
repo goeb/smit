@@ -409,3 +409,36 @@ void printfIndent(const char *text, const char *indent)
         if (text[i] == '\n') printf("%s", indent); // indent each new line
     }
 }
+
+/** Compare two values of the given property
+  * @return -1, 0, +1
+  */
+int compareProperties(const std::map<std::string, std::list<std::string> > &plist1,
+                      const std::map<std::string, std::list<std::string> > &plist2,
+                      const std::string &name)
+{
+    std::map<std::string, std::list<std::string> >::const_iterator p1 = plist1.find(name);
+    std::map<std::string, std::list<std::string> >::const_iterator p2 = plist2.find(name);
+
+    if (p1 == plist1.end() && p2 == plist2.end()) return 0;
+    else if (p1 == plist1.end()) return -1; // arbitrary choice
+    else if (p2 == plist2.end()) return +1; // arbitrary choice
+    else {
+        std::list<std::string>::const_iterator v1 = p1->second.begin();
+        std::list<std::string>::const_iterator v2 = p2->second.begin();
+        while (v1 != p1->second.end() && v2	!= p2->second.end()) {
+            int lt = v1->compare(*v2);
+            if (lt < 0) return -1;
+            else if (lt > 0) return +1;
+            // else continue
+            v1++;
+            v2++;
+        }
+        if (v1 == p1->second.end() && v2 == p2->second.end()) {
+            return 0; // they are equal
+        } else if (v1 == p1->second.end()) return -1; // arbitrary choice
+        else return +1; // arbitrary choice
+    }
+    return 0; // not reached normally
+}
+

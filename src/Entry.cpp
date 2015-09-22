@@ -191,3 +191,61 @@ std::string Entry::serialize() const
     }
     return s.str();
 }
+
+/**
+  * sortingSpec: a list of pairs (ascending-order, property-name)
+  *
+  */
+void Entry::sort(std::vector<Entry> &inout, const std::list<std::pair<bool, std::string> > &sortingSpec)
+{
+    if (sortingSpec.size()==0) return;
+
+    EntryComparator ec(sortingSpec);
+    std::sort(inout.begin(), inout.end(), ec);
+}
+
+
+bool Entry::lessThan(const Entry &other, const std::list<std::pair<bool, std::string> > &sortingSpec) const
+{
+    return lessThan(&other, sortingSpec);
+}
+
+/** Compare 2 entries after sortingSpec.
+  *
+  * sortingSpec: a list of pairs (ascending-order, property-name)
+  *
+  * @return
+  *     true or false
+  *     If they are equal, false is returned.
+  */
+bool Entry::lessThan(const Entry* other, const std::list<std::pair<bool, std::string> > &sortingSpec) const
+{
+    if (!other) return false;
+
+    int result = 0; // 0 means equal, <0 means less-than, >0 means greater-than
+    std::list<std::pair<bool, std::string> >::const_iterator s = sortingSpec.begin();
+
+    while ( (result == 0) && (s != sortingSpec.end()) ) {
+
+        // case of id, ctime
+        if (s->second == "id") {
+            if (id == other->id) result = 0;
+            else if (atoi(id.c_str()) < atoi(other->id.c_str())) result = -1;
+            else result = +1;
+
+        } else if (s->second == "ctime") {
+            if (ctime < other->ctime) result = -1;
+            else if (ctime > other->ctime) result = +1;
+            else result = 0;
+
+        } else {
+            // the other properties
+
+            result = compareProperties(properties, other->properties, s->second);
+        }
+        if (!s->first) result = -result; // descending order
+        s++;
+    }
+    if (result<0) return true;
+    else return false;
+}

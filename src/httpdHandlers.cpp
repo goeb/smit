@@ -1577,6 +1577,30 @@ void httpGetListOfIssues(const RequestContext *req, const Project &p, User u, co
 
 }
 
+void httpGetListOfEntries(const RequestContext *req, const Project &p, User u)
+{
+    std::string q = req->getQueryString();
+    PredefinedView v = PredefinedView::loadFromQueryString(q); // unamed view, used as handler on the viewing parameters
+
+    std::vector<Entry> entries;
+    p.searchEntries(v.sort.c_str(), entries);
+
+    sendHttpHeader200(req);
+
+    std::vector<Entry>::iterator e;
+    // TODO temporary display
+    FOREACH(e, entries) {
+        std::map<std::string, std::list<std::string> >::iterator property;
+        req->printf("%s:\n", e->id.c_str());
+
+        FOREACH(property, e->properties) {
+            req->printf("    %s: %s\n", property->first.c_str(), toString(property->second).c_str());
+        }
+
+        req->printf("\n");
+    }
+}
+
 void httpGetListOfIssues(const RequestContext *req, const Project &p, User u)
 {
     if (getFormat(req) == X_SMIT) return httpCloneIssues(req, p); // used for cloning
@@ -2581,6 +2605,7 @@ int begin_request_handler(const RequestContext *req)
 
         } else if ( (resource == "issues") && (uri == "new") && (method == "GET") ) httpGetNewIssueForm(req, *p, user);
         else if ( (resource == "issues") && (method == "GET") ) return httpGetIssue(req, *p, uri, user);
+        else if ( (resource == "entries") && (method == "GET") ) httpGetListOfEntries(req, *p, user);
         else if ( (resource == "config") && (method == "GET") ) httpGetProjectConfig(req, *p, user);
         else if ( (resource == "config") && (method == "POST") ) httpPostProjectConfig(req, *p, user);
         else if ( (resource == "views") && (method == "GET") && !isdir && uri.empty()) return httpGetFile(req);

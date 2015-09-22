@@ -840,7 +840,24 @@ std::list<std::pair<bool, std::string> > parseSortingSpec(const char *sortingSpe
 }
 
 
+void Project::searchEntries(const char *sortingSpec, std::vector<Entry> &entries) const
+{
+    ScopeLocker scopeLocker(locker, LOCK_READ_ONLY);
+    std::map<std::string, Issue*>::const_iterator i;
+    FOREACH(i, issues) {
+        Entry *e = i->second->first;
+        while (e) {
+            entries.push_back(*e);
+            e = e->getNext();
+        }
+    }
 
+    if (sortingSpec) {
+        std::list<std::pair<bool, std::string> > sSpec = parseSortingSpec(sortingSpec);
+        Entry::sort(entries, sSpec);
+    }
+
+}
 
 /** search
   *   fulltext: text that is searched (optional: 0 for no fulltext search)

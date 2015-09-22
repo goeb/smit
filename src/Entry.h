@@ -63,6 +63,10 @@ public:
     /** set a message */ // TODO use std::atomic to make it thread-safe for reading
     inline void setMessage(const std::string *msg) { message = msg; }
 
+    static void sort(std::vector<Entry> &inout, const std::list<std::pair<bool, std::string> > &sortingSpec);
+    bool lessThan(const Entry &other, const std::list<std::pair<bool, std::string> > &sortingSpec) const;
+    bool lessThan(const Entry *other, const std::list<std::pair<bool, std::string> > &sortingSpec) const;
+
 private:
     // mutable members, that may be modified when a user posts another entry
     // chainlist pointers
@@ -78,5 +82,15 @@ private:
     static const std::string EMPTY_MESSAGE;
 
 };
+
+class EntryComparator {
+public:
+    EntryComparator(const std::list<std::pair<bool, std::string> > &sSpec) : sortingSpec(sSpec) { }
+    inline bool operator() (const Entry* i, const Entry* j) { return i->lessThan(j, sortingSpec); }
+    inline bool operator() (const Entry i, const Entry j) { return i.lessThan(j, sortingSpec); }
+private:
+    const std::list<std::pair<bool, std::string> > &sortingSpec;
+};
+
 
 #endif
