@@ -31,6 +31,7 @@
 
 #include "HttpContext.h"
 #include "httpdHandlers.h"
+#include "httpdUtils.h"
 #include "logging.h"
 #include "db.h"
 #include "cpio.h"

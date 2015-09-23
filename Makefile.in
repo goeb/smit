@@ -82,7 +82,7 @@ PROGRAMS = $(bin_PROGRAMS)
 am__smit_SOURCES_DIST = src/db.cpp src/Entry.cpp src/Issue.cpp \
 	src/Project.cpp src/View.cpp src/Tag.cpp src/parseConfig.cpp \
 	src/identifiers.cpp src/main.cpp src/httpdHandlers.cpp \
-	src/renderingText.cpp src/renderingJson.cpp \
+	src/httpdUtils.cpp src/renderingText.cpp src/renderingJson.cpp \
 	src/renderingCsv.cpp src/renderingHtml.cpp src/cpio.cpp \
 	src/stringTools.cpp src/jTools.cpp src/mutexTools.cpp \
 	src/session.cpp src/dateTools.cpp src/logging.cpp \
@@ -102,7 +102,7 @@ am_smit_OBJECTS = src/smit-db.$(OBJEXT) src/smit-Entry.$(OBJEXT) \
 	src/smit-View.$(OBJEXT) src/smit-Tag.$(OBJEXT) \
 	src/smit-parseConfig.$(OBJEXT) src/smit-identifiers.$(OBJEXT) \
 	src/smit-main.$(OBJEXT) src/smit-httpdHandlers.$(OBJEXT) \
-	src/smit-renderingText.$(OBJEXT) \
+	src/smit-httpdUtils.$(OBJEXT) src/smit-renderingText.$(OBJEXT) \
 	src/smit-renderingJson.$(OBJEXT) \
 	src/smit-renderingCsv.$(OBJEXT) \
 	src/smit-renderingHtml.$(OBJEXT) src/smit-cpio.$(OBJEXT) \
@@ -372,7 +372,7 @@ AM_LDFLAGS = $(am__append_3) $(am__append_6) $(am__append_9)
 smit_SOURCES = src/db.cpp src/Entry.cpp src/Issue.cpp src/Project.cpp \
 	src/View.cpp src/Tag.cpp src/parseConfig.cpp \
 	src/identifiers.cpp src/main.cpp src/httpdHandlers.cpp \
-	src/renderingText.cpp src/renderingJson.cpp \
+	src/httpdUtils.cpp src/renderingText.cpp src/renderingJson.cpp \
 	src/renderingCsv.cpp src/renderingHtml.cpp src/cpio.cpp \
 	src/stringTools.cpp src/jTools.cpp src/mutexTools.cpp \
 	src/session.cpp src/dateTools.cpp src/logging.cpp \
@@ -523,6 +523,8 @@ src/smit-main.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/smit-httpdHandlers.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
+src/smit-httpdUtils.$(OBJEXT): src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
 src/smit-renderingText.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/smit-renderingJson.$(OBJEXT): src/$(am__dirstamp) \
@@ -619,6 +621,7 @@ mostlyclean-compile:
 	-rm -f src/smit-filesystem.$(OBJEXT)
 	-rm -f src/smit-httpClient.$(OBJEXT)
 	-rm -f src/smit-httpdHandlers.$(OBJEXT)
+	-rm -f src/smit-httpdUtils.$(OBJEXT)
 	-rm -f src/smit-identifiers.$(OBJEXT)
 	-rm -f src/smit-jTools.$(OBJEXT)
 	-rm -f src/smit-localClient.$(OBJEXT)
@@ -663,6 +666,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-filesystem.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-httpClient.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-httpdHandlers.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-httpdUtils.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-identifiers.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-jTools.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-localClient.Po@am__quote@
@@ -895,6 +899,20 @@ src/smit-httpdHandlers.obj: src/httpdHandlers.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/httpdHandlers.cpp' object='src/smit-httpdHandlers.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/smit-httpdHandlers.obj `if test -f 'src/httpdHandlers.cpp'; then $(CYGPATH_W) 'src/httpdHandlers.cpp'; else $(CYGPATH_W) '$(srcdir)/src/httpdHandlers.cpp'; fi`
+
+src/smit-httpdUtils.o: src/httpdUtils.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/smit-httpdUtils.o -MD -MP -MF src/$(DEPDIR)/smit-httpdUtils.Tpo -c -o src/smit-httpdUtils.o `test -f 'src/httpdUtils.cpp' || echo '$(srcdir)/'`src/httpdUtils.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/smit-httpdUtils.Tpo src/$(DEPDIR)/smit-httpdUtils.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/httpdUtils.cpp' object='src/smit-httpdUtils.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/smit-httpdUtils.o `test -f 'src/httpdUtils.cpp' || echo '$(srcdir)/'`src/httpdUtils.cpp
+
+src/smit-httpdUtils.obj: src/httpdUtils.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/smit-httpdUtils.obj -MD -MP -MF src/$(DEPDIR)/smit-httpdUtils.Tpo -c -o src/smit-httpdUtils.obj `if test -f 'src/httpdUtils.cpp'; then $(CYGPATH_W) 'src/httpdUtils.cpp'; else $(CYGPATH_W) '$(srcdir)/src/httpdUtils.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/smit-httpdUtils.Tpo src/$(DEPDIR)/smit-httpdUtils.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/httpdUtils.cpp' object='src/smit-httpdUtils.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/smit-httpdUtils.obj `if test -f 'src/httpdUtils.cpp'; then $(CYGPATH_W) 'src/httpdUtils.cpp'; else $(CYGPATH_W) '$(srcdir)/src/httpdUtils.cpp'; fi`
 
 src/smit-renderingText.o: src/renderingText.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/smit-renderingText.o -MD -MP -MF src/$(DEPDIR)/smit-renderingText.Tpo -c -o src/smit-renderingText.o `test -f 'src/renderingText.cpp' || echo '$(srcdir)/'`src/renderingText.cpp

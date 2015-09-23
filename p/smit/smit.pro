@@ -42,7 +42,8 @@ SOURCES += \
     ../../src/third-party/fnmatch.c \
     ../../src/renderingJson.cpp \
     ../../src/json.cpp \
-    ../../src/jTools.cpp
+    ../../src/jTools.cpp \
+    ../../src/httpdUtils.cpp
     ../../src/ssoKerberos.cpp
 
 HEADERS += \
@@ -87,6 +88,7 @@ HEADERS += \
     ../../src/Tag.h \
     ../../src/renderingJson.h \
     ../../src/json.h \
-    ../../src/jTools.h
+    ../../src/jTools.h \
+    ../../src/httpdUtils.h
     ../../src/ssoKerberos.h
 

@@ -40,6 +40,7 @@ smit_SOURCES = \
 			   src/identifiers.cpp \
 			   src/main.cpp \
 			   src/httpdHandlers.cpp \
+			   src/httpdUtils.cpp \
 			   src/renderingText.cpp \
 			   src/renderingJson.cpp \
 			   src/renderingCsv.cpp \
