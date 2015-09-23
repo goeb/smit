@@ -83,15 +83,16 @@ am__smit_SOURCES_DIST = src/db.cpp src/Entry.cpp src/Issue.cpp \
 	src/Project.cpp src/View.cpp src/Tag.cpp src/parseConfig.cpp \
 	src/identifiers.cpp src/main.cpp src/httpdHandlers.cpp \
 	src/httpdUtils.cpp src/renderingText.cpp src/renderingJson.cpp \
-	src/renderingCsv.cpp src/renderingHtml.cpp src/cpio.cpp \
-	src/stringTools.cpp src/jTools.cpp src/mutexTools.cpp \
-	src/session.cpp src/dateTools.cpp src/logging.cpp \
-	src/Trigger.cpp src/filesystem.cpp src/console.cpp \
-	src/HttpContext.cpp src/localClient.cpp src/Args.cpp \
-	src/ProjectConfig.cpp src/Object.cpp src/AuthSha1.cpp \
-	src/third-party/mongoose.c src/third-party/fnmatch.c \
-	src/clone.cpp src/httpClient.cpp src/AuthKrb5.cpp \
-	src/AuthLdap.cpp
+	src/renderingCsv.cpp src/renderingHtml.cpp \
+	src/ContextParameters.cpp src/renderingHtmlIssue.cpp \
+	src/cpio.cpp src/stringTools.cpp src/jTools.cpp \
+	src/mutexTools.cpp src/session.cpp src/dateTools.cpp \
+	src/logging.cpp src/Trigger.cpp src/filesystem.cpp \
+	src/console.cpp src/HttpContext.cpp src/localClient.cpp \
+	src/Args.cpp src/ProjectConfig.cpp src/Object.cpp \
+	src/AuthSha1.cpp src/third-party/mongoose.c \
+	src/third-party/fnmatch.c src/clone.cpp src/httpClient.cpp \
+	src/AuthKrb5.cpp src/AuthLdap.cpp
 am__dirstamp = $(am__leading_dot)dirstamp
 @CURL_ENABLED_TRUE@am__objects_1 = src/smit-clone.$(OBJEXT) \
 @CURL_ENABLED_TRUE@	src/smit-httpClient.$(OBJEXT)
@@ -105,7 +106,9 @@ am_smit_OBJECTS = src/smit-db.$(OBJEXT) src/smit-Entry.$(OBJEXT) \
 	src/smit-httpdUtils.$(OBJEXT) src/smit-renderingText.$(OBJEXT) \
 	src/smit-renderingJson.$(OBJEXT) \
 	src/smit-renderingCsv.$(OBJEXT) \
-	src/smit-renderingHtml.$(OBJEXT) src/smit-cpio.$(OBJEXT) \
+	src/smit-renderingHtml.$(OBJEXT) \
+	src/smit-ContextParameters.$(OBJEXT) \
+	src/smit-renderingHtmlIssue.$(OBJEXT) src/smit-cpio.$(OBJEXT) \
 	src/smit-stringTools.$(OBJEXT) src/smit-jTools.$(OBJEXT) \
 	src/smit-mutexTools.$(OBJEXT) src/smit-session.$(OBJEXT) \
 	src/smit-dateTools.$(OBJEXT) src/smit-logging.$(OBJEXT) \
@@ -373,14 +376,16 @@ smit_SOURCES = src/db.cpp src/Entry.cpp src/Issue.cpp src/Project.cpp \
 	src/View.cpp src/Tag.cpp src/parseConfig.cpp \
 	src/identifiers.cpp src/main.cpp src/httpdHandlers.cpp \
 	src/httpdUtils.cpp src/renderingText.cpp src/renderingJson.cpp \
-	src/renderingCsv.cpp src/renderingHtml.cpp src/cpio.cpp \
-	src/stringTools.cpp src/jTools.cpp src/mutexTools.cpp \
-	src/session.cpp src/dateTools.cpp src/logging.cpp \
-	src/Trigger.cpp src/filesystem.cpp src/console.cpp \
-	src/HttpContext.cpp src/localClient.cpp src/Args.cpp \
-	src/ProjectConfig.cpp src/Object.cpp src/AuthSha1.cpp \
-	src/third-party/mongoose.c src/third-party/fnmatch.c \
-	$(am__append_10) $(am__append_11) $(am__append_12)
+	src/renderingCsv.cpp src/renderingHtml.cpp \
+	src/ContextParameters.cpp src/renderingHtmlIssue.cpp \
+	src/cpio.cpp src/stringTools.cpp src/jTools.cpp \
+	src/mutexTools.cpp src/session.cpp src/dateTools.cpp \
+	src/logging.cpp src/Trigger.cpp src/filesystem.cpp \
+	src/console.cpp src/HttpContext.cpp src/localClient.cpp \
+	src/Args.cpp src/ProjectConfig.cpp src/Object.cpp \
+	src/AuthSha1.cpp src/third-party/mongoose.c \
+	src/third-party/fnmatch.c $(am__append_10) $(am__append_11) \
+	$(am__append_12)
 nodist_smit_SOURCES = embedcpio.c embedcpio.h 
 BUILT_SOURCES = embedcpio.c embedcpio.h
 CLEANFILES = embedcpio.c embedcpio.h convertToC
@@ -533,6 +538,10 @@ src/smit-renderingCsv.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/smit-renderingHtml.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
+src/smit-ContextParameters.$(OBJEXT): src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
+src/smit-renderingHtmlIssue.$(OBJEXT): src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
 src/smit-cpio.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/smit-stringTools.$(OBJEXT): src/$(am__dirstamp) \
@@ -604,6 +613,7 @@ mostlyclean-compile:
 	-rm -f src/smit-AuthKrb5.$(OBJEXT)
 	-rm -f src/smit-AuthLdap.$(OBJEXT)
 	-rm -f src/smit-AuthSha1.$(OBJEXT)
+	-rm -f src/smit-ContextParameters.$(OBJEXT)
 	-rm -f src/smit-Entry.$(OBJEXT)
 	-rm -f src/smit-HttpContext.$(OBJEXT)
 	-rm -f src/smit-Issue.$(OBJEXT)
@@ -631,6 +641,7 @@ mostlyclean-compile:
 	-rm -f src/smit-parseConfig.$(OBJEXT)
 	-rm -f src/smit-renderingCsv.$(OBJEXT)
 	-rm -f src/smit-renderingHtml.$(OBJEXT)
+	-rm -f src/smit-renderingHtmlIssue.$(OBJEXT)
 	-rm -f src/smit-renderingJson.$(OBJEXT)
 	-rm -f src/smit-renderingText.$(OBJEXT)
 	-rm -f src/smit-session.$(OBJEXT)
@@ -649,6 +660,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-AuthKrb5.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-AuthLdap.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-AuthSha1.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-ContextParameters.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-Entry.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-HttpContext.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-Issue.Po@am__quote@
@@ -676,6 +688,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-parseConfig.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-renderingCsv.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-renderingHtml.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-renderingHtmlIssue.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-renderingJson.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-renderingText.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-session.Po@am__quote@
@@ -969,6 +982,34 @@ src/smit-renderingHtml.obj: src/renderingHtml.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/renderingHtml.cpp' object='src/smit-renderingHtml.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/smit-renderingHtml.obj `if test -f 'src/renderingHtml.cpp'; then $(CYGPATH_W) 'src/renderingHtml.cpp'; else $(CYGPATH_W) '$(srcdir)/src/renderingHtml.cpp'; fi`
+
+src/smit-ContextParameters.o: src/ContextParameters.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/smit-ContextParameters.o -MD -MP -MF src/$(DEPDIR)/smit-ContextParameters.Tpo -c -o src/smit-ContextParameters.o `test -f 'src/ContextParameters.cpp' || echo '$(srcdir)/'`src/ContextParameters.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/smit-ContextParameters.Tpo src/$(DEPDIR)/smit-ContextParameters.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/ContextParameters.cpp' object='src/smit-ContextParameters.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/smit-ContextParameters.o `test -f 'src/ContextParameters.cpp' || echo '$(srcdir)/'`src/ContextParameters.cpp
+
+src/smit-ContextParameters.obj: src/ContextParameters.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/smit-ContextParameters.obj -MD -MP -MF src/$(DEPDIR)/smit-ContextParameters.Tpo -c -o src/smit-ContextParameters.obj `if test -f 'src/ContextParameters.cpp'; then $(CYGPATH_W) 'src/ContextParameters.cpp'; else $(CYGPATH_W) '$(srcdir)/src/ContextParameters.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/smit-ContextParameters.Tpo src/$(DEPDIR)/smit-ContextParameters.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/ContextParameters.cpp' object='src/smit-ContextParameters.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/smit-ContextParameters.obj `if test -f 'src/ContextParameters.cpp'; then $(CYGPATH_W) 'src/ContextParameters.cpp'; else $(CYGPATH_W) '$(srcdir)/src/ContextParameters.cpp'; fi`
+
+src/smit-renderingHtmlIssue.o: src/renderingHtmlIssue.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/smit-renderingHtmlIssue.o -MD -MP -MF src/$(DEPDIR)/smit-renderingHtmlIssue.Tpo -c -o src/smit-renderingHtmlIssue.o `test -f 'src/renderingHtmlIssue.cpp' || echo '$(srcdir)/'`src/renderingHtmlIssue.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/smit-renderingHtmlIssue.Tpo src/$(DEPDIR)/smit-renderingHtmlIssue.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/renderingHtmlIssue.cpp' object='src/smit-renderingHtmlIssue.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/smit-renderingHtmlIssue.o `test -f 'src/renderingHtmlIssue.cpp' || echo '$(srcdir)/'`src/renderingHtmlIssue.cpp
+
+src/smit-renderingHtmlIssue.obj: src/renderingHtmlIssue.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/smit-renderingHtmlIssue.obj -MD -MP -MF src/$(DEPDIR)/smit-renderingHtmlIssue.Tpo -c -o src/smit-renderingHtmlIssue.obj `if test -f 'src/renderingHtmlIssue.cpp'; then $(CYGPATH_W) 'src/renderingHtmlIssue.cpp'; else $(CYGPATH_W) '$(srcdir)/src/renderingHtmlIssue.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/smit-renderingHtmlIssue.Tpo src/$(DEPDIR)/smit-renderingHtmlIssue.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/renderingHtmlIssue.cpp' object='src/smit-renderingHtmlIssue.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/smit-renderingHtmlIssue.obj `if test -f 'src/renderingHtmlIssue.cpp'; then $(CYGPATH_W) 'src/renderingHtmlIssue.cpp'; else $(CYGPATH_W) '$(srcdir)/src/renderingHtmlIssue.cpp'; fi`
 
 src/smit-cpio.o: src/cpio.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/smit-cpio.o -MD -MP -MF src/$(DEPDIR)/smit-cpio.Tpo -c -o src/smit-cpio.o `test -f 'src/cpio.cpp' || echo '$(srcdir)/'`src/cpio.cpp

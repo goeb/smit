@@ -1,0 +1,36 @@
+#ifndef _renderingHtmlIssue_h
+#define _renderingHtmlIssue_h
+
+#include <list>
+#include <string>
+#include <stdint.h>
+
+#include "HttpContext.h"
+#include "ContextParameters.h"
+#include "db.h"
+
+#define QS_GOTO_NEXT "next"
+#define QS_GOTO_PREVIOUS "previous"
+
+
+class RHtmlIssue {
+public:
+
+    static void printFormMessage(const ContextParameters &ctx, const std::string &contents);
+    static void printEditMessage(const ContextParameters &ctx, const Issue *issue,
+                                 const Entry &eToBeAmended);
+    static void printIssueForm(const ContextParameters &ctx, const Issue *issue, bool autofocus);
+    static std::string convertToRichText(const std::string &raw);
+    static void printIssueSummary(const ContextParameters &ctx, const Issue &issue);
+    static void printIssue(const ContextParameters &ctx, const Issue &issue, const std::string &entryToBeAmended);
+    static void printIssueListFullContents(const ContextParameters &ctx, const std::vector<Issue> &issueList);
+    static void printIssueList(const ContextParameters &ctx, const std::vector<Issue> &issueList,
+                               const std::list<std::string> &colspec, bool showOtherFormats);
+    static void printIssuesAccrossProjects(ContextParameters ctx,
+                                           const std::vector<Issue> &issues,
+                                           const std::list<std::string> &colspec);
+};
+
+
+
+#endif

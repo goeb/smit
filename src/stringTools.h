@@ -51,5 +51,6 @@ int compareProperties(const std::map<std::string, std::list<std::string> > &plis
                       const std::map<std::string, std::list<std::string> > &plist2,
                       const std::string &name);
 
+bool inList(const std::list<std::string> &listOfValues, const std::string &value);
 
 #endif

@@ -45,6 +45,8 @@ smit_SOURCES = \
 			   src/renderingJson.cpp \
 			   src/renderingCsv.cpp \
 			   src/renderingHtml.cpp \
+			   src/ContextParameters.cpp \
+			   src/renderingHtmlIssue.cpp \
 			   src/cpio.cpp \
 			   src/stringTools.cpp \
 			   src/jTools.cpp \

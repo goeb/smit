@@ -34,6 +34,8 @@
 #include "identifiers.h"
 #include "renderingText.h"
 #include "renderingHtml.h"
+#include "renderingHtmlIssue.h"
+#include "ContextParameters.h"
 #include "renderingCsv.h"
 #include "renderingJson.h"
 #include "parseConfig.h"
@@ -218,7 +220,7 @@ void handleMessagePreview(const RequestContext *request)
     std::string q = request->getQueryString();
     std::string message = getFirstParamFromQueryString(q, "message");
     LOG_DEBUG("message=%s", message.c_str());
-    message = RHtml::convertToRichText(htmlEscape(message));
+    message = RHtmlIssue::convertToRichText(htmlEscape(message));
     sendHttpHeader200(request);
     request->printf("Content-Type: text/html\r\n\r\n");
     request->printf("%s", message.c_str());

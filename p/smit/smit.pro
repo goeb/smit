@@ -43,7 +43,9 @@ SOURCES += \
     ../../src/renderingJson.cpp \
     ../../src/json.cpp \
     ../../src/jTools.cpp \
-    ../../src/httpdUtils.cpp
+    ../../src/httpdUtils.cpp \
+    ../../src/renderingHtmlIssue.cpp \
+    ../../src/ContextParameters.cpp
     ../../src/ssoKerberos.cpp
 
 HEADERS += \
@@ -89,6 +91,8 @@ HEADERS += \
     ../../src/renderingJson.h \
     ../../src/json.h \
     ../../src/jTools.h \
-    ../../src/httpdUtils.h
+    ../../src/httpdUtils.h \
+    ../../src/renderingHtmlIssue.h \
+    ../../src/ContextParameters.h
     ../../src/ssoKerberos.h
 

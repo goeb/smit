@@ -442,3 +442,11 @@ int compareProperties(const std::map<std::string, std::list<std::string> > &plis
     return 0; // not reached normally
 }
 
+bool inList(const std::list<std::string> &listOfValues, const std::string &value)
+{
+    std::list<std::string>::const_iterator v;
+    for (v=listOfValues.begin(); v!=listOfValues.end(); v++) if (*v == value) return true;
+
+    return false;
+}
+

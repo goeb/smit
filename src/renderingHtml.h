@@ -6,6 +6,7 @@
 #include <stdint.h>
 
 #include "HttpContext.h"
+#include "ContextParameters.h"
 #include "db.h"
 #include "session.h"
 
@@ -13,33 +14,6 @@
 #define QS_GOTO_NEXT "next"
 #define QS_GOTO_PREVIOUS "previous"
 
-
-/** SmitData is used to manage the values in the HTML
-  * The HTML items marked with class "smit_data" will have
-  * their value replaced by client-side scripting.
-  *
-  */
-class ContextParameters {
-public:
-    ContextParameters(const RequestContext *req, const User &u, const Project &p);
-    ContextParameters(const RequestContext *req, const User &u);
-    void init(const RequestContext *request, const User &u);
-    const Project &getProject() const;
-
-    User user; // signed-in user
-    enum Role userRole;
-    std::string search;
-    std::string sort;
-    std::map<std::string, std::list<std::string> > filterin;
-    std::map<std::string, std::list<std::string> > filterout;
-    const Project *project;
-    ProjectConfig projectConfig;
-    std::map<std::string, PredefinedView> predefinedViews;
-    std::set<std::string> usersOfProject;
-    std::list<std::pair<std::string, uint8_t> > htmlFieldDisplay;
-    const RequestContext *req;
-    const char *originView; // query string format
-};
 
 class RHtml {
 public:
@@ -64,7 +38,6 @@ public:
 
     static void printPageNewIssue(const ContextParameters &ctx);
 
-    static bool inList(const std::list<std::string> &listOfValues, const std::string &value);
     static void printFormMessage(const ContextParameters &ctx, const std::string &contents);
     static void printEditMessage(const ContextParameters &ctx, const Issue *issue,
                                  const Entry &eToBeAmended);
@@ -86,8 +59,6 @@ public:
 
     static std::string convertToRichText(const std::string &raw);
     static void printIssueSummary(const ContextParameters &ctx, const Issue &issue);
-    static void printIssueNext(const ContextParameters &ctx, const Issue &issue);
-    static void printIssuePrevious(const ContextParameters &ctx, const Issue &issue);
     static void printIssue(const ContextParameters &ctx, const Issue &issue, const std::string &entryToBeAmended);
     static void printIssueListFullContents(const ContextParameters &ctx, const std::vector<Issue> &issueList);
     static void printIssueList(const ContextParameters &ctx, const std::vector<Issue> &issueList,
