@@ -1188,6 +1188,39 @@ void httpSendIssueList(const RequestContext *req, const Project &p,
     }
 }
 
+void httpGetListOfEntries(const RequestContext *req, const Project &p, User u)
+{
+    std::string q = req->getQueryString();
+    PredefinedView v = PredefinedView::loadFromQueryString(q); // unamed view, used as handler on the viewing parameters
+
+    std::vector<Entry> entries;
+    p.searchEntries(v.sort.c_str(), entries, v.limit);
+
+    sendHttpHeader200(req);
+
+
+    // Only HTML supported at the moment
+
+    ContextParameters ctx = ContextParameters(req, u, p);
+    ctx.filterin = v.filterin;
+    ctx.filterout = v.filterout;
+    ctx.search = v.search;
+    ctx.sort = v.sort;
+
+    // get the colspec
+    std::list<std::string> cols;
+    std::list<std::string> allCols = p.getConfig().getPropertiesNames();
+    std::list<std::string> nocols;
+    if (v.colspec.size() > 0) {
+        cols = parseColspec(v.colspec.c_str(), nocols);
+    } else {
+        // prevent having no columns, by forcing all of them
+        cols = allCols;
+    }
+
+    RHtml::printPageEntries(ctx, entries, cols);
+}
+
 /** Get the list of issues at the moment indicated by the snapshot
   *
   * @param snapshot
@@ -1225,30 +1258,6 @@ void httpGetListOfIssues(const RequestContext *req, const Project &p, User u, co
 
     httpSendIssueList(req, p, u, issueList);
 
-}
-
-void httpGetListOfEntries(const RequestContext *req, const Project &p, User u)
-{
-    std::string q = req->getQueryString();
-    PredefinedView v = PredefinedView::loadFromQueryString(q); // unamed view, used as handler on the viewing parameters
-
-    std::vector<Entry> entries;
-    p.searchEntries(v.sort.c_str(), entries);
-
-    sendHttpHeader200(req);
-
-    std::vector<Entry>::iterator e;
-    // TODO temporary display
-    FOREACH(e, entries) {
-        std::map<std::string, std::list<std::string> >::iterator property;
-        req->printf("%s:\n", e->id.c_str());
-
-        FOREACH(property, e->properties) {
-            req->printf("    %s: %s\n", property->first.c_str(), toString(property->second).c_str());
-        }
-
-        req->printf("\n");
-    }
 }
 
 void httpGetListOfIssues(const RequestContext *req, const Project &p, User u)

@@ -840,7 +840,7 @@ std::list<std::pair<bool, std::string> > parseSortingSpec(const char *sortingSpe
 }
 
 
-void Project::searchEntries(const char *sortingSpec, std::vector<Entry> &entries) const
+void Project::searchEntries(const char *sortingSpec, std::vector<Entry> &entries, int limit) const
 {
     ScopeLocker scopeLocker(locker, LOCK_READ_ONLY);
     std::map<std::string, Issue*>::const_iterator i;
@@ -857,6 +857,8 @@ void Project::searchEntries(const char *sortingSpec, std::vector<Entry> &entries
         Entry::sort(entries, sSpec);
     }
 
+    // limit the number of items
+    if (limit >= 0 && limit < entries.size()) entries.erase(entries.begin()+limit, entries.end());
 }
 
 /** search

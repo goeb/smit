@@ -21,6 +21,7 @@ struct PredefinedView {
     std::string colspec;
     std::string sort;
     std::string search;
+    int limit;
     bool isDefault; // indicate if this view should be chosen by default when query string is empty
 
     PredefinedView() : isDefault(false) {}

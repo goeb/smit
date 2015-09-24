@@ -163,6 +163,9 @@ PredefinedView PredefinedView::loadFromQueryString(const std::string &q)
     v.search = getFirstParamFromQueryString(q, "search");
     v.sort = getFirstParamFromQueryString(q, "sort");
     v.colspec = getFirstParamFromQueryString(q, "colspec");
+    std::string limit = getFirstParamFromQueryString(q, "limit");
+    if (!limit.empty()) v.limit = atoi(limit.c_str());
+    else v.limit = -1; // no limit
     return v;
 }
 

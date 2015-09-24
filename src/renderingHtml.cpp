@@ -65,6 +65,7 @@ const Project &ContextParameters::getProject() const
 #define K_SM_URL_ROOT "SM_URL_ROOT"
 #define K_SM_TABLE_USER_PERMISSIONS "SM_TABLE_USER_PERMISSIONS"
 #define K_SM_SCRIPT "SM_SCRIPT"
+#define K_SM_DIV_ENTRIES "SM_DIV_ENTRIES"
 
 /** Load a page template of a specific project
   *
@@ -101,9 +102,9 @@ int loadProjectPage(const RequestContext *req, const Project *project, const std
 class VariableNavigator {
 public:
     const std::vector<Issue> *issueList;
-    std::vector<Issue> *issuesOfAllProjects;
+    const std::vector<Issue> *issuesOfAllProjects;
     const std::vector<Issue> *issueListFullContents;
-    std::list<std::string> *colspec;
+    const std::list<std::string> *colspec;
     const ContextParameters &ctx;
     const std::list<std::pair<std::string, std::string> > *projectList;
     const std::list<User> *usersList;
@@ -112,6 +113,7 @@ public:
     const Entry *entryToBeAmended;
     const std::map<std::string, std::map<Role, std::set<std::string> > > *userRolesByProject;
     std::string script; // javascript to be inserted in SM_SCRIPT
+    const std::vector<Entry> *entries;
 
     VariableNavigator(const std::string basename, const ContextParameters &context) : ctx(context) {
         buffer = 0;
@@ -125,6 +127,7 @@ public:
         userRolesByProject = 0;
         concernedUser = 0;
         entryToBeAmended = 0;
+        entries = 0;
 
         int n = loadProjectPage(ctx.req, ctx.project, basename, &buffer);
 
@@ -254,6 +257,8 @@ public:
                 if (!script.empty()) {
                     ctx.req->printf("<script type=\"text/javascript\">%s</script>\n", script.c_str());
                 }
+            } else if (varname == K_SM_DIV_ENTRIES && entries && colspec) {
+                RHtml::printEntries(ctx, *entries, *colspec);
             } else {
                 // unknown variable name
                 ctx.req->printf("%s", varname.c_str());
@@ -926,7 +931,7 @@ void RHtml::printPageIssuesFullContents(const ContextParameters &ctx, const std:
 }
 
 void RHtml::printPageIssueList(const ContextParameters &ctx,
-                               const std::vector<Issue> &issueList, std::list<std::string> colspec)
+                               const std::vector<Issue> &issueList, const std::list<std::string> &colspec)
 {
     VariableNavigator vn("issues.html", ctx);
     vn.issueList = &issueList;
@@ -934,8 +939,8 @@ void RHtml::printPageIssueList(const ContextParameters &ctx,
     vn.printPage();
 }
 void RHtml::printPageIssueAccrossProjects(const ContextParameters &ctx,
-                                          std::vector<Issue> &issues,
-                                          std::list<std::string> colspec)
+                                          const std::vector<Issue> &issues,
+                                          const std::list<std::string> &colspec)
 {
     VariableNavigator vn("issuesAccross.html", ctx);
     vn.issuesOfAllProjects = &issues;
@@ -983,4 +988,90 @@ void RHtml::printPageNewIssue(const ContextParameters &ctx)
 {
     VariableNavigator vn("newIssue.html", ctx);
     vn.printPage();
+}
+
+void RHtml::printPageEntries(const ContextParameters &ctx,
+                             const std::vector<Entry> &entries, const std::list<std::string> &colspec)
+{
+    VariableNavigator vn("entries.html", ctx);
+    vn.entries = &entries;
+    vn.colspec = &colspec;
+    vn.printPage();
+}
+
+void RHtml::printEntries(const ContextParameters &ctx, const std::vector<Entry> &entries,
+                         const std::list<std::string> &colspec)
+{
+    ctx.req->printf("<div class=\"sm_entries\">\n");
+
+    printFilters(ctx);
+
+    // number of entries
+    ctx.req->printf("<div class=\"sm_entries_count\">%s: <span class=\"sm_entries_count\">%lu</span></div>\n",
+                    _("Entries found"), L(entries.size()));
+
+    ctx.req->printf("<table class=\"sm_entries\">\n");
+
+    // print header of the table
+    ctx.req->printf("<tr class=\"sm_entries\">\n");
+    std::list<std::string>::const_iterator colname;
+    FOREACH(colname, colspec) {
+
+        std::string label = ctx.projectConfig.getLabelOfProperty(*colname);
+        std::string newQueryString = getQsSubSorting(ctx.req->getQueryString(), *colname, true);
+        ctx.req->printf("<th class=\"sm_entries\">%s\n", htmlEscape(label).c_str());
+
+        std::list<std::string> defaultCols = ctx.projectConfig.getPropertiesNames();
+        newQueryString = getQsRemoveColumn(ctx.req->getQueryString(), *colname, defaultCols);
+        ctx.req->printf(" <a href=\"?%s\" class=\"sm_entries_delete_col\" title=\"%s\">&#10008;</a>\n",
+                        newQueryString.c_str(), _("Hide this column"));
+        ctx.req->printf("</th>\n");
+    }
+    ctx.req->printf("</tr>\n");
+
+    // print the rows of the entries
+    std::vector<Entry>::const_iterator e;
+    FOREACH(e, entries) {
+
+        ctx.req->printf("<tr class=\"sm_entries\">\n");
+
+        std::list<std::string>::const_iterator c;
+        FOREACH (c, colspec) {
+            std::ostringstream text;
+            std::string column = *c;
+
+            if (column == "id") text << e->id.c_str();
+            else if (column == K_CTIME) text << epochToStringDelta(e->ctime);
+            else if (column == K_AUTHOR) text << e->author;
+            else if (column == "p" && e->issue) text << e->issue->project;
+            else {
+                PropertiesIt p;
+                const PropertiesMap & properties = e->properties;
+
+                p = properties.find(column);
+                if (p != properties.end()) text << toString(p->second);
+                else text << _("(unchanged)");
+            }
+            // add href if column is 'id'
+            std::string href_lhs = "";
+            std::string href_rhs = "";
+            if (column == "id" && e->issue) {
+                href_lhs = "<a href=\"";
+                std::string href = MongooseServerContext::getInstance().getUrlRewritingRoot() + "/";
+                href += Project::urlNameEncode(e->issue->project) + "/files/";
+                href += urlEncode(e->id);
+                href_lhs = href_lhs + href;
+                href_lhs = href_lhs +  + "\">";
+
+                href_rhs = "</a>";
+            }
+
+            ctx.req->printf("<td class=\"sm_entries\">%s%s%s</td>\n",
+                            href_lhs.c_str(), htmlEscape(text.str()).c_str(), href_rhs.c_str());
+        }
+        // TODO +message
+        ctx.req->printf("</tr>\n");
+    }
+    ctx.req->printf("</table>\n");
+    ctx.req->printf("</div>\n");
 }

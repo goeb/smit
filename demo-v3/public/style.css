@@ -197,10 +197,10 @@ textarea.sm_issue_pinput_message {
 .sm_issues_other_formats {
     text-align: right;
 }
-table.sm_issues {
+table.sm_issues, table.sm_entries {
     border-collapse:collapse;
 }
-th.sm_issues, td.sm_issues {
+th.sm_issues, td.sm_issues, th.sm_entries, td.sm_entries {
     padding-right: 1em;
     padding-left: 1em;
     padding-bottom: 0.2em;
@@ -208,13 +208,13 @@ th.sm_issues, td.sm_issues {
     border-right: solid 1px rgb(200, 200, 186);
     font-size: small;
 }
-th.sm_issues {
+th.sm_issues, th.sm_entries {
     border-bottom: solid 1px rgb(200, 200, 186);
 }
-table.sm_issues tr {
+table.sm_issues tr, table.sm_entries tr {
     vertical-align:text-top;
 }
-table.sm_issues tr:hover {
+table.sm_issues tr:hover, table.sm_entries tr:hover {
     background-color: #E8E8E8;
 }
 .sm_issues_group {
@@ -253,9 +253,9 @@ a:link.sm_issues_sort_cumulative { color: #344; }
 a:visited.sm_issues_sort_cumulative { color: #344; }
 a.sm_issues_sort { }
 
-a:link.sm_issues_delete_col { color: #344; }
-a:visited.sm_issues_delete_col { color: #344; }
-a.sm_issues_delete_col { }
+a:link.sm_issues_delete_col, a:link.sm_entries_delete_col { color: #344; }
+a:visited.sm_issues_delete_col, a:visited.sm_entries_delete_col { color: #344; }
+a.sm_issues_delete_col, a.sm_entries_delete_col { }
 
 .sm_entry_edit, .sm_entry_edit form {
     vertical-align: top;
@@ -300,7 +300,7 @@ table.sm_projects tr:hover, table.sm_users tr:hover {
 }
 .sm_projects_stakeholder { color: #444; }
 .sm_projects_new { font-weight: bold; }
-.sm_issues_count {
+.sm_issues_count, .sm_entries_count {
     font-weight: bold;
     margin-bottom: 1em;
 }
