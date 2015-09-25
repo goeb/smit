@@ -1210,6 +1210,7 @@ void httpGetListOfEntries(const RequestContext *req, const Project &p, User u)
     std::list<std::string> cols;
     // the columns for entries are slightly different from those for issues
     std::list<std::string> allCols = p.getConfig().getUserDefinedProperties();
+    allCols.push_front(K_SUMMARY);
     allCols.push_front("_author");
     allCols.push_front("_ctime");
     allCols.push_front("id");

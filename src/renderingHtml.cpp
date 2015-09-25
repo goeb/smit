@@ -981,6 +981,12 @@ void RHtml::printPageIssue(const ContextParameters &ctx, const Issue &issue, con
         qs += "&" QS_GOTO_PREVIOUS "=" + urlEncode(issue.id);
         ctx.req->printf("updateHref('%s', './?%s');\n", SM_ISSUE_PREVIOUS, enquoteJs(qs).c_str());
     }
+
+    // check display options
+    std::string display = getFirstParamFromQueryString(ctx.req->getQueryString(), "display");
+    if (display == "properties_changes") {
+        ctx.req->printf("showPropertiesChanges();\n");
+    }
     ctx.req->printf("</script>");
 }
 
@@ -1044,8 +1050,7 @@ void RHtml::printEntries(const ContextParameters &ctx, const std::vector<Entry> 
             std::string href_lhs = "";
             std::string href_rhs = "";
 
-
-            if (column == "id") text << e->id.c_str();
+            if (column == "id") text << e->issue->id.c_str(); // id of the issue (not id of the entry)
             else if (column == "_ctime") text << epochToStringDelta(e->ctime);
             else if (column == "_author") text << e->author;
             else if (column == "p" && e->issue) text << e->issue->project;
@@ -1055,9 +1060,8 @@ void RHtml::printEntries(const ContextParameters &ctx, const std::vector<Entry> 
 
                 p = properties.find(column);
                 if (p != properties.end()) {
-                    if (p->first == K_MESSAGE) {
-                        // do not display whole message directly
-                        // print first characters...
+                    if (p->first == K_MESSAGE || p->first == K_SUMMARY) {
+                        // do not display whole message, truncate and print first characters...
                         std::string firstChars;
                         if (!p->second.empty()) firstChars = p->second.front();
                         const uint32_t maxChars = 20;
@@ -1080,18 +1084,20 @@ void RHtml::printEntries(const ContextParameters &ctx, const std::vector<Entry> 
                 // add some href if column is 'id'
                 href_lhs = "<a href=\"";
                 std::string href = MongooseServerContext::getInstance().getUrlRewritingRoot() + "/";
-                href += Project::urlNameEncode(e->issue->project) + "/files/";
-                href += urlEncode(e->id);
+                href += Project::urlNameEncode(e->issue->project) + "/issues/";
+                href += urlEncode(e->issue->id);
+                href += "?display=properties_changes#" + urlEncode(e->id);
                 href_lhs = href_lhs + href;
                 href_lhs = href_lhs +  + "\">";
 
                 href_rhs = "</a>";
+                // check if the entry is the creation of a new issue
+                if (e->issue->first && e->issue->first->id == e->id) text << " " << _("(new)");
             }
 
             ctx.req->printf("<td class=\"sm_entries\">%s%s%s</td>\n",
                             href_lhs.c_str(), htmlEscape(text.str()).c_str(), href_rhs.c_str());
         }
-        // TODO +message
         ctx.req->printf("</tr>\n");
     }
     ctx.req->printf("</table>\n");
