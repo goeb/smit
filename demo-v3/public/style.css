@@ -393,3 +393,6 @@ div.sm_entry_files {
 .sm_amend {
     font-size: 150%;
 }
+.sm_property_unchanged {
+    color: #aaa;
+}

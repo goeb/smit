@@ -66,6 +66,7 @@ struct ProjectConfig {
     int addProperty(std::list<std::string> &tokens);
     const PropertySpec *getPropertySpec(const std::string name) const;
     std::list<std::string> getPropertiesNames() const;
+    std::list<std::string> getUserDefinedProperties() const;
     static std::list<std::string> getReservedProperties();
     static bool isReservedProperty(const std::string &name);
     std::string getLabelOfProperty(const std::string &propertyName) const;

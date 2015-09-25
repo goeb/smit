@@ -1018,11 +1018,12 @@ void RHtml::printEntries(const ContextParameters &ctx, const std::vector<Entry> 
     FOREACH(colname, colspec) {
 
         std::string label = ctx.projectConfig.getLabelOfProperty(*colname);
-        std::string newQueryString = getQsSubSorting(ctx.req->getQueryString(), *colname, true);
         ctx.req->printf("<th class=\"sm_entries\">%s\n", htmlEscape(label).c_str());
 
-        std::list<std::string> defaultCols = ctx.projectConfig.getPropertiesNames();
-        newQueryString = getQsRemoveColumn(ctx.req->getQueryString(), *colname, defaultCols);
+        std::list<std::string> defaultCols = ctx.projectConfig.getUserDefinedProperties();
+        defaultCols.push_back("_author");
+        defaultCols.push_back("_ctime");
+        std::string newQueryString = getQsRemoveColumn(ctx.req->getQueryString(), *colname, defaultCols);
         ctx.req->printf(" <a href=\"?%s\" class=\"sm_entries_delete_col\" title=\"%s\">&#10008;</a>\n",
                         newQueryString.c_str(), _("Hide this column"));
         ctx.req->printf("</th>\n");
@@ -1039,10 +1040,14 @@ void RHtml::printEntries(const ContextParameters &ctx, const std::vector<Entry> 
         FOREACH (c, colspec) {
             std::ostringstream text;
             std::string column = *c;
+            // add some decorators in some cases
+            std::string href_lhs = "";
+            std::string href_rhs = "";
+
 
             if (column == "id") text << e->id.c_str();
-            else if (column == K_CTIME) text << epochToStringDelta(e->ctime);
-            else if (column == K_AUTHOR) text << e->author;
+            else if (column == "_ctime") text << epochToStringDelta(e->ctime);
+            else if (column == "_author") text << e->author;
             else if (column == "p" && e->issue) text << e->issue->project;
             else {
                 PropertiesIt p;
@@ -1050,12 +1055,14 @@ void RHtml::printEntries(const ContextParameters &ctx, const std::vector<Entry> 
 
                 p = properties.find(column);
                 if (p != properties.end()) text << toString(p->second);
-                else text << _("(unchanged)");
+                else {
+                     text << _("(unchanged)");
+                     href_lhs = "<span class=\"sm_property_unchanged\">";
+                     href_rhs = "</span>";
+                }
             }
-            // add href if column is 'id'
-            std::string href_lhs = "";
-            std::string href_rhs = "";
             if (column == "id" && e->issue) {
+                // add some href if column is 'id'
                 href_lhs = "<a href=\"";
                 std::string href = MongooseServerContext::getInstance().getUrlRewritingRoot() + "/";
                 href += Project::urlNameEncode(e->issue->project) + "/files/";

@@ -233,7 +233,12 @@ bool Entry::lessThan(const Entry* other, const std::list<std::pair<bool, std::st
             else if (atoi(id.c_str()) < atoi(other->id.c_str())) result = -1;
             else result = +1;
 
-        } else if (s->second == "ctime") {
+        } else if (s->second == "_author") {
+            if (author < other->author) result = -1;
+            else if (author > other->author) result = +1;
+            else result = 0;
+
+        } else if (s->second == "_ctime") {
             if (ctime < other->ctime) result = -1;
             else if (ctime > other->ctime) result = +1;
             else result = 0;

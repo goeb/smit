@@ -78,19 +78,25 @@ const PropertySpec *ProjectConfig::getPropertySpec(const std::string name) const
   */
 std::list<std::string> ProjectConfig::getPropertiesNames() const
 {
-    std::list<std::string> colspec;
-
-    // get user defined properties
-    std::list<PropertySpec>::const_iterator pspec;
-    FOREACH(pspec, properties) {
-        colspec.push_back(pspec->name);
-    }
+    std::list<std::string> properties = getUserDefinedProperties();
 
     // add mandatory properties that are not included in orderedProperties
     std::list<std::string> reserved = getReservedProperties();
-    colspec.insert(colspec.begin(), reserved.begin(), reserved.end());
-    return colspec;
+    properties.insert(properties.begin(), reserved.begin(), reserved.end());
+    return properties;
 }
+
+std::list<std::string> ProjectConfig::getUserDefinedProperties() const
+{
+    std::list<std::string> userDefinedProperties;
+    // get user defined properties
+    std::list<PropertySpec>::const_iterator pspec;
+    FOREACH(pspec, properties) {
+        userDefinedProperties.push_back(pspec->name);
+    }
+    return userDefinedProperties;
+}
+
 
 std::list<std::string> ProjectConfig::getReservedProperties()
 {

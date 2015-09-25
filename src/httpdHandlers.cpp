@@ -1198,7 +1198,6 @@ void httpGetListOfEntries(const RequestContext *req, const Project &p, User u)
 
     sendHttpHeader200(req);
 
-
     // Only HTML supported at the moment
 
     ContextParameters ctx = ContextParameters(req, u, p);
@@ -1209,10 +1208,15 @@ void httpGetListOfEntries(const RequestContext *req, const Project &p, User u)
 
     // get the colspec
     std::list<std::string> cols;
-    std::list<std::string> allCols = p.getConfig().getPropertiesNames();
-    std::list<std::string> nocols;
+    // the columns for entries are slightly different from those for issues
+    std::list<std::string> allCols = p.getConfig().getUserDefinedProperties();
+    allCols.push_front("_author");
+    allCols.push_front("_ctime");
+    allCols.push_front("id");
+    allCols.push_back(K_MESSAGE);
+
     if (v.colspec.size() > 0) {
-        cols = parseColspec(v.colspec.c_str(), nocols);
+        cols = parseColspec(v.colspec.c_str(), allCols);
     } else {
         // prevent having no columns, by forcing all of them
         cols = allCols;
