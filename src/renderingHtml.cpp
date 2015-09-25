@@ -1054,8 +1054,23 @@ void RHtml::printEntries(const ContextParameters &ctx, const std::vector<Entry> 
                 const PropertiesMap & properties = e->properties;
 
                 p = properties.find(column);
-                if (p != properties.end()) text << toString(p->second);
-                else {
+                if (p != properties.end()) {
+                    if (p->first == K_MESSAGE) {
+                        // do not display whole message directly
+                        // print first characters...
+                        std::string firstChars;
+                        if (!p->second.empty()) firstChars = p->second.front();
+                        const uint32_t maxChars = 20;
+                        if (firstChars.size() > maxChars) {
+                            firstChars = firstChars.substr(0, maxChars);
+                             firstChars += "...";
+                        }
+                        text << firstChars;
+
+                    } else {
+                        text << toString(p->second);
+                    }
+                } else {
                      text << _("(unchanged)");
                      href_lhs = "<span class=\"sm_property_unchanged\">";
                      href_rhs = "</span>";
