@@ -20,7 +20,8 @@ std::string getQsSubSorting(std::string qs, const std::string &property, bool ex
 class RHtmlIssue {
 public:
 
-    static void printOtherProperties(const ContextParameters &ctx, const Entry &ee, bool printMessageHeading);
+    static void printOtherProperties(const ContextParameters &ctx, const Entry &ee, bool printMessageHeading,
+                                     const char *divStyle);
     static void printFormMessage(const ContextParameters &ctx, const std::string &contents);
     static void printEditMessage(const ContextParameters &ctx, const Issue *issue,
                                  const Entry &eToBeAmended);

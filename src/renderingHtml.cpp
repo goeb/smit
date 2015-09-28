@@ -1066,7 +1066,7 @@ void RHtml::printEntries(const ContextParameters &ctx, const std::vector<Entry> 
 
         // changed properties
         ctx.req->printf("<td class=\"sm_entries\">");
-        RHtmlIssue::printOtherProperties(ctx, *e, true);
+        RHtmlIssue::printOtherProperties(ctx, *e, true, 0);
         ctx.req->printf("</td>");
 
         ctx.req->printf("</tr>\n");

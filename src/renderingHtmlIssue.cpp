@@ -991,7 +991,7 @@ void RHtmlIssue::printIssue(const ContextParameters &ctx, const Issue &issue, co
 
         // -------------------------------------------------
         // print other modified properties
-        printOtherProperties(ctx, ee, false);
+        printOtherProperties(ctx, ee, false, "sm_entry_other_properties");
 
         ctx.req->printf("</div>\n"); // end entry
 
@@ -1001,7 +1001,8 @@ void RHtmlIssue::printIssue(const ContextParameters &ctx, const Issue &issue, co
     ctx.req->printf("</div>\n");
 }
 
-void RHtmlIssue::printOtherProperties(const ContextParameters &ctx, const Entry &ee, bool printMessageHeading)
+void RHtmlIssue::printOtherProperties(const ContextParameters &ctx, const Entry &ee, bool printMessageHeading,
+                                      const char *divStyle)
 {
     std::ostringstream otherProperties;
 
@@ -1039,7 +1040,9 @@ void RHtmlIssue::printOtherProperties(const ContextParameters &ctx, const Entry 
     }
 
     if (otherProperties.str().size() > 0) {
-        ctx.req->printf("<div class=\"sm_entry_other_properties\">\n");
+        ctx.req->printf("<div");
+        if (divStyle) ctx.req->printf(" class=\"%s\"", divStyle);
+        ctx.req->printf(">\n");
         ctx.req->printf("%s", otherProperties.str().c_str());
         ctx.req->printf("</div>\n");
     }
