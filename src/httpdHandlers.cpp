@@ -1206,24 +1206,7 @@ void httpGetListOfEntries(const RequestContext *req, const Project &p, User u)
     ctx.search = v.search;
     ctx.sort = v.sort;
 
-    // get the colspec
-    std::list<std::string> cols;
-    // the columns for entries are slightly different from those for issues
-    std::list<std::string> allCols = p.getConfig().getUserDefinedProperties();
-    allCols.push_front(K_SUMMARY);
-    allCols.push_front("_author");
-    allCols.push_front("_ctime");
-    allCols.push_front("id");
-    allCols.push_back(K_MESSAGE);
-
-    if (v.colspec.size() > 0) {
-        cols = parseColspec(v.colspec.c_str(), allCols);
-    } else {
-        // prevent having no columns, by forcing all of them
-        cols = allCols;
-    }
-
-    RHtml::printPageEntries(ctx, entries, cols);
+    RHtml::printPageEntries(ctx, entries);
 }
 
 /** Get the list of issues at the moment indicated by the snapshot

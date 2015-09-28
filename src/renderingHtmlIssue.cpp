@@ -988,31 +988,10 @@ void RHtmlIssue::printIssue(const ContextParameters &ctx, const Issue &issue, co
             ctx.req->printf("</div>\n"); // end files
         }
 
-        // print other modified properties
+
         // -------------------------------------------------
-        std::ostringstream otherProperties;
-
-        // process summary first as it is not part of orderedFields
-        std::map<std::string, std::list<std::string> >::const_iterator p;
-        bool first = true;
-        FOREACH(p, ee.properties) {
-            if (p->first == K_MESSAGE) continue;
-
-            if (!first) otherProperties << ", "; // separate properties by a comma
-            first = false;
-
-            std::string value = toString(p->second);
-            otherProperties << "<span class=\"sm_entry_pname\">" << htmlEscape(ctx.projectConfig.getLabelOfProperty(p->first))
-                            << ": </span>";
-            otherProperties << "<span class=\"sm_entry_pvalue\">" << htmlEscape(value) << "</span>";
-
-        }
-
-        if (otherProperties.str().size() > 0) {
-            ctx.req->printf("<div class=\"sm_entry_other_properties\">\n");
-            ctx.req->printf("%s", otherProperties.str().c_str());
-            ctx.req->printf("</div>\n");
-        }
+        // print other modified properties
+        printOtherProperties(ctx, ee, false);
 
         ctx.req->printf("</div>\n"); // end entry
 
@@ -1020,8 +999,53 @@ void RHtmlIssue::printIssue(const ContextParameters &ctx, const Issue &issue, co
     } // end of entries
 
     ctx.req->printf("</div>\n");
-
 }
+
+void RHtmlIssue::printOtherProperties(const ContextParameters &ctx, const Entry &ee, bool printMessageHeading)
+{
+    std::ostringstream otherProperties;
+
+    // process summary first as it is not part of orderedFields
+    PropertiesIt p;
+    bool first = true;
+    FOREACH(p, ee.properties) {
+
+        if (p->first == K_MESSAGE && !printMessageHeading) continue;
+
+        std::string value;
+
+        if (p->first == K_MESSAGE) {
+            // print first characters of the message
+            if (p->second.empty()) continue; // defensive programming, should not happen
+
+            const uint32_t maxChar = 30;
+            if (p->second.front().size() > maxChar) {
+                value = p->second.front().substr(0, maxChar) + "...";
+            } else {
+                value = p->second.front();
+            }
+        } else {
+            // normal property (other than the message)
+            value = toString(p->second);
+        }
+
+        if (!first) otherProperties << ", "; // separate properties by a comma
+        first = false;
+
+        otherProperties << "<span class=\"sm_entry_pname\">" << htmlEscape(ctx.projectConfig.getLabelOfProperty(p->first))
+                        << ": </span>";
+        otherProperties << "<span class=\"sm_entry_pvalue\">" << htmlEscape(value) << "</span>";
+
+    }
+
+    if (otherProperties.str().size() > 0) {
+        ctx.req->printf("<div class=\"sm_entry_other_properties\">\n");
+        ctx.req->printf("%s", otherProperties.str().c_str());
+        ctx.req->printf("</div>\n");
+    }
+}
+
+
 
 void RHtmlIssue::printFormMessage(const ContextParameters &ctx, const std::string &contents)
 {

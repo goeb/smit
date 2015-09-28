@@ -257,8 +257,8 @@ public:
                 if (!script.empty()) {
                     ctx.req->printf("<script type=\"text/javascript\">%s</script>\n", script.c_str());
                 }
-            } else if (varname == K_SM_DIV_ENTRIES && entries && colspec) {
-                RHtml::printEntries(ctx, *entries, *colspec);
+            } else if (varname == K_SM_DIV_ENTRIES && entries) {
+                RHtml::printEntries(ctx, *entries);
             } else {
                 // unknown variable name
                 ctx.req->printf("%s", varname.c_str());
@@ -997,16 +997,15 @@ void RHtml::printPageNewIssue(const ContextParameters &ctx)
 }
 
 void RHtml::printPageEntries(const ContextParameters &ctx,
-                             const std::vector<Entry> &entries, const std::list<std::string> &colspec)
+                             const std::vector<Entry> &entries)
 {
     VariableNavigator vn("entries.html", ctx);
     vn.entries = &entries;
-    vn.colspec = &colspec;
+    vn.script = "showPropertiesChanges();"; // because by default they are hidden
     vn.printPage();
 }
 
-void RHtml::printEntries(const ContextParameters &ctx, const std::vector<Entry> &entries,
-                         const std::list<std::string> &colspec)
+void RHtml::printEntries(const ContextParameters &ctx, const std::vector<Entry> &entries)
 {
     ctx.req->printf("<div class=\"sm_entries\">\n");
 
@@ -1019,85 +1018,57 @@ void RHtml::printEntries(const ContextParameters &ctx, const std::vector<Entry> 
     ctx.req->printf("<table class=\"sm_entries\">\n");
 
     // print header of the table
+    // Columns: issue-id | ctime | author | fields modified by entry
     ctx.req->printf("<tr class=\"sm_entries\">\n");
-    std::list<std::string>::const_iterator colname;
-    FOREACH(colname, colspec) {
 
-        std::string label = ctx.projectConfig.getLabelOfProperty(*colname);
-        ctx.req->printf("<th class=\"sm_entries\">%s\n", htmlEscape(label).c_str());
+    // id
+    std::string label = ctx.projectConfig.getLabelOfProperty("id");
+    ctx.req->printf("<th class=\"sm_entries\">%s\n", htmlEscape(label).c_str());
 
-        std::list<std::string> defaultCols = ctx.projectConfig.getUserDefinedProperties();
-        defaultCols.push_back("_author");
-        defaultCols.push_back("_ctime");
-        std::string newQueryString = getQsRemoveColumn(ctx.req->getQueryString(), *colname, defaultCols);
-        ctx.req->printf(" <a href=\"?%s\" class=\"sm_entries_delete_col\" title=\"%s\">&#10008;</a>\n",
-                        newQueryString.c_str(), _("Hide this column"));
-        ctx.req->printf("</th>\n");
-    }
+    // ctime
+    label = _("Date");
+    ctx.req->printf("<th class=\"sm_entries\">%s\n", htmlEscape(label).c_str());
+
+    // author
+    label = _("Author");
+    ctx.req->printf("<th class=\"sm_entries\">%s\n", htmlEscape(label).c_str());
+
+    // fields modified by entry
+    label = _("Modification");
+    ctx.req->printf("<th class=\"sm_entries\">%s\n", htmlEscape(label).c_str());
+
     ctx.req->printf("</tr>\n");
 
-    // print the rows of the entries
+    // print the rows (one for each entry)
     std::vector<Entry>::const_iterator e;
     FOREACH(e, entries) {
 
         ctx.req->printf("<tr class=\"sm_entries\">\n");
 
-        std::list<std::string>::const_iterator c;
-        FOREACH (c, colspec) {
-            std::ostringstream text;
-            std::string column = *c;
-            // add some decorators in some cases
-            std::string href_lhs = "";
-            std::string href_rhs = "";
+        // id of the issue (not id of the entry)
+        std::string href = MongooseServerContext::getInstance().getUrlRewritingRoot() + "/";
+        href += Project::urlNameEncode(e->issue->project) + "/issues/";
+        href += urlEncode(e->issue->id);
+        href += "?display=properties_changes#" + urlEncode(e->id);
 
-            if (column == "id") text << e->issue->id.c_str(); // id of the issue (not id of the entry)
-            else if (column == "_ctime") text << epochToStringDelta(e->ctime);
-            else if (column == "_author") text << e->author;
-            else if (column == "p" && e->issue) text << e->issue->project;
-            else {
-                PropertiesIt p;
-                const PropertiesMap & properties = e->properties;
+        ctx.req->printf("<td class=\"sm_entries\"><a href=\"%s\">%s",
+                        href.c_str(), htmlEscape(e->issue->id).c_str());
+        // print if the issue is newly created by this entry
+        if (e->issue->first && e->issue->first->id == e->id) ctx.req->printf(" (%s)", htmlEscape(_("new")).c_str());
 
-                p = properties.find(column);
-                if (p != properties.end()) {
-                    if (p->first == K_MESSAGE || p->first == K_SUMMARY) {
-                        // do not display whole message, truncate and print first characters...
-                        std::string firstChars;
-                        if (!p->second.empty()) firstChars = p->second.front();
-                        const uint32_t maxChars = 20;
-                        if (firstChars.size() > maxChars) {
-                            firstChars = firstChars.substr(0, maxChars);
-                             firstChars += "...";
-                        }
-                        text << firstChars;
+        ctx.req->printf("</a></td>\n"); // end id
 
-                    } else {
-                        text << toString(p->second);
-                    }
-                } else {
-                     text << _("(unchanged)");
-                     href_lhs = "<span class=\"sm_property_unchanged\">";
-                     href_rhs = "</span>";
-                }
-            }
-            if (column == "id" && e->issue) {
-                // add some href if column is 'id'
-                href_lhs = "<a href=\"";
-                std::string href = MongooseServerContext::getInstance().getUrlRewritingRoot() + "/";
-                href += Project::urlNameEncode(e->issue->project) + "/issues/";
-                href += urlEncode(e->issue->id);
-                href += "?display=properties_changes#" + urlEncode(e->id);
-                href_lhs = href_lhs + href;
-                href_lhs = href_lhs +  + "\">";
+        // ctime
+        ctx.req->printf("<td class=\"sm_entries\">%s</td>\n", epochToStringDelta(e->ctime).c_str());
 
-                href_rhs = "</a>";
-                // check if the entry is the creation of a new issue
-                if (e->issue->first && e->issue->first->id == e->id) text << " " << _("(new)");
-            }
+        // author
+        ctx.req->printf("<td class=\"sm_entries\">%s</td>\n", htmlEscape(e->author).c_str());
 
-            ctx.req->printf("<td class=\"sm_entries\">%s%s%s</td>\n",
-                            href_lhs.c_str(), htmlEscape(text.str()).c_str(), href_rhs.c_str());
-        }
+        // changed properties
+        ctx.req->printf("<td class=\"sm_entries\">");
+        RHtmlIssue::printOtherProperties(ctx, *e, true);
+        ctx.req->printf("</td>");
+
         ctx.req->printf("</tr>\n");
     }
     ctx.req->printf("</table>\n");

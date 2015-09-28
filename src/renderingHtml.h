@@ -67,10 +67,8 @@ public:
                                            const std::vector<Issue> &issues,
                                            const std::list<std::string> &colspec);
 
-    static void printPageEntries(const ContextParameters &ctx,
-                                 const std::vector<Entry> &entries, const std::list<std::string> &colspec);
-    static void printEntries(const ContextParameters &ctx, const std::vector<Entry> &entries,
-                             const std::list<std::string> &colspec);
+    static void printPageEntries(const ContextParameters &ctx, const std::vector<Entry> &entries);
+    static void printEntries(const ContextParameters &ctx, const std::vector<Entry> &entries);
 
 };
 
