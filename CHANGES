@@ -1,6 +1,7 @@
 v3.1.0
     - property names starting with underscore are reserved
     - improve filterout logical combination (OR everywhere)
+    - page entries: list of latest entries
     - fix duplicate file upload
     - reinforce reserved parts of projects names
     - update users' permissions after creating a new project
