@@ -1028,6 +1028,11 @@ void RHtmlIssue::printOtherProperties(const ContextParameters &ctx, const Entry 
         } else {
             // normal property (other than the message)
             value = toString(p->second);
+            // truncate if too long
+            const uint32_t maxChar = 100;
+            if (value.size() > maxChar) {
+                value = value.substr(0, maxChar) + "...";
+            }
         }
 
         if (!first) otherProperties << ", "; // separate properties by a comma

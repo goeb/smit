@@ -1033,6 +1033,10 @@ void RHtml::printEntries(const ContextParameters &ctx, const std::vector<Entry> 
     label = _("Author");
     ctx.req->printf("<th class=\"sm_entries\">%s\n", htmlEscape(label).c_str());
 
+    // summary
+    label = ctx.projectConfig.getLabelOfProperty(K_SUMMARY);
+    ctx.req->printf("<th class=\"sm_entries\">%s\n", htmlEscape(label).c_str());
+
     // fields modified by entry
     label = _("Modification");
     ctx.req->printf("<th class=\"sm_entries\">%s\n", htmlEscape(label).c_str());
@@ -1051,18 +1055,22 @@ void RHtml::printEntries(const ContextParameters &ctx, const std::vector<Entry> 
         href += urlEncode(e->issue->id);
         href += "?display=properties_changes#" + urlEncode(e->id);
 
-        ctx.req->printf("<td class=\"sm_entries\"><a href=\"%s\">%s",
-                        href.c_str(), htmlEscape(e->issue->id).c_str());
+        ctx.req->printf("<td class=\"sm_entries\"><a href=\"%s\">%s", href.c_str(), htmlEscape(e->issue->id).c_str());
         // print if the issue is newly created by this entry
-        if (e->issue->first && e->issue->first->id == e->id) ctx.req->printf(" (%s)", htmlEscape(_("new")).c_str());
+        if (e->issue->first && e->issue->first->id == e->id) ctx.req->printf("*"); // '*' to denote new issue
 
-        ctx.req->printf("</a></td>\n"); // end id
+        ctx.req->printf("</a></td>\n"); // end of issue id
 
         // ctime
         ctx.req->printf("<td class=\"sm_entries\">%s</td>\n", epochToStringDelta(e->ctime).c_str());
 
         // author
         ctx.req->printf("<td class=\"sm_entries\">%s</td>\n", htmlEscape(e->author).c_str());
+
+        // summary
+
+        ctx.req->printf("<td class=\"sm_entries\">%s</td>\n",
+                        htmlEscape(getProperty(e->properties, K_SUMMARY)).c_str());
 
         // changed properties
         ctx.req->printf("<td class=\"sm_entries\">");
