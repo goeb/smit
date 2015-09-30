@@ -1047,6 +1047,11 @@ void RHtml::printEntries(const ContextParameters &ctx, const std::vector<Entry> 
     std::vector<Entry>::const_iterator e;
     FOREACH(e, entries) {
 
+        if (!e->issue) {
+            LOG_ERROR("null issue for entry %s", e->id.c_str());
+            continue;
+        }
+
         ctx.req->printf("<tr class=\"sm_entries\">\n");
 
         // id of the issue (not id of the entry)
@@ -1068,9 +1073,8 @@ void RHtml::printEntries(const ContextParameters &ctx, const std::vector<Entry> 
         ctx.req->printf("<td class=\"sm_entries\">%s</td>\n", htmlEscape(e->author).c_str());
 
         // summary
-
-        ctx.req->printf("<td class=\"sm_entries\">%s</td>\n",
-                        htmlEscape(getProperty(e->properties, K_SUMMARY)).c_str());
+        ctx.req->printf("<td class=\"sm_entries\"><a href=\"%s\">%s</a></td>\n",
+                        href.c_str(), htmlEscape(e->issue->getSummary()).c_str());
 
         // changed properties
         ctx.req->printf("<td class=\"sm_entries\">");
