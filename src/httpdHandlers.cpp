@@ -226,6 +226,48 @@ void handleMessagePreview(const RequestContext *request)
     request->printf("%s", message.c_str());
 }
 
+int httpPostSm(const RequestContext *req, const std::string &resource)
+{
+    LOG_INFO("httpPostSm: %s", resource.c_str());
+
+    const char *multipart = "multipart/form-data";
+
+    const char *contentType = getContentType(req);
+    if (0 == strncmp(multipart, contentType, strlen(multipart))) {
+
+        // extract the boundary
+        const char *b = "boundary=";
+        const char *p = mg_strcasestr(contentType, b);
+        if (!p) {
+            LOG_ERROR("Missing boundary in multipart form data");
+            return sendHttpHeader400(req, "missing boundary");
+        }
+        p += strlen(b);
+        std::string boundary = p;
+        LOG_INFO("Boundary: %s", boundary.c_str());
+
+        std::string postData;
+        int rc = readMgreq(req, postData, MAX_SIZE_UPLOAD);
+        if (rc < 0) {
+            sendHttpHeader413(req, "You tried to upload too much data. Max is 10 MB.");
+            return REQUEST_COMPLETED;
+        }
+
+        LOG_INFO("data=%s", postData.c_str());
+        sendHttpHeader200(req);
+        req->printf("Content-Type: text/plain\r\n\r\n");
+        req->printf("xxxxxx");
+
+
+    } else {
+        // other Content-Type
+        LOG_ERROR("Content-Type '%s' not supported", contentType);
+        return sendHttpHeader400(req, "Bad Content-Type");
+    }
+
+    return REQUEST_COMPLETED;
+}
+
 /** Get a SM embedded file
   *
   * Embbeded files: smit.js, etc.
@@ -2115,7 +2157,8 @@ int begin_request_handler(const RequestContext *req)
     if    ( (resource == "public") && (method == "GET")) return httpGetFile(req);
     else if (resource == "public") return sendHttpHeader400(req, "invalid method");
 
-    if    ( (resource == "sm") && (method == "GET") ) return httpGetSm(req, uri);
+    if      ( (resource == "sm") && (method == "GET") ) return httpGetSm(req, uri);
+    else if ( (resource == "sm") && (method == "POST") ) return httpPostSm(req, uri);
     else if (resource == "sm") return sendHttpHeader400(req, "invalid method");
 
     if    ( (resource == "signin") && (method == "POST") ) return httpPostSignin(req);

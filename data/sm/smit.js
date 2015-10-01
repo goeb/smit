@@ -13,12 +13,72 @@ function ajaxSend(url, method) {
     if (status == 200) return ['ok', request.responseText];
     else return ['error', request.responseText];
 }
-function previewMessage() {
+function getPreview2() {
+
+    // create an iframe that will receive the submitted form
+    var iframe = document.createElement("iframe");
+    iframe.name = "myTarget";
+    iframe.id = "myiframe";
+    iframe.style.display = "none";
+    iframe.onload = "displayPreview(this.innerHTML);";
+    document.body.appendChild(iframe);
+  iframe.addEventListener("load", function () {
+    alert("Yeah! Data sent: this="+this);
+    console.log("iframe : "+this);
+        displayPreviewFromIframe();
+  });
+
+    var form = document.createElement('form');
+    form.action = '/sm/preview'; // TODO fix the URL prefix
+    form.method = 'POST'; // TODO use GET?
+    form.target = iframe.name; // so that it does not reload main page
+    form.enctype = "multipart/form-data";
+
+    var msg = document.getElementsByName('+message')[0];
+
+    var aninput = msg.cloneNode(true);
+    //var aninput = document.createElement('textarea');
+    //aninput.type = 'hidden';
+    //aninput.name = '+message';
+    aninput.value = msg.value;
+    //aninput.wrap = msg.wrap;
+    //aninput.wrap = 'hard';
+    //console.log("msg.wrap="+msg.wrap);
+    form.appendChild(aninput);
+
+    //form.style.display = "none";
+    document.body.appendChild(form);
+    form.submit();
+
+
+    // TODO get the contents of the iframe
+
+    // delete the iframe NOT HERE
+    //document.body.removeChild(iframe);
+    // delete the form
+    document.body.removeChild(form);
+}
+function displayPreviewFromIframe(iframe) {
+    var iframe = document.getElementById('myiframe');
+    console.log("iframe contents: "+iframe.innerHTML);
+    displayPreview(iframe.innerHTML);    
+}
+function displayPreview(html) {
     var divPreview = document.getElementById('sm_entry_preview');
     if (!divPreview) {
-        alert('Preview not available');
+        console.error('Preview not available');
         return;
     }
+    divPreview.innerHTML = html;
+}
+function previewMessage() {
+
+    {
+        var html = getPreview2();
+        displayPreview(html);
+        return;
+    }
+
     var msg = document.getElementsByName('+message')[0];
     var value = msg.value;
     // url-encode value TODO
@@ -26,7 +86,7 @@ function previewMessage() {
     var request = new XMLHttpRequest();
     request.open('GET', url, false); // synchronous
     request.send(null);
-    divPreview.innerHTML = request.responseText;
+    displayPreview(request.responseText);
 }
 
 function sm_deleteResource(redirect) {
