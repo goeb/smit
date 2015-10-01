@@ -24,6 +24,49 @@ std::string Object::getSubdir(const std::string &id) {
     }
 }
 
+std::string Object::getNextObject(ObjectIteraror &objectIt)
+{
+    if (!objectIt.root) {
+        // open the root dir
+        objectIt.root = openDir(objectIt.path);
+        if (!objectIt.root) {
+            LOG_ERROR("Cannot open objects dir '%s': %s", objectIt.path.c_str(), strerror(errno));
+            return "";
+        }
+    }
+
+    // TODO encapsulate this in Project, and check if mutex read-only necessary
+
+    // iterate until a file found, or end of directories reached
+    while (1) {
+        if (!objectIt.subdir) {
+            objectIt.subdirname = getNextFile(objectIt.root);
+            if (objectIt.subdirname.empty()) {
+                // no more subdir
+                closeDir(objectIt.root);
+                return "";
+            }
+
+            std::string subdirpath = objectIt.path + "/" + objectIt.subdirname;
+            objectIt.subdir = openDir(subdirpath);
+            if (!objectIt.subdir) {
+                LOG_ERROR("Cannot open objects subdir '%s': %s", subdirpath.c_str(), strerror(errno));
+                closeDir(objectIt.root);
+                return "";
+            }
+        }
+
+        std::string o = getNextFile(objectIt.subdir);
+
+        if (o.size()) return objectIt.subdirname + o; // got it!
+
+        // end of files ion subdirs, take next subdir
+        closeDir(objectIt.subdir);
+        objectIt.subdir = 0;
+    }
+}
+
+
 /** Write an object into a database
   *
   * @param[out] id

@@ -1377,6 +1377,26 @@ void httpGetView(const RequestContext *req, Project &p, const std::string &view,
     }
 }
 
+/** Get the list of objects of a project
+  *
+  * Send the list of objects ids, separated by \n
+  */
+void httpGetObjects(const RequestContext *req, Project &p)
+{
+    sendHttpHeader200(req);
+    req->printf("Content-Type: text/plain\r\n\r\n");
+
+    std::string objectsPath = p.getObjectsDir();
+
+    ObjectIteraror oit(objectsPath);
+    std::string filename = Object::getNextObject(oit);
+    while (filename.size()) {
+        req->printf("%s\n", filename.c_str());
+        filename = Object::getNextObject(oit);
+    }
+
+}
+
 /** Get an object
   *
   * Read access is supposed to have already been granted.
@@ -1388,6 +1408,8 @@ void httpGetView(const RequestContext *req, Project &p, const std::string &view,
   */
 void httpGetObject(const RequestContext *req, Project &p, std::string object)
 {
+    if (object.empty()) return httpGetObjects(req, p);
+
     std::string id = popToken(object, '/');
     std::string basemane = object;
     std::string realpath = p.getObjectsDir() + "/" + Object::getSubpath(id);
