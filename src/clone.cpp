@@ -434,9 +434,10 @@ int getEntriesOfRemoteIssue(const PullContext &pullCtx, const Project &p, const 
 
 /** Clone a remote issue
   *
-  * Download all entries of the remote that do not exist locally.
+  * This makes the assumption that all remote entries have previously
+  * been downloaded.
   */
-Issue *cloneIssue(const PullContext &pullCtx, Project &p, const std::string &issueId)
+Issue *loadRemoteIssue(const PullContext &pullCtx, Project &p, const std::string &issueId)
 {
     LOG_DEBUG("Cloning %s/issues/%s", p.getName().c_str(), issueId.c_str());
 
@@ -496,7 +497,7 @@ int pullIssue(const PullContext &pullCtx, Project &p, const std::string &remoteI
     LOG_DEBUG("Pulling %s/issues/%s", p.getName().c_str(), remoteIssueId.c_str());
 
     // download the remote issue
-    Issue *remoteIssue = cloneIssue(pullCtx, p, remoteIssueId);
+    Issue *remoteIssue = loadRemoteIssue(pullCtx, p, remoteIssueId);
     if (!remoteIssue) return -1;
 
     // Get the related local issue. 3 possible cases:
