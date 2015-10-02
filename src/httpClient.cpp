@@ -51,7 +51,46 @@ void HttpRequest::getFileStdout()
 
 }
 
-/** Dowload a file
+/** Download a file into local memory (helper function)
+  *
+  * @param[out] data
+  *
+  * @return
+  *     0, regular file downloaded successfully
+  *     1, directory listing downloaded successfully
+  *    <0, error, file not downloaded
+  */
+int HttpRequest::downloadInMemory(const HttpClientContext &ctx,
+                                  const std::string &url, std::string &data)
+{
+    HttpRequest hr(ctx);
+    hr.setUrl(url);
+    int r = hr.downloadInMemory(data);
+    if (r >= 0) return r;
+    else return -hr.httpStatusCode;
+}
+
+/** Download a file into local memory
+  *
+  * @return
+  *     0, success
+  *    -1, error
+  */
+int HttpRequest::downloadInMemory(std::string &data)
+{
+    curl_easy_setopt(curlHandle, CURLOPT_WRITEDATA, (void *)this);
+    curl_easy_setopt(curlHandle, CURLOPT_WRITEFUNCTION, downloadInMemoryCallback);
+    buffer = &data;
+
+    performRequest();
+
+    if (httpStatusCode == 200) return 0;
+
+    return -1;
+}
+
+
+/** Download a file
   *
   * @return
   *     0, regular file downloaded successfully
@@ -68,7 +107,7 @@ int HttpRequest::downloadFile(const HttpClientContext &ctx,
     else return -hr.httpStatusCode;
 }
 
-/** Dowload a file
+/** Download a file
   *
   * @return
   *     0, regular file downloaded successfully
@@ -392,6 +431,14 @@ size_t HttpRequest::downloadCallback(void *contents, size_t size, size_t nmemb, 
     return realsize;
 }
 
+size_t HttpRequest::downloadInMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp)
+{
+    HttpRequest *hr = (HttpRequest*)userp;
+    size_t realsize = size * nmemb;
+    hr->handleDownloadInMemory(contents, realsize);
+    return realsize;
+}
+
 
 void HttpRequest::handleReceivedRaw(void *data, size_t size)
 {
@@ -460,6 +507,14 @@ void HttpRequest::handleDownload(void *data, size_t size)
     } // else the size is zero, an empty file has been created
 }
 
+void HttpRequest::handleDownloadInMemory(void *data, size_t size)
+{
+    // if error, then do not store anything in the file
+    if (httpStatusCode != 200) return;
+
+    if (buffer) buffer->append((char*)data, size);
+}
+
 /** Ignore the response
   * (do not save it into a file, as the default lib curl behaviour)
   */
@@ -509,6 +564,7 @@ HttpRequest::HttpRequest(const HttpClientContext &ctx)
     isDirectory = false;
     fd = 0;
     httpStatusCode = -1; // not set
+    buffer = 0;
     curlHandle = curl_easy_init();
     curl_easy_setopt(curlHandle, CURLOPT_USERAGENT, "smit-agent/1.0");
     curl_easy_setopt(curlHandle, CURLOPT_HEADERFUNCTION, headerCallback);

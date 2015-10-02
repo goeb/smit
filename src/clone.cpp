@@ -131,8 +131,49 @@ int testSessid(const std::string url, const HttpClientContext &ctx)
 
 }
 
+int pullObjects(const PullContext &ctx, const Project &p)
+{
+    std::string urlFiles = ctx.rooturl + "/" + p.getUrlName() + "/" RESOURCE_FILES;
 
-/** Recursively pull files
+    // get the list of all remote objects
+    std::string objectsList;
+    int r = HttpRequest::downloadInMemory(ctx.httpCtx, urlFiles, objectsList);
+    if (r < 0) {
+        LOG_ERROR("Could not download %s: r=%d", urlFiles.c_str(), r);
+        return -1;
+    }
+
+    // iterate over the list of all objects and download those that are not in local
+
+    int count = 0;
+    std::istringstream objectsStream(objectsList);
+    std::string objectId;
+    while (getline(objectsStream, objectId)) {
+        trim(objectId);
+        if (objectId.empty()) continue; // should not happen though
+
+        std::string destLocal = p.getObjectsDir() + "/" + Object::getSubpath(objectId);
+        if (fileExists(destLocal)) continue; // already in local repo
+
+        // download
+
+        count++;
+        LOG_CLI("\r%s: pulling files: %d", p.getName().c_str(), count);
+
+        std::string url = urlFiles + "/" + objectId;
+        int r = HttpRequest::downloadFile(ctx.httpCtx, url, destLocal);
+        if (r != 0) {
+            LOG_ERROR("Could not download %s: r=%d", url.c_str(), r);
+            return -1;
+        }
+    }
+
+    if (count > 0) LOG_CLI("\n");
+
+    return 0;
+}
+
+/** Recursively clone files
   *
   * Files that already exist locally are not pulled.
   *
@@ -140,13 +181,13 @@ int testSessid(const std::string url, const HttpClientContext &ctx)
   *     0 success
   *    -1 an error occurred and the recursive pulling aborted
   */
-int pullFiles(const PullContext &ctx, const std::string &srcResource,
-              const std::string &destLocal, int &counter)
+int cloneFiles(const PullContext &ctx, const std::string &srcResource,
+               const std::string &destLocal, int &counter)
 {
     // Download the resource locally in a temporary location
     // and determine if it is a directory or a regular file
 
-    LOG_DIAG("pullFiles %s", srcResource.c_str());
+    LOG_DIAG("cloneFiles %s", srcResource.c_str());
 
     if (fileExists(destLocal) && !isDir(destLocal)) {
         // File already there. Skip this download.
@@ -197,7 +238,7 @@ int pullFiles(const PullContext &ctx, const std::string &srcResource,
             std::string urlFilename = urlEncode(filename);
             std::string rsrc = srcResource + "/" + urlFilename;
             std::string dlocal = destLocal + "/" + filename;
-            r = pullFiles(ctx, rsrc, dlocal, counter);
+            r = cloneFiles(ctx, rsrc, dlocal, counter);
             if (r != 0) {
                 LOG_ERROR("Abort pulling.");
                 return r;
@@ -231,7 +272,7 @@ int getProjects(const std::string &rooturl, const std::string &destdir, const Ht
     cloneCtx.mergeStrategy = MERGE_KEEP_LOCAL; // not used here (brut cloning)
     int counter = 0;
     LOG_CLI("Cloning All Projects...\n");
-    int r = pullFiles(cloneCtx, "/", destdir, counter);
+    int r = cloneFiles(cloneCtx, "/", destdir, counter);
     LOG_CLI("\n");
 
     return r;
@@ -679,17 +720,13 @@ int pullProjectConfig(const PullContext &ctx, Project &p)
 
 int pullProject(const PullContext &pullCtx, Project &p)
 {
-    LOG_CLI("Pulling project: %s\n", p.getName().c_str());
+    LOG_CLI("%s: pulling...\n", p.getName().c_str());
 
-    // TODO: move the pullFiles after the pulling of remote issues
+    // TODO: move the pullObjects after the pulling of remote issues
     // as it may happen that a remote file is created between the
-    // moment of the pullFiles and the moment of the download of RESOURCE_ISSUES
-
+    // moment of the pullObjects and the moment of the download of RESOURCE_ISSUES
     LOG_DEBUG("Pulling objects of %s", p.getName().c_str());
-    std::string resource = p.getUrlName() + "/" RESOURCE_OBJECTS;
-    int counter = 0;
-    int r = pullFiles(pullCtx, resource, p.getObjectsDir(), counter);
-    if (counter > 0) LOG_CLI("\n");
+    int r = pullObjects(pullCtx, p);
     if (r < 0) return r;
 
     // get the remote issues
@@ -758,7 +795,7 @@ int pullProjects(const PullContext &pullCtx)
             std::string destLocal = pullCtx.localRepo + "/" + *projectName;
             LOG_CLI("Pulling new project: %s\n", projectName->c_str());
             int counter = 0;
-            int r = pullFiles(pullCtx, resource, destLocal, counter);
+            int r = cloneFiles(pullCtx, resource, destLocal, counter);
             if (counter > 0) LOG_CLI("\n");
             if (r < 0) return r;
         } else {

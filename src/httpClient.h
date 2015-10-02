@@ -43,6 +43,10 @@ public:
     std::map<std::string, Cookie> cookies;
     std::list<std::string> lines; // fulfilled after calling getRequestLines()
     void getFileStdout();
+
+    static int downloadInMemory(const HttpClientContext &ctx, const std::string &url, std::string &data);
+    int downloadInMemory(std::string &data);
+
     static int downloadFile(const HttpClientContext &ctx,
                             const std::string &url, const std::string &localPath);
     int downloadFile(const std::string &localPath);
@@ -50,6 +54,7 @@ public:
     int test();
     void handleReceiveFileOrDirectory(void *data, size_t size);
     void handleDownload(void *data, size_t size);
+    void handleDownloadInMemory(void *data, size_t size);
     void openFile();
     void closeFile();
     /** In order to download files, the caller must set either set
@@ -64,6 +69,7 @@ public:
 
     static size_t receiveLinesCallback(void *contents, size_t size, size_t nmemb, void *userp);
     static size_t downloadCallback(void *contents, size_t size, size_t nmemb, void *userp);
+    static size_t downloadInMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp);
     static size_t writeToFileOrDirCallback(void *contents, size_t size, size_t nmemb, void *userp);
     static size_t getStdoutCallback(void *contents, size_t size, size_t nmemb, void *userp);
     static size_t headerCallback(void *contents, size_t size, size_t nmemb, void *userp);
@@ -80,11 +86,12 @@ private:
     std::string currentLine;
     CURL *curlHandle;
     struct curl_slist *headerList;
-    std::string filename; // name of the file for storing the download data
+    std::string filename; // name of the file for storing the downloaded data
     FILE *fd; // file descriptor of the file
     bool isDirectory;
     std::string repository; // base path for storage of files
     std::string downloadDir; // alternative to repository for storage
+    std::string *buffer; // buffer for in-memory download
 };
 
 
