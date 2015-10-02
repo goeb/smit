@@ -1133,14 +1133,17 @@ void httpCloneIssues(const RequestContext *req, const Project &p)
     const std::map<std::string, std::list<std::string> > filterOut;
 
     sendHttpHeader200(req);
-    req->printf("Content-Type: text/directory\r\n\r\n");
+    req->printf("Content-Type: text/plain\r\n\r\n");
 
     // get all the issues, sorted by id
     std::vector<Issue> issues;
     p.search(0, filterIn, filterOut, "id", issues);
     std::vector<Issue>::const_iterator i;
     FOREACH(i, issues) {
-        req->printf("%s\n", i->id.c_str());
+        if (!i->first) continue;
+        if (!i->latest) continue;
+        req->printf("%s %s %s\n", i->id.c_str(),
+                    i->first->id.c_str(), i->latest->id.c_str());
     }
 }
 

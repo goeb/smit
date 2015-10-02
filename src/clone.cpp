@@ -434,35 +434,16 @@ int getEntriesOfRemoteIssue(const PullContext &pullCtx, const Project &p, const 
 
 /** Clone a remote issue
   *
-  * This makes the assumption that all remote entries have previously
-  * been downloaded.
+  * This makes the assumption that all remote entries have been
+  * previously downloaded.
   */
-Issue *loadRemoteIssue(const PullContext &pullCtx, Project &p, const std::string &issueId)
+Issue *loadRemoteIssue(const PullContext &pullCtx, Project &p, const std::string &issueId, const std::string &latestEntry)
 {
-    LOG_DEBUG("Cloning %s/issues/%s", p.getName().c_str(), issueId.c_str());
+    LOG_DEBUG("loadRemoteIssue of %s: %s", p.getName().c_str(), issueId.c_str());
 
-    // Get the ref the remote issue (its latest entry)
-    std::string localTmp = p.getTmpDir() + "/download";
-    std::string url = pullCtx.rooturl + "/" + p.getUrlName() + "/" RSRC_REF_ISSUES "/" + issueId;
-    int r = HttpRequest::downloadFile(pullCtx.httpCtx, url, localTmp);
-    if (r != 0) {
-        LOG_ERROR("Cannot dowload '%s': r=%d", url.c_str(), r);
-        return 0;
-    }
-
-    std::string latest;
-    r = loadFile(localTmp.c_str(), latest);
-    if (r != 0) {
-        LOG_ERROR("Cannot read file '%s': %s", localTmp.c_str(), strerror((errno)));
-        return 0;
-    }
-    unlink(localTmp.c_str());
-
-    trim(latest);
-
-    Issue *remoteIssue = Issue::load(p.getObjectsDir(), latest);
+    Issue *remoteIssue = Issue::load(p.getObjectsDir(), latestEntry);
     if (!remoteIssue) {
-        fprintf(stderr, "Cannot load remote issue from latest %s\n", latest.c_str());
+        fprintf(stderr, "Cannot load remote issue from latest %s\n", latestEntry.c_str());
         exit(1);
     }
     // set the id of the remote, as it is not fulfilled by "load()"
@@ -490,14 +471,16 @@ void renameIssueStandingInTheWay(Project &p, const std::string &issueId)
 
 /** Pull an issue
   *
+  * This is not really a "pull" as no download occurs here.
+  * All must have been downloaded previously.
   */
-int pullIssue(const PullContext &pullCtx, Project &p, const std::string &remoteIssueId)
+int pullIssue(const PullContext &pullCtx, Project &p, const std::string &remoteIssueId, const std::string &latestEntry)
 {
     LOG_FUNC();
     LOG_DEBUG("Pulling %s/issues/%s", p.getName().c_str(), remoteIssueId.c_str());
 
     // download the remote issue
-    Issue *remoteIssue = loadRemoteIssue(pullCtx, p, remoteIssueId);
+    Issue *remoteIssue = loadRemoteIssue(pullCtx, p, remoteIssueId, latestEntry);
     if (!remoteIssue) return -1;
 
     // Get the related local issue. 3 possible cases:
@@ -698,6 +681,10 @@ int pullProject(const PullContext &pullCtx, Project &p)
 {
     LOG_CLI("Pulling project: %s\n", p.getName().c_str());
 
+    // TODO: move the pullFiles after the pulling of remote issues
+    // as it may happen that a remote file is created between the
+    // moment of the pullFiles and the moment of the download of RESOURCE_ISSUES
+
     LOG_DEBUG("Pulling objects of %s", p.getName().c_str());
     std::string resource = p.getUrlName() + "/" RESOURCE_OBJECTS;
     int counter = 0;
@@ -714,10 +701,13 @@ int pullProject(const PullContext &pullCtx, Project &p)
 
     std::list<std::string>::iterator issueIt;
     FOREACH(issueIt, hr.lines) {
-        std::string remoteIssueId = *issueIt;
+        // each line is: <issue-id> <first-entry-id> <latest-entry-id>
+        std::string remoteIssueId = popToken(*issueIt, ' ');
         if (remoteIssueId.empty()) continue;
+        std::string firstEntry = popToken(*issueIt, ' ');
+        std::string latestEntry = *issueIt;
 
-        pullIssue(pullCtx, p, remoteIssueId);
+        pullIssue(pullCtx, p, remoteIssueId, latestEntry);
     }
 
     // pull project configuration
