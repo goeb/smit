@@ -720,7 +720,7 @@ int pullProjectConfig(const PullContext &ctx, Project &p)
 
 int pullProject(const PullContext &pullCtx, Project &p)
 {
-    LOG_CLI("%s: pulling...\n", p.getName().c_str());
+    LOG_CLI("Pulling project: %s\n", p.getName().c_str());
 
     // TODO: move the pullObjects after the pulling of remote issues
     // as it may happen that a remote file is created between the
