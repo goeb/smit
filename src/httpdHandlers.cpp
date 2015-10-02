@@ -1386,15 +1386,12 @@ void httpGetObjects(const RequestContext *req, Project &p)
     sendHttpHeader200(req);
     req->printf("Content-Type: text/plain\r\n\r\n");
 
-    std::string objectsPath = p.getObjectsDir();
-
-    ObjectIteraror oit(objectsPath);
-    std::string filename = Object::getNextObject(oit);
-    while (filename.size()) {
-        req->printf("%s\n", filename.c_str());
-        filename = Object::getNextObject(oit);
+    std::list<std::string> objects;
+    std::list<std::string>::iterator o;
+    p.getObjects(objects);
+    FOREACH(o, objects) {
+        req->printf("%s\n", o->c_str());
     }
-
 }
 
 /** Get an object

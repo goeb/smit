@@ -682,6 +682,21 @@ int Project::reload()
     return r;
 }
 
+/** Get the list of all objects of the project
+  *
+  */
+void Project::getObjects(std::list<std::string> &objects) const
+{
+    ScopeLocker L1(locker, LOCK_READ_ONLY);
+
+    ObjectIteraror oit(getObjectsDir());
+    std::string objectId;
+    while ( (objectId = Object::getNextObject(oit)) != "") {
+        objects.push_back(objectId);
+    }
+}
+
+
 /** Insert a file in the directory of attached files
   *
   * @param basename

@@ -24,6 +24,11 @@ std::string Object::getSubdir(const std::string &id) {
     }
 }
 
+/** Get the next object in the objects database
+  *
+  * All directory descriptors will be closed
+  * after all the objects have been iterated through.
+  */
 std::string Object::getNextObject(ObjectIteraror &objectIt)
 {
     if (!objectIt.root) {
@@ -34,8 +39,6 @@ std::string Object::getNextObject(ObjectIteraror &objectIt)
             return "";
         }
     }
-
-    // TODO encapsulate this in Project, and check if mutex read-only necessary
 
     // iterate until a file found, or end of directories reached
     while (1) {
@@ -58,9 +61,13 @@ std::string Object::getNextObject(ObjectIteraror &objectIt)
 
         std::string o = getNextFile(objectIt.subdir);
 
-        if (o.size()) return objectIt.subdirname + o; // got it!
+        if (o.size()) {
+            // got the next object
+            // do not close directories yet, wait the end for that
+            return objectIt.subdirname + o;
+        }
 
-        // end of files ion subdirs, take next subdir
+        // end of files in subdirs, take next subdir
         closeDir(objectIt.subdir);
         objectIt.subdir = 0;
     }

@@ -82,6 +82,7 @@ public:
     // methods for database access
     inline std::string getObjectsDir() const { return path + '/' + PATH_OBJECTS; }
     inline std::string getIssuesDir() const { return path + '/' + PATH_ISSUES; }
+    void getObjects(std::list<std::string> &objects) const;
 
     // methods for handling attached files
     int addFile(const std::string &objectId);
