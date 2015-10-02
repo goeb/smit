@@ -98,13 +98,15 @@
                 datasets = [];
                 //console.log("datasetsTitles=" + JSON.stringify(datasetsTitles));
                 var colors = [ "#aa0", "#d00", "#b8a8d8", "#436", "#0d5", "#d79", "#a4c", "#5a6", "#356", "#333" ];
+                datasetsTitles.sort();
                 for (var title in datasetsTitles) {
                     var label = datasetsTitles[title];
                     if (label == '') label = "(empty)";
                     // build data
                     var data = [];
-                    for (var sample in samples) {
-                        var value = samples[sample][label];
+                    timestamps = Object.keys(samples).sort();
+                    for (var i = 0; i < timestamps.length; i++) {
+                        var value = samples[timestamps[i]][label];
                         if (value == undefined) value = 0;
                         data.push(value);
                     }
@@ -124,7 +126,7 @@
                 var labels = [];
                 for (m in xArray) {
                     var d = new Date(xArray[m]*1000);
-                    var dateStr = "" + d.getFullYear() + "-" + (1+d.getMonth()) + "-" + d.getDate();
+                    dateStr = d.toISOString().substr(0, 10);
                     labels.push(dateStr);
                 }
                 var ctx = document.getElementById("myChart").getContext("2d");
