@@ -1,4 +1,4 @@
-v3.1.0
+v3.2.0
     - property names starting with underscore are reserved
     - improve filterout logical combination (OR everywhere)
     - page entries: list of latest entries
@@ -7,6 +7,10 @@ v3.1.0
     - update users' permissions after creating a new project
     - fix script for migrating v2 to v3
 
+The hard-coded version in smit v3.0.1 was: "v3.1.0".
+In order to prevent confusion, the version after v3.0.1
+is named "v3.2.0".
+
 v3.0.1
     - smit clone: clone permissions of user
     - smit clone/push/pull: some fixes
@@ -14,6 +18,7 @@ v3.0.1
     - page statistics
     - smit push --dry-run
     - fix delete user with client IE9
+
 
 v3.0.0
     - Suggested values for search filters (filters in/out)
