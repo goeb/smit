@@ -1,4 +1,5 @@
 v3.2.0
+    - one-click filter-out of a group
     - property names starting with underscore are reserved
     - improve filterout logical combination (OR everywhere)
     - page entries: list of latest entries
