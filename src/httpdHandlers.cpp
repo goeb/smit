@@ -1190,7 +1190,10 @@ void httpSendIssueList(const RequestContext *req, const Project &p,
         }
     }
 }
-
+/** Get a list of entries
+  *
+  * Query-String: ?sort=-ctime&limit=20
+  */
 void httpGetListOfEntries(const RequestContext *req, const Project &p, User u)
 {
     std::string q = req->getQueryString();

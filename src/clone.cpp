@@ -173,7 +173,7 @@ int pullObjects(const PullContext &ctx, const Project &p)
     return 0;
 }
 
-/** Recursively clone files
+/** Recursively clone files and directories
   *
   * Files that already exist locally are not pulled.
   *
@@ -634,7 +634,7 @@ int pullProjectViews(const PullContext &ctx, Project &p)
     std::string url = ctx.rooturl + "/" + p.getUrlName() + "/" + RSRC_REF_VIEWS;
     int r = HttpRequest::downloadFile(ctx.httpCtx, url, localTmp);
     if (r != 0) {
-        LOG_ERROR("Cannot dowload project config: r=%d", r);
+        LOG_ERROR("Cannot download project config: r=%d", r);
         return -1;
     }
 
@@ -680,7 +680,7 @@ int pullProjectConfig(const PullContext &ctx, Project &p)
     std::string url = ctx.rooturl + "/" + p.getUrlName() + "/" + RSRC_PROJECT_CONFIG;
     int r = HttpRequest::downloadFile(ctx.httpCtx, url, localTmp);
     if (r != 0) {
-        LOG_ERROR("Cannot dowload project config: r=%d", r);
+        LOG_ERROR("Cannot download project config: r=%d", r);
         return -1;
     }
 
