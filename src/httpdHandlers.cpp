@@ -1207,9 +1207,9 @@ void httpGetListOfEntries(const RequestContext *req, const Project &p, User u)
     // Only HTML supported at the moment
 
     ContextParameters ctx = ContextParameters(req, u, p);
-    ctx.filterin = v.filterin;
-    ctx.filterout = v.filterout;
-    ctx.search = v.search;
+    //ctx.filterin = v.filterin; not available for entries
+    //ctx.filterout = v.filterout; not available for entries
+    //ctx.search = v.search; not available for entries
     ctx.sort = v.sort;
 
     RHtml::printPageEntries(ctx, entries);

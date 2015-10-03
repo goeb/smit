@@ -662,7 +662,7 @@ void RHtml::printNavigationIssues(const ContextParameters &ctx, bool autofocus)
         HtmlNode a("a");
         a.addAttribute("href", "/%s/issues/new", ctx.getProject().getUrlName().c_str());
         a.addAttribute("class", "sm_link_new_issue");
-        a.addContents("%s", _("Create new issue"));
+        a.addContents("%s", _("New issue"));
         div.addContents(a);
     }
 
