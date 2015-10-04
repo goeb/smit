@@ -1,8 +1,9 @@
 v3.2.0
     - one-click filter-out of a group
+    - new filterout logical combination (OR everywhere)
     - property names starting with underscore are reserved
-    - improve filterout logical combination (OR everywhere)
     - page entries: list of latest entries
+    - accelerated pulling: v3.2.0 not compatible with v3.0.1
     - fix duplicate file upload
     - reinforce reserved parts of projects names
     - update users' permissions after creating a new project
