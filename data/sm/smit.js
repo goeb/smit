@@ -13,6 +13,27 @@ function ajaxSend(url, method) {
     if (status == 200) return ['ok', request.responseText];
     else return ['error', request.responseText];
 }
+function getPreview3() {
+    console.log("getPreview3");
+    var form = document.getElementById('sm_issue_form');
+    var form2 = form.cloneNode(true);
+    console.log("form2="+form2);
+    var n = form2.elements.length;
+    console.log("form2.elements.length="+n);
+    for (var i=0; i<n; i++) {
+        console.log("form2.elements[i].name=", form2.elements[i].name);
+        if (form2.elements[i].name != "+message") {
+            // remove the element
+            //delete form2.elements[i];
+            //i--;
+        }
+    }
+    console.log("form2.elements.length="+form2.elements.length);
+
+    form2.action = '/sm/preview';
+    document.body.appendChild(form2);
+    form2.submit();
+}
 function getPreview2() {
 
     // create an iframe that will receive the submitted form
@@ -74,7 +95,7 @@ function displayPreview(html) {
 function previewMessage() {
 
     {
-        var html = getPreview2();
+        var html = getPreview3();
         displayPreview(html);
         return;
     }

@@ -1123,7 +1123,7 @@ void RHtmlIssue::printIssueForm(const ContextParameters &ctx, const Issue *issue
 
     const ProjectConfig &pconfig = ctx.projectConfig;
 
-    ctx.req->printf("<form enctype=\"multipart/form-data\" method=\"post\"  class=\"sm_issue_form\">");
+    ctx.req->printf("<form id=\"sm_issue_form\" enctype=\"multipart/form-data\" method=\"post\"  class=\"sm_issue_form\">");
 
     // The form is made over a table with 4 columns.
     // each row is made of 1 label, 1 input, 1 label, 1 input (4 columns)
