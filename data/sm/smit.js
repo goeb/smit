@@ -13,6 +13,25 @@ function ajaxSend(url, method) {
     if (status == 200) return ['ok', request.responseText];
     else return ['error', request.responseText];
 }
+function getPreview4() {
+    console.log("getPreview4");
+    var form = document.getElementById('sm_issue_form');
+    form.action = '/sm/preview';
+
+    // create an iframe that will receive the submitted form
+    var iframe = document.createElement("iframe");
+    iframe.name = "myTarget";
+    iframe.id = "myiframe";
+    iframe.style.display = "none";
+    document.body.appendChild(iframe);
+    iframe.addEventListener("load", function () {
+        alert("Yeah! Data sent: this="+this);
+        console.log("iframe : textContent="+iframe.contentWindow.document.body.textContent);
+        displayPreview(iframe.contentWindow.document.body.textContent);
+    });
+    form.target = iframe.name;
+    form.submit();
+}
 function getPreview3() {
     console.log("getPreview3");
     var form = document.getElementById('sm_issue_form');
@@ -21,16 +40,28 @@ function getPreview3() {
     var n = form2.elements.length;
     console.log("form2.elements.length="+n);
     for (var i=0; i<n; i++) {
-        console.log("form2.elements[i].name=", form2.elements[i].name);
+        //console.log("form2.elements[i].name=", form2.elements[i].name);
+        //console.log("form2.elements[i].value=", form2.elements[i].value);
         if (form2.elements[i].name != "+message") {
             // remove the element
             //delete form2.elements[i];
             //i--;
         }
     }
+
+    var msg = document.getElementsByName('+message')[0];
+
+    console.log("msg.text=", msg.text);
+    console.log("msg.value=", msg.value);
+    msg.text = msg.value;
+    console.log("2.msg.text=", msg.text);
+    console.log("msg.cols=", msg.cols);
+    console.log("msg.wrap=", msg.wrap);
+    form2.appendChild(msg);
+
     console.log("form2.elements.length="+form2.elements.length);
 
-    form2.action = '/sm/preview';
+    form2.action = '/sm/preview'; // TODO fix url rewriting case
     document.body.appendChild(form2);
     form2.submit();
 }
@@ -95,7 +126,7 @@ function displayPreview(html) {
 function previewMessage() {
 
     {
-        var html = getPreview3();
+        var html = getPreview4();
         displayPreview(html);
         return;
     }
