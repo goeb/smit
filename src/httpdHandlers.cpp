@@ -1771,143 +1771,247 @@ int httpGetIssue(const RequestContext *req, Project &p, const std::string &issue
     return REQUEST_COMPLETED;
 }
 
-void parseMultipartAndStoreUploadedFiles(const std::string &data, std::string boundary,
+/** Parse a Content-Disposition line of a multipart form-data
+  *
+  * @param[out] name
+  * @param[out] filename
+  *
+  * @return
+  *   0, success
+  *  -1, invalid Content-Disposition
+  *
+  */
+int multipartGetContentDisposition(std::string &line, std::string &name, std::string &filename)
+{
+    // content-disposition = "Content-Disposition" ":"
+    //                       disposition-type *( ";" disposition-parm )
+    // disposition-type = "attachment" | disp-extension-token
+    // disposition-parm = filename-parm | disp-extension-parm
+    // filename-parm = "filename" "=" quoted-string
+    // disp-extension-token = token
+    // disp-extension-parm = token "=" ( token | quoted-string )
+
+    // filename containing " (double-quote) is not supported
+
+    LOG_DIAG("multipartGetContentDisposition: %s", line.c_str());
+
+    name.clear();
+    filename.clear();
+
+    std::string contentDisp = popToken(line, ':');
+    trim(contentDisp);
+    if (contentDisp != "Content-Disposition") return -1;
+
+    // skip disposition-type
+    popToken(line, ';');
+
+    while (!line.empty()) {
+        // get key
+        std::string tokenKey = popToken(line, '=');
+        trim(tokenKey);
+        // get values
+        std::string value;
+        trimLeft(line, " \t"); // skip leading blanks
+        if (!line.empty() && line[0] == '"') {
+            // quoted string
+            line = line.substr(1); // skip first "
+            value = popToken(line, '"');
+        } else {
+            // token
+            value = popToken(line, ';');
+        }
+
+        trimLeft(line, "; \t"); // go ahead until next key=value
+
+        if (tokenKey == "name") name = value;
+        if (tokenKey == "filename") filename = value;
+    }
+    return 0;
+}
+
+/** Move the pointer to the next CRLF
+  *
+  * @return
+  *     pointer to the first CRLF encountered
+  *     null, if no CRLF found
+  *
+  * The pointer bufferEnd must be one char past the end of the buffer.
+  */
+const char *goToEndOfLine(const char *buffer, const char *bufferEnd)
+{
+    while ( (buffer+2 <= bufferEnd) && (0 != strncmp(buffer, "\r\n", 2)) ) buffer++;
+    if (buffer+2 > bufferEnd) return 0; // past the end of the buffer
+    return buffer;
+}
+
+void skipCRLF(const char **buffer, const char *bufferEnd)
+{
+    if (!buffer) return;
+
+    if ( (*buffer+2 <= bufferEnd) && (0 == strncmp(*buffer, "\r\n", 2)) ) *buffer += 2; // skip CRLF
+}
+
+/** Parse one part of a multipart
+  *
+  * @param buffer
+  *     pointer to start of part, ie: the --boundary
+  *
+  * @param[out] data
+  *     start of data
+  *
+  * @param[out] dataSize
+  *     size of data
+  *
+  * @return
+  *     number of bytes to skip to the next
+  *     0, if end of multipart or error
+  *
+  */
+size_t multipartGetNextPart(const char * const buffer, size_t bufferSize, const char *sboundary,
+                           const char **data, size_t *dataSize,
+                           std::string &name, std::string &filename)
+{
+    const char *buf = buffer; // this is our local pointer that we move forward
+
+    if (!data || !dataSize) {
+        LOG_ERROR("Invalid null data (%p) or dataSize (%p)", data, dataSize);
+        return 0;
+    }
+    const char *bufferEnd = buffer + bufferSize; // 1 char past the end of the buffer
+
+    std::string boundary(sboundary);
+    boundary.insert(0, "--"); // prefix with --, as the effective boundary has this -- prefix
+
+    // part must start with boundary
+    if (boundary.size() > bufferSize) {
+        LOG_ERROR("Malformed multipart (a)");
+        return 0;
+    }
+    if (0 != strncmp(buffer, boundary.c_str(), boundary.size()) ) {
+        LOG_ERROR("Malformed multipart (b)");
+        return 0;
+    }
+
+    buf += boundary.size(); // skip first boundary
+
+    // detect end of multipart: -- folowwing the boundary
+    if ( (buf+4 <= bufferEnd) && (0 == strncmp(buf, "--\r\n", 4)) ) return 0;
+
+    skipCRLF(&buf, bufferEnd);
+
+    // Go through headers
+
+    // Example of line expected:
+    // Content-Disposition: form-data; name="summary"
+    // or
+    // Content-Disposition: form-data; name="file"; filename="accum.png"
+    // Content-Type: image/png
+
+    name.clear();
+    filename.clear();
+    while (1) {
+        // get line
+        const char *endOfLine = goToEndOfLine(buf, bufferEnd);
+        if (!endOfLine) {
+            LOG_ERROR("Malformed multipart (0). Abort.");
+            return 0;
+        }
+
+        if (endOfLine == buf) {
+            // empty line, which means end of header.
+            break; // leave the loop
+        }
+        std::string line(buf, endOfLine-buf); // get the line
+        LOG_DEBUG("header of part: %s", line.c_str());
+
+        // Parse the line, expecting a Content-Disposition
+        // If this header is not a Content-Disposition, then continue anyway.
+        // A missing Content-Disposition will be detected below (by an empty name).
+        std::string tmpName, tmpFilename;
+        multipartGetContentDisposition(line, tmpName, tmpFilename);
+        if (!tmpName.empty()) name = tmpName;
+        if (!tmpFilename.empty()) filename = tmpFilename;
+
+        // move over the line
+        buf = endOfLine;
+        skipCRLF(&buf, bufferEnd);
+    }
+
+    skipCRLF(&buf, bufferEnd);
+
+    if (name.empty()) {
+        LOG_ERROR("Malformed multipart. Missing name.");
+        return 0;
+    }
+
+    // get contents
+    *data = buf; // the contents of the part starts here
+
+    // search the end
+
+    // add CRLF before the boundary as it is not part of the data
+    boundary.insert(0, "\r\n");
+
+    const char *endOfPart = buf;
+    while (endOfPart <= bufferEnd-boundary.size()) {
+        if (0 == memcmp(endOfPart, boundary.data(), boundary.size())) {
+            // boundary found
+            break;
+        }
+        endOfPart++;
+    }
+
+    if (endOfPart > bufferEnd-boundary.size()) {
+        LOG_ERROR("Malformed multipart. Premature end.");
+        return 0;
+    }
+
+    *dataSize = endOfPart - *data;
+    const char *nextPart = endOfPart + 2; // skip CRLF to point to next boundary
+
+    return nextPart - buffer; // number of bytes moved forward
+}
+
+void parseMultipartAndStoreUploadedFiles(const std::string &part, std::string boundary,
                                          std::map<std::string, std::list<std::string> > &vars,
                                          const Project &project)
 {
-    const char *p = data.data();
-    size_t len = data.size();
-    const char *end = p + len;
-
-    boundary = "--" + boundary; // prefix with --
-
-    // normally, data starts with boundary
-    if ((p+2<=end) && (0 == strncmp(p, "\r\n", 2)) ) p += 2;
-    if ((p+boundary.size()<=end) && (0 == strncmp(p, boundary.c_str(), boundary.size())) ) {
-        p += boundary.size();
-    }
-
-    boundary.insert(0, "\r\n"); // add CRLF in the prefix
-
-    while (1) {
-        if ((p+2<=end) &&  (0 == strncmp(p, "\r\n", 2)) ) p += 2; // skip CRLF
-        // line expected:
-        // Content-Disposition: form-data; name="summary"
-        // or
-        // Content-Disposition: form-data; name="file"; filename="accum.png"
-        // Content-Type: image/png
-
-        // get end of line
-        const char *endOfLine = p;
-        while ( (endOfLine+2<=end) && (0 != strncmp(endOfLine, "\r\n", 2)) ) endOfLine++;
-        if (endOfLine+2>end) {
-            LOG_ERROR("Malformed multipart (0). Abort.");
-            return;
-        }
-        std::string line(p, endOfLine-p); // get the line
-        LOG_DEBUG("line=%s", line.c_str());
-
-        // get name
-        const char *nameToken = "name=\"";
-        size_t namePos = line.find(nameToken);
-        if (namePos == std::string::npos) {
-            LOG_ERROR("Malformed multipart. Missing name.");
-            return;
-        }
-        std::string name = line.substr(namePos+strlen(nameToken));
-        // remove ".*
-        size_t quotePos = name.find('"');
-        if (quotePos == std::string::npos) {
-            LOG_ERROR("Malformed multipart. Missing quote after name.");
-            return;
-        }
-        name = name.substr(0, quotePos);
-        trimBlanks(name);
-
-        // get filename (optional)
-        // filename containing " (double-quote) is not supported
-        const char *filenameToken = "filename=\"";
-        size_t filenamePos = line.find(filenameToken);
-        std::string filename;
-        if (filenamePos != std::string::npos) {
-            filename = line.substr(filenamePos+strlen(filenameToken));
-            // remove ".*
-            quotePos = filename.find('"');
-            if (quotePos == std::string::npos) {
-                LOG_ERROR("Malformed multipart. Missing quote after name.");
-                return;
-            }
-            filename = filename.substr(0, quotePos);
-        }
-
-        p = endOfLine;
-        if ((p+2<=end) &&  (0 == strncmp(p, "\r\n", 2)) ) p += 2; // skip CRLF
-
-        // get contents
-        // search the end
-        const char *endOfPart = p;
-        while (endOfPart <= end-boundary.size()) {
-            if (0 == memcmp(endOfPart, boundary.data(), boundary.size())) {
-                // boundary found
-                break;
-            }
-            endOfPart++;
-        }
-        if (endOfPart > end-boundary.size()) {
-            LOG_ERROR("Malformed multipart. Premature end.");
-            return;
-        }
-        if (filenamePos == std::string::npos) {
-            // regular property of the form
-            std::string value(p, endOfPart-p);
-            trimBlanks(value);
+    size_t n;
+    const char *data;
+    size_t dataSize;
+    int offset = 0;
+    std::string name;
+    std::string filename;
+    while ( (n = multipartGetNextPart(part.data()+offset, part.size(), boundary.c_str(),
+                                      &data, &dataSize, name, filename) )) {
+        if (name != K_FILE) {
+            // regular property
+            LOG_DIAG("Multipart: name=%s", name.c_str());
+            std::string value;
+            value.assign(data, dataSize);
             vars[name].push_back(value);
 
-            LOG_DEBUG("name=%s, value=%s", name.c_str(), value.c_str());
-
-        } else {
+        } else if (!filename.empty()) {
             // uploaded file
-            // skip line Content-Type
-            endOfLine = p; // initialize pointer
-            while ( (endOfLine+2<=end) && (0 != strncmp(endOfLine, "\r\n", 2)) ) endOfLine++;
-            if (endOfLine+2>end) {
-                LOG_ERROR("Malformed multipart (0). Abort.");
+            LOG_DIAG("Multipart: filename=%s", filename.c_str());
+
+            // case of a file
+            // keep only the basename
+            size_t lastSlash = filename.find_last_of("\\/");
+            if (lastSlash != std::string::npos) filename = filename.substr(lastSlash+1);
+
+            // store to objects directory
+            std::string objectid;
+            int r = Object::write(project.getObjectsDir(), data, dataSize, objectid);
+            if (r < 0) {
+                LOG_ERROR("Could not store uploaded file: %s", filename.c_str());
                 return;
             }
-            p = endOfLine;
-            if ((p+2<=end) &&  (0 == strncmp(p, "\r\n", 2)) ) p += 2; // skip CRLF
-            if ((p+2<=end) &&  (0 == strncmp(p, "\r\n", 2)) ) p += 2; // skip CRLF
-
-            size_t size = endOfPart-p; // size of the file
-            if (size) {
-                // keep only the basename
-                size_t lastSlash = filename.find_last_of("\\/");
-                if (lastSlash != std::string::npos) filename = filename.substr(lastSlash+1);
-
-
-                // store to objects directory
-                std::string objectid;
-                int r = Object::write(project.getObjectsDir(), p, size, objectid);
-                if (r < 0) {
-                    LOG_ERROR("Could not store uploaded file: %s", filename.c_str());
-                    return;
-                }
-                std::string base = objectid + "/" + filename;
-                vars[name].push_back(base);
-
-            } // else: empty file, ignore.
+            std::string base = objectid + "/" + filename;
+            vars[name].push_back(base);
         }
 
-        p = endOfPart;
-        p += boundary.size();
-        if (p >= end) {
-            LOG_ERROR("Malformed multipart. (4).");
-            return;
-        }
-        if ( (p+4<=end) && (0 == strncmp(p, "--\r\n", 4)) ) {
-            // end of multipart
-            break;
-        }
+        offset += n;
     }
 }
 
