@@ -44,7 +44,11 @@ std::string bin2hex(const uint8_t *buffer, size_t len)
 }
 
 
-/** take first token name out of uri
+/** Take first token name out of string (typically uri)
+  *
+  * And consume the first separator encountered.
+  * Several consecutive separators are taken as a single one.
+  *
   * Examples:
   *     popToken("/a/b/c", '/') -> return "a" and set uri to "b/c"
   *     popToken("a/b/c", '/') -> return "a" and set uri to "b/c"
@@ -69,7 +73,7 @@ std::string popToken(std::string & uri, char separator)
     if (pos == std::string::npos) uri = "";
     else {
         uri = uri.substr(pos);
-        trimLeft(uri, sepStr);
+        trimLeft(uri, sepStr); // Several consecutive separators are taken as a single one
     }
 
     return firstToken;
