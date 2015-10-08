@@ -15,10 +15,14 @@ function ajaxSend(url, method) {
 }
 function getPreview4() {
     console.log("getPreview4");
+    displayPreview('...'); // preview in progress...
+
     var form = document.getElementById('sm_issue_form');
     form.action = '/sm/preview';
+    // todo remove attached files
+    form.method = 'GET';
 
-    // create an iframe that will receive the submitted form
+    // create a hidden iframe that will receive the submitted form
     var iframe = document.createElement("iframe");
     iframe.name = "myTarget";
     iframe.id = "myiframe";
@@ -126,8 +130,7 @@ function displayPreview(html) {
 function previewMessage() {
 
     {
-        var html = getPreview4();
-        displayPreview(html);
+        getPreview4();
         return;
     }
 
