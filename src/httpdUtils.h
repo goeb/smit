@@ -68,4 +68,8 @@ int parseFormRequest(const RequestContext *req, std::map<std::string, std::list<
                      const std::string &pathTmp);
 void parseQueryStringVar(const std::string &var, std::string &key, std::string &value);
 
+size_t multipartGetNextPart(const char * const buffer, size_t bufferSize, const char *sboundary,
+                           const char **data, size_t *dataSize,
+                           std::string &name, std::string &filename);
+
 #endif
