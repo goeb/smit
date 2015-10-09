@@ -70,9 +70,9 @@ int httpPostSignin(const RequestContext *request)
 {
     LOG_FUNC();
 
-    const char *contentType = getContentType(request);
+    ContentType ct = getContentType(request);
 
-    if (0 == strcmp("application/x-www-form-urlencoded", contentType)) {
+    if (ct == CT_WWW_FORM_URLENCODED) {
         // application/x-www-form-urlencoded
         // post_data is "var1=val1&var2=val2...".
 
@@ -147,7 +147,7 @@ int httpPostSignin(const RequestContext *request)
         }
 
     } else {
-        LOG_ERROR("Unsupported Content-Type in httpPostSignin: %s", contentType);
+        LOG_ERROR("Unsupported Content-Type in httpPostSignin: %s", getContentTypeString(request));
         return sendHttpHeader400(request, "Unsupported Content-Type");
     }
     return REQUEST_COMPLETED;
@@ -230,21 +230,16 @@ int httpPostSm(const RequestContext *req, const std::string &resource)
 {
     LOG_INFO("httpPostSm: %s", resource.c_str());
 
-    const char *multipart = "multipart/form-data";
+    std::string boundary;
+    ContentType ct = getContentType(req, boundary);
+    if (ct == CT_MULTIPART_FORM_DATA) {
 
-    const char *contentType = getContentType(req);
-    if (0 == strncmp(multipart, contentType, strlen(multipart))) {
-
-        // extract the boundary
-        const char *b = "boundary=";
-        const char *p = mg_strcasestr(contentType, b);
-        if (!p) {
+        if (boundary.empty()) {
             LOG_ERROR("Missing boundary in multipart form data");
             return sendHttpHeader400(req, "missing boundary");
         }
-        p += strlen(b);
-        std::string boundary = p;
-        LOG_INFO("Boundary: %s", boundary.c_str());
+
+        LOG_DEBUG("Boundary: %s", boundary.c_str());
 
         std::string postData;
         int rc = readMgreq(req, postData, MAX_SIZE_UPLOAD);
@@ -258,10 +253,9 @@ int httpPostSm(const RequestContext *req, const std::string &resource)
         req->printf("Content-Type: text/plain\r\n\r\n");
         req->printf("xxxxxx");
 
-
     } else {
         // other Content-Type
-        LOG_ERROR("Content-Type '%s' not supported", contentType);
+        LOG_ERROR("Content-Type '%s' not supported", getContentTypeString(req));
         return sendHttpHeader400(req, "Bad Content-Type");
     }
 
@@ -443,8 +437,8 @@ void httpPostUserEmpty(const RequestContext *req, const User &signedInUser)
 
     // get the posted parameters
 
-    const char *contentType = getContentType(req);
-    if (0 == strcmp("application/x-www-form-urlencoded", contentType)) {
+    ContentType ct = getContentType(req);
+    if (ct == CT_WWW_FORM_URLENCODED) {
         // application/x-www-form-urlencoded
         // post_data is "var1=val1&var2=val2...".
 
@@ -471,7 +465,7 @@ void httpPostUserEmpty(const RequestContext *req, const User &signedInUser)
             }
         }
     } else {
-        LOG_INFO("httpPostUserEmpty: contentType '%s' rejected", contentType);
+        LOG_INFO("httpPostUserEmpty: contentType '%s' rejected", getContentTypeString(req));
     }
     sendHttpHeader403(req);
     return;
@@ -491,10 +485,10 @@ void httpPostUser(const RequestContext *request, User signedInUser, const std::s
     if (username.empty()) return httpPostUserEmpty(request, signedInUser);
 
     // get the posted parameters
-    const char *contentType = getContentType(request);
+    ContentType ct = getContentType(request);
 
-    if (0 != strcmp("application/x-www-form-urlencoded", contentType)) {
-        LOG_ERROR("Bad contentType: %s", contentType);
+    if (ct != CT_WWW_FORM_URLENCODED) {
+        LOG_ERROR("Bad contentType: %s", getContentTypeString(request));
         return;
     }
     // application/x-www-form-urlencoded
@@ -913,10 +907,10 @@ void httpPostProjectConfig(const RequestContext *req, Project &p, User u)
 
     std::string postData;
 
-    const char *contentType = getContentType(req);
+    ContentType ct = getContentType(req);
 
-    if (0 != strcmp("application/x-www-form-urlencoded", contentType)) {
-        LOG_ERROR("httpPostProjectConfig: invalid content-type '%s'", contentType);
+    if (ct != CT_WWW_FORM_URLENCODED) {
+        LOG_ERROR("httpPostProjectConfig: invalid content-type '%s'", getContentTypeString(req));
         return;
     }
 
@@ -1528,8 +1522,8 @@ void httpPostView(const RequestContext *req, Project &p, const std::string &name
     LOG_FUNC();
 
     std::string postData;
-    const char *contentType = getContentType(req);
-    if (0 == strcmp("application/x-www-form-urlencoded", contentType)) {
+    ContentType ct = getContentType(req);
+    if (ct == CT_WWW_FORM_URLENCODED) {
         // application/x-www-form-urlencoded
         // post_data is "var1=val1&var2=val2...".
         int rc = readMgreq(req, postData, MAX_SIZE_UPLOAD);
@@ -1826,9 +1820,9 @@ void httpPushEntry(const RequestContext *req, Project &p, const std::string &iss
         sendHttpHeader403(req);
         return;
     }
-    const char *multipart = "application/octet-stream";
-    const char *contentType = getContentType(req);
-    if (0 == strncmp(multipart, contentType, strlen(multipart))) {
+
+    ContentType ct = getContentType(req);
+    if (ct == CT_OCTET_STREAM) {
 
         std::string postData;
         int rc = readMgreq(req, postData, MAX_SIZE_UPLOAD);
@@ -1874,7 +1868,7 @@ void httpPushEntry(const RequestContext *req, Project &p, const std::string &iss
         unlink(tmpPath.c_str()); // clean-up the tmp file
 
     } else {
-        LOG_ERROR("Content-Type '%s' not supported", contentType);
+        LOG_ERROR("Content-Type '%s' not supported", getContentTypeString(req));
         sendHttpHeader400(req, "bad content-type");
         return;
     }
@@ -1920,21 +1914,17 @@ void httpPostEntry(const RequestContext *req, Project &pro, const std::string & 
         sendHttpHeader403(req);
         return;
     }
-    const char *multipart = "multipart/form-data";
+
     std::map<std::string, std::list<std::string> > vars;
+    std::string boundary;
+    ContentType ct = getContentType(req, boundary);
 
-    const char *contentType = getContentType(req);
-    if (0 == strncmp(multipart, contentType, strlen(multipart))) {
+    if (ct == CT_MULTIPART_FORM_DATA) {
 
-        // extract the boundary
-        const char *b = "boundary=";
-        const char *p = mg_strcasestr(contentType, b);
-        if (!p) {
+        if (boundary.empty()) {
             LOG_ERROR("Missing boundary in multipart form data");
             return;
         }
-        p += strlen(b);
-        std::string boundary = p;
         LOG_DEBUG("Boundary: %s", boundary.c_str());
 
         std::string postData;
@@ -1948,7 +1938,7 @@ void httpPostEntry(const RequestContext *req, Project &pro, const std::string & 
 
     } else {
         // other Content-Type
-        LOG_ERROR("Content-Type '%s' not supported", contentType);
+        LOG_ERROR("Content-Type '%s' not supported", getContentTypeString(req));
         sendHttpHeader400(req, "Bad Content-Type");
         return;
     }

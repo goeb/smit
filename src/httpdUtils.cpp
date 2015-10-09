@@ -34,8 +34,6 @@
 #include "filesystem.h"
 #include "httpdUtils.h"
 
-
-
 // global variable statictics
 HttpStatistics HttpStats;
 
@@ -80,16 +78,53 @@ int readMgreq(const RequestContext *request, std::string &data, size_t maxSize)
     return 0; // ok
 }
 
-/** Get the content type
-  *
-  * @return
-  *     If no content type, then return an empty string.
-  */
-const char *getContentType(const RequestContext *req)
+const char *getContentTypeString(const RequestContext *req)
 {
     const char *ct = req->getHeader("Content-Type");
     if (ct) return ct;
-    else return "";
+    return "";
+}
+
+/** Get the content type
+  *
+  * @param[out] boundary
+  *    boundary in case of multipart
+  */
+
+ContentType getContentType(const RequestContext *req)
+{
+    std::string boundary;
+    return getContentType(req, boundary);
+}
+
+
+/** Get the content type, and the multipart boundary if any
+  *
+  * @param[out] boundary
+  *    boundary in case of multipart
+  */
+ContentType getContentType(const RequestContext *req, std::string &boundary)
+{
+    boundary.clear();
+    const char *ct = getContentTypeString(req);
+
+    if (0 == strcmp("application/x-www-form-urlencoded", ct)) return CT_WWW_FORM_URLENCODED;
+
+    if (0 == strcmp("application/octet-stream", ct)) return CT_OCTET_STREAM;
+
+    if (0 == strcmp("multipart/form-data", ct)) {
+        // get the boundary
+        const char *b = "boundary=";
+        const char *p = mg_strcasestr(ct, b);
+        if (p) {
+            p += strlen(b);
+            boundary = p;
+        }
+
+        return CT_MULTIPART_FORM_DATA;
+    }
+
+    return CT_UNKNOWN;
 }
 
 void sendHttpHeader200(const RequestContext *request)
@@ -373,54 +408,6 @@ std::string removeParam(std::string qs, const char *paramName)
         }
     }
     return newQueryString;
-}
-
-
-
-/**
-  *
-  * @param[out] vars
-  *     Associative array where the posted parameters get stored
-  *
-  * @param pathTmp
-  *     Path to a temporary directory where to store the uploaded files
-  *     If empty, the uploaded files should be ignored.
-  */
-int parseFormRequest(const RequestContext *req, std::map<std::string, std::list<std::string> > &vars,
-                     const std::string &pathTmp)
-{
-    const char *multipart = "multipart/form-data";
-    const char *contentType = getContentType(req);
-    if (0 == strncmp(multipart, contentType, strlen(multipart))) {
-
-        // extract the boundary
-        const char *b = "boundary=";
-        const char *p = mg_strcasestr(contentType, b);
-        if (!p) {
-            LOG_ERROR("Missing boundary in multipart form data");
-            return -1;
-        }
-        p += strlen(b);
-        std::string boundary = p;
-        LOG_DEBUG("Boundary: %s", boundary.c_str());
-
-        std::string postData;
-        int rc = readMgreq(req, postData, MAX_SIZE_UPLOAD);
-        if (rc < 0) {
-            sendHttpHeader413(req, "You tried to upload too much data. Max is 10 MB.");
-            return -1;
-        }
-
-        // parseMultipartAndStoreUploadedFiles(postData, boundary, vars, pro);
-        // TODO parse the posted parameter
-
-    } else {
-        // other Content-Type
-        LOG_ERROR("Content-Type '%s' not supported", contentType);
-        sendHttpHeader400(req, "Bad Content-Type");
-        return -1;
-    }
-    return 0;
 }
 
 void parseQueryStringVar(const std::string &var, std::string &key, std::string &value) {
