@@ -68,7 +68,13 @@ int readMgreq(const RequestContext *request, std::string &data, size_t maxSize)
         data.append(std::string(postFragment, n));
         if (data.size() > maxSize) {
             // data too big. overflow. abort.
+
             LOG_ERROR("Too much POST data. Abort. maxSize=%lu", L(maxSize));
+
+            // continue reading the data, in order to close the socket properly
+            // after sending the response header
+            while ( (n = request->read(postFragment, SIZ)) > 0) { }
+
             return -1;
         }
 
