@@ -1930,6 +1930,7 @@ void httpPostEntry(const RequestContext *req, Project &pro, const std::string & 
 
     if (boundary.empty()) {
         LOG_ERROR("Missing boundary in multipart form data");
+        sendHttpHeader400(req, "Missing boundary");
         return;
     }
     LOG_DEBUG("Boundary: %s", boundary.c_str());
