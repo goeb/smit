@@ -106,16 +106,19 @@ ContentType getContentType(const RequestContext *req)
 ContentType getContentType(const RequestContext *req, std::string &boundary)
 {
     boundary.clear();
-    const char *ct = getContentTypeString(req);
+    std::string ctHeader = getContentTypeString(req);
 
-    if (0 == strcmp("application/x-www-form-urlencoded", ct)) return CT_WWW_FORM_URLENCODED;
+    std::string ct = popToken(ctHeader, ';');
+    trim(ct);
 
-    if (0 == strcmp("application/octet-stream", ct)) return CT_OCTET_STREAM;
+    if (ct == "application/x-www-form-urlencoded") return CT_WWW_FORM_URLENCODED;
 
-    if (0 == strcmp("multipart/form-data", ct)) {
+    if (ct == "application/octet-stream") return CT_OCTET_STREAM;
+
+    if (ct == "multipart/form-data") {
         // get the boundary
         const char *b = "boundary=";
-        const char *p = mg_strcasestr(ct, b);
+        const char *p = mg_strcasestr(ctHeader.c_str(), b);
         if (p) {
             p += strlen(b);
             boundary = p;
