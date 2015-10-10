@@ -72,84 +72,84 @@ int httpPostSignin(const RequestContext *request)
 
     ContentType ct = getContentType(request);
 
-    if (ct == CT_WWW_FORM_URLENCODED) {
-        // application/x-www-form-urlencoded
-        // post_data is "var1=val1&var2=val2...".
-
-        const int SIZ = 1024;
-        char buffer[SIZ+1];
-        char password[SIZ+1];
-        int n; // number of bytes read
-        n = request->read(buffer, SIZ);
-        if (n == SIZ) {
-            LOG_ERROR("Post data for signin too long. Abort request.");
-            return sendHttpHeader400(request, "Post data for signin too long");
-        }
-        buffer[n] = 0;
-        LOG_DEBUG("postData=%s", buffer);
-        std::string postData = buffer;
-
-        // get the username
-        int r = mg_get_var(postData.c_str(), postData.size(),
-                           "username", buffer, SIZ);
-        if (r<=0) {
-            // error: empty, or too long, or not present
-            LOG_DEBUG("Cannot get username. r=%d, postData=%s", r, postData.c_str());
-            return sendHttpHeader400(request, "Missing user name");
-        }
-        std::string username = buffer;
-
-        // get the password
-        r = mg_get_var(postData.c_str(), postData.size(),
-                       "password", password, SIZ);
-
-        if (r<0) {
-            // error: empty, or too long, or not present
-            LOG_DEBUG("Cannot get password. r=%d, postData=%s", r, postData.c_str());
-            return sendHttpHeader400(request, "Missing password");
-        }
-
-        // check credentials
-        std::string sessionId = SessionBase::requestSession(username, password);
-        LOG_DIAG("User %s got sessid: %s", username.c_str(), sessionId.c_str());
-        memset(password, 0xFF, SIZ+1); // erase password
-
-        if (sessionId.size() == 0) {
-            LOG_DEBUG("Authentication refused");
-            sendHttpHeader403(request);
-            return REQUEST_COMPLETED;
-        }
-
-        // Sign-in accepted
-
-        std::string redirect;
-        enum RenderingFormat format = getFormat(request);
-
-        if (format == X_SMIT || format == RENDERING_TEXT) {
-            std::string cookieSessid = getServerCookie(COOKIE_SESSID_PREFIX, sessionId, SESSION_DURATION);
-            sendHttpHeader204(request, cookieSessid.c_str());
-        } else {
-            // HTML rendering
-            // Get the redirection page
-            r = mg_get_var(postData.c_str(), postData.size(),
-                           "redirect", buffer, SIZ);
-
-            if (r<0) {
-                // error: empty, or too long, or not present
-                LOG_DEBUG("Cannot get redirect. r=%d, postData=%s", r, postData.c_str());
-                return sendHttpHeader400(request, "Cannot get redirection");
-            }
-            redirect = buffer;
-
-            if (redirect.empty()) redirect = "/";
-            std::string s = getServerCookie(COOKIE_SESSID_PREFIX, sessionId, SESSION_DURATION);
-            sendHttpRedirect(request, redirect, s.c_str());
-        }
-
-    } else {
+    if (ct != CT_WWW_FORM_URLENCODED) {
         LOG_ERROR("Unsupported Content-Type in httpPostSignin: %s", getContentTypeString(request));
         return sendHttpHeader400(request, "Unsupported Content-Type");
     }
+
+    // application/x-www-form-urlencoded
+    // post_data is "var1=val1&var2=val2...".
+
+    const int SIZ = 1024;
+    char buffer[SIZ+1];
+    char password[SIZ+1];
+    int n; // number of bytes read
+    n = request->read(buffer, SIZ);
+    if (n == SIZ) {
+        LOG_ERROR("Post data for signin too long. Abort request.");
+        return sendHttpHeader400(request, "Post data for signin too long");
+    }
+    buffer[n] = 0;
+    LOG_DEBUG("postData=%s", buffer);
+    std::string postData = buffer;
+
+    // get the username
+    int r = mg_get_var(postData.c_str(), postData.size(),
+                       "username", buffer, SIZ);
+    if (r<=0) {
+        // error: empty, or too long, or not present
+        LOG_DEBUG("Cannot get username. r=%d, postData=%s", r, postData.c_str());
+        return sendHttpHeader400(request, "Missing user name");
+    }
+    std::string username = buffer;
+
+    // get the password
+    r = mg_get_var(postData.c_str(), postData.size(),
+                   "password", password, SIZ);
+
+    if (r<0) {
+        // error: empty, or too long, or not present
+        LOG_DEBUG("Cannot get password. r=%d, postData=%s", r, postData.c_str());
+        return sendHttpHeader400(request, "Missing password");
+    }
+
+    // check credentials
+    std::string sessionId = SessionBase::requestSession(username, password);
+    LOG_DIAG("User %s got sessid: %s", username.c_str(), sessionId.c_str());
+    memset(password, 0xFF, SIZ+1); // erase password
+
+    if (sessionId.size() == 0) {
+        LOG_DEBUG("Authentication refused");
+        sendHttpHeader403(request);
+        return REQUEST_COMPLETED;
+    }
+
+    // Sign-in accepted
+
+    std::string redirect;
+    enum RenderingFormat format = getFormat(request);
+
+    if (format == X_SMIT || format == RENDERING_TEXT) {
+        std::string cookieSessid = getServerCookie(COOKIE_SESSID_PREFIX, sessionId, SESSION_DURATION);
+        sendHttpHeader204(request, cookieSessid.c_str());
+    } else {
+        // HTML rendering
+        // Get the redirection page
+        r = mg_get_var(postData.c_str(), postData.size(),
+                       "redirect", buffer, SIZ);
+
+        if (r<0) {
+            // error: empty, or too long, or not present
+            LOG_DEBUG("Cannot get redirect. r=%d, postData=%s", r, postData.c_str());
+            return sendHttpHeader400(request, "Cannot get redirection");
+        }
+        redirect = buffer;
+
+        if (redirect.empty()) redirect = "/";
+        std::string s = getServerCookie(COOKIE_SESSID_PREFIX, sessionId, SESSION_DURATION);
+        sendHttpRedirect(request, redirect, s.c_str());
+    }
+
     return REQUEST_COMPLETED;
 }
 
@@ -232,32 +232,31 @@ int httpPostSm(const RequestContext *req, const std::string &resource)
 
     std::string boundary;
     ContentType ct = getContentType(req, boundary);
-    if (ct == CT_MULTIPART_FORM_DATA) {
 
-        if (boundary.empty()) {
-            LOG_ERROR("Missing boundary in multipart form data");
-            return sendHttpHeader400(req, "missing boundary");
-        }
-
-        LOG_DEBUG("Boundary: %s", boundary.c_str());
-
-        std::string postData;
-        int rc = readMgreq(req, postData, MAX_SIZE_UPLOAD);
-        if (rc < 0) {
-            sendHttpHeader413(req, "You tried to upload too much data. Max is 10 MB.");
-            return REQUEST_COMPLETED;
-        }
-
-        LOG_INFO("data=%s", postData.c_str());
-        sendHttpHeader200(req);
-        req->printf("Content-Type: text/plain\r\n\r\n");
-        req->printf("xxxxxx");
-
-    } else {
+    if (ct != CT_MULTIPART_FORM_DATA) {
         // other Content-Type
         LOG_ERROR("Content-Type '%s' not supported", getContentTypeString(req));
         return sendHttpHeader400(req, "Bad Content-Type");
     }
+
+    if (boundary.empty()) {
+        LOG_ERROR("Missing boundary in multipart form data");
+        return sendHttpHeader400(req, "missing boundary");
+    }
+
+    LOG_DEBUG("Boundary: %s", boundary.c_str());
+
+    std::string postData;
+    int rc = readMgreq(req, postData, MAX_SIZE_UPLOAD);
+    if (rc < 0) {
+        sendHttpHeader413(req, "You tried to upload too much data. Max is 10 MB.");
+        return REQUEST_COMPLETED;
+    }
+
+    LOG_INFO("data=%s", postData.c_str());
+    sendHttpHeader200(req);
+    req->printf("Content-Type: text/plain\r\n\r\n");
+    req->printf("xxxxxx");
 
     return REQUEST_COMPLETED;
 }
@@ -433,42 +432,45 @@ void httpPostUserEmpty(const RequestContext *req, const User &signedInUser)
         return;
     }
 
-    // check if a hot reload is requested
-
     // get the posted parameters
 
     ContentType ct = getContentType(req);
-    if (ct == CT_WWW_FORM_URLENCODED) {
-        // application/x-www-form-urlencoded
-        // post_data is "var1=val1&var2=val2...".
-
-        std::string postData;
-        int rc = readMgreq(req, postData, 4096);
-        if (rc < 0) {
-            sendHttpHeader413(req, "You tried to upload too much data. Max is 4096 bytes.");
-            return;
-        }
-
-        std::string tokenPair = popToken(postData, '&');
-        std::string key = popToken(tokenPair, '=');
-        std::string value = urlDecode(tokenPair);
-
-        if (key == "hotreload" && value == "1") {
-            int r = UserBase::hotReload();
-            if (r != 0) {
-                sendHttpHeader500(req, "Hot reload failed");
-                return;
-            } else {
-                // Ok, redirect
-                sendHttpRedirect(req, "/users", 0);
-                return;
-            }
-        }
-    } else {
+    if (ct != CT_WWW_FORM_URLENCODED) {
         LOG_INFO("httpPostUserEmpty: contentType '%s' rejected", getContentTypeString(req));
+        sendHttpHeader403(req);
+        return;
     }
-    sendHttpHeader403(req);
-    return;
+
+    // application/x-www-form-urlencoded
+    // post_data is "var1=val1&var2=val2...".
+
+    std::string postData;
+    int rc = readMgreq(req, postData, 4096);
+    if (rc < 0) {
+        sendHttpHeader413(req, "You tried to upload too much data. Max is 4096 bytes.");
+        return;
+    }
+
+    std::string tokenPair = popToken(postData, '&');
+    std::string key = popToken(tokenPair, '=');
+    std::string value = urlDecode(tokenPair);
+
+    // check if a hot reload is requested
+
+    if (key != "hotreload" || value != "1") {
+        sendHttpHeader403(req);
+        return;
+    }
+
+    // execute the hot reload
+    int r = UserBase::hotReload();
+    if (r != 0) {
+        sendHttpHeader500(req, "Hot reload failed");
+        return;
+    }
+
+    // Ok, redirect
+    sendHttpRedirect(req, "/users", 0);
 }
 
 /** Post configuration of a new or existing user
@@ -491,6 +493,7 @@ void httpPostUser(const RequestContext *request, User signedInUser, const std::s
         LOG_ERROR("Bad contentType: %s", getContentTypeString(request));
         return;
     }
+
     // application/x-www-form-urlencoded
     // post_data is "var1=val1&var2=val2...".
 
@@ -1523,17 +1526,17 @@ void httpPostView(const RequestContext *req, Project &p, const std::string &name
 
     std::string postData;
     ContentType ct = getContentType(req);
-    if (ct == CT_WWW_FORM_URLENCODED) {
-        // application/x-www-form-urlencoded
-        // post_data is "var1=val1&var2=val2...".
-        int rc = readMgreq(req, postData, MAX_SIZE_UPLOAD);
-        if (rc < 0) {
-            sendHttpHeader413(req, "You tried to upload too much data. Max is 10 MB.");
-            return;
-        }
-    } else {
+    if (ct != CT_WWW_FORM_URLENCODED) {
         // bad request
         sendHttpHeader400(req, "");
+        return;
+    }
+
+    // application/x-www-form-urlencoded
+    // post_data is "var1=val1&var2=val2...".
+    int rc = readMgreq(req, postData, MAX_SIZE_UPLOAD);
+    if (rc < 0) {
+        sendHttpHeader413(req, "You tried to upload too much data. Max is 10 MB.");
         return;
     }
     //LOG_DEBUG("postData=%s\n<br>", postData.c_str());
@@ -1815,63 +1818,61 @@ void httpPushEntry(const RequestContext *req, Project &p, const std::string &iss
 {
     LOG_DEBUG("httpPushEntry: %s/%s", issueId.c_str(), entryId.c_str());
 
-    enum Role r = u.getRole(p.getName());
-    if (r != ROLE_RW && r != ROLE_ADMIN) {
+    enum Role role = u.getRole(p.getName());
+    if (role != ROLE_RW && role != ROLE_ADMIN) {
         sendHttpHeader403(req);
         return;
     }
 
     ContentType ct = getContentType(req);
-    if (ct == CT_OCTET_STREAM) {
-
-        std::string postData;
-        int rc = readMgreq(req, postData, MAX_SIZE_UPLOAD);
-        if (rc < 0) {
-            sendHttpHeader413(req, "You tried to upload too much data. Max is 10 MB.");
-            return;
-        }
-
-        LOG_DEBUG("Got upload data: %ld bytes", L(postData.size()));
-
-        // store the entry in a temporary location
-        std::string tmpPath = p.getTmpDir() + "/" + entryId;
-        int r = writeToFile(tmpPath, postData);
-        if (r != 0) {
-            std::string msg = "Failed to store pushed entry: %s" + entryId;
-            sendHttpHeader500(req, msg.c_str());
-            return;
-        }
-
-        // insert the entry into the database
-        std::string id = issueId;
-        r = p.pushEntry(id, entryId, u.username, tmpPath);
-        if (r == -1) {
-            std::string msg = "Cannot push the entry";
-            sendHttpHeader400(req, msg.c_str());
-
-        } else if (r == -2) {
-            // Internal Server Error
-            std::string msg = "pushEntry error";
-            sendHttpHeader500(req, msg.c_str());
-        } else if (r == -3) {
-            // HTTP 409 Conflict
-            sendHttpHeader409(req);
-
-        } else {
-            // ok, no problem
-            sendHttpHeader201(req);
-            // give the issue id, as it may be necessary to inform
-            // the client that it has been renamed (renumbered)
-            req->printf("issue: %s\r\n", id.c_str());
-        }
-
-        unlink(tmpPath.c_str()); // clean-up the tmp file
-
-    } else {
+    if (ct != CT_OCTET_STREAM) {
         LOG_ERROR("Content-Type '%s' not supported", getContentTypeString(req));
         sendHttpHeader400(req, "bad content-type");
         return;
     }
+
+    std::string postData;
+    int rc = readMgreq(req, postData, MAX_SIZE_UPLOAD);
+    if (rc < 0) {
+        sendHttpHeader413(req, "You tried to upload too much data. Max is 10 MB.");
+        return;
+    }
+
+    LOG_DEBUG("Got upload data: %ld bytes", L(postData.size()));
+
+    // store the entry in a temporary location
+    std::string tmpPath = p.getTmpDir() + "/" + entryId;
+    int r = writeToFile(tmpPath, postData);
+    if (r != 0) {
+        std::string msg = "Failed to store pushed entry: %s" + entryId;
+        sendHttpHeader500(req, msg.c_str());
+        return;
+    }
+
+    // insert the entry into the database
+    std::string id = issueId;
+    r = p.pushEntry(id, entryId, u.username, tmpPath);
+    if (r == -1) {
+        std::string msg = "Cannot push the entry";
+        sendHttpHeader400(req, msg.c_str());
+
+    } else if (r == -2) {
+        // Internal Server Error
+        std::string msg = "pushEntry error";
+        sendHttpHeader500(req, msg.c_str());
+    } else if (r == -3) {
+        // HTTP 409 Conflict
+        sendHttpHeader409(req);
+
+    } else {
+        // ok, no problem
+        sendHttpHeader201(req);
+        // give the issue id, as it may be necessary to inform
+        // the client that it has been renamed (renumbered)
+        req->printf("issue: %s\r\n", id.c_str());
+    }
+
+    unlink(tmpPath.c_str()); // clean-up the tmp file
 }
 
 /** Remove empty values for multiselect properties
@@ -1919,29 +1920,27 @@ void httpPostEntry(const RequestContext *req, Project &pro, const std::string & 
     std::string boundary;
     ContentType ct = getContentType(req, boundary);
 
-    if (ct == CT_MULTIPART_FORM_DATA) {
-
-        if (boundary.empty()) {
-            LOG_ERROR("Missing boundary in multipart form data");
-            return;
-        }
-        LOG_DEBUG("Boundary: %s", boundary.c_str());
-
-        std::string postData;
-        int rc = readMgreq(req, postData, MAX_SIZE_UPLOAD);
-        if (rc < 0) {
-            sendHttpHeader413(req, "You tried to upload too much data. Max is 10 MB.");
-            return;
-        }
-
-        parseMultipartAndStoreUploadedFiles(postData, boundary, vars, pro);
-
-    } else {
+    if (ct != CT_MULTIPART_FORM_DATA) {
         // other Content-Type
         LOG_ERROR("Content-Type '%s' not supported", getContentTypeString(req));
         sendHttpHeader400(req, "Bad Content-Type");
         return;
     }
+
+    if (boundary.empty()) {
+        LOG_ERROR("Missing boundary in multipart form data");
+        return;
+    }
+    LOG_DEBUG("Boundary: %s", boundary.c_str());
+
+    std::string postData;
+    int rc = readMgreq(req, postData, MAX_SIZE_UPLOAD);
+    if (rc < 0) {
+        sendHttpHeader413(req, "You tried to upload too much data. Max is 10 MB.");
+        return;
+    }
+
+    parseMultipartAndStoreUploadedFiles(postData, boundary, vars, pro);
 
     bool isNewIssue = false;
     std::string id = issueId;
