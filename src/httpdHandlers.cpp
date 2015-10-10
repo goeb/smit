@@ -1786,6 +1786,7 @@ void parseMultipartAndStoreUploadedFiles(const std::string &part, std::string bo
             LOG_DIAG("Multipart: name=%s", name.c_str());
             std::string value;
             value.assign(data, dataSize);
+            trim(value);
             vars[name].push_back(value);
 
         } else if (!filename.empty()) {
