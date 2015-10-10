@@ -214,49 +214,69 @@ void handleGetStats(const RequestContext *request)
     request->printf("Others:   %4d\r\n", others);
 }
 
-void handleMessagePreview(const RequestContext *request)
+void handleMessagePreview(const RequestContext *req)
 {
     LOG_FUNC();
-    std::string q = request->getQueryString();
-    std::string message = getFirstParamFromQueryString(q, "message");
-    LOG_DEBUG("message=%s", message.c_str());
+    std::string boundary;
+    ContentType ct = getContentType(req, boundary);
+
+    if (ct != CT_MULTIPART_FORM_DATA) {
+        LOG_ERROR("Content-Type '%s' not supported", getContentTypeString(req));
+        sendHttpHeader400(req, "Bad Content-Type");
+        return;
+    }
+
+    if (boundary.empty()) {
+        LOG_ERROR("Missing boundary in multipart form data");
+        sendHttpHeader400(req, "Missing boundary");
+        return;
+    }
+    LOG_DEBUG("Boundary: %s", boundary.c_str());
+
+    std::string postData;
+    int rc = readMgreq(req, postData, 1024*1024); // max 1 MB
+    if (rc < 0) {
+        sendHttpHeader413(req, "Too much data for preview (max 1 MB)");
+        return;
+    }
+
+    size_t n;
+    const char *data;
+    size_t dataSize;
+    int offset = 0;
+    std::string name;
+    std::string filename;
+    std::string message;
+
+    while ( (n = multipartGetNextPart(postData.data()+offset, postData.size(), boundary.c_str(),
+                                      &data, &dataSize, name, filename) )) {
+        if (name == K_MESSAGE) {
+            message.assign(data, dataSize);
+        }
+
+        offset += n;
+    }
+
+    trim(message);
+    LOG_DIAG("message=%s", message.c_str());
     message = RHtmlIssue::convertToRichText(htmlEscape(message));
-    sendHttpHeader200(request);
-    request->printf("Content-Type: text/html\r\n\r\n");
-    request->printf("%s", message.c_str());
+    LOG_DIAG("rich message=%s", message.c_str());
+    sendHttpHeader200(req);
+    req->printf("Content-Type: text/html\r\n\r\n");
+    req->printf("%s", message.c_str());
 }
+
 
 int httpPostSm(const RequestContext *req, const std::string &resource)
 {
     LOG_INFO("httpPostSm: %s", resource.c_str());
 
-    std::string boundary;
-    ContentType ct = getContentType(req, boundary);
-
-    if (ct != CT_MULTIPART_FORM_DATA) {
-        // other Content-Type
-        LOG_ERROR("Content-Type '%s' not supported", getContentTypeString(req));
-        return sendHttpHeader400(req, "Bad Content-Type");
+    if (resource != "preview") {
+        LOG_ERROR("httpPostSm: Unsupported resource '%s'", resource.c_str());
+        return sendHttpHeader400(req, "");
     }
 
-    if (boundary.empty()) {
-        LOG_ERROR("Missing boundary in multipart form data");
-        return sendHttpHeader400(req, "missing boundary");
-    }
-
-    LOG_DEBUG("Boundary: %s", boundary.c_str());
-
-    std::string postData;
-    int rc = readMgreq(req, postData, MAX_SIZE_UPLOAD);
-    if (rc < 0) {
-        sendHttpHeader413(req, "You tried to upload too much data. Max is 10 MB.");
-        return REQUEST_COMPLETED;
-    }
-
-    LOG_INFO("data=%s", postData.c_str());
-    sendHttpHeader200(req);
-    req->printf("Content-Type: text/plain\r\n\r\n");
-    req->printf("xxxxxx");
+    handleMessagePreview(req);
 
     return REQUEST_COMPLETED;
 }
@@ -264,18 +284,13 @@ int httpPostSm(const RequestContext *req, const std::string &resource)
 /** Get a SM embedded file
   *
   * Embbeded files: smit.js, etc.
-  * Virtual files: preview
   */
 int httpGetSm(const RequestContext *request, const std::string &file)
 {
     int r; // return 0 to let mongoose handle static file, 1 otherwise
 
     LOG_DEBUG("httpGetSm: %s", file.c_str());
-    const char *virtualFilePreview = "preview";
-    if (0 == strncmp(file.c_str(), virtualFilePreview, strlen(virtualFilePreview))) {
-        handleMessagePreview(request);
-        return REQUEST_COMPLETED;
-    } else if (0 == strcmp(file.c_str(), "stat")) {
+    if (0 == strcmp(file.c_str(), "stat")) {
         handleGetStats(request);
         return REQUEST_COMPLETED;
     }

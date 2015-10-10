@@ -13,111 +13,41 @@ function ajaxSend(url, method) {
     if (status == 200) return ['ok', request.responseText];
     else return ['error', request.responseText];
 }
-function getPreview4() {
-    console.log("getPreview4");
+function previewMessage() {
     displayPreview('...'); // preview in progress...
 
-    var form = document.getElementById('sm_issue_form');
-    form.action = '/sm/preview';
-    // todo remove attached files
-    form.method = 'GET';
-
     // create a hidden iframe that will receive the submitted form
-    var iframe = document.createElement("iframe");
-    iframe.name = "myTarget";
-    iframe.id = "myiframe";
-    iframe.style.display = "none";
-    document.body.appendChild(iframe);
-    iframe.addEventListener("load", function () {
-        alert("Yeah! Data sent: this="+this);
-        console.log("iframe : textContent="+iframe.contentWindow.document.body.textContent);
-        displayPreview(iframe.contentWindow.document.body.textContent);
-    });
-    form.target = iframe.name;
-    form.submit();
-}
-function getPreview3() {
-    console.log("getPreview3");
-    var form = document.getElementById('sm_issue_form');
-    var form2 = form.cloneNode(true);
-    console.log("form2="+form2);
-    var n = form2.elements.length;
-    console.log("form2.elements.length="+n);
-    for (var i=0; i<n; i++) {
-        //console.log("form2.elements[i].name=", form2.elements[i].name);
-        //console.log("form2.elements[i].value=", form2.elements[i].value);
-        if (form2.elements[i].name != "+message") {
-            // remove the element
-            //delete form2.elements[i];
-            //i--;
-        }
+    // (if iframe already exists, reuse it)
+    var iframe = document.getElementById('sm_preview_iframe');
+    if (!iframe) {
+        iframe = document.createElement("iframe");
+        iframe.name = "sm_preview_iframe";
+        iframe.id = "sm_preview_iframe";
+        iframe.style.display = "none";
+        document.body.appendChild(iframe);
+        iframe.addEventListener("load", function () {
+            var contents = iframe.contentWindow.document.body.innerHTML;
+            console.log("iframe-load: contents=" + contents);
+            displayPreview(contents);
+        });
     }
 
-    var msg = document.getElementsByName('+message')[0];
+    var form = document.getElementById('sm_issue_form');
+    var origin_action = form.action;
+    form.action = '/sm/preview';
+    var origin_method = form.method;
+    form.method = 'POST';
+    var origin_target = form.target;
+    form.target = iframe.name;
 
-    console.log("msg.text=", msg.text);
-    console.log("msg.value=", msg.value);
-    msg.text = msg.value;
-    console.log("2.msg.text=", msg.text);
-    console.log("msg.cols=", msg.cols);
-    console.log("msg.wrap=", msg.wrap);
-    form2.appendChild(msg);
+    // todo remove attached files (not needed for preview)
 
-    console.log("form2.elements.length="+form2.elements.length);
-
-    form2.action = '/sm/preview'; // TODO fix url rewriting case
-    document.body.appendChild(form2);
-    form2.submit();
-}
-function getPreview2() {
-
-    // create an iframe that will receive the submitted form
-    var iframe = document.createElement("iframe");
-    iframe.name = "myTarget";
-    iframe.id = "myiframe";
-    iframe.style.display = "none";
-    iframe.onload = "displayPreview(this.innerHTML);";
-    document.body.appendChild(iframe);
-  iframe.addEventListener("load", function () {
-    alert("Yeah! Data sent: this="+this);
-    console.log("iframe : "+this);
-        displayPreviewFromIframe();
-  });
-
-    var form = document.createElement('form');
-    form.action = '/sm/preview'; // TODO fix the URL prefix
-    form.method = 'POST'; // TODO use GET?
-    form.target = iframe.name; // so that it does not reload main page
-    form.enctype = "multipart/form-data";
-
-    var msg = document.getElementsByName('+message')[0];
-
-    var aninput = msg.cloneNode(true);
-    //var aninput = document.createElement('textarea');
-    //aninput.type = 'hidden';
-    //aninput.name = '+message';
-    aninput.value = msg.value;
-    //aninput.wrap = msg.wrap;
-    //aninput.wrap = 'hard';
-    //console.log("msg.wrap="+msg.wrap);
-    form.appendChild(aninput);
-
-    //form.style.display = "none";
-    document.body.appendChild(form);
     form.submit();
 
-
-    // TODO get the contents of the iframe
-
-    // delete the iframe NOT HERE
-    //document.body.removeChild(iframe);
-    // delete the form
-    document.body.removeChild(form);
-}
-function displayPreviewFromIframe(iframe) {
-    var iframe = document.getElementById('myiframe');
-    console.log("iframe contents: "+iframe.innerHTML);
-    displayPreview(iframe.innerHTML);    
+    // restore the original settings
+    form.action = origin_action;
+    form.method = origin_method;
+    form.target = origin_target;
 }
 function displayPreview(html) {
     var divPreview = document.getElementById('sm_entry_preview');
@@ -127,23 +57,6 @@ function displayPreview(html) {
     }
     divPreview.innerHTML = html;
 }
-function previewMessage() {
-
-    {
-        getPreview4();
-        return;
-    }
-
-    var msg = document.getElementsByName('+message')[0];
-    var value = msg.value;
-    // url-encode value TODO
-    var url = '/sm/preview?message=' + encodeURIComponent(value);
-    var request = new XMLHttpRequest();
-    request.open('GET', url, false); // synchronous
-    request.send(null);
-    displayPreview(request.responseText);
-}
-
 function sm_deleteResource(redirect) {
     var r = confirm("Confirm delete?");
     if (r == true) {
