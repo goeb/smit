@@ -32,13 +32,20 @@ function previewMessage() {
         });
     }
 
+    // get the form
     var form = document.getElementById('sm_issue_form');
+    // modify some parts
     var origin_action = form.action;
     form.action = '/sm/preview';
     var origin_method = form.method;
     form.method = 'POST';
     var origin_target = form.target;
     form.target = iframe.name;
+    // disable file uploads
+    var elements = form.elements;
+    for (var i=0; i<elements.length; i++) {
+        if (elements[i].name != '+message') elements[i].disabled = true;
+    }
 
     // todo remove attached files (not needed for preview)
 
@@ -48,6 +55,11 @@ function previewMessage() {
     form.action = origin_action;
     form.method = origin_method;
     form.target = origin_target;
+    // re-enable all fields
+    for (var i=0; i<elements.length; i++) {
+        elements[i].disabled = false;
+    }
+
 }
 function displayPreview(html) {
     var divPreview = document.getElementById('sm_entry_preview');
