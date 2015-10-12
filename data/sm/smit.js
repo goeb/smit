@@ -27,7 +27,6 @@ function previewMessage() {
         document.body.appendChild(iframe);
         iframe.addEventListener("load", function () {
             var contents = iframe.contentWindow.document.body.innerHTML;
-            console.log("iframe-load: contents=" + contents);
             displayPreview(contents);
         });
     }
@@ -52,7 +51,10 @@ function previewMessage() {
     form.submit();
 
     // restore the original settings
-    form.action = origin_action;
+    console.log('origin_action=', origin_action);
+    if (origin_action === undefined) form.removeAttribute('action');
+    else  form.action = origin_action;
+    console.log('form.action=', form.action);
     form.method = origin_method;
     form.target = origin_target;
     // re-enable all fields
