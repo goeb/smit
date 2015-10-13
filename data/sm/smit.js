@@ -52,7 +52,7 @@ function previewMessage() {
 
     // restore the original settings
     console.log('origin_action=', origin_action);
-    if (origin_action === undefined) form.removeAttribute('action');
+    if (origin_action === undefined || origin_action == '') form.removeAttribute('action');
     else  form.action = origin_action;
     console.log('form.action=', form.action);
     form.method = origin_method;
