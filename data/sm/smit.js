@@ -21,42 +21,49 @@ function previewMessage() {
     var iframe = document.getElementById('sm_preview_iframe');
     if (!iframe) {
         iframe = document.createElement("iframe");
-        iframe.name = "sm_preview_iframe";
+        iframe.name = "sm_preview_iframe_name";
         iframe.id = "sm_preview_iframe";
         iframe.style.display = "none";
         document.body.appendChild(iframe);
         iframe.addEventListener("load", function () {
             var contents = iframe.contentWindow.document.body.innerHTML;
             displayPreview(contents);
+
+            console.log("before restore: form.action=", form.action);
+            console.log("before restore: form.target=", form.target);
+            // restore the original settings
+            if (form.origin_action === undefined || form.origin_action == '') {
+                form.removeAttribute('action');
+            } else form.action = form.origin_action;
+            form.method = form.origin_method;
+            form.target = form.origin_target;
+            // re-enable all fields
+            var elements = form.elements;
+            for (var i=0; i<elements.length; i++) {
+                elements[i].disabled = false;
+            }
+            console.log("restore: form.action=", form.action);
+            console.log("restore: form.target=", form.target);
         });
     }
 
     // get the form
     var form = document.getElementById('sm_issue_form');
+    // backup
+    form.origin_action = form.action;
+    form.origin_method = form.method;
+    form.origin_target = form.target;
     // modify some parts
-    var origin_action = form.action;
     form.action = '/sm/preview';
-    var origin_method = form.method;
     form.method = 'POST';
-    var origin_target = form.target;
     form.target = iframe.name;
-    // disable file uploads
+    // disable file upload, and other fields
     var elements = form.elements;
     for (var i=0; i<elements.length; i++) {
         if (elements[i].name != '+message') elements[i].disabled = true;
     }
 
     form.submit();
-
-    // restore the original settings
-    if (origin_action === undefined || origin_action == '') form.removeAttribute('action');
-    else  form.action = origin_action;
-    form.method = origin_method;
-    form.target = origin_target;
-    // re-enable all fields
-    for (var i=0; i<elements.length; i++) {
-        elements[i].disabled = false;
-    }
 
 }
 function displayPreview(html) {
