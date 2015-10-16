@@ -46,15 +46,11 @@ function previewMessage() {
         if (elements[i].name != '+message') elements[i].disabled = true;
     }
 
-    // todo remove attached files (not needed for preview)
-
     form.submit();
 
     // restore the original settings
-    console.log('origin_action=', origin_action);
     if (origin_action === undefined || origin_action == '') form.removeAttribute('action');
     else  form.action = origin_action;
-    console.log('form.action=', form.action);
     form.method = origin_method;
     form.target = origin_target;
     // re-enable all fields
@@ -568,7 +564,6 @@ function showOrHideClasses(className, show) {
             for(var j=0; j<inputs.length; j++) {
                 if (show) inputs[j].disabled = false;
                 else inputs[j].disabled = true;
-                //console.log("input[" + j + "], " + inputs[j].name + ", show=" + show );
             }
         }
     }
