@@ -729,7 +729,7 @@ int Project::addFile(const std::string &objectId)
     if (fileExists(destPath)) {
         int r = cmpFiles(srcPath, destPath);
         if (r != 0) {
-            LOG_ERROR("ID collision, files differ: %s", objectId.c_str());
+            LOG_ERROR("ID collision, files differ(%d): %s", r, objectId.c_str());
             return -2;
         } else {
             // ok the are the same

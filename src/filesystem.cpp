@@ -385,10 +385,37 @@ std::string getTmpPath(const std::string &path)
     return dir + "/." + base + ".tmp";
 }
 
-int cmpFiles(const std::string &srcPath, const std::string &destPath)
+/** Compare 2 files
+  *
+  * @return
+  *      0, files have the same content
+  *     -1, file1 does not exist
+  *     -2, file2 does not exist
+  *     -3, files differ
+  *     -4, I/O error
+  *
+  */
+int cmpFiles(const std::string &path1, const std::string &path2)
 {
-    LOG_INFO("cmpFiles not implemented");
-    // TODO
+    std::ifstream f1;
+    f1.open(path1.c_str(), std::ios_base::in | std::ios_base::binary);
+    if (!f1) return -1;
+
+    std::ifstream f2;
+    f2.open(path2.c_str(), std::ios_base::in | std::ios_base::binary);
+    if (!f2) return -2;
+
+    const int BUF_SIZE = 4096;
+    char buf1[BUF_SIZE];
+    char buf2[BUF_SIZE];
+    while (1) {
+        f1.read(buf1, BUF_SIZE);
+        f2.read(buf2, BUF_SIZE);
+        if (f1.gcount() != f2.gcount()) return -3; // not same amount of bytes read: files differ
+        if (0 != memcmp(buf1, buf2, f1.gcount())) return -3; // files differ
+        if (f1.fail() || f2.fail()) return -4;
+        if (f1.eof() && f2.eof()) return 0; // files are the same
+    }
     return 0;
 }
 
