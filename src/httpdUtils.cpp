@@ -34,8 +34,6 @@
 #include "filesystem.h"
 #include "httpdUtils.h"
 
-
-
 // global variable statictics
 HttpStatistics HttpStats;
 
@@ -70,7 +68,13 @@ int readMgreq(const RequestContext *request, std::string &data, size_t maxSize)
         data.append(std::string(postFragment, n));
         if (data.size() > maxSize) {
             // data too big. overflow. abort.
+
             LOG_ERROR("Too much POST data. Abort. maxSize=%lu", L(maxSize));
+
+            // continue reading the data, in order to close the socket properly
+            // after sending the response header
+            while ( (n = request->read(postFragment, SIZ)) > 0) { }
+
             return -1;
         }
 
@@ -80,16 +84,56 @@ int readMgreq(const RequestContext *request, std::string &data, size_t maxSize)
     return 0; // ok
 }
 
-/** Get the content type
-  *
-  * @return
-  *     If no content type, then return an empty string.
-  */
-const char *getContentType(const RequestContext *req)
+const char *getContentTypeString(const RequestContext *req)
 {
     const char *ct = req->getHeader("Content-Type");
     if (ct) return ct;
-    else return "";
+    return "";
+}
+
+/** Get the content type
+  *
+  * @param[out] boundary
+  *    boundary in case of multipart
+  */
+
+ContentType getContentType(const RequestContext *req)
+{
+    std::string boundary;
+    return getContentType(req, boundary);
+}
+
+
+/** Get the content type, and the multipart boundary if any
+  *
+  * @param[out] boundary
+  *    boundary in case of multipart
+  */
+ContentType getContentType(const RequestContext *req, std::string &boundary)
+{
+    boundary.clear();
+    std::string ctHeader = getContentTypeString(req);
+
+    std::string ct = popToken(ctHeader, ';');
+    trim(ct);
+
+    if (ct == "application/x-www-form-urlencoded") return CT_WWW_FORM_URLENCODED;
+
+    if (ct == "application/octet-stream") return CT_OCTET_STREAM;
+
+    if (ct == "multipart/form-data") {
+        // get the boundary
+        const char *b = "boundary=";
+        const char *p = mg_strcasestr(ctHeader.c_str(), b);
+        if (p) {
+            p += strlen(b);
+            boundary = p;
+        }
+
+        return CT_MULTIPART_FORM_DATA;
+    }
+
+    return CT_UNKNOWN;
 }
 
 void sendHttpHeader200(const RequestContext *request)
@@ -375,54 +419,6 @@ std::string removeParam(std::string qs, const char *paramName)
     return newQueryString;
 }
 
-
-
-/**
-  *
-  * @param[out] vars
-  *     Associative array where the posted parameters get stored
-  *
-  * @param pathTmp
-  *     Path to a temporary directory where to store the uploaded files
-  *     If empty, the uploaded files should be ignored.
-  */
-int parseFormRequest(const RequestContext *req, std::map<std::string, std::list<std::string> > &vars,
-                     const std::string &pathTmp)
-{
-    const char *multipart = "multipart/form-data";
-    const char *contentType = getContentType(req);
-    if (0 == strncmp(multipart, contentType, strlen(multipart))) {
-
-        // extract the boundary
-        const char *b = "boundary=";
-        const char *p = mg_strcasestr(contentType, b);
-        if (!p) {
-            LOG_ERROR("Missing boundary in multipart form data");
-            return -1;
-        }
-        p += strlen(b);
-        std::string boundary = p;
-        LOG_DEBUG("Boundary: %s", boundary.c_str());
-
-        std::string postData;
-        int rc = readMgreq(req, postData, MAX_SIZE_UPLOAD);
-        if (rc < 0) {
-            sendHttpHeader413(req, "You tried to upload too much data. Max is 10 MB.");
-            return -1;
-        }
-
-        // parseMultipartAndStoreUploadedFiles(postData, boundary, vars, pro);
-        // TODO parse the posted parameter
-
-    } else {
-        // other Content-Type
-        LOG_ERROR("Content-Type '%s' not supported", contentType);
-        sendHttpHeader400(req, "Bad Content-Type");
-        return -1;
-    }
-    return 0;
-}
-
 void parseQueryStringVar(const std::string &var, std::string &key, std::string &value) {
     size_t x = var.find('=');
     if (x != std::string::npos) {
@@ -437,5 +433,203 @@ void parseQueryStringVar(const std::string &var, std::string &key, std::string &
     value = urlDecode(value);
 }
 
+/** Parse a Content-Disposition line of a multipart form-data
+  *
+  * @param[out] name
+  * @param[out] filename
+  *
+  * @return
+  *   0, success
+  *  -1, invalid Content-Disposition
+  *
+  */
+static int multipartGetContentDisposition(std::string &line, std::string &name, std::string &filename)
+{
+    // content-disposition = "Content-Disposition" ":"
+    //                       disposition-type *( ";" disposition-parm )
+    // disposition-type = "attachment" | disp-extension-token
+    // disposition-parm = filename-parm | disp-extension-parm
+    // filename-parm = "filename" "=" quoted-string
+    // disp-extension-token = token
+    // disp-extension-parm = token "=" ( token | quoted-string )
 
+    // filename containing " (double-quote) is not supported
 
+    LOG_DIAG("multipartGetContentDisposition: %s", line.c_str());
+
+    name.clear();
+    filename.clear();
+
+    std::string contentDisp = popToken(line, ':');
+    trim(contentDisp);
+    if (contentDisp != "Content-Disposition") return -1;
+
+    // skip disposition-type
+    popToken(line, ';');
+
+    while (!line.empty()) {
+        // get key
+        std::string tokenKey = popToken(line, '=');
+        trim(tokenKey);
+        // get values
+        std::string value;
+        trimLeft(line, " \t"); // skip leading blanks
+        if (!line.empty() && line[0] == '"') {
+            // quoted string
+            line = line.substr(1); // skip first "
+            value = popToken(line, '"');
+        } else {
+            // token
+            value = popToken(line, ';');
+        }
+
+        trimLeft(line, "; \t"); // go ahead until next key=value
+
+        if (tokenKey == "name") name = value;
+        if (tokenKey == "filename") filename = value;
+    }
+    return 0;
+}
+
+/** Move the pointer to the next CRLF
+  *
+  * @return
+  *     pointer to the first CRLF encountered
+  *     null, if no CRLF found
+  *
+  * The pointer bufferEnd must be one char past the end of the buffer.
+  */
+static const char *goToEndOfLine(const char *buffer, const char *bufferEnd)
+{
+    while ( (buffer+2 <= bufferEnd) && (0 != strncmp(buffer, "\r\n", 2)) ) buffer++;
+    if (buffer+2 > bufferEnd) return 0; // past the end of the buffer
+    return buffer;
+}
+
+static void skipCRLF(const char **buffer, const char *bufferEnd)
+{
+    if (!buffer) return;
+
+    if ( (*buffer+2 <= bufferEnd) && (0 == strncmp(*buffer, "\r\n", 2)) ) *buffer += 2; // skip CRLF
+}
+
+/** Parse one part of a multipart
+  *
+  * @param buffer
+  *     pointer to start of part, ie: the --boundary
+  *
+  * @param[out] data
+  *     start of data
+  *
+  * @param[out] dataSize
+  *     size of data
+  *
+  * @return
+  *     number of bytes to skip to the next
+  *     0, if end of multipart or error
+  *
+  */
+size_t multipartGetNextPart(const char * const buffer, size_t bufferSize, const char *sboundary,
+                           const char **data, size_t *dataSize,
+                           std::string &name, std::string &filename)
+{
+    const char *buf = buffer; // this is our local pointer that we move forward
+
+    if (!data || !dataSize) {
+        LOG_ERROR("Invalid null data (%p) or dataSize (%p)", data, dataSize);
+        return 0;
+    }
+    const char *bufferEnd = buffer + bufferSize; // 1 char past the end of the buffer
+
+    std::string boundary(sboundary);
+    boundary.insert(0, "--"); // prefix with --, as the effective boundary has this -- prefix
+
+    // part must start with boundary
+    if (boundary.size() > bufferSize) {
+        LOG_ERROR("Malformed multipart (a)");
+        return 0;
+    }
+    if (0 != strncmp(buffer, boundary.c_str(), boundary.size()) ) {
+        LOG_ERROR("Malformed multipart (b)");
+        return 0;
+    }
+
+    buf += boundary.size(); // skip first boundary
+
+    // detect end of multipart: -- folowwing the boundary
+    if ( (buf+4 <= bufferEnd) && (0 == strncmp(buf, "--\r\n", 4)) ) return 0;
+
+    skipCRLF(&buf, bufferEnd);
+
+    // Go through headers
+
+    // Example of line expected:
+    // Content-Disposition: form-data; name="summary"
+    // or
+    // Content-Disposition: form-data; name="file"; filename="accum.png"
+    // Content-Type: image/png
+
+    name.clear();
+    filename.clear();
+    while (1) {
+        // get line
+        const char *endOfLine = goToEndOfLine(buf, bufferEnd);
+        if (!endOfLine) {
+            LOG_ERROR("Malformed multipart (0). Abort.");
+            return 0;
+        }
+
+        if (endOfLine == buf) {
+            // empty line, which means end of header.
+            break; // leave the loop
+        }
+        std::string line(buf, endOfLine-buf); // get the line
+        LOG_DEBUG("header of part: %s", line.c_str());
+
+        // Parse the line, expecting a Content-Disposition
+        // If this header is not a Content-Disposition, then continue anyway.
+        // A missing Content-Disposition will be detected below (by an empty name).
+        std::string tmpName, tmpFilename;
+        multipartGetContentDisposition(line, tmpName, tmpFilename);
+        if (!tmpName.empty()) name = tmpName;
+        if (!tmpFilename.empty()) filename = tmpFilename;
+
+        // move over the line
+        buf = endOfLine;
+        skipCRLF(&buf, bufferEnd);
+    }
+
+    skipCRLF(&buf, bufferEnd);
+
+    if (name.empty()) {
+        LOG_ERROR("Malformed multipart. Missing name.");
+        return 0;
+    }
+
+    // get contents
+    *data = buf; // the contents of the part starts here
+
+    // search the end
+
+    // add CRLF before the boundary as it is not part of the data
+    boundary.insert(0, "\r\n");
+
+    const char *endOfPart = buf;
+    while (endOfPart <= bufferEnd-boundary.size()) {
+        if (0 == memcmp(endOfPart, boundary.data(), boundary.size())) {
+            // boundary found
+            break;
+        }
+        endOfPart++;
+    }
+
+    if (endOfPart > bufferEnd-boundary.size()) {
+        LOG_ERROR("Malformed multipart. Premature end.");
+        return 0;
+    }
+
+    *dataSize = endOfPart - *data;
+    const char *nextPart = endOfPart + 2; // skip CRLF to point to next boundary
+
+    return nextPart - buffer; // number of bytes moved forward
+}

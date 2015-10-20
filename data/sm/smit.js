@@ -14,21 +14,66 @@ function ajaxSend(url, method) {
     else return ['error', request.responseText];
 }
 function previewMessage() {
+    displayPreview('...'); // preview in progress...
+
+    // create a hidden iframe that will receive the submitted form
+    // (if iframe already exists, reuse it)
+    var iframe = document.getElementById('sm_preview_iframe');
+    if (!iframe) {
+        iframe = document.createElement("iframe");
+        iframe.name = "sm_preview_iframe_name";
+        iframe.id = "sm_preview_iframe";
+        iframe.style.display = "none";
+        document.body.appendChild(iframe);
+        iframe.addEventListener("load", function () {
+            var contents = iframe.contentWindow.document.body.innerHTML;
+            displayPreview(contents);
+
+            console.log("before restore: form.action=", form.action);
+            console.log("before restore: form.target=", form.target);
+            // restore the original settings
+            if (form.origin_action === undefined || form.origin_action == '') {
+                form.removeAttribute('action');
+            } else form.action = form.origin_action;
+            form.method = form.origin_method;
+            form.target = form.origin_target;
+            // re-enable all fields
+            var elements = form.elements;
+            for (var i=0; i<elements.length; i++) {
+                elements[i].disabled = false;
+            }
+            console.log("restore: form.action=", form.action);
+            console.log("restore: form.target=", form.target);
+        });
+    }
+
+    // get the form
+    var form = document.getElementById('sm_issue_form');
+    // backup
+    form.origin_action = form.action;
+    form.origin_method = form.method;
+    form.origin_target = form.target;
+    // modify some parts
+    form.action = '/sm/preview';
+    form.method = 'POST';
+    form.target = iframe.name;
+    // disable file upload, and other fields
+    var elements = form.elements;
+    for (var i=0; i<elements.length; i++) {
+        if (elements[i].name != '+message') elements[i].disabled = true;
+    }
+
+    form.submit();
+
+}
+function displayPreview(html) {
     var divPreview = document.getElementById('sm_entry_preview');
     if (!divPreview) {
-        alert('Preview not available');
+        console.error('Preview not available');
         return;
     }
-    var msg = document.getElementsByName('+message')[0];
-    var value = msg.value;
-    // url-encode value TODO
-    var url = '/sm/preview?message=' + encodeURIComponent(value);
-    var request = new XMLHttpRequest();
-    request.open('GET', url, false); // synchronous
-    request.send(null);
-    divPreview.innerHTML = request.responseText;
+    divPreview.innerHTML = html;
 }
-
 function sm_deleteResource(redirect) {
     var r = confirm("Confirm delete?");
     if (r == true) {
@@ -526,7 +571,6 @@ function showOrHideClasses(className, show) {
             for(var j=0; j<inputs.length; j++) {
                 if (show) inputs[j].disabled = false;
                 else inputs[j].disabled = true;
-                //console.log("input[" + j + "], " + inputs[j].name + ", show=" + show );
             }
         }
     }

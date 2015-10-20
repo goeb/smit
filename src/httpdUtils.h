@@ -36,6 +36,13 @@ struct HttpStatistics {
     Locker lock;
 };
 
+enum ContentType {
+    CT_WWW_FORM_URLENCODED, // application/x-www-form-urlencoded
+    CT_MULTIPART_FORM_DATA, // multipart/form-data
+    CT_OCTET_STREAM, //application/octet-stream
+    CT_UNKNOWN
+};
+
 // global variable statictics
 extern HttpStatistics HttpStats;
 
@@ -43,7 +50,9 @@ void initHttpStats();
 void addHttpStat(HttpEvent e);
 
 int readMgreq(const RequestContext *request, std::string &data, size_t maxSize);
-const char *getContentType(const RequestContext *req);
+const char *getContentTypeString(const RequestContext *req);
+ContentType getContentType(const RequestContext *req);
+ContentType getContentType(const RequestContext *req, std::string &boundary);
 void sendHttpHeader200(const RequestContext *request);
 void sendHttpHeader201(const RequestContext *request);
 void sendHttpHeader204(const RequestContext *request, const char *extraHeader);
@@ -64,8 +73,10 @@ RenderingFormat getFormat(const RequestContext *request);
 int getFromCookie(const RequestContext *request, const std::string &prefix, std::string &value);
 std::list<std::list<std::string> > convertPostToTokens(std::string &postData);
 std::string removeParam(std::string qs, const char *paramName);
-int parseFormRequest(const RequestContext *req, std::map<std::string, std::list<std::string> > &vars,
-                     const std::string &pathTmp);
 void parseQueryStringVar(const std::string &var, std::string &key, std::string &value);
+
+size_t multipartGetNextPart(const char * const buffer, size_t bufferSize, const char *sboundary,
+                           const char **data, size_t *dataSize,
+                           std::string &name, std::string &filename);
 
 #endif

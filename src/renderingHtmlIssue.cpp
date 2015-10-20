@@ -1086,7 +1086,7 @@ void RHtmlIssue::printEditMessage(const ContextParameters &ctx, const Issue *iss
         return;
     }
     ctx.req->printf("<div class=\"sm_amend\">%s: %s</div>", _("Amend Messsage"), urlEncode(eToBeAmended.id).c_str());
-    ctx.req->printf("<form enctype=\"multipart/form-data\" method=\"post\"  class=\"sm_issue_form\">");
+    ctx.req->printf("<form enctype=\"multipart/form-data\" method=\"post\" class=\"sm_issue_form\">");
     ctx.req->printf("<input type=\"hidden\" value=\"%s\" name=\"%s\">", urlEncode(eToBeAmended.id).c_str(), K_AMEND);
     ctx.req->printf("<table class=\"sm_issue_properties\">");
 
@@ -1123,7 +1123,7 @@ void RHtmlIssue::printIssueForm(const ContextParameters &ctx, const Issue *issue
 
     const ProjectConfig &pconfig = ctx.projectConfig;
 
-    ctx.req->printf("<form enctype=\"multipart/form-data\" method=\"post\"  class=\"sm_issue_form\">");
+    ctx.req->printf("<form id=\"sm_issue_form\" enctype=\"multipart/form-data\" method=\"post\" class=\"sm_issue_form\">");
 
     // The form is made over a table with 4 columns.
     // each row is made of 1 label, 1 input, 1 label, 1 input (4 columns)
