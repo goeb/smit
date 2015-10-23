@@ -750,21 +750,36 @@ void httpGetNewProject(const RequestContext *req, User u)
 {
     if (! u.superadmin) return sendHttpHeader403(req);
 
-    Project p;
-    // add by default 2 properties : status (open, closed) and owner (selectUser)
-    PropertySpec pspec;
     ProjectConfig pconfig;
-    pspec.name = "status";
-    pspec.type = F_SELECT;
-    pspec.selectOptions.push_back("open");
-    pspec.selectOptions.push_back("closed");
-    pconfig.properties.push_back(pspec);
-    pspec.name = "owner";
-    pspec.type = F_SELECT_USER;
-    pconfig.properties.push_back(pspec);
-    p.setConfig(pconfig);
+    const Project *pPtr = 0;
+
+    std::string q = req->getQueryString();
+    std::string copyConfigFrom = getFirstParamFromQueryString(q, "copy-config-from");
+    if (!copyConfigFrom.empty()) {
+        // initiate a new config, copied from this one
+        pPtr = Database::Db.lookupProject(copyConfigFrom);
+    }
+
+    if (pPtr) {
+        pconfig = pPtr->getConfig();
+    } else {
+        // add by default 2 properties : status (open, closed) and owner (selectUser)
+        PropertySpec pspec;
+        pspec.name = "status";
+        pspec.type = F_SELECT;
+        pspec.selectOptions.push_back("open");
+        pspec.selectOptions.push_back("closed");
+        pconfig.properties.push_back(pspec);
+        pspec.name = "owner";
+        pspec.type = F_SELECT_USER;
+        pconfig.properties.push_back(pspec);
+    }
+
+    Project newEmptyProject;
+    newEmptyProject.setConfig(pconfig);
+
     sendHttpHeader200(req);
-    ContextParameters ctx = ContextParameters(req, u, p);
+    ContextParameters ctx = ContextParameters(req, u, newEmptyProject);
     RHtml::printProjectConfig(ctx);
 }
 
