@@ -52,7 +52,7 @@ const Project &ContextParameters::getProject() const
 #define K_SM_DIV_NAVIGATION_GLOBAL "SM_DIV_NAVIGATION_GLOBAL"
 #define K_SM_DIV_NAVIGATION_ISSUES "SM_DIV_NAVIGATION_ISSUES"
 #define K_SM_HTML_PROJECT "SM_HTML_PROJECT"
-#define K_SM_URL_PROJECT "SM_URL_PROJECT"
+#define K_SM_URL_PROJECT "SM_URL_PROJECT" // including the SM_URL_ROOT
 #define K_SM_RAW_ISSUE_ID "SM_RAW_ISSUE_ID"
 #define K_SM_DIV_PREDEFINED_VIEWS "SM_DIV_PREDEFINED_VIEWS"
 #define K_SM_DIV_PROJECTS "SM_DIV_PROJECTS"
@@ -66,6 +66,7 @@ const Project &ContextParameters::getProject() const
 #define K_SM_TABLE_USER_PERMISSIONS "SM_TABLE_USER_PERMISSIONS"
 #define K_SM_SCRIPT "SM_SCRIPT"
 #define K_SM_DIV_ENTRIES "SM_DIV_ENTRIES"
+#define K_SM_DATALIST_PROJECTS "SM_DATALIST_PROJECTS"
 
 /** Load a page template of a specific project
   *
@@ -188,7 +189,7 @@ public:
             if (varname.empty()) break;
 
             if (varname == K_SM_HTML_PROJECT && ctx.project) {
-                if (ctx.getProject().getName().empty()) ctx.req->printf("(new)");
+                if (ctx.getProject().getName().empty()) ctx.req->printf("(new project)");
                 else ctx.req->printf("%s", htmlEscape(ctx.getProject().getName()).c_str());
 
             } else if (varname == K_SM_URL_PROJECT && ctx.project) {
@@ -203,8 +204,11 @@ public:
                 // do not print this in case a a new project
                 if (! ctx.getProject().getName().empty()) RHtml::printNavigationIssues(ctx, false);
 
-            } else if (varname == K_SM_DIV_PROJECTS && projectList) {
-                RHtml::printProjects(ctx, *projectList, userRolesByProject);
+            } else if (varname == K_SM_DIV_PROJECTS && projectList && userRolesByProject) {
+                RHtml::printProjects(ctx, *projectList, *userRolesByProject);
+
+            } else if (varname == K_SM_DATALIST_PROJECTS && projectList) {
+                RHtml::printDatalistProjects(ctx, *projectList);
 
             } else if (varname == K_SM_DIV_USERS && usersList) {
                 RHtml::printUsers(ctx.req, *usersList);
@@ -701,10 +705,21 @@ void RHtml::printNavigationIssues(const ContextParameters &ctx, bool autofocus)
     div.print(ctx.req);
 }
 
+void RHtml::printDatalistProjects(const ContextParameters &ctx,
+                                  const std::list<std::pair<std::string, std::string> > &pList)
+{
+    std::list<std::pair<std::string, std::string> >::const_iterator p;
+
+    ctx.req->printf("<datalist id=\"sm_projects\">\n");
+    FOREACH(p, pList) {
+        ctx.req->printf("<option value=\"%s\">\n", htmlEscape(p->second).c_str());
+    }
+    ctx.req->printf("</datalist>\n");
+}
 
 void RHtml::printProjects(const ContextParameters &ctx,
                           const std::list<std::pair<std::string, std::string> > &pList,
-                          const std::map<std::string, std::map<Role, std::set<std::string> > > *userRolesByProject)
+                          const std::map<std::string, std::map<Role, std::set<std::string> > > &userRolesByProject)
 {
     std::list<std::pair<std::string, std::string> >::const_iterator p;
     ctx.req->printf("<table class=\"sm_projects\">\n");
@@ -736,8 +751,8 @@ void RHtml::printProjects(const ContextParameters &ctx,
         ctx.req->printf("<td>%s</td>\n", htmlEscape(_(p->second.c_str())).c_str());
 
         std::map<std::string, std::map<Role, std::set<std::string> > >::const_iterator urit;
-        urit = userRolesByProject->find(pname);
-        if (urit != userRolesByProject->end()) {
+        urit = userRolesByProject.find(pname);
+        if (urit != userRolesByProject.end()) {
 
             std::list<Role>::iterator r;
             FOREACH(r, roleColumns) {
