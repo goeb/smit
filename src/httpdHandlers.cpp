@@ -1719,7 +1719,7 @@ void httpPostTag(const RequestContext *req, Project &p, std::string &ref, User u
 void httpReloadProject(const RequestContext *req, Project &p, User u)
 {
     enum Role role = u.getRole(p.getName());
-    if (role != ROLE_ADMIN) {
+    if (!u.superadmin) {
         sendHttpHeader403(req);
         return;
     }
