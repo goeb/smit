@@ -7,6 +7,21 @@
         <link rel="stylesheet" type="text/css" href="SM_URL_ROOT/public/style.css">
         <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/>
         <script src="SM_URL_ROOT/sm/smit.js"></script>
+        <style>
+            div.help_content {
+                display: none;
+                margin: 5px;
+                padding: 5px;
+                border: 1px solid grey;
+                box-shadow: 5px 5px 8px #CCC;
+            }
+        </style>
+        <script>
+            function show(id) {
+                var item = document.getElementById(id);
+                item.style.display = "block";
+            }
+        </script>
     </head>
     <body>
         <div style="position: fixed; top: 0; padding-top: 15px; width: 100%; background: white;">
@@ -31,6 +46,8 @@
             </div>
             <h2>Properties</h2>
             Edit here the properties that you want in your issues.<br>
+            <div class="clickable" onclick="show('help_property'); return false;">Show help</div>
+            <div class="help_content" id="help_property">
             Each property has:
             <ul><li>a logical name, that must be unique among the properties of the project. This logical name is used in the address (query string) for filters and sorting.</li>
                 <li>a label, that is a more human friendly representation of the property, displayed in the pages. If the label is empty, then the logical name is used instead.</li>
@@ -45,11 +62,13 @@
                 <li>a list of possible values, for types <code>select</code> and <code>multiselect</code></li>
             </ul>
             You cannot use the following logical names as they are reserved:
+            <code>p</code>,
             <code>id</code>,
             <code>ctime</code>,
             <code>mtime</code>,
             <code>summary</code>
             . However you may assign a human-readable label to these, as well as for any other.
+            </div>
             <br>
             <br>
             <noscript>You must enable Javascript to continue...</noscript>
@@ -60,6 +79,16 @@
             <br>
             <div onclick="addMoreProperties(3);" class="clickable">+ Click for more properties...</div>
             <br>
+            <h2>Tags</h2>
+            <div class="clickable" onclick="show('help_tag'); return false;">Show help</div>
+            <div class="help_content" id="help_tag">
+                Tags are keywords assigned to entries.<br>
+                <ul>
+                    <li>Logical Name: an identifier for the keyword</li>
+                    <li>Tag Label: a text that will be displayed</li>
+                    <li>Display in Issue Header: a line at the beginning of the issue will indicate if at least one entry is tagged</li>
+                </ul>
+            </div>
             <table id="sm_config_tags" style="vertical-align: top;">
                 <tr><th></th><th>Tag Logical Name</th><th>Tag Label</th><th>Display in Issue Header</th></tr>
             </table>
