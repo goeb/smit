@@ -696,17 +696,20 @@ int httpGetFile(const RequestContext *request)
     return REQUEST_COMPLETED; // the request is completely handled
 }
 
-void httpGetProjects(const RequestContext *req, User u)
+
+/** Get a list of the projects to which a user may access
+  *
+  */
+void getProjects(const User &u, std::list<std::pair<std::string, std::string> > &pList)
 {
-    sendHttpHeader200(req);
-    // print list of available projects
-    std::list<std::pair<std::string, Role> > usersRoles;
-    std::list<std::pair<std::string, std::string> > pList;
-    if (!UserBase::isLocalUserInterface() && !u.superadmin) {
+    pList.clear();
+
+    if (!u.superadmin) {
         // Get the list of the projects to which the user has permission
         pList = u.getProjects();
 
     } else {
+        // Superadmin
         // Get the list of all projects
         // (case of a superadmin of a local user)
         std::list<std::string> allProjects = Database::getProjects();
@@ -716,7 +719,14 @@ void httpGetProjects(const RequestContext *req, User u)
             pList.push_back(std::make_pair(*p ,roleToString(r)));
         }
     }
+}
 
+void httpGetProjects(const RequestContext *req, User u)
+{
+    sendHttpHeader200(req);
+    // print list of available projects
+    std::list<std::pair<std::string, std::string> > pList;
+    getProjects(u, pList);
     enum RenderingFormat format = getFormat(req);
 
     if (format == RENDERING_TEXT) RText::printProjectList(req, pList);
@@ -778,19 +788,24 @@ void httpGetNewProject(const RequestContext *req, User u)
     Project newEmptyProject;
     newEmptyProject.setConfig(pconfig);
 
+    std::list<std::pair<std::string, std::string> > pList;
+    getProjects(u, pList);
+
     sendHttpHeader200(req);
     ContextParameters ctx = ContextParameters(req, u, newEmptyProject);
-    RHtml::printProjectConfig(ctx);
+    RHtml::printProjectConfig(ctx, pList);
 }
-
 
 void httpGetProjectConfig(const RequestContext *req, Project &p, User u)
 {
     if (u.getRole(p.getName()) != ROLE_ADMIN && ! u.superadmin) return sendHttpHeader403(req);
 
+    std::list<std::pair<std::string, std::string> > pList;
+    getProjects(u, pList);
+
     sendHttpHeader200(req);
     ContextParameters ctx = ContextParameters(req, u, p);
-    RHtml::printProjectConfig(ctx);
+    RHtml::printProjectConfig(ctx, pList);
 }
 
 void consolidatePropertyDescription(std::list<std::list<std::string> > &tokens, PropertySpec &pSpec)

@@ -712,7 +712,7 @@ void RHtml::printDatalistProjects(const ContextParameters &ctx,
 
     ctx.req->printf("<datalist id=\"sm_projects\">\n");
     FOREACH(p, pList) {
-        ctx.req->printf("<option value=\"%s\">\n", htmlEscape(p->second).c_str());
+        ctx.req->printf("<option value=\"%s\">\n", htmlEscape(p->first).c_str());
     }
     ctx.req->printf("</datalist>\n");
 }
@@ -914,10 +914,11 @@ std::string RHtml::getScriptProjectConfig(const ContextParameters &ctx)
 }
 
 
-void RHtml::printProjectConfig(const ContextParameters &ctx)
+void RHtml::printProjectConfig(const ContextParameters &ctx,
+                               const std::list<std::pair<std::string, std::string> > &pList)
 {
     VariableNavigator vn("project.html", ctx);
-
+    vn.projectList = &pList;
     vn.script = getScriptProjectConfig(ctx);
 
     if (ctx.user.superadmin) {

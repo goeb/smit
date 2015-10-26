@@ -26,7 +26,7 @@ public:
                                      const std::list<std::pair<std::string, std::string> > &pList,
                                      const std::map<std::string, std::map<Role, std::set<std::string> > > &userRolesByProject);
 
-    static void printProjectConfig(const ContextParameters &ctx);
+    static void printProjectConfig(const ContextParameters &ctx, const std::list<std::pair<std::string, std::string> > &pList);
     static void printPageIssuesFullContents(const ContextParameters &ctx, const std::vector<Issue> &issueList);
     static void printPageIssueList(const ContextParameters &ctx, const std::vector<Issue> &issueList,
                                    const std::list<std::string> &colspec);
