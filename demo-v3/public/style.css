@@ -141,7 +141,7 @@ input {
     font-size: small;
 }
 .sm_issue_pvalue_ta {
-    white-space: pre;
+    white-space: pre-wrap;
 }
 .sm_issue_pvalue {
     white-space: nowrap;
@@ -392,7 +392,4 @@ div.sm_entry_files {
 }
 .sm_amend {
     font-size: 150%;
-}
-.sm_property_unchanged {
-    color: #aaa;
 }
