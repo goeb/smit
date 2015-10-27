@@ -4,8 +4,8 @@ setperm "John the ripper" ro myproject
 setperm "John the ripper" rw mypxxx
 setperm "Mister Myster" ro myproject
 setperm "Mister Myster" rw mypxxx
-setperm alice admin a:b:c
 setperm alice ro myproject
+setperm alice admin myproject/yoyo
 setperm alice ro things_to_do
 setperm fred superadmin
 setperm fred admin myproject*
