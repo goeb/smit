@@ -26,7 +26,7 @@ public:
                                      const std::list<std::pair<std::string, std::string> > &pList,
                                      const std::map<std::string, std::map<Role, std::set<std::string> > > &userRolesByProject);
 
-    static void printProjectConfig(const ContextParameters &ctx);
+    static void printProjectConfig(const ContextParameters &ctx, const std::list<std::pair<std::string, std::string> > &pList);
     static void printPageIssuesFullContents(const ContextParameters &ctx, const std::vector<Issue> &issueList);
     static void printPageIssueList(const ContextParameters &ctx, const std::vector<Issue> &issueList,
                                    const std::list<std::string> &colspec);
@@ -50,9 +50,11 @@ public:
     static void printPageView(const ContextParameters &ctx, const PredefinedView &pv);
     static void printPageListOfViews(const ContextParameters &ctx);
     static void printLinksToPredefinedViews(const ContextParameters &ctx);
+    static void printDatalistProjects(const ContextParameters &ctx,
+                                      const std::list<std::pair<std::string, std::string> > &pList);
     static void printProjects(const ContextParameters &ctx,
                               const std::list<std::pair<std::string, std::string> > &pList,
-                              const std::map<std::string, std::map<Role, std::set<std::string> > > *userRolesByProject);
+                              const std::map<std::string, std::map<Role, std::set<std::string> > > &userRolesByProject);
     static void printUsers(const RequestContext *req, const std::list<User> &usersList);
     static void printUserPermissions(const RequestContext *req, const User &u);
     static std::string getScriptProjectConfig(const ContextParameters &ctx);

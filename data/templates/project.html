@@ -8,6 +8,7 @@
         <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/>
         <script src="SM_URL_ROOT/sm/smit.js"></script>
         <style>
+            .on_new_project { display: none; }
             div.help_content {
                 display: none;
                 margin: 5px;
@@ -17,9 +18,22 @@
             }
         </style>
         <script>
+            function showOnNewProject() {
+                if (location.pathname.replace( /.*\//, '' ) != '_') return;
+
+                var items = document.getElementsByClassName('on_new_project');
+                for (var i=0; i<items.length; i++) {
+                    items[i].style.display = 'block';
+                }
+            }
             function show(id) {
                 var item = document.getElementById(id);
                 item.style.display = "block";
+            }
+            function getUrlCopyConfigFrom(id) {
+                var item = document.getElementById(id);
+                location.search = "?copy-config-from=" + encodeURI(item.value);
+                return false;
             }
         </script>
     </head>
@@ -68,9 +82,14 @@
             <code>summary</code>
             . However you may assign a human-readable label to these, as well as for any other.
             </div>
+            <div class="on_new_project">
+                SM_DATALIST_PROJECTS
+                Copy configuration from another project:
+                <input list="sm_projects" id="copy_from">
+                <a href="#" onclick="return getUrlCopyConfigFrom('copy_from');">Load</a>
+            </div>
             <br>
             <br>
-            <noscript>You must enable Javascript to continue...</noscript>
 
             <table id="sm_config_properties" style="vertical-align: top;">
                 <tr><th></th><th>Logical Name</th><th>Label</th><th>Type</th></tr>
@@ -103,5 +122,6 @@
             <input type="submit" value="Reload Project From Disk Storage">
         </form>
         SM_SCRIPT
+        <script>showOnNewProject();</script>
     </body>
 </html>

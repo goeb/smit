@@ -155,6 +155,8 @@ Project *Database::getProject(const std::string & projectName)
     else return p->second;
 }
 
+/** Get all the projects of the repository
+  */
 std::list<std::string> Database::getProjects()
 {
     ScopeLocker scopeLocker(Db.locker, LOCK_READ_ONLY);
