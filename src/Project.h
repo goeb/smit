@@ -41,6 +41,7 @@ public:
                 const std::map<std::string, std::list<std::string> > &filterOut,
                 const char *sortingSpec,
                 std::vector<IssueCopy> &returnedIssues) const;
+    void searchEntries(const char *sortingSpec, std::vector<Entry> &entries, int limit) const;
 
     int get(const std::string &issueId, IssueCopy &issue) const;
     void getAllIssues(std::vector<Issue*> &issuesList);
