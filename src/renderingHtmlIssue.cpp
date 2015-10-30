@@ -870,7 +870,7 @@ void RHtmlIssue::printIssue(const ContextParameters &ctx, const IssueCopy &issue
             ctx.req->printf("<a href=\"%s/%s/issues/%s?amend=%s\" class=\"sm_entry_edit\" "
                             "title=\"Edit this message (at most %d minutes after posting)\">",
                             MongooseServerContext::getInstance().getUrlRewritingRoot().c_str(),
-                            ctx.getProject().getUrlName().c_str(), enquoteJs(issue.id).c_str(),
+                            ctx.getProjectUrlName().c_str(), enquoteJs(issue.id).c_str(),
                             enquoteJs(ee.id).c_str(), (DELETE_DELAY_S/60));
             ctx.req->printf("&#9998; %s", _("edit"));
             ctx.req->printf("</a>\n");
@@ -879,7 +879,7 @@ void RHtmlIssue::printIssue(const ContextParameters &ctx, const IssueCopy &issue
         // link to raw entry
         ctx.req->printf("(<a href=\"%s/%s/" RESOURCE_FILES "/%s\" class=\"sm_entry_raw\">%s</a>",
                         MongooseServerContext::getInstance().getUrlRewritingRoot().c_str(),
-                        ctx.getProject().getUrlName().c_str(),
+                        ctx.getProjectUrlName().c_str(),
                         urlEncode(ee.id).c_str(), _("raw"));
         // link to possible amendments
         int i = 1;
@@ -888,7 +888,7 @@ void RHtmlIssue::printIssue(const ContextParameters &ctx, const IssueCopy &issue
             std::list<std::string>::const_iterator a;
             FOREACH(a, as->second) {
                 ctx.req->printf(", <a href=\"/%s/" RESOURCE_FILES "/%s\" class=\"sm_entry_raw\">%s%d</a>",
-                                ctx.getProject().getUrlName().c_str(),
+                                ctx.getProjectUrlName().c_str(),
                                 urlEncode(*a).c_str(), _("amend"), i);
                 i++;
             }
@@ -910,7 +910,7 @@ void RHtmlIssue::printIssue(const ContextParameters &ctx, const IssueCopy &issue
 
                     ctx.req->printf("<a href=\"#\" onclick=\"tagEntry('/%s/tags', '%s', '%s');return false;\""
                                     " title=\"%s\" class=\"sm_entry_tag\">",
-                                    ctx.getProject().getUrlName().c_str(), enquoteJs(ee.id).c_str(),
+                                    ctx.getProjectUrlName().c_str(), enquoteJs(ee.id).c_str(),
                                     enquoteJs(tag.id).c_str(), tagTitle);
 
                     // the tag itself
@@ -964,7 +964,7 @@ void RHtmlIssue::printIssue(const ContextParameters &ctx, const IssueCopy &issue
                 }
                 ctx.req->printf("%s", htmlEscape(basename).c_str());
                 // size of the file
-                std::string path = ctx.project->getObjectsDir() + '/' + Object::getSubpath(objectId);
+                std::string path = Project::getObjectPath(ctx.projectPath, objectId);
                 std::string size = getFileSize(path);
                 ctx.req->printf("<span> (%s)</span>", size.c_str());
                 ctx.req->printf("</a>");
@@ -1212,7 +1212,7 @@ void RHtmlIssue::printIssueForm(const ContextParameters &ctx, const IssueCopy *i
             }
             input << "<select class=\"sm_issue_pinput_" << pname << "\" name=\"" << pname << "\">";
 
-            std::set<std::string> users = UserBase::getUsersOfProject(ctx.getProject().getName());
+            std::set<std::string> users = UserBase::getUsersOfProject(ctx.projectName);
             // same a as above : keep old value even if not in official list
             if (!value.empty()) users.insert(value);
 

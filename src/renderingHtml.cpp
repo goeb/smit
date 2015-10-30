@@ -40,14 +40,6 @@
   #include "AuthLdap.h"
 #endif
 
-const Project &ContextParameters::getProject() const
-{
-    if (!project) {
-        LOG_ERROR("Invalid null project. Expect crash...");
-    }
-    return *project;
-}
-
 
 #define K_SM_DIV_NAVIGATION_GLOBAL "SM_DIV_NAVIGATION_GLOBAL"
 #define K_SM_DIV_NAVIGATION_ISSUES "SM_DIV_NAVIGATION_ISSUES"
@@ -75,12 +67,12 @@ const Project &ContextParameters::getProject() const
   *
   * The caller is responsible for calling 'free' on the returned pointer (if not null).
   */
-int loadProjectPage(const RequestContext *req, const Project *project, const std::string &page, const char **data)
+int loadProjectPage(const RequestContext *req, const std::string &projectPath, const std::string &page, const char **data)
 {
     std::string path;
-    if (project) {
+    if (!projectPath.empty()) {
         // first look in the templates of the project
-        path = project->getPath() + "/" PATH_TEMPLATES "/" + page;
+        path = projectPath + "/" PATH_TEMPLATES "/" + page;
         int n = loadFile(path.c_str(), data);
         if (n > 0) return n;
     }
@@ -130,7 +122,7 @@ public:
         entryToBeAmended = 0;
         entries = 0;
 
-        int n = loadProjectPage(ctx.req, ctx.project, basename, &buffer);
+        int n = loadProjectPage(ctx.req, ctx.projectPath, basename, &buffer);
 
         if (n > 0) {
             size = n;
@@ -188,21 +180,21 @@ public:
             dumpPrevious(ctx.req);
             if (varname.empty()) break;
 
-            if (varname == K_SM_HTML_PROJECT && ctx.project) {
-                if (ctx.getProject().getName().empty()) ctx.req->printf("(new project)");
-                else ctx.req->printf("%s", htmlEscape(ctx.getProject().getName()).c_str());
+            if (varname == K_SM_HTML_PROJECT) {
+                if (!ctx.hasProject()) ctx.req->printf("(new project)");
+                else ctx.req->printf("%s", htmlEscape(ctx.projectName).c_str());
 
-            } else if (varname == K_SM_URL_PROJECT && ctx.project) {
+            } else if (varname == K_SM_URL_PROJECT && ctx.hasProject()) {
                 MongooseServerContext &mc = MongooseServerContext::getInstance();
                 ctx.req->printf("%s/%s", mc.getUrlRewritingRoot().c_str(),
-                                ctx.getProject().getUrlName().c_str());
+                                ctx.getProjectUrlName().c_str());
 
             } else if (varname == K_SM_DIV_NAVIGATION_GLOBAL) {
                 RHtml::printNavigationGlobal(ctx);
 
-            } else if (varname == K_SM_DIV_NAVIGATION_ISSUES && ctx.project) {
+            } else if (varname == K_SM_DIV_NAVIGATION_ISSUES) {
                 // do not print this in case a a new project
-                if (! ctx.getProject().getName().empty()) RHtml::printNavigationIssues(ctx, false);
+                if (ctx.hasProject()) RHtml::printNavigationIssues(ctx, false);
 
             } else if (varname == K_SM_DIV_PROJECTS && projectList && userRolesByProject) {
                 RHtml::printProjects(ctx, *projectList, *userRolesByProject);
@@ -396,7 +388,7 @@ void RHtml::printPageView(const ContextParameters &ctx, const PredefinedView &pv
 
         } else if (t == F_SELECT_USER) {
             std::set<std::string>::const_iterator u;
-            std::set<std::string> users = UserBase::getUsersOfProject(ctx.getProject().getName());
+            std::set<std::string> users = UserBase::getUsersOfProject(ctx.projectName);
             // fulfill the list of proposed values
             proposedValues.push_back("me");
             FOREACH(u, users) { proposedValues.push_back(*u); }
@@ -412,7 +404,7 @@ void RHtml::printPageView(const ContextParameters &ctx, const PredefinedView &pv
     ctx.req->printf("setSearch('%s');\n", enquoteJs(pv.search).c_str());
     ctx.req->printf("setUrl('%s/%s/issues/?%s');\n",
                     MongooseServerContext::getInstance().getUrlRewritingRoot().c_str(),
-                    ctx.getProject().getUrlName().c_str(),
+                    ctx.getProjectUrlName().c_str(),
                     pv.generateQueryString().c_str());
 
     // add datalists for all types select, multiselect and selectuser
@@ -468,7 +460,7 @@ void RHtml::printLinksToPredefinedViews(const ContextParameters &ctx)
     std::map<std::string, PredefinedView>::const_iterator pv;
     ctx.req->printf("<table class=\"sm_views\">");
     ctx.req->printf("<tr><th>%s</th><th>%s</th></tr>\n", _("Name"), _("Associated Url"));
-    FOREACH(pv, ctx.predefinedViews) {
+    FOREACH(pv, ctx.projectViews) {
         ctx.req->printf("<tr><td class=\"sm_views_name\">");
         ctx.req->printf("<a href=\"%s\">%s</a>", urlEncode(pv->first).c_str(), htmlEscape(pv->first).c_str());
         ctx.req->printf("</td><td class=\"sm_views_link\">");
@@ -590,11 +582,11 @@ void RHtml::printNavigationGlobal(const ContextParameters &ctx)
         div.addContents(allUsers);
     }
 
-    if (ctx.project && (ctx.userRole == ROLE_ADMIN || ctx.user.superadmin) ) {
+    if (ctx.hasProject() && (ctx.userRole == ROLE_ADMIN || ctx.user.superadmin) ) {
         // link for modifying project structure
         HtmlNode linkToModify("a");
         linkToModify.addAttribute("class", "sm_link_modify_project");
-        linkToModify.addAttribute("href", "/%s/config", ctx.getProject().getUrlName().c_str());
+        linkToModify.addAttribute("href", "/%s/config", ctx.getProjectUrlName().c_str());
         linkToModify.addContents("%s", _("Project config"));
         div.addContents(" ");
         div.addContents(linkToModify);
@@ -602,16 +594,16 @@ void RHtml::printNavigationGlobal(const ContextParameters &ctx)
         // link to config of predefined views
         HtmlNode linkToViews("a");
         linkToViews.addAttribute("class", "sm_link_views");
-        linkToViews.addAttribute("href", "/%s/views/", ctx.getProject().getUrlName().c_str());
+        linkToViews.addAttribute("href", "/%s/views/", ctx.getProjectUrlName().c_str());
         linkToViews.addContents("%s", _("Views"));
         div.addContents(" ");
         div.addContents(linkToViews);
     }
 
-    if (ctx.project) {
+    if (ctx.hasProject()) {
         HtmlNode linkToStat("a");
         linkToStat.addAttribute("class", "sm_link_stat");
-        linkToStat.addAttribute("href", "/%s/stat", ctx.getProject().getUrlName().c_str());
+        linkToStat.addAttribute("href", "/%s/stat", ctx.getProjectUrlName().c_str());
         linkToStat.addContents("%s", _("Stat"));
         div.addContents(" ");
         div.addContents(linkToStat);
@@ -664,16 +656,16 @@ void RHtml::printNavigationIssues(const ContextParameters &ctx, bool autofocus)
     div.addAttribute("class", "sm_navigation_project");
     if (ctx.userRole == ROLE_ADMIN || ctx.userRole == ROLE_RW || ctx.user.superadmin) {
         HtmlNode a("a");
-        a.addAttribute("href", "/%s/issues/new", ctx.getProject().getUrlName().c_str());
+        a.addAttribute("href", "/%s/issues/new", ctx.getProjectUrlName().c_str());
         a.addAttribute("class", "sm_link_new_issue");
         a.addContents("%s", _("New issue"));
         div.addContents(a);
     }
 
     std::map<std::string, PredefinedView>::const_iterator pv;
-    FOREACH (pv, ctx.predefinedViews) {
+    FOREACH (pv, ctx.projectViews) {
         HtmlNode a("a");
-        a.addAttribute("href", "/%s/issues/?%s", ctx.getProject().getUrlName().c_str(),
+        a.addAttribute("href", "/%s/issues/?%s", ctx.getProjectUrlName().c_str(),
                        pv->second.generateQueryString().c_str());
         a.addAttribute("class", "sm_predefined_view");
         a.addContents("%s", pv->first.c_str());
@@ -682,7 +674,7 @@ void RHtml::printNavigationIssues(const ContextParameters &ctx, bool autofocus)
 
     HtmlNode form("form");
     form.addAttribute("class", "sm_searchbox");
-    form.addAttribute("action", "/%s/issues/", ctx.getProject().getUrlName().c_str());
+    form.addAttribute("action", "/%s/issues/", ctx.getProjectUrlName().c_str());
     form.addAttribute("method", "get");
 
     HtmlNode input("input");
@@ -696,7 +688,7 @@ void RHtml::printNavigationIssues(const ContextParameters &ctx, bool autofocus)
 
     // advanced search
     HtmlNode a("a");
-    a.addAttribute("href", "/%s/views/_", ctx.getProject().getUrlName().c_str());
+    a.addAttribute("href", "/%s/views/_", ctx.getProjectUrlName().c_str());
     a.addAttribute("class", "sm_advanced_search");
     a.addContents(_("Advanced Search"));
     div.addContents(a);
@@ -923,8 +915,8 @@ void RHtml::printProjectConfig(const ContextParameters &ctx,
 
     if (ctx.user.superadmin) {
         vn.script += "showOrHideClasses('sm_zone_superadmin', true);\n";
-        if (ctx.project) {
-            vn.script += "setProjectName('" + enquoteJs(ctx.getProject().getName()) + "');\n";
+        if (ctx.hasProject()) {
+            vn.script += "setProjectName('" + enquoteJs(ctx.projectName) + "');\n";
         }
 
     } else {

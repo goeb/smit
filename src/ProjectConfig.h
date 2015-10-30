@@ -76,5 +76,4 @@ struct ProjectConfig {
     static ProjectConfig getDefaultConfig();
 };
 
-
 #endif

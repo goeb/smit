@@ -29,13 +29,14 @@
   * ContextParameters::projectConfig gets the config once at initilisation,
   * and afterwards one can work with the copy (without locking).
   */
-ContextParameters::ContextParameters(const RequestContext *request, const User &u, const Project &p)
+ContextParameters::ContextParameters(const RequestContext *req, const User &u, const ProjectParameters &pp)
 {
-    init(request, u);
-    project = &p;
-    projectConfig = p.getConfig(); // take a copy of the config
-    predefinedViews = p.getViews(); // take a copy of the config
-    userRole = u.getRole(p.getName());
+    init(req, u);
+    projectName = pp.projectName;
+    projectPath = pp.projectPath;
+    projectConfig = pp.pconfig;
+    projectViews = pp.views;
+    userRole = u.getRole(projectName);
 }
 
 ContextParameters::ContextParameters(const RequestContext *request, const User &u)
@@ -45,7 +46,6 @@ ContextParameters::ContextParameters(const RequestContext *request, const User &
 
 void ContextParameters::init(const RequestContext *request, const User &u)
 {
-    project = 0;
     user = u;
     req = request;
     originView = 0;

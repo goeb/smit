@@ -1528,12 +1528,16 @@ ProjectConfig Project::getConfig() const
     return config;
 }
 
-std::map<std::string, PredefinedView> Project::getViews() const
+ProjectParameters Project::getProjectParameters() const
 {
-    ScopeLocker scopeLocker(lockerForViews, LOCK_READ_ONLY);
-    return predefinedViews;
+    ScopeLocker scopeLocker(lockerForConfig, LOCK_READ_ONLY);
+    ProjectParameters pParams;
+    pParams.projectName = name;
+    pParams.projectPath = path;
+    pParams.pconfig = config;
+    pParams.views = predefinedViews;
+    return pParams;
 }
-
 
 /** Amend the message of an existing entry
   *

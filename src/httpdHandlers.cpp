@@ -699,6 +699,8 @@ int httpGetFile(const RequestContext *request)
 
 /** Get a list of the projects to which a user may access
   *
+  * @param[out] pList
+  *     A list of pairs (project-name, user-role)
   */
 void getProjects(const User &u, std::list<std::pair<std::string, std::string> > &pList)
 {
@@ -792,7 +794,7 @@ void httpGetNewProject(const RequestContext *req, User u)
     getProjects(u, pList);
 
     sendHttpHeader200(req);
-    ContextParameters ctx = ContextParameters(req, u, newEmptyProject);
+    ContextParameters ctx = ContextParameters(req, u, newEmptyProject.getProjectParameters());
     RHtml::printProjectConfig(ctx, pList);
 }
 
@@ -804,7 +806,7 @@ void httpGetProjectConfig(const RequestContext *req, Project &p, User u)
     getProjects(u, pList);
 
     sendHttpHeader200(req);
-    ContextParameters ctx = ContextParameters(req, u, p);
+    ContextParameters ctx = ContextParameters(req, u, p.getProjectParameters());
     RHtml::printProjectConfig(ctx, pList);
 }
 
@@ -1258,7 +1260,7 @@ void httpSendIssueList(const RequestContext *req, const Project &p,
         separator = urlDecode(separator);
         RCsv::printIssueList(req, issueList, cols, separator.c_str());
     } else {
-        ContextParameters ctx = ContextParameters(req, u, p);
+        ContextParameters ctx = ContextParameters(req, u, p.getProjectParameters());
         ctx.filterin = v.filterin;
         ctx.filterout = v.filterout;
         ctx.search = v.search;
@@ -1290,7 +1292,7 @@ void httpGetListOfEntries(const RequestContext *req, const Project &p, User u)
 
     // Only HTML supported at the moment
 
-    ContextParameters ctx = ContextParameters(req, u, p);
+    ContextParameters ctx = ContextParameters(req, u, p.getProjectParameters());
     //ctx.filterin = v.filterin; not available for entries
     //ctx.filterout = v.filterout; not available for entries
     //ctx.search = v.search; not available for entries
@@ -1432,7 +1434,7 @@ void httpGetNewIssueForm(const RequestContext *req, Project &p, User u)
 
     sendHttpHeader200(req);
 
-    ContextParameters ctx = ContextParameters(req, u, p);
+    ContextParameters ctx = ContextParameters(req, u, p.getProjectParameters());
 
     // only HTML format is needed
     RHtml::printPageNewIssue(ctx);
@@ -1445,7 +1447,7 @@ void httpGetView(const RequestContext *req, Project &p, const std::string &view,
 
     if (view.empty()) {
         // print the list of all views
-        ContextParameters ctx = ContextParameters(req, u, p);
+        ContextParameters ctx = ContextParameters(req, u, p.getProjectParameters());
         RHtml::printPageListOfViews(ctx);
 
     } else {
@@ -1462,7 +1464,7 @@ void httpGetView(const RequestContext *req, Project &p, const std::string &view,
                 pv = PredefinedView::loadFromQueryString(originView);
             }
         }
-        ContextParameters ctx = ContextParameters(req, u, p);
+        ContextParameters ctx = ContextParameters(req, u, p.getProjectParameters());
         RHtml::printPageView(ctx, pv);
     }
 }
@@ -1526,7 +1528,7 @@ void httpGetHeadObject(const RequestContext *req, Project &p, std::string object
 void httpGetStat(const RequestContext *req, Project &p, const User &u)
 {
     sendHttpHeader200(req);
-    ContextParameters ctx = ContextParameters(req, u, p);
+    ContextParameters ctx = ContextParameters(req, u, p.getProjectParameters());
     // only HTML format is supported
     RHtml::printPageStat(ctx, u);
 }
@@ -1821,7 +1823,7 @@ int httpGetIssue(const RequestContext *req, Project &p, const std::string &issue
                 entryToBeAmended = e;
             }
 
-            ContextParameters ctx = ContextParameters(req, u, p);
+            ContextParameters ctx = ContextParameters(req, u, p.getProjectParameters());
             std::string originView;
             int r = getFromCookie(req, COOKIE_ORIGIN_VIEW, originView);
             if (r == 0) ctx.originView = originView.c_str();

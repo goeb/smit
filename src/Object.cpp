@@ -6,6 +6,7 @@
 #include "stringTools.h"
 #include "logging.h"
 
+
 std::string Object::getSubpath(const std::string &id) {
     if (id.size() <= 2) {
         std::string result = "xx/" + id;

@@ -28,6 +28,15 @@
 
 #define DELETE_DELAY_S (10*60) // seconds
 
+/** Class for holding project config and some other info
+  */
+struct ProjectParameters {
+    std::string projectPath;
+    std::string projectName;
+    ProjectConfig pconfig;
+    std::map<std::string, PredefinedView> views;
+};
+
 class Project {
 public:
     static Project *init(const std::string &path, const std::string &repo);
@@ -67,7 +76,7 @@ public:
 
     // project config
     ProjectConfig getConfig() const;
-    std::map<std::string, PredefinedView> getViews() const;
+    ProjectParameters getProjectParameters() const;
 
     inline void setConfig(ProjectConfig pconfig) { config = pconfig; }
     int modifyConfig(std::list<std::list<std::string> > &tokens, const std::string &author);
@@ -78,6 +87,9 @@ public:
 
     // methods for database access
     inline std::string getObjectsDir() const { return path + '/' + PATH_OBJECTS; }
+    inline static std::string getObjectPath(const std::string path, const std::string &oid) {
+        return path + '/' + PATH_OBJECTS + '/' + Object::getSubpath(oid);
+    }
     inline std::string getIssuesDir() const { return path + '/' + PATH_ISSUES; }
     void getObjects(std::list<std::string> &objects) const;
 
@@ -149,7 +161,5 @@ private:
                             const std::list<std::string> &issues);
 
 };
-
-
 
 #endif
