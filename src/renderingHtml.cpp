@@ -102,14 +102,14 @@ int loadProjectPage(const RequestContext *req, const Project *project, const std
   */
 class VariableNavigator {
 public:
-    const std::vector<Issue> *issueList;
-    const std::vector<Issue> *issuesOfAllProjects;
-    const std::vector<Issue> *issueListFullContents;
+    const std::vector<IssueCopy> *issueList;
+    const std::vector<IssueCopy> *issuesOfAllProjects;
+    const std::vector<IssueCopy> *issueListFullContents;
     const std::list<std::string> *colspec;
     const ContextParameters &ctx;
     const std::list<std::pair<std::string, std::string> > *projectList;
     const std::list<User> *usersList;
-    const Issue *currentIssue;
+    const IssueCopy *currentIssue;
     const User *concernedUser;
     const Entry *entryToBeAmended;
     const std::map<std::string, std::map<Role, std::set<std::string> > > *userRolesByProject;
@@ -238,7 +238,7 @@ public:
                 RHtmlIssue::printIssue(ctx, *currentIssue, eAmended);
 
             } else if (varname == K_SM_DIV_ISSUE_FORM) {
-                Issue issue;
+                IssueCopy issue;
                 if (!currentIssue) currentIssue = &issue; // set an empty issue
 
                 if (entryToBeAmended) RHtmlIssue::printEditMessage(ctx, currentIssue, *entryToBeAmended);
@@ -939,7 +939,7 @@ void RHtml::printProjectConfig(const ContextParameters &ctx,
 /** Print HTML page with the given issues and their full contents
   *
   */
-void RHtml::printPageIssuesFullContents(const ContextParameters &ctx, const std::vector<Issue> &issueList)
+void RHtml::printPageIssuesFullContents(const ContextParameters &ctx, const std::vector<IssueCopy> &issueList)
 {
     VariableNavigator vn("issues.html", ctx);
     vn.issueListFullContents = &issueList;
@@ -947,7 +947,7 @@ void RHtml::printPageIssuesFullContents(const ContextParameters &ctx, const std:
 }
 
 void RHtml::printPageIssueList(const ContextParameters &ctx,
-                               const std::vector<Issue> &issueList, const std::list<std::string> &colspec)
+                               const std::vector<IssueCopy> &issueList, const std::list<std::string> &colspec)
 {
     VariableNavigator vn("issues.html", ctx);
     vn.issueList = &issueList;
@@ -955,7 +955,7 @@ void RHtml::printPageIssueList(const ContextParameters &ctx,
     vn.printPage();
 }
 void RHtml::printPageIssueAccrossProjects(const ContextParameters &ctx,
-                                          const std::vector<Issue> &issues,
+                                          const std::vector<IssueCopy> &issues,
                                           const std::list<std::string> &colspec)
 {
     VariableNavigator vn("issuesAccross.html", ctx);
@@ -965,7 +965,7 @@ void RHtml::printPageIssueAccrossProjects(const ContextParameters &ctx,
 }
 
 
-void RHtml::printPageIssue(const ContextParameters &ctx, const Issue &issue, const Entry *eToBeAmended)
+void RHtml::printPageIssue(const ContextParameters &ctx, const IssueCopy &issue, const Entry *eToBeAmended)
 {
     VariableNavigator vn("issue.html", ctx);
     vn.currentIssue = &issue;

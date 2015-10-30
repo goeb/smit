@@ -21,7 +21,7 @@
 
 #define CONTENT_TYPE_JSON "application/json"
 
-void RJson::printIssueList(const RequestContext *req, const std::vector<Issue> &issueList,
+void RJson::printIssueList(const RequestContext *req, const std::vector<IssueCopy> &issueList,
                            std::list<std::string> colspec)
 {
     req->printf("Content-Type: " CONTENT_TYPE_JSON "\r\n\r\n");
@@ -29,7 +29,7 @@ void RJson::printIssueList(const RequestContext *req, const std::vector<Issue> &
     // list of issues
     std::string issuesJson = "[";
 
-    std::vector<Issue>::const_iterator i;
+    std::vector<IssueCopy>::const_iterator i;
     for (i=issueList.begin(); i!=issueList.end(); i++) {
 
         // render an issue as an array

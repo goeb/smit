@@ -87,7 +87,7 @@ void printHeader(const char *header)
     printf("\n");
 }
 
-void printProperties(const Issue &i)
+void printProperties(const IssueCopy &i)
 {
     PropertiesIt p;
     printHeader("Properties");
@@ -97,7 +97,7 @@ void printProperties(const Issue &i)
     }
 }
 
-void printMessages(const Issue &i, int printMode)
+void printMessages(const IssueCopy &i, int printMode)
 {
     const Entry *e = i.first;
     while (e) {
@@ -154,7 +154,7 @@ void printMessages(const Issue &i, int printMode)
     }
 }
 
-void printIssue(const Issue &i, int printMode)
+void printIssue(const IssueCopy &i, int printMode)
 {
     printf("Issue %s: %s\n", i.id.c_str(), i.getSummary().c_str());
 
@@ -172,9 +172,9 @@ void printAllIssues(const Project &p)
     const std::map<std::string, std::list<std::string> > filterIn;
     const std::map<std::string, std::list<std::string> > filterOut;
 
-    std::vector<Issue> issueList;
+    std::vector<IssueCopy> issueList;
     p.search("", filterIn, filterOut, "id", issueList);
-    std::vector<Issue>::const_iterator i;
+    std::vector<IssueCopy>::const_iterator i;
     FOREACH(i, issueList) {
         printIssue(*i, PRINT_SUMMARY);
     }
@@ -322,7 +322,7 @@ int cmdIssue(int argc, char * const *argv)
 
     } else {
         // get the issue
-        Issue issue;
+        IssueCopy issue;
         int r = p->get(issueId, issue);
         if (r != 0) {
             fprintf(stderr, "Cannot get issue '%s'\n", issueId.c_str());

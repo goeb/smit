@@ -262,12 +262,56 @@ Issue *Project::getIssue(const std::string &id) const
     else return i->second;
 }
 
+void Project::consolidateAssociations(IssueCopy &issue) const
+{
+    // TODO factorize code of the 2 following blocks, as they are very similar
+
+    // consolidate the copy of the issue with the associations
+    // Forward Associations
+    std::map<IssueId, std::map<AssociationId, std::list<IssueId> > >::const_iterator ait;
+    ait = associations.find(issue.id);
+    if (ait != associations.end()) {
+        std::map<AssociationId, std::list<IssueId> >::const_iterator a;
+        FOREACH(a, ait->second) {
+            AssociationId associationName = a->first;
+            std::list<IssueId>::const_iterator otherIssue;
+            FOREACH(otherIssue, a->second) {
+                Issue *oi = getIssue(issue.id);
+                if (!oi) continue;
+                IssueSummary is;
+                is.id = oi->id;
+                is.summary = oi->getSummary();
+                issue.associations[associationName].insert(is);
+            }
+        }
+    }
+
+    // Reverse Associations
+    std::map<IssueId, std::map<AssociationId, std::set<IssueId> > >::const_iterator rait;
+    rait = reverseAssociations.find(issue.id);
+    if (rait != reverseAssociations.end()) {
+        std::map<AssociationId, std::set<IssueId> >::const_iterator a;
+        FOREACH(a, rait->second) {
+            AssociationId associationName = a->first;
+            std::set<IssueId>::const_iterator otherIssue;
+            FOREACH(otherIssue, a->second) {
+                Issue *oi = getIssue(issue.id);
+                if (!oi) continue; // a bad issue id was fulfilled by a user
+                IssueSummary is;
+                is.id = oi->id;
+                is.summary = oi->getSummary();
+                issue.reverseAssociations[associationName].insert(is);
+            }
+        }
+    }
+}
+
 /** Return a given issue
   *
   * @param[out] issue
   *     Thread-safe, as the returned issue is a copy.
   */
-int Project::get(const std::string &issueId, Issue &issue) const
+int Project::get(const std::string &issueId, IssueCopy &issue) const
 {
     ScopeLocker scopeLocker(locker, LOCK_READ_ONLY);
 
@@ -279,6 +323,8 @@ int Project::get(const std::string &issueId, Issue &issue) const
     }
 
     issue = *i; // make a copy
+    consolidateAssociations(issue);
+
     return 0;
 }
 
@@ -903,7 +949,7 @@ void Project::search(const char *fulltextSearch,
                      const std::map<std::string, std::list<std::string> > &filterIn,
                      const std::map<std::string, std::list<std::string> > &filterOut,
                      const char *sortingSpec,
-                     std::vector<Issue> &returnedIssues) const
+                     std::vector<IssueCopy> &returnedIssues) const
 {
     ScopeLocker scopeLocker(locker, LOCK_READ_ONLY);
 
@@ -913,7 +959,6 @@ void Project::search(const char *fulltextSearch,
     //     2. then, if fulltext is not null, walk through these issues and their
     //        related messages and keep those that contain <fulltext>
     //     3. then, do the sorting according to <sortingSpec>
-    std::vector<const Issue*> result;
 
     std::map<std::string, Issue*>::const_iterator i;
     for (i=issues.begin(); i!=issues.end(); i++) {
@@ -930,31 +975,16 @@ void Project::search(const char *fulltextSearch,
         }
 
         // keep this issue in the result
-        result.push_back(issue);
-    }
-
-    // make a copy of the issues (do not return pointers)
-    std::vector<const Issue*>::iterator it;
-    FOREACH(it, result) {
-        returnedIssues.push_back(*(*it));
+        IssueCopy icopy(*issue);
+        consolidateAssociations(icopy);
+        returnedIssues.push_back(icopy);
     }
 
     // 4. do the sorting
     if (sortingSpec) {
         std::list<std::pair<bool, std::string> > sSpec = parseSortingSpec(sortingSpec);
-        Issue::sort(returnedIssues, sSpec);
+        IssueCopy::sort(returnedIssues, sSpec);
     }
-}
-
-
-std::map<std::string, std::set<std::string> > Project::getReverseAssociations(const std::string &issue) const
-{
-    ScopeLocker scopeLocker(locker, LOCK_READ_ONLY);
-
-    std::map<std::string, std::map<std::string, std::set<std::string> > >::const_iterator raIssue;
-    raIssue = reverseAssociations.find(issue);
-    if (raIssue == reverseAssociations.end()) return std::map<std::string, std::set<std::string> >();
-    else return raIssue->second;
 }
 
 int Project::insertIssueInTable(Issue *i)
@@ -1118,12 +1148,13 @@ void Project::updateAssociations(const Issue *i, const std::string &associationN
     } else associations[i->id][associationName] = issues;
 
 
+#if 0 // remove me
     // convert list to set
     std::set<std::string> otherIssues;
-    std::list<std::string>::const_iterator otherIssue;
     FOREACH(otherIssue, issues) {
         if (! otherIssue->empty()) otherIssues.insert(*otherIssue);
     }
+#endif
 
     // clean up reverse associations, to cover the case where an association has been removed
     std::map<std::string, std::map<std::string, std::set<std::string> > >::iterator raIssue;
@@ -1134,6 +1165,7 @@ void Project::updateAssociations(const Issue *i, const std::string &associationN
     }
 
     // add new reverse associations
+    std::list<std::string>::const_iterator otherIssue;
     FOREACH(otherIssue, issues) {
         if (otherIssue->empty()) continue;
         reverseAssociations[*otherIssue][associationName].insert(i->id);

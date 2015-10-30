@@ -27,21 +27,21 @@ public:
                                      const std::map<std::string, std::map<Role, std::set<std::string> > > &userRolesByProject);
 
     static void printProjectConfig(const ContextParameters &ctx, const std::list<std::pair<std::string, std::string> > &pList);
-    static void printPageIssuesFullContents(const ContextParameters &ctx, const std::vector<Issue> &issueList);
-    static void printPageIssueList(const ContextParameters &ctx, const std::vector<Issue> &issueList,
+    static void printPageIssuesFullContents(const ContextParameters &ctx, const std::vector<IssueCopy> &issueList);
+    static void printPageIssueList(const ContextParameters &ctx, const std::vector<IssueCopy> &issueList,
                                    const std::list<std::string> &colspec);
     static void printPageIssueAccrossProjects(const ContextParameters &ctx,
-                                             const std::vector<Issue> &issues,
+                                             const std::vector<IssueCopy> &issues,
                                              const std::list<std::string> &colspec);
-    static void printPageIssue(const ContextParameters &ctx, const Issue &issue,
+    static void printPageIssue(const ContextParameters &ctx, const IssueCopy &issue,
                                const Entry *eTobeAmended);
 
     static void printPageNewIssue(const ContextParameters &ctx);
 
     static void printFormMessage(const ContextParameters &ctx, const std::string &contents);
-    static void printEditMessage(const ContextParameters &ctx, const Issue *issue,
+    static void printEditMessage(const ContextParameters &ctx, const IssueCopy *issue,
                                  const Entry &eToBeAmended);
-    static void printIssueForm(const ContextParameters &ctx, const Issue *issue, bool autofocus);
+    static void printIssueForm(const ContextParameters &ctx, const IssueCopy *issue, bool autofocus);
     static void printPageSignin(const ContextParameters &ctx, const char *redirect);
 
     static void printPageStat(const ContextParameters &ctx, const User &u);
@@ -60,13 +60,13 @@ public:
     static std::string getScriptProjectConfig(const ContextParameters &ctx);
 
     static std::string convertToRichText(const std::string &raw);
-    static void printIssueSummary(const ContextParameters &ctx, const Issue &issue);
+    static void printIssueSummary(const ContextParameters &ctx, const IssueCopy &issue);
     static void printIssue(const ContextParameters &ctx, const Issue &issue, const std::string &entryToBeAmended);
-    static void printIssueListFullContents(const ContextParameters &ctx, const std::vector<Issue> &issueList);
+    static void printIssueListFullContents(const ContextParameters &ctx, const std::vector<IssueCopy> &issueList);
     static void printIssueList(const ContextParameters &ctx, const std::vector<Issue> &issueList,
                                const std::list<std::string> &colspec, bool showOtherFormats);
     static void printIssuesAccrossProjects(ContextParameters ctx,
-                                           const std::vector<Issue> &issues,
+                                           const std::vector<IssueCopy> &issues,
                                            const std::list<std::string> &colspec);
 
     static void printPageEntries(const ContextParameters &ctx, const std::vector<Entry> &entries);

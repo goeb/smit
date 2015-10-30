@@ -23,17 +23,17 @@ public:
     static void printOtherProperties(const ContextParameters &ctx, const Entry &ee, bool printMessageHeading,
                                      const char *divStyle);
     static void printFormMessage(const ContextParameters &ctx, const std::string &contents);
-    static void printEditMessage(const ContextParameters &ctx, const Issue *issue,
+    static void printEditMessage(const ContextParameters &ctx, const IssueCopy *issue,
                                  const Entry &eToBeAmended);
-    static void printIssueForm(const ContextParameters &ctx, const Issue *issue, bool autofocus);
+    static void printIssueForm(const ContextParameters &ctx, const IssueCopy *issue, bool autofocus);
     static std::string convertToRichText(const std::string &raw);
-    static void printIssueSummary(const ContextParameters &ctx, const Issue &issue);
-    static void printIssue(const ContextParameters &ctx, const Issue &issue, const std::string &entryToBeAmended);
-    static void printIssueListFullContents(const ContextParameters &ctx, const std::vector<Issue> &issueList);
-    static void printIssueList(const ContextParameters &ctx, const std::vector<Issue> &issueList,
+    static void printIssueSummary(const ContextParameters &ctx, const IssueCopy &issue);
+    static void printIssue(const ContextParameters &ctx, const IssueCopy &issue, const std::string &entryToBeAmended);
+    static void printIssueListFullContents(const ContextParameters &ctx, const std::vector<IssueCopy> &issueList);
+    static void printIssueList(const ContextParameters &ctx, const std::vector<IssueCopy> &issueList,
                                const std::list<std::string> &colspec, bool showOtherFormats);
     static void printIssuesAccrossProjects(ContextParameters ctx,
-                                           const std::vector<Issue> &issues,
+                                           const std::vector<IssueCopy> &issues,
                                            const std::list<std::string> &colspec);
 };
 

@@ -1063,11 +1063,11 @@ enum IssueNavigation { ISSUE_NEXT, ISSUE_PREVIOUS };
   *     a string containing the url to redirect to
   *     "" if the next or previous the redirection could not be done
   */
-std::string getRedirectionToIssue(const Project &p, std::vector<Issue> &issueList,
+std::string getRedirectionToIssue(const Project &p, std::vector<IssueCopy> &issueList,
                     const std::string &issueId, IssueNavigation direction, const std::string &qs)
 {
     // get current issue
-    std::vector<Issue>::const_iterator i;
+    std::vector<IssueCopy>::const_iterator i;
     FOREACH(i, issueList) {
         if (i->id == issueId) {
             break;
@@ -1109,7 +1109,7 @@ void httpIssuesAccrossProjects(const RequestContext *req, User u, const std::str
     std::string q = req->getQueryString();
     PredefinedView v = PredefinedView::loadFromQueryString(q); // unamed view, used as handle on the viewing parameters
 
-    std::vector<Issue> issues;
+    std::vector<IssueCopy> issues;
 
     // foreach project, get list of issues
     std::list<std::pair<std::string, std::string> >::const_iterator p;
@@ -1131,7 +1131,7 @@ void httpIssuesAccrossProjects(const RequestContext *req, User u, const std::str
 
     // sort
     std::list<std::pair<bool, std::string> > sSpec = parseSortingSpec(v.sort.c_str());
-    Issue::sort(issues, sSpec);
+    IssueCopy::sort(issues, sSpec);
 
     // get the colspec
     std::list<std::string> cols;
@@ -1220,9 +1220,9 @@ void httpCloneIssues(const RequestContext *req, const Project &p)
     req->printf("Content-Type: text/plain\r\n\r\n");
 
     // get all the issues, sorted by id
-    std::vector<Issue> issues;
+    std::vector<IssueCopy> issues;
     p.search(0, filterIn, filterOut, "id", issues);
-    std::vector<Issue>::const_iterator i;
+    std::vector<IssueCopy>::const_iterator i;
     FOREACH(i, issues) {
         if (!i->first) continue;
         if (!i->latest) continue;
@@ -1232,7 +1232,7 @@ void httpCloneIssues(const RequestContext *req, const Project &p)
 }
 
 void httpSendIssueList(const RequestContext *req, const Project &p,
-                       const User &u, const std::vector<Issue> &issueList)
+                       const User &u, const std::vector<IssueCopy> &issueList)
 {
     std::string q = req->getQueryString();
     PredefinedView v = PredefinedView::loadFromQueryString(q);
@@ -1312,7 +1312,7 @@ void httpGetListOfEntries(const RequestContext *req, const Project &p, User u)
   */
 void httpGetListOfIssues(const RequestContext *req, const Project &p, User u, const std::string &snapshot)
 {
-    std::vector<Issue> issueList;
+    std::vector<IssueCopy> issueList;
     std::map<std::string, std::list<std::string> > emptyFilter;
 
     p.search(0, emptyFilter, emptyFilter, 0, issueList);
@@ -1322,7 +1322,7 @@ void httpGetListOfIssues(const RequestContext *req, const Project &p, User u, co
     // for each returned issue:
     // - update the issue according to the snapshot datetime
     // - if the ctime is after the snapshot datetime, then remove the issue
-    std::vector<Issue>::iterator i = issueList.begin();
+    std::vector<IssueCopy>::iterator i = issueList.begin();
     while (i != issueList.end()) {
         int n = i->makeSnapshot(datetime);
         if (n == 0) {
@@ -1374,7 +1374,7 @@ void httpGetListOfIssues(const RequestContext *req, const Project &p, User u)
     replaceUserMe(v.filterout, p, u.username);
     if (v.search == "me") v.search = u.username;
 
-    std::vector<Issue> issueList;
+    std::vector<IssueCopy> issueList;
     p.search(v.search.c_str(), v.filterin, v.filterout, v.sort.c_str(), issueList);
 
     // check for redirection to specific issue (used for previous/next)
@@ -1748,7 +1748,6 @@ void httpPostTag(const RequestContext *req, Project &p, std::string &ref, User u
   */
 void httpReloadProject(const RequestContext *req, Project &p, User u)
 {
-    enum Role role = u.getRole(p.getName());
     if (!u.superadmin) {
         sendHttpHeader403(req);
         return;
@@ -1774,7 +1773,7 @@ int httpGetIssue(const RequestContext *req, Project &p, const std::string &issue
     LOG_DEBUG("httpGetIssue: project=%s, issue=%s", p.getName().c_str(), issueId.c_str());
     enum RenderingFormat format = getFormat(req);
 
-    Issue issue;
+    IssueCopy issue;
     int r = p.get(issueId, issue);
     if (r < 0) {
         // issue not found or other error

@@ -227,20 +227,6 @@ void Issue::consolidate()
     }
 }
 
-
-/**
-  * sortingSpec: a list of pairs (ascending-order, property-name)
-  *
-  */
-void Issue::sort(std::vector<Issue> &inout, const std::list<std::pair<bool, std::string> > &sortingSpec)
-{
-    if (sortingSpec.size()==0) return;
-
-    IssueComparator ic(sortingSpec);
-    std::sort(inout.begin(), inout.end(), ic);
-}
-
-
 std::string Issue::getProperty(const std::string &propertyName) const
 {
     if (propertyName == "p") return project;
@@ -377,60 +363,6 @@ bool Issue::isInFilter(const std::map<std::string, std::list<std::string> > &fil
     else return false; // mode FILTER_OUT
 }
 
-bool Issue::lessThan(const Issue &other, const std::list<std::pair<bool, std::string> > &sortingSpec) const
-{
-    return lessThan(&other, sortingSpec);
-}
-
-/** Compare 2 issues after sortingSpec.
-  *
-  * sortingSpec: a list of pairs (ascending-order, property-name)
-  *
-  * @return
-  *     true or false
-  *     If they are equal, false is returned.
-  */
-bool Issue::lessThan(const Issue* other, const std::list<std::pair<bool, std::string> > &sortingSpec) const
-{
-    if (!other) return false;
-
-    int result = 0; // 0 means equal, <0 means less-than, >0 means greater-than
-    std::list<std::pair<bool, std::string> >::const_iterator s = sortingSpec.begin();
-
-    while ( (result == 0) && (s != sortingSpec.end()) ) {
-        // case of id, ctime, mtime
-        if (s->second == "id") {
-            if (id == other->id) result = 0;
-            else if (atoi(id.c_str()) < atoi(other->id.c_str())) result = -1;
-            else result = +1;
-
-        } else if (s->second == "ctime") {
-            if (ctime < other->ctime) result = -1;
-            else if (ctime > other->ctime) result = +1;
-            else result = 0;
-
-        } else if (s->second == "mtime") {
-            if (mtime < other->mtime) result = -1;
-            else if (mtime > other->mtime) result = +1;
-            else result = 0;
-
-        } else if (s->second == "p") {
-            if (project < other->project) result = -1;
-            else if (project == other->project) result = 0;
-            else result = +1;
-
-        } else {
-            // the other properties
-
-            result = compareProperties(properties, other->properties, s->second);
-        }
-        if (!s->first) result = -result; // descending order
-        s++;
-    }
-    if (result<0) return true;
-    else return false;
-}
-
 
 /** Search for the given text through the issue properties
   * and the messages of the entries.
@@ -517,4 +449,74 @@ bool Issue::hasTag(const std::string &entryId, const std::string &tagname) const
     if (tagit == tit->second.end()) return false;
 
     return true;
+}
+
+IssueCopy::IssueCopy(const Issue &i) : Issue(i)
+{
+}
+
+bool IssueCopy::lessThan(const IssueCopy &other, const std::list<std::pair<bool, std::string> > &sortingSpec) const
+{
+    return lessThan(&other, sortingSpec);
+}
+
+/** Compare 2 issues after sortingSpec.
+  *
+  * sortingSpec: a list of pairs (ascending-order, property-name)
+  *
+  * @return
+  *     true or false
+  *     If they are equal, false is returned.
+  */
+bool IssueCopy::lessThan(const IssueCopy* other, const std::list<std::pair<bool, std::string> > &sortingSpec) const
+{
+    if (!other) return false;
+
+    int result = 0; // 0 means equal, <0 means less-than, >0 means greater-than
+    std::list<std::pair<bool, std::string> >::const_iterator s = sortingSpec.begin();
+
+    while ( (result == 0) && (s != sortingSpec.end()) ) {
+        // case of id, ctime, mtime
+        if (s->second == "id") {
+            if (id == other->id) result = 0;
+            else if (atoi(id.c_str()) < atoi(other->id.c_str())) result = -1;
+            else result = +1;
+
+        } else if (s->second == "ctime") {
+            if (ctime < other->ctime) result = -1;
+            else if (ctime > other->ctime) result = +1;
+            else result = 0;
+
+        } else if (s->second == "mtime") {
+            if (mtime < other->mtime) result = -1;
+            else if (mtime > other->mtime) result = +1;
+            else result = 0;
+
+        } else if (s->second == "p") {
+            if (project < other->project) result = -1;
+            else if (project == other->project) result = 0;
+            else result = +1;
+
+        } else {
+            // the other properties
+
+            result = compareProperties(properties, other->properties, s->second);
+        }
+        if (!s->first) result = -result; // descending order
+        s++;
+    }
+    if (result<0) return true;
+    else return false;
+}
+
+/**
+  * sortingSpec: a list of pairs (ascending-order, property-name)
+  *
+  */
+void IssueCopy::sort(std::vector<IssueCopy> &inout, const std::list<std::pair<bool, std::string> > &sortingSpec)
+{
+    if (sortingSpec.size()==0) return;
+
+    IssueComparator ic(sortingSpec);
+    std::sort(inout.begin(), inout.end(), ic);
 }

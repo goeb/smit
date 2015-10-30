@@ -26,11 +26,7 @@
 #define PATH_TAGS           PATH_REFS "/tags"
 #define PATH_TRIGGER        PATH_REFS "/trigger"
 
-
-
 #define DELETE_DELAY_S (10*60) // seconds
-
-
 
 class Project {
 public:
@@ -38,18 +34,18 @@ public:
     static bool isProject(const std::string &path);
     static bool containsReservedName(std::string name);
     static bool isReservedName(const std::string &name);
+
     // methods for handling issues
     void search(const char *fulltextSearch,
                 const std::map<std::string, std::list<std::string> > &filterIn,
                 const std::map<std::string, std::list<std::string> > &filterOut,
                 const char *sortingSpec,
-                std::vector<Issue> &returnedIssues) const;
-    void searchEntries(const char *sortingSpec, std::vector<Entry> &entries, int limit) const;
+                std::vector<IssueCopy> &returnedIssues) const;
 
-    int get(const std::string &issueId, Issue &issue) const;
+    int get(const std::string &issueId, IssueCopy &issue) const;
     void getAllIssues(std::vector<Issue*> &issuesList);
-    std::map<std::string, std::set<std::string> > getReverseAssociations(const std::string &issue) const;
     int storeRefIssue(const std::string &issueId, const std::string &entryId);
+    void consolidateAssociations(IssueCopy &issue) const;
 
     // methods for handling entries
     int addEntry(PropertiesMap properties, std::string &iid, Entry *&entry, std::string username);
@@ -118,10 +114,10 @@ private:
 
     // associations table
     // { issue : { association-name : [other-issues] } }
-    std::map<std::string, std::map<std::string, std::list<std::string> > > associations;
+    std::map<IssueId, std::map<AssociationId, std::list<IssueId> > > associations;
 
     // reverse associations table
-    std::map<std::string, std::map<std::string, std::set<std::string> > > reverseAssociations;
+    std::map<IssueId, std::map<AssociationId, std::set<IssueId> > > reverseAssociations;
 
     // views
     std::map<std::string, PredefinedView> predefinedViews;

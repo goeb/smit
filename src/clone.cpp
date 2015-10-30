@@ -496,7 +496,7 @@ Issue *loadRemoteIssue(const PullContext &pullCtx, Project &p, const std::string
   */
 void renameIssueStandingInTheWay(Project &p, const std::string &issueId)
 {
-    Issue i;
+    IssueCopy i;
     int r = p.get(issueId, i);
     if (r == 0) {
         // Yes, another issue is in the way. Rename it.

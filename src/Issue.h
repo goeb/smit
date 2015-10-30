@@ -32,7 +32,8 @@ enum FilterMode {
     FILTER_OUT
 };
 
-class Project; // forward declaration
+typedef std::string IssueId;
+typedef std::string AssociationId;
 
 // Issue
 // An issue is consolidated over all its entries
@@ -55,8 +56,6 @@ struct Issue {
     // the properties of the issue is the consolidation of all the properties
     // of its entries. For a given key, the most recent value has priority.
     std::string getSummary() const;
-    bool lessThan(const Issue &other, const std::list<std::pair<bool, std::string> > &sortingSpec) const;
-    bool lessThan(const Issue *other, const std::list<std::pair<bool, std::string> > &sortingSpec) const;
     bool isInFilter(const std::map<std::string, std::list<std::string> > &filter, FilterMode mode) const;
 
     void consolidate();
@@ -72,19 +71,39 @@ struct Issue {
     static Issue *load(const std::string &objectsDir, const std::string &latestEntryOfIssue);
     void insertEntry(Entry *e);
     Entry *amendEntry(const std::string &entryId, const std::string &newMsg, const std::string &username);
-    static void sort(std::vector<Issue> &inout, const std::list<std::pair<bool, std::string> > &sortingSpec);
 
     std::string getProperty(const std::string &propertyName) const;
     int makeSnapshot(time_t datetime);
+};
 
+struct IssueSummary {
+    std::string id;
+    std::string summary;
+    inline bool operator< (const IssueSummary &other) const { return id < other.id; }
+};
+
+/** Copy of an issue, used for offline reading
+  */
+struct IssueCopy : public Issue {
+    // associations table, consolidated only at users' request
+    // { association-name : [IssueSummary,...] }
+    std::map<AssociationId, std::set<IssueSummary> > associations; // issues referenced by this
+    std::map<AssociationId, std::set<IssueSummary> > reverseAssociations; // issues that reference this
+
+    IssueCopy(const Issue &i);
+    IssueCopy() {}
+
+    bool lessThan(const IssueCopy &other, const std::list<std::pair<bool, std::string> > &sortingSpec) const;
+    bool lessThan(const IssueCopy *other, const std::list<std::pair<bool, std::string> > &sortingSpec) const;
+    static void sort(std::vector<IssueCopy> &inout, const std::list<std::pair<bool, std::string> > &sortingSpec);
 };
 
 
 class IssueComparator {
 public:
     IssueComparator(const std::list<std::pair<bool, std::string> > &sSpec) : sortingSpec(sSpec) { }
-    inline bool operator() (const Issue* i, const Issue* j) { return i->lessThan(j, sortingSpec); }
-    inline bool operator() (const Issue i, const Issue j) { return i.lessThan(j, sortingSpec); }
+    inline bool operator() (const IssueCopy* i, const IssueCopy* j) { return i->lessThan(j, sortingSpec); }
+    inline bool operator() (const IssueCopy i, const IssueCopy j) { return i.lessThan(j, sortingSpec); }
 private:
     const std::list<std::pair<bool, std::string> > &sortingSpec;
 };

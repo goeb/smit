@@ -50,7 +50,7 @@ void RCsv::printProjectList(const RequestContext *req, const std::list<std::pair
     }
 }
 
-void RCsv::printIssueList(const RequestContext *req, const std::vector<Issue> &issueList,
+void RCsv::printIssueList(const RequestContext *req, const std::vector<IssueCopy> &issueList,
                           std::list<std::string> colspec, const char *separator)
 {
     req->printf("Content-Type: text/plain\r\n\r\n");
@@ -67,7 +67,7 @@ void RCsv::printIssueList(const RequestContext *req, const std::vector<Issue> &i
 
 
     // list of issues
-    std::vector<Issue>::const_iterator i;
+    std::vector<IssueCopy>::const_iterator i;
     for (i=issueList.begin(); i!=issueList.end(); i++) {
 
         std::list<std::string>::iterator c;

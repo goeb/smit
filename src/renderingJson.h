@@ -9,7 +9,7 @@
 
 class RJson {
 public:
-    static void printIssueList(const RequestContext *req, const std::vector<Issue> &issueList,
+    static void printIssueList(const RequestContext *req, const std::vector<IssueCopy> &issueList,
                                std::list<std::string> colspec);
 };
 

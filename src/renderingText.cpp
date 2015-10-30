@@ -30,7 +30,7 @@ void RText::printProjectList(const RequestContext *req, const std::list<std::pai
     }
 }
 
-void RText::printIssueList(const RequestContext *req, const std::vector<Issue> &issueList, std::list<std::string> colspec)
+void RText::printIssueList(const RequestContext *req, const std::vector<IssueCopy> &issueList, std::list<std::string> colspec)
 {
     req->printf("Content-Type: text/plain\r\n\r\n");
 
@@ -43,7 +43,7 @@ void RText::printIssueList(const RequestContext *req, const std::vector<Issue> &
     req->printf("\n");
 
     // list of issues
-    std::vector<Issue>::const_iterator i;
+    std::vector<IssueCopy>::const_iterator i;
     for (i=issueList.begin(); i!=issueList.end(); i++) {
 
         std::list<std::string>::iterator c;
@@ -70,7 +70,7 @@ void RText::printIssueList(const RequestContext *req, const std::vector<Issue> &
 
 }
 
-void RText::printIssue(const RequestContext *req, const Issue &issue)
+void RText::printIssue(const RequestContext *req, const IssueCopy &issue)
 {
     LOG_DEBUG("RText::printIssue...");
     req->printf("Content-Type: text/plain\r\n\r\n");

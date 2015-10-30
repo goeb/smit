@@ -286,7 +286,7 @@ void printFilters(const ContextParameters &ctx)
     ctx.req->printf("</div>");
 }
 
-void RHtmlIssue::printIssueListFullContents(const ContextParameters &ctx, const std::vector<Issue> &issueList)
+void RHtmlIssue::printIssueListFullContents(const ContextParameters &ctx, const std::vector<IssueCopy> &issueList)
 {
     ctx.req->printf("<div class=\"sm_issues\">\n");
 
@@ -295,29 +295,14 @@ void RHtmlIssue::printIssueListFullContents(const ContextParameters &ctx, const 
     ctx.req->printf("<div class=\"sm_issues_count\">%s: <span class=\"sm_issues_count\">%lu</span></div>\n",
                     _("Issues found"), L(issueList.size()));
 
-
-    std::vector<Issue>::const_iterator i;
-    if (!ctx.project) {
-        LOG_ERROR("Null project");
-        return;
-    }
-
+    std::vector<IssueCopy>::const_iterator i;
     FOREACH (i, issueList) {
-        Issue issue;
-        int r = ctx.getProject().get(i->id, issue);
-        if (r < 0) {
-            // issue not found (or other error)
-            LOG_INFO("Issue disappeared: %s", i->id.c_str());
-
-        } else {
-
-            // deactivate user role
-            ContextParameters ctxCopy = ctx;
-            ctxCopy.userRole = ROLE_RO;
-            printIssueSummary(ctxCopy, issue);
-            printIssue(ctxCopy, issue, "");
-
-        }
+        const IssueCopy &issue = *i;
+        // deactivate user role, as no edit form is to be displayed
+        ContextParameters ctxCopy = ctx;
+        ctxCopy.userRole = ROLE_RO;
+        printIssueSummary(ctxCopy, issue);
+        printIssue(ctxCopy, issue, "");
     }
     ctx.req->printf("</div>\n");
 
@@ -338,7 +323,7 @@ std::string queryStringAdd(const RequestContext *req, const char *param)
     return url;
 }
 
-void RHtmlIssue::printIssueList(const ContextParameters &ctx, const std::vector<Issue> &issueList,
+void RHtmlIssue::printIssueList(const ContextParameters &ctx, const std::vector<IssueCopy> &issueList,
                            const std::list<std::string> &colspec, bool showOtherFormats)
 {
     ctx.req->printf("<div class=\"sm_issues\">\n");
@@ -387,7 +372,7 @@ void RHtmlIssue::printIssueList(const ContextParameters &ctx, const std::vector<
     ctx.req->printf("</tr>\n");
 
     // print the rows of the issues
-    std::vector<Issue>::const_iterator i;
+    std::vector<IssueCopy>::const_iterator i;
     for (i=issueList.begin(); i!=issueList.end(); i++) {
 
         if (! group.empty() &&
@@ -451,7 +436,7 @@ void RHtmlIssue::printIssueList(const ContextParameters &ctx, const std::vector<
 }
 
 void RHtmlIssue::printIssuesAccrossProjects(ContextParameters ctx,
-                                       const std::vector<Issue> &issues,
+                                       const std::vector<IssueCopy> &issues,
                                        const std::list<std::string> &colspec)
 {
     printIssueList(ctx, issues, colspec, false);
@@ -643,7 +628,7 @@ bool isImage(const std::string &filename)
 /** print id and summary of an issue
   *
   */
-void RHtmlIssue::printIssueSummary(const ContextParameters &ctx, const Issue &issue)
+void RHtmlIssue::printIssueSummary(const ContextParameters &ctx, const IssueCopy &issue)
 {
     ctx.req->printf("<div class=\"sm_issue_header\">\n");
     ctx.req->printf("<a href=\"%s\" class=\"sm_issue_id\">%s</a>\n", htmlEscape(issue.id).c_str(),
@@ -658,38 +643,41 @@ void RHtmlIssue::printIssueSummary(const ContextParameters &ctx, const Issue &is
   * A <tr> must have been opened by the caller,
   * and must be closed by the caller.
   */
-void printAssociations(const ContextParameters &ctx, const std::string &associationName, const std::list<std::string> &issues, bool reverse)
+void printAssociations(const ContextParameters &ctx, const std::string &associationId, const IssueCopy &i, bool reverse)
 {
     std::string label;
     if (reverse) {
-        label = ctx.projectConfig.getReverseLabelOfProperty(associationName);
+        label = ctx.projectConfig.getReverseLabelOfProperty(associationId);
     } else {
-        label = ctx.projectConfig.getLabelOfProperty(associationName);
+        label = ctx.projectConfig.getLabelOfProperty(associationId);
     }
 
     ctx.req->printf("<td class=\"sm_issue_plabel\">%s: </td>", htmlEscape(label).c_str());
-    std::list<std::string>::const_iterator otherIssue;
     ctx.req->printf("<td colspan=\"3\" class=\"sm_issue_asso\">");
-    FOREACH(otherIssue, issues) {
-        // separate by a line feed
-        if (otherIssue != issues.begin()) ctx.req->printf("<br>\n");
 
-        Issue associatedIssue;
-        int r = ctx.getProject().get(*otherIssue, associatedIssue);
-        if (r == 0) { // issue found. print id and summary
+    std::map<AssociationId, std::set<IssueSummary> >::const_iterator ait;
+    if (reverse) ait = i.reverseAssociations.find(associationId);
+    else ait = i.associations.find(associationId);
+
+    if (ait != i.associations.end()) {
+        std::set<IssueSummary>::const_iterator is;
+        const std::set<IssueSummary> &issuesSummaries = ait->second;
+        FOREACH(is, issuesSummaries) {
+            // separate by a line feed (LF)
+            if (is != issuesSummaries.begin()) ctx.req->printf("<br>\n");
             ctx.req->printf("<a href=\"%s\"><span class=\"sm_issue_asso_id\">%s</span>"
-                            " <span class=\"sm_issue_asso_summary\">%s</span></a>", urlEncode(associatedIssue.id).c_str(),
-                            htmlEscape(associatedIssue.id).c_str(), htmlEscape(associatedIssue.getSummary()).c_str());
-
-        } else { // not found. no such issue
-            ctx.req->printf("<span class=\"sm_not_found\">%s</span>\n", htmlEscape(*otherIssue).c_str());
+                            " <span class=\"sm_issue_asso_summary\">%s</span></a>",
+                            urlEncode(is->id).c_str(),
+                            htmlEscape(is->id).c_str(),
+                            htmlEscape(is->summary).c_str());
         }
+
     }
     ctx.req->printf("</td>");
 }
 
 
-void RHtmlIssue::printIssue(const ContextParameters &ctx, const Issue &issue, const std::string &entryToBeAmended)
+void RHtmlIssue::printIssue(const ContextParameters &ctx, const IssueCopy &issue, const std::string &entryToBeAmended)
 {
     ctx.req->printf("<div class=\"sm_issue\">");
 
@@ -755,7 +743,7 @@ void RHtmlIssue::printIssue(const ContextParameters &ctx, const Issue &issue, co
             std::list<std::string> associatedIssues;
             if (p != issue.properties.end()) associatedIssues = p->second;
 
-            printAssociations(ctx, pname, associatedIssues, false);
+            printAssociations(ctx, pname, issue, false);
 
         } else {
             // print label and value of property (other than an association)
@@ -789,17 +777,14 @@ void RHtmlIssue::printIssue(const ContextParameters &ctx, const Issue &issue, co
     ctx.req->printf("</tr>\n");
 
     // reverse associated issues, if any
-    std::map<std::string, std::set<std::string> > rAssociatedIssues = ctx.project->getReverseAssociations(issue.id);
-    if (!rAssociatedIssues.empty()) {
-        std::map<std::string, std::set<std::string> >::const_iterator ra;
-        FOREACH(ra, rAssociatedIssues) {
+    if (!issue.reverseAssociations.empty()) {
+        std::map<AssociationId, std::set<IssueSummary> >::const_iterator ra;
+        FOREACH(ra, issue.reverseAssociations) {
             if (ra->second.empty()) continue;
             if (!ctx.projectConfig.isValidPropertyName(ra->first)) continue;
 
-            std::list<std::string> issues(ra->second.begin(), ra->second.end()); // convert to list
             ctx.req->printf("<tr class=\"sm_issue_asso\">");
-
-            printAssociations(ctx, ra->first, issues, true);
+            printAssociations(ctx, ra->first, issue, true);
             ctx.req->printf("</tr>");
         }
     }
@@ -1075,7 +1060,7 @@ void RHtmlIssue::printFormMessage(const ContextParameters &ctx, const std::strin
     ctx.req->printf("</label></td></tr>\n");
 }
 
-void RHtmlIssue::printEditMessage(const ContextParameters &ctx, const Issue *issue,
+void RHtmlIssue::printEditMessage(const ContextParameters &ctx, const IssueCopy *issue,
                              const Entry &eToBeAmended)
 {
     if (!issue) {
@@ -1111,7 +1096,7 @@ void RHtmlIssue::printEditMessage(const ContextParameters &ctx, const Issue *iss
   *    down to the summary field, and do not let the user read the top of
   *    the page first)
   */
-void RHtmlIssue::printIssueForm(const ContextParameters &ctx, const Issue *issue, bool autofocus)
+void RHtmlIssue::printIssueForm(const ContextParameters &ctx, const IssueCopy *issue, bool autofocus)
 {
     if (!issue) {
         LOG_ERROR("printIssueForm: Invalid null issue");
