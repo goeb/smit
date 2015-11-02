@@ -366,9 +366,6 @@ int Project::modifyConfig(std::list<std::list<std::string> > &tokens, const std:
     // verify the syntax of the tokens
     ProjectConfig c = ProjectConfig::parseProjectConfig(tokens);
 
-    // keep unchanged the configuration items not managed via this modifyConfig
-    c.numberIssueAcrossProjects = config.numberIssueAcrossProjects;
-
     return modifyConfig(c, author);
 }
 

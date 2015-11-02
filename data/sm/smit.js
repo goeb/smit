@@ -4,6 +4,10 @@ function changeWrapping() {
     if (msg.wrap != "off") msg.wrap = "off";
     else msg.wrap = "hard";
 }
+function setIssueNumberingPolicy(isGlobal) {
+    var input = document.getElementsByName('sm_numberIssues')[0];
+    input.checked = isGlobal;
+}
 
 function ajaxSend(url, method) {
     var request = new XMLHttpRequest();

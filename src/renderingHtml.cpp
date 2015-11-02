@@ -902,6 +902,11 @@ std::string RHtml::getScriptProjectConfig(const ContextParameters &ctx)
 
     script += "addTag('', '', '', '');\n";
     script += "addTag('', '', '', '');\n";
+
+    // manage issue numbering policy
+    if (ctx.projectConfig.numberIssueAcrossProjects) {
+        script += "setIssueNumberingPolicy(true);\n";
+    }
     return script;
 }
 

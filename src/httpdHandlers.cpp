@@ -860,6 +860,18 @@ void consolidateTagDescription(std::list<std::list<std::string> > &tokens, const
     tokens.push_back(line);
 }
 
+void consolidateIssueNumberingPolicy(std::list<std::list<std::string> > &tokens,
+                                     const std::string &value)
+{
+    // numbering is global if checkox is "on"
+    if (value != "on") return;
+
+    std::list<std::string> line;
+    line.push_back(KEY_NUMBER_ISSUES);
+    line.push_back("global");
+    tokens.push_back(line);
+}
+
 /** Parse the form parameters
   *
   * @param postData
@@ -908,7 +920,7 @@ void parsePostedProjectConfig(std::string &postData, std::list<std::list<std::st
         }
         else if (key == "reverseAssociation") pSpec.reverseLabel = value;
         else if (key == "tagDisplay") tagDisplay = value;
-        else if (key == "propertyName" || key == "tagName") {
+        else if (key == "propertyName" || key == "tagName" || key == "sm_numberIssues") {
 
             // a starting property or tag description stops any other on-going
             // property description or tag description
@@ -929,6 +941,7 @@ void parsePostedProjectConfig(std::string &postData, std::list<std::list<std::st
 
             if (key == "propertyName") pSpec.name = value; // start new property description
             else if (key == "tagName") tagName = value; // start new tag description
+            else if (key == "sm_numberIssues") consolidateIssueNumberingPolicy(tokens, value);
 
         } else {
             LOG_ERROR("ProjectConfig: invalid posted parameter: '%s'", key.c_str());
