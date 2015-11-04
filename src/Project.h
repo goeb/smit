@@ -55,7 +55,7 @@ public:
     int get(const std::string &issueId, IssueCopy &issue) const;
     void getAllIssues(std::vector<Issue*> &issuesList);
     int storeRefIssue(const std::string &issueId, const std::string &entryId);
-    void consolidateAssociations(IssueCopy &issue) const;
+    void consolidateAssociations(IssueCopy &issue, bool forward) const;
 
     // methods for handling entries
     int addEntry(PropertiesMap properties, std::string &iid, Entry *&entry, std::string username);
@@ -127,7 +127,7 @@ private:
 
     // associations table
     // { issue : { association-name : [other-issues] } }
-    std::map<IssueId, std::map<AssociationId, std::list<IssueId> > > associations;
+    std::map<IssueId, std::map<AssociationId, std::set<IssueId> > > associations;
 
     // reverse associations table
     std::map<IssueId, std::map<AssociationId, std::set<IssueId> > > reverseAssociations;

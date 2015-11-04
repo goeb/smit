@@ -262,46 +262,41 @@ Issue *Project::getIssue(const std::string &id) const
     else return i->second;
 }
 
-void Project::consolidateAssociations(IssueCopy &issue) const
+/** Consolidate the copy of the issue with the associations
+  */
+void Project::consolidateAssociations(IssueCopy &issue, bool forward) const
 {
-    // TODO factorize code of the 2 following blocks, as they are very similar
-
-    // consolidate the copy of the issue with the associations
-    // Forward Associations
-    std::map<IssueId, std::map<AssociationId, std::list<IssueId> > >::const_iterator ait;
-    ait = associations.find(issue.id);
-    if (ait != associations.end()) {
-        std::map<AssociationId, std::list<IssueId> >::const_iterator a;
-        FOREACH(a, ait->second) {
-            AssociationId associationName = a->first;
-            std::list<IssueId>::const_iterator otherIssue;
-            FOREACH(otherIssue, a->second) {
-                Issue *oi = getIssue(issue.id);
-                if (!oi) continue;
-                IssueSummary is;
-                is.id = oi->id;
-                is.summary = oi->getSummary();
-                issue.associations[associationName].insert(is);
-            }
-        }
+    std::map<IssueId, std::map<AssociationId, std::set<IssueId> > >::const_iterator ait;
+    std::map<AssociationId, std::set<IssueSummary> > *atable;
+    if (forward) {
+        // Forward Associations
+        ait = associations.find(issue.id);
+        if (ait == associations.end()) return;
+        atable = &issue.associations;
+    } else {
+        // reverse
+        ait = reverseAssociations.find(issue.id);
+        if (ait == reverseAssociations.end()) return;
+        atable = &issue.reverseAssociations;
     }
+    std::map<AssociationId, std::set<IssueSummary> > &associationTable = *atable;
 
-    // Reverse Associations
-    std::map<IssueId, std::map<AssociationId, std::set<IssueId> > >::const_iterator rait;
-    rait = reverseAssociations.find(issue.id);
-    if (rait != reverseAssociations.end()) {
-        std::map<AssociationId, std::set<IssueId> >::const_iterator a;
-        FOREACH(a, rait->second) {
-            AssociationId associationName = a->first;
-            std::set<IssueId>::const_iterator otherIssue;
-            FOREACH(otherIssue, a->second) {
-                Issue *oi = getIssue(issue.id);
-                if (!oi) continue; // a bad issue id was fulfilled by a user
-                IssueSummary is;
-                is.id = oi->id;
-                is.summary = oi->getSummary();
-                issue.reverseAssociations[associationName].insert(is);
-            }
+    std::map<AssociationId, std::set<IssueId> >::const_iterator a;
+    FOREACH(a, ait->second) {
+        AssociationId associationName = a->first;
+        const std::set<IssueId> &otherIssues = a->second;
+        std::set<IssueId>::const_iterator otherIssue;
+        otherIssue = otherIssues.begin();
+        while(otherIssue != otherIssues.end()) {
+            std::string xx = *otherIssue;
+            //FOREACH(otherIssue, a->second) {
+            Issue *oi = getIssue(*otherIssue);
+            if (!oi) {otherIssue++; continue;} // a bad issue id was fulfilled by a user
+            IssueSummary is;
+            is.id = oi->id;
+            is.summary = oi->getSummary();
+            associationTable[associationName].insert(is);
+            otherIssue++;
         }
     }
 }
@@ -323,7 +318,8 @@ int Project::get(const std::string &issueId, IssueCopy &issue) const
     }
 
     issue = *i; // make a copy
-    consolidateAssociations(issue);
+    consolidateAssociations(issue, true);
+    consolidateAssociations(issue, false);
 
     return 0;
 }
@@ -973,7 +969,8 @@ void Project::search(const char *fulltextSearch,
 
         // keep this issue in the result
         IssueCopy icopy(*issue);
-        consolidateAssociations(icopy);
+        consolidateAssociations(icopy, true);
+        consolidateAssociations(icopy, false);
         returnedIssues.push_back(icopy);
     }
 
@@ -1139,24 +1136,23 @@ void Project::updateAssociations(const Issue *i, const std::string &associationN
     if (!i) return;
 
     if (issues.empty() || issues.front() == "") {
-        associations[i->id].erase(associationName);
-        if (associations[i->id].empty()) associations.erase(i->id);
+        if (associations.find(i->id) != associations.end()) {
+            associations[i->id].erase(associationName);
+            if (associations[i->id].empty()) associations.erase(i->id);
+        }
 
-    } else associations[i->id][associationName] = issues;
-
-
-#if 0 // remove me
-    // convert list to set
-    std::set<std::string> otherIssues;
-    FOREACH(otherIssue, issues) {
-        if (! otherIssue->empty()) otherIssues.insert(*otherIssue);
+    } else {
+        associations[i->id][associationName].clear();
+        std::list<std::string>::const_iterator otherIssueX;
+        FOREACH(otherIssueX, issues) {
+            associations[i->id][associationName].insert(*otherIssueX);
+        }
     }
-#endif
 
     // clean up reverse associations, to cover the case where an association has been removed
-    std::map<std::string, std::map<std::string, std::set<std::string> > >::iterator raIssue;
+    std::map<IssueId, std::map<AssociationId, std::set<IssueId> > >::iterator raIssue;
     FOREACH(raIssue, reverseAssociations) {
-        std::map<std::string, std::set<std::string> >::iterator raAssoName;
+        std::map<AssociationId, std::set<IssueId> >::iterator raAssoName;
         raAssoName = raIssue->second.find(associationName);
         if (raAssoName != raIssue->second.end()) raAssoName->second.erase(i->id);
     }
@@ -1168,6 +1164,7 @@ void Project::updateAssociations(const Issue *i, const std::string &associationN
         reverseAssociations[*otherIssue][associationName].insert(i->id);
     }
 
+#if 0
     // debug
     // dump associations
     FOREACH(raIssue, reverseAssociations) {
@@ -1180,7 +1177,7 @@ void Project::updateAssociations(const Issue *i, const std::string &associationN
             }
         }
     }
-
+#endif
 }
 
 void parseAssociation(std::list<std::string> &values)

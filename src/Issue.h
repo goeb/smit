@@ -103,7 +103,7 @@ class IssueComparator {
 public:
     IssueComparator(const std::list<std::pair<bool, std::string> > &sSpec) : sortingSpec(sSpec) { }
     inline bool operator() (const IssueCopy* i, const IssueCopy* j) { return i->lessThan(j, sortingSpec); }
-    inline bool operator() (const IssueCopy i, const IssueCopy j) { return i.lessThan(j, sortingSpec); }
+    inline bool operator() (const IssueCopy &i, const IssueCopy &j) { return i.lessThan(j, sortingSpec); }
 private:
     const std::list<std::pair<bool, std::string> > &sortingSpec;
 };
