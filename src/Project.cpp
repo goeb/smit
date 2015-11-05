@@ -267,36 +267,31 @@ Issue *Project::getIssue(const std::string &id) const
 void Project::consolidateAssociations(IssueCopy &issue, bool forward) const
 {
     std::map<IssueId, std::map<AssociationId, std::set<IssueId> > >::const_iterator ait;
-    std::map<AssociationId, std::set<IssueSummary> > *atable;
+    std::map<AssociationId, std::set<IssueSummary> > *associationTable;
     if (forward) {
         // Forward Associations
         ait = associations.find(issue.id);
         if (ait == associations.end()) return;
-        atable = &issue.associations;
+        associationTable = &issue.associations;
     } else {
         // reverse
         ait = reverseAssociations.find(issue.id);
         if (ait == reverseAssociations.end()) return;
-        atable = &issue.reverseAssociations;
+        associationTable = &issue.reverseAssociations;
     }
-    std::map<AssociationId, std::set<IssueSummary> > &associationTable = *atable;
 
     std::map<AssociationId, std::set<IssueId> >::const_iterator a;
     FOREACH(a, ait->second) {
         AssociationId associationName = a->first;
         const std::set<IssueId> &otherIssues = a->second;
         std::set<IssueId>::const_iterator otherIssue;
-        otherIssue = otherIssues.begin();
-        while(otherIssue != otherIssues.end()) {
-            std::string xx = *otherIssue;
-            //FOREACH(otherIssue, a->second) {
+        FOREACH(otherIssue, otherIssues) {
             Issue *oi = getIssue(*otherIssue);
-            if (!oi) {otherIssue++; continue;} // a bad issue id was fulfilled by a user
+            if (!oi) continue; // a bad issue id was fulfilled by a user
             IssueSummary is;
             is.id = oi->id;
             is.summary = oi->getSummary();
-            associationTable[associationName].insert(is);
-            otherIssue++;
+            (*associationTable)[associationName].insert(is);
         }
     }
 }
