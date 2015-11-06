@@ -9,7 +9,7 @@
 #include "mutexTools.h"
 #include "Auth.h"
 
-#define SESSION_DURATION (60*60*24) // 1 day
+#define SESSION_DURATION (60*60*36) // 1.5 day
 #define COOKIE_VIEW_DURATION (60*60*24) // 1 day
 #define PATH_AUTH  "/users/auth"
 #define P_USERS       "users"
