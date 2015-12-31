@@ -26,14 +26,50 @@ import WebConfig
 
 Verbose = False
 
+# GNUPGHOME initialized in gnupg.d
+# export GNUPGHOME=gnupg.d
+# gpg --import <file>
+def gpgExec(args, stdinText):
+    "Execute a GNUPG command"
+
+    # set the GNUPGHOME environment variable
+    basedir = os.path.dirname(__file__)
+    cmd = 'GNUPGHOME='+basedir+'/gnupg.d gpg ' + args
+
+    if stdinText is not None :
+        stdinOpt = subprocess.PIPE
+    else :
+        stdinOpt = None
+
+    p = subprocess.Popen(cmd, shell=True, stdin=stdinOpt, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+    if stdinText is not None :
+        p.stdin.write(stdinText.encode('utf8'))
+        p.stdin.close()
+
+    p.wait()
+    stdout = p.stdout.read()
+    stderr = p.stderr.read()
+    exitCode = p.returncode
+
+    return exitCode, stdout, stderr
+
+
 def getGpgKey(email):
-    "return the GPG id of a user, if any"
+    "return a GPG id of a user, if any"
+
+    # check first if the email is known in the config
     try:
         gpgKey = MailConfig.GPG_KEYS[email]
     except:
         gpgKey = None
+
+    if gpgKey is None :
+        # check if the email is known in the GPG base
+        rc, stdout, stderr = gpgExec('--list-keys ' + email, None)
+	if rc == 0: gpgKey = email
     
-    #print 'getGpgKey('+email+')=%s' % (gpgKey)
+    if Verbose: print 'getGpgKey('+email+')=%s' % (gpgKey)
+
     return gpgKey
 
 def getEmail(username):
@@ -89,13 +125,11 @@ def getMailSubject(jsonMsg):
     s = "[%s] %s: %s" % (jsonMsg['project'], jsonMsg['issue'], getPropertyValue(jsonMsg, 'summary'))
     return s
 
-# GNUPGHOME initialized in gnupg.d
-# export GNUPGHOME=gnupg.d
-# gpg --import <file>
-def gpgEncrypt(text, addressees):
+def gpgEncrypt(clearText, addressees):
     "Encrypt text, if at least one GPG key is configured"
-    basedir = os.path.dirname(__file__)
+
     gpgKeys = set()
+    # check if at least one addressee has a GPG key
     for a in addressees:
 	k = getGpgKey(a)
 	if k is None:
@@ -103,20 +137,20 @@ def gpgEncrypt(text, addressees):
 	else:
             gpgKeys.add(k)
 
-    if len(gpgKeys) == 0: return text
+    if len(gpgKeys) == 0:
+        if Verbose: print "Mail in clear text"
+        return text
 
     # build the gpg command line
-    cmd = 'GNUPGHOME='+basedir+'/gnupg.d gpg -e --trust-model always --armor'
+    gpgArgs = '-e --trust-model always --armor'
     for k in gpgKeys:
-        cmd += ' -r ' + k
+        gpgArgs += ' -r ' + k
 
-    #print 'cmd=', cmd
-    p = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, close_fds=True)
-    p.stdin.write(text.encode('utf8'))
-    p.stdin.close()
-    result = p.stdout.read()
-    #print "result=", result
-    return result
+    exitCode, cipheredText, stderr = gpgExec(gpgArgs, clearText)
+    if exitCode != 0:
+        print "gpgExec error: ", stderr
+
+    return cipheredText
 
 def urlEscapeProjectName(pname):
     'escape characters for passing the project name in an URL'
