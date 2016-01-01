@@ -1,5 +1,22 @@
 # News
 
+## 6 November 2015
+
+Smit v3.2.1 is released
+
+Main changes:
+
+- HTML interface
+    * navigating through issues: one-click filter-out of a group
+    * searching: new filterout logical combination
+    * improved message preview: line breaks taken into account
+    * list of latest entries
+    * administration: on creation of a new project, copy the config of another
+- Accelerated pulling (not compatible with v3.0.1)
+- Fixed duplicate file upload
+
+Source code: [git tag v3.2.1](https://github.com/goeb/smit/tree/v3.2.1)
+
 ## 29 July 2015
 
 Smit v3.0.0 is released.
