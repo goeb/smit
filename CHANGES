@@ -1,10 +1,12 @@
-v3.2.0
+v3.2.1, 6 Nov 2015
     - one-click filter-out of a group
     - new filterout logical combination (OR everywhere)
     - improved message preview: line breaks taken into account
     - page entries: list of latest entries
     - property names starting with underscore are reserved
     - update users' permissions after creating a new project
+    - on creation of a new project, copy the config of another
+    - session duration now 1.5 day
     - fix duplicate file upload
     - accelerated pulling: v3.2.0 not compatible with v3.0.1
     - reinforce reserved parts of projects names
