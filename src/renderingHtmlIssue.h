@@ -32,7 +32,7 @@ public:
     static void printIssueListFullContents(const ContextParameters &ctx, const std::vector<IssueCopy> &issueList);
     static void printIssueList(const ContextParameters &ctx, const std::vector<IssueCopy> &issueList,
                                const std::list<std::string> &colspec, bool showOtherFormats);
-    static void printIssuesAccrossProjects(ContextParameters ctx,
+    static void printIssuesAccrossProjects(const ContextParameters &ctx,
                                            const std::vector<IssueCopy> &issues,
                                            const std::list<std::string> &colspec);
 };

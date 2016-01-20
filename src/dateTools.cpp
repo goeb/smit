@@ -69,6 +69,5 @@ std::string epochToStringDelta(time_t t)
     else if (delta > 0) snprintf(datetime, sizeof(datetime)-1, "%ld %s", delta/60/60/24/366, _("year"));
     else return epochToString(t);
 
-
     return std::string(datetime);
 }

@@ -86,12 +86,19 @@ int loadFile(const char *filepath, const char **data)
         fclose(f);
         return -1;
     }
-    long filesize = ftell(f);
-    if (filesize > 4*1024*1024) { // max 4 MByte
-        LOG_ERROR("loadFile: file '%s'' over-sized (%ld bytes)", filepath, filesize);
+    long filesizeL = ftell(f);
+    if (filesizeL < 0) {
+        LOG_ERROR("could not ftell(%s): %s", filepath, strerror(errno));
         fclose(f);
         return -1;
     }
+    if (filesizeL > 4*1024*1024) { // max 4 MByte
+        LOG_ERROR("loadFile: file '%s'' over-sized (%ld bytes)", filepath, filesizeL);
+        fclose(f);
+        return -1;
+    }
+
+    size_t filesize = filesizeL;
 
     if (0 == filesize) {
         // the file is empty
@@ -101,8 +108,8 @@ int loadFile(const char *filepath, const char **data)
 
     rewind(f);
     char *buffer = (char *)malloc(filesize+1); // allow +1 for terminating null char
-    LOG_DEBUG("allocated buffer %p: %ld bytes", buffer, filesize+1);
-    long n = fread(buffer, 1, filesize, f);
+    LOG_DEBUG("allocated buffer %p: %ld bytes", buffer, L(filesize+1));
+    size_t n = fread(buffer, 1, filesize, f);
     if (n != filesize) {
         LOG_ERROR("fread(%s): short read. feof=%d, ferror=%d", filepath, feof(f), ferror(f));
         fclose(f);
@@ -154,6 +161,7 @@ int writeToFile(const char *filepath, const char *data, size_t len)
         if (n != len) {
             LOG_ERROR("Could not write all data, incomplete file '%s': (%d) %s",
                       filepath, errno, strerror(errno));
+            close(f);
             return -1;
         }
     }

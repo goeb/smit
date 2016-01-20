@@ -199,7 +199,6 @@ int cmdProject(int argc, char **argv)
     const char *path = ".";
     bool create = false;
     bool printall = false;
-    bool update = false;
     bool listconfig = false;
 
     int c;
@@ -262,10 +261,6 @@ int cmdProject(int argc, char **argv)
     setLoggingLevel(LL_ERROR);
     setLoggingOption(LO_CLI);
 
-    if (printall && update) {
-        printf("Options '-a' and '-u' not compatible.\n\n");
-        return helpProject();
-    }
     if (printall) {
         Database::loadProjects(path, true);
 

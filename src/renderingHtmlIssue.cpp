@@ -435,7 +435,7 @@ void RHtmlIssue::printIssueList(const ContextParameters &ctx, const std::vector<
     ctx.req->printf("</div>\n");
 }
 
-void RHtmlIssue::printIssuesAccrossProjects(ContextParameters ctx,
+void RHtmlIssue::printIssuesAccrossProjects(const ContextParameters &ctx,
                                        const std::vector<IssueCopy> &issues,
                                        const std::list<std::string> &colspec)
 {
@@ -656,10 +656,13 @@ void printAssociations(const ContextParameters &ctx, const std::string &associat
     ctx.req->printf("<td colspan=\"3\" class=\"sm_issue_asso\">");
 
     std::map<AssociationId, std::set<IssueSummary> >::const_iterator ait;
-    if (reverse) ait = i.reverseAssociations.find(associationId);
-    else ait = i.associations.find(associationId);
+    const std::map<AssociationId, std::set<IssueSummary> > *atable;
+    if (reverse) atable = &i.reverseAssociations;
+    else atable = &i.associations;
 
-    if (ait != i.associations.end()) {
+    ait = atable->find(associationId);
+
+    if (ait != atable->end()) {
         std::set<IssueSummary>::const_iterator is;
         const std::set<IssueSummary> &issuesSummaries = ait->second;
         FOREACH(is, issuesSummaries) {

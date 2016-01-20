@@ -498,6 +498,7 @@ public:
         va_start(list, format);
         char value[LOCAL_SIZE];
         int n = vsnprintf(value, LOCAL_SIZE, format, list);
+        va_end(list);
         if (n >= LOCAL_SIZE || n < 0) {
             LOG_ERROR("addAttribute error: vsnprintf n=%d", n);
         } else {
@@ -541,6 +542,7 @@ public:
         va_start(list, format);
         char buffer[LOCAL_SIZE];
         int n = vsnprintf(buffer, LOCAL_SIZE, format, list);
+        va_end(list);
         if (n >= LOCAL_SIZE || n < 0) {
             LOG_ERROR("addText error: vsnprintf n=%d", n);
         } else {

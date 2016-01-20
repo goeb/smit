@@ -83,6 +83,7 @@ Project *Project::init(const std::string &path, const std::string &repo)
             if (path.size() <= repo.size()) {
                 LOG_ERROR("Cannot compute project name: too short (path=%s, repo=%s)",
                           path.c_str(), repo.c_str());
+                delete p;
                 return 0;
             }
             p->name = path.substr(repo.size()); // remove the leading repo part
@@ -846,6 +847,7 @@ void Project::loadTags()
         }
 
         currentTag = tag->parent;
+        delete tag;
     }
     LOG_INFO("Project %s: %d tags", getName().c_str(), n);
 }

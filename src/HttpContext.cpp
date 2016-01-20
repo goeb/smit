@@ -97,7 +97,9 @@ int MongooseRequestContext::printf(const char *fmt, ...) const
 {
     va_list ap;
     va_start(ap, fmt);
-    return mg_vprintf(conn, fmt, ap);
+    int r = mg_vprintf(conn, fmt, ap);
+    va_end(ap);
+    return r;
 }
 
 /** Write data to the HTTP client

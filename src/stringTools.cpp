@@ -83,11 +83,10 @@ std::string popToken(std::string & uri, char separator)
   */
 void trimRight(std::string &s, const char *c)
 {
-    size_t i = s.size()-1;
-    while ( (i>=0) && strchr(c, s[i]) ) i--;
+    size_t i = s.size();
+    while ( (i>0) && strchr(c, s[i-1]) ) i--;
 
-    if (i < 0) s = "";
-    else s = s.substr(0, i+1);
+    s = s.substr(0, i);
 }
 
 /** Remove characters at the beginning of string

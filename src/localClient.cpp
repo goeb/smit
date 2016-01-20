@@ -332,5 +332,6 @@ int cmdIssue(int argc, char * const *argv)
         printIssue(issue, printMode);
 
     }
+    delete p;
     return 0;
 }

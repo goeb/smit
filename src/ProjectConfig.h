@@ -26,6 +26,7 @@ int strToPropertyType(const std::string &s, PropertyType &out);
 std::list<std::pair<bool, std::string> > parseSortingSpec(const char *sortingSpec);
 
 struct PropertySpec {
+    PropertySpec() : type(F_TEXT) {};
     std::string name;
     std::string label;
     enum PropertyType type;
@@ -44,7 +45,7 @@ struct PropertySpec {
 #define OPT_DISPLAY "-display"
 
 struct ProjectConfig {
-    ProjectConfig() : numberIssueAcrossProjects(false) {}
+    ProjectConfig() : numberIssueAcrossProjects(false), ctime(0) {}
 
     // user defined configuration
     std::list<PropertySpec> properties; // user defined properties

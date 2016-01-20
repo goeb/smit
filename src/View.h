@@ -24,7 +24,7 @@ struct PredefinedView {
     int limit;
     bool isDefault; // indicate if this view should be chosen by default when query string is empty
 
-    PredefinedView() : isDefault(false) {}
+    PredefinedView() : limit(-1), isDefault(false) {}
     static std::string getDirectionName(bool d);
     static std::string getDirectionSign(const std::string &text);
     std::string generateQueryString() const;

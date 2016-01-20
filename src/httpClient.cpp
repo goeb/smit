@@ -491,6 +491,7 @@ void HttpRequest::handleReceivedLines(const char *data, size_t size)
         // do not push empty lines if it is a diectory listing
         if (!isDirectory || !currentLine.empty()) lines.push_back(currentLine);
         currentLine.clear();
+        return;
     }
     size_t i = 0;
     size_t notConsumedOffset = 0;

@@ -621,6 +621,7 @@ int pullIssue(const PullContext &pullCtx, Project &p, const std::string &remoteI
         }
     }
 
+    delete remoteIssue;
     return 0; // ok
 }
 

@@ -251,6 +251,7 @@ int cpioExtractTree(const char *cpioStart, size_t cpioSize, const char *src, con
 
             if (cpioOffset + nToRead > cpioEnd) {
                 LOG_ERROR("cpioExtract: Error while reading contents (eof)");
+                close(extractedFile);
                 return -1;
             }
             memcpy(buffer, cpioOffset, nToRead);
