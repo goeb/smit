@@ -40,6 +40,8 @@ void MongooseServerContext::init()
 
     memset(&callbacks, 0, sizeof(callbacks));
 
+    mongooseCtx = 0;
+
     callbacks.log_message = logMessage;
 }
 

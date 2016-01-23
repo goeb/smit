@@ -121,6 +121,7 @@ public:
         concernedUser = 0;
         entryToBeAmended = 0;
         entries = 0;
+        searchFromHere = 0;
 
         int n = loadProjectPage(ctx.req, ctx.projectPath, basename, &buffer);
 

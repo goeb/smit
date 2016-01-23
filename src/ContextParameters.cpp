@@ -49,4 +49,5 @@ void ContextParameters::init(const RequestContext *request, const User &u)
     user = u;
     req = request;
     originView = 0;
+    userRole = ROLE_NONE;
 }

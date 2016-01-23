@@ -112,6 +112,7 @@ public:
     int renameIssue(Issue &i, const std::string &newId);
     int storeEntry(const Entry *e);
 
+    Project() : maxIssueId(0) {}
 
 private:
     // private member variables

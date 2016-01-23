@@ -317,6 +317,7 @@ int cmdIssue(int argc, char * const *argv)
             }
         } else {
             printf("Error: cannot add entry\n");
+            delete p;
             return 1;
         }
 
