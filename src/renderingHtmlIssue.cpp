@@ -679,11 +679,8 @@ void printAssociations(const ContextParameters &ctx, const std::string &associat
     ctx.req->printf("</td>");
 }
 
-
-void RHtmlIssue::printIssue(const ContextParameters &ctx, const IssueCopy &issue, const std::string &entryToBeAmended)
+void RHtmlIssue::printPropertiesTables(const ContextParameters &ctx, const IssueCopy &issue)
 {
-    ctx.req->printf("<div class=\"sm_issue\">");
-
     // issue properties in a two-column table
     // -------------------------------------------------
     ctx.req->printf("<table class=\"sm_issue_properties\">");
@@ -793,7 +790,11 @@ void RHtmlIssue::printIssue(const ContextParameters &ctx, const IssueCopy &issue
     }
 
     ctx.req->printf("</table>\n");
+}
 
+void RHtmlIssue::printTags(const ContextParameters &ctx, const IssueCopy &issue)
+{
+    const ProjectConfig &pconfig = ctx.projectConfig;
 
     // tags of the entries of the issue
     if (!pconfig.tags.empty()) {
@@ -815,7 +816,179 @@ void RHtmlIssue::printIssue(const ContextParameters &ctx, const IssueCopy &issue
 
         ctx.req->printf("</div>\n");
     }
+}
+void RHtmlIssue::printEntry(const ContextParameters &ctx, const IssueCopy &issue, const Entry &ee, bool beingAmended)
+{
+    const ProjectConfig &pconfig = ctx.projectConfig;
+    const char *styleBeingAmended = "";
+    if (beingAmended) {
+        // the page will display a form for editing this entry.
+        // we want here a special display to help the user understand the link
+        styleBeingAmended = "sm_entry_being_amended";
+    }
 
+    // look if class sm_no_contents is applicable
+    // an entry has no contents if no message and no file
+    const char* classNoContents = "";
+    if (ee.getMessage().empty() || ee.isAmending()) {
+        std::map<std::string, std::list<std::string> >::const_iterator files = ee.properties.find(K_FILE);
+        if (files == ee.properties.end() || files->second.empty()) {
+            classNoContents = "sm_entry_no_contents";
+        }
+    }
+
+    // add tag-related styles, for the tags of the entry
+    std::string classTagged = "sm_entry_notag";
+    std::map<std::string, std::set<std::string> >::const_iterator tit = issue.tags.find(ee.id);
+    if (tit != issue.tags.end()) {
+
+        classTagged = "sm_entry_tagged";
+        std::set<std::string>::iterator tag;
+        FOREACH(tag, tit->second) {
+            // check that this tag is declared in project config
+            if (pconfig.tags.find(*tag) != pconfig.tags.end()) {
+                classTagged += "sm_entry_tag_" + *tag + " ";
+            }
+        }
+    }
+
+    ctx.req->printf("<div class=\"sm_entry %s %s %s\" id=\"%s\">\n", classNoContents,
+                    urlEncode(classTagged).c_str(), styleBeingAmended, urlEncode(ee.id).c_str());
+
+    ctx.req->printf("<div class=\"sm_entry_header\">\n");
+    ctx.req->printf("<span class=\"sm_entry_author\">%s</span>", htmlEscape(ee.author).c_str());
+    ctx.req->printf(", <span class=\"sm_entry_ctime\">%s</span>\n", epochToString(ee.ctime).c_str());
+    // conversion of date in javascript
+    // document.write(new Date(%d)).toString());
+
+    // edit button
+    time_t delta = time(0) - ee.ctime;
+    if ( (delta < DELETE_DELAY_S) && (ee.author == ctx.user.username) &&
+         (ctx.userRole == ROLE_ADMIN || ctx.userRole == ROLE_RW) &&
+         !ee.isAmending()) {
+        // entry was created less than 10 minutes ago, and by same user, and is latest in the issue
+        ctx.req->printf("<a href=\"%s/%s/issues/%s?amend=%s\" class=\"sm_entry_edit\" "
+                        "title=\"Edit this message (at most %d minutes after posting)\">",
+                        MongooseServerContext::getInstance().getUrlRewritingRoot().c_str(),
+                        ctx.getProjectUrlName().c_str(), enquoteJs(issue.id).c_str(),
+                        enquoteJs(ee.id).c_str(), (DELETE_DELAY_S/60));
+        ctx.req->printf("&#9998; %s", _("edit"));
+        ctx.req->printf("</a>\n");
+    }
+
+    // link to raw entry
+    ctx.req->printf("(<a href=\"%s/%s/" RESOURCE_FILES "/%s\" class=\"sm_entry_raw\">%s</a>",
+                    MongooseServerContext::getInstance().getUrlRewritingRoot().c_str(),
+                    ctx.getProjectUrlName().c_str(),
+                    urlEncode(ee.id).c_str(), _("raw"));
+    // link to possible amendments
+    int i = 1;
+    std::map<std::string, std::list<std::string> >::const_iterator as = issue.amendments.find(ee.id);
+    if (as != issue.amendments.end()) {
+        std::list<std::string>::const_iterator a;
+        FOREACH(a, as->second) {
+            ctx.req->printf(", <a href=\"/%s/" RESOURCE_FILES "/%s\" class=\"sm_entry_raw\">%s%d</a>",
+                            ctx.getProjectUrlName().c_str(),
+                            urlEncode(*a).c_str(), _("amend"), i);
+            i++;
+        }
+    }
+    ctx.req->printf(")");
+
+    // display the tags of the entry
+    if (!pconfig.tags.empty()) {
+        std::map<std::string, TagSpec>::const_iterator tagIt;
+        FOREACH(tagIt, pconfig.tags) {
+            TagSpec tag = tagIt->second;
+            LOG_DEBUG("tag: id=%s, label=%s", tag.id.c_str(), tag.label.c_str());
+            std::string tagStyle = "sm_entry_notag";
+            bool tagged = issue.hasTag(ee.id, tag.id);
+            if (tagged) tagStyle = "sm_entry_tagged " + urlEncode("sm_entry_tag_" + tag.id);
+
+            if (ctx.userRole == ROLE_ADMIN || ctx.userRole == ROLE_RW) {
+                const char *tagTitle = _("Click to tag/untag");
+
+                ctx.req->printf("<a href=\"#\" onclick=\"tagEntry('/%s/tags', '%s', '%s');return false;\""
+                                " title=\"%s\" class=\"sm_entry_tag\">",
+                                ctx.getProjectUrlName().c_str(), enquoteJs(ee.id).c_str(),
+                                enquoteJs(tag.id).c_str(), tagTitle);
+
+                // the tag itself
+                ctx.req->printf("<span class=\"%s\" id=\"sm_tag_%s_%s\">",
+                                tagStyle.c_str(), urlEncode(ee.id).c_str(), urlEncode(tag.id).c_str());
+                ctx.req->printf("[%s]", htmlEscape(tag.label).c_str());
+                ctx.req->printf("</span>\n");
+
+                ctx.req->printf("</a>\n");
+
+            } else {
+                // read-only
+                // if tag is not active, do not display
+                if (tagged) {
+                    ctx.req->printf("<span class=\"%s\">", tagStyle.c_str());
+                    ctx.req->printf("[%s]", htmlEscape(tag.label).c_str());
+                    ctx.req->printf("</span>\n");
+                }
+
+            }
+
+        }
+
+    }
+
+    ctx.req->printf("</div>\n"); // end header
+
+    std::string m = ee.getMessage();
+    if (! m.empty() && !ee.isAmending()) {
+        ctx.req->printf("<div class=\"sm_entry_message\">");
+        ctx.req->printf("%s\n", convertToRichText(htmlEscape(m)).c_str());
+        ctx.req->printf("</div>\n"); // end message
+    } // else, do not display
+
+
+    // uploaded / attached files
+    std::map<std::string, std::list<std::string> >::const_iterator files = ee.properties.find(K_FILE);
+    if (files != ee.properties.end() && files->second.size() > 0) {
+        ctx.req->printf("<div class=\"sm_entry_files\">\n");
+        std::list<std::string>::const_iterator itf;
+        FOREACH(itf, files->second) {
+            std::string f = *itf;
+            std::string objectId = popToken(f, '/');
+            std::string basename = f;
+
+            std::string href = RESOURCE_FILES "/" + urlEncode(objectId) + "/" + urlEncode(basename);
+            ctx.req->printf("<div class=\"sm_entry_file\">\n");
+            ctx.req->printf("<a href=\"../%s\" class=\"sm_entry_file\">", href.c_str());
+            if (isImage(f)) {
+                // do not escape slashes
+                ctx.req->printf("<img src=\"../%s\" class=\"sm_entry_file\"><br>", href.c_str());
+            }
+            ctx.req->printf("%s", htmlEscape(basename).c_str());
+            // size of the file
+            std::string path = Project::getObjectPath(ctx.projectPath, objectId);
+            std::string size = getFileSize(path);
+            ctx.req->printf("<span> (%s)</span>", size.c_str());
+            ctx.req->printf("</a>");
+            ctx.req->printf("</div>\n"); // end file
+        }
+        ctx.req->printf("</div>\n"); // end files
+    }
+
+
+    // -------------------------------------------------
+    // print other modified properties
+    printOtherProperties(ctx, ee, false, "sm_entry_other_properties");
+
+    ctx.req->printf("</div>\n"); // end entry
+}
+
+void RHtmlIssue::printIssue(const ContextParameters &ctx, const IssueCopy &issue, const std::string &entryToBeAmended)
+{
+    ctx.req->printf("<div class=\"sm_issue\">");
+
+    printPropertiesTables(ctx, issue);
+
+    printTags(ctx, issue);
 
     // entries
     // -------------------------------------------------
@@ -823,165 +996,8 @@ void RHtmlIssue::printIssue(const ContextParameters &ctx, const IssueCopy &issue
     while (e) {
         Entry ee = *e;
 
-        const char *styleBeingAmended = "";
-        if (ee.id == entryToBeAmended) {
-            // the page will display a form for editing this entry.
-            // we want here a special display to help the user understand the link
-            styleBeingAmended = "sm_entry_being_amended";
-        }
-
-        // look if class sm_no_contents is applicable
-        // an entry has no contents if no message and no file
-        const char* classNoContents = "";
-        if (ee.getMessage().empty() || ee.isAmending()) {
-            std::map<std::string, std::list<std::string> >::iterator files = ee.properties.find(K_FILE);
-            if (files == ee.properties.end() || files->second.empty()) {
-                classNoContents = "sm_entry_no_contents";
-            }
-        }
-
-        // add tag-related styles, for the tags of the entry
-        std::string classTagged = "sm_entry_notag";
-        std::map<std::string, std::set<std::string> >::const_iterator tit = issue.tags.find(ee.id);
-        if (tit != issue.tags.end()) {
-
-            classTagged = "sm_entry_tagged";
-            std::set<std::string>::iterator tag;
-            FOREACH(tag, tit->second) {
-                // check that this tag is declared in project config
-                if (pconfig.tags.find(*tag) != pconfig.tags.end()) {
-                    classTagged += "sm_entry_tag_" + *tag + " ";
-                }
-            }
-        }
-
-        ctx.req->printf("<div class=\"sm_entry %s %s %s\" id=\"%s\">\n", classNoContents,
-                        urlEncode(classTagged).c_str(), styleBeingAmended, urlEncode(ee.id).c_str());
-
-        ctx.req->printf("<div class=\"sm_entry_header\">\n");
-        ctx.req->printf("<span class=\"sm_entry_author\">%s</span>", htmlEscape(ee.author).c_str());
-        ctx.req->printf(", <span class=\"sm_entry_ctime\">%s</span>\n", epochToString(ee.ctime).c_str());
-        // conversion of date in javascript
-        // document.write(new Date(%d)).toString());
-
-        // edit button
-        time_t delta = time(0) - ee.ctime;
-        if ( (delta < DELETE_DELAY_S) && (ee.author == ctx.user.username) &&
-             (ctx.userRole == ROLE_ADMIN || ctx.userRole == ROLE_RW) &&
-             !ee.isAmending()) {
-            // entry was created less than 10 minutes ago, and by same user, and is latest in the issue
-            ctx.req->printf("<a href=\"%s/%s/issues/%s?amend=%s\" class=\"sm_entry_edit\" "
-                            "title=\"Edit this message (at most %d minutes after posting)\">",
-                            MongooseServerContext::getInstance().getUrlRewritingRoot().c_str(),
-                            ctx.getProjectUrlName().c_str(), enquoteJs(issue.id).c_str(),
-                            enquoteJs(ee.id).c_str(), (DELETE_DELAY_S/60));
-            ctx.req->printf("&#9998; %s", _("edit"));
-            ctx.req->printf("</a>\n");
-        }
-
-        // link to raw entry
-        ctx.req->printf("(<a href=\"%s/%s/" RESOURCE_FILES "/%s\" class=\"sm_entry_raw\">%s</a>",
-                        MongooseServerContext::getInstance().getUrlRewritingRoot().c_str(),
-                        ctx.getProjectUrlName().c_str(),
-                        urlEncode(ee.id).c_str(), _("raw"));
-        // link to possible amendments
-        int i = 1;
-        std::map<std::string, std::list<std::string> >::const_iterator as = issue.amendments.find(ee.id);
-        if (as != issue.amendments.end()) {
-            std::list<std::string>::const_iterator a;
-            FOREACH(a, as->second) {
-                ctx.req->printf(", <a href=\"/%s/" RESOURCE_FILES "/%s\" class=\"sm_entry_raw\">%s%d</a>",
-                                ctx.getProjectUrlName().c_str(),
-                                urlEncode(*a).c_str(), _("amend"), i);
-                i++;
-            }
-        }
-        ctx.req->printf(")");
-
-        // display the tags of the entry
-        if (!pconfig.tags.empty()) {
-            std::map<std::string, TagSpec>::const_iterator tagIt;
-            FOREACH(tagIt, pconfig.tags) {
-                TagSpec tag = tagIt->second;
-                LOG_DEBUG("tag: id=%s, label=%s", tag.id.c_str(), tag.label.c_str());
-                std::string tagStyle = "sm_entry_notag";
-                bool tagged = issue.hasTag(ee.id, tag.id);
-                if (tagged) tagStyle = "sm_entry_tagged " + urlEncode("sm_entry_tag_" + tag.id);
-
-                if (ctx.userRole == ROLE_ADMIN || ctx.userRole == ROLE_RW) {
-                    const char *tagTitle = _("Click to tag/untag");
-
-                    ctx.req->printf("<a href=\"#\" onclick=\"tagEntry('/%s/tags', '%s', '%s');return false;\""
-                                    " title=\"%s\" class=\"sm_entry_tag\">",
-                                    ctx.getProjectUrlName().c_str(), enquoteJs(ee.id).c_str(),
-                                    enquoteJs(tag.id).c_str(), tagTitle);
-
-                    // the tag itself
-                    ctx.req->printf("<span class=\"%s\" id=\"sm_tag_%s_%s\">",
-                                    tagStyle.c_str(), urlEncode(ee.id).c_str(), urlEncode(tag.id).c_str());
-                    ctx.req->printf("[%s]", htmlEscape(tag.label).c_str());
-                    ctx.req->printf("</span>\n");
-
-                    ctx.req->printf("</a>\n");
-
-                } else {
-                    // read-only
-                    // if tag is not active, do not display
-                    if (tagged) {
-                        ctx.req->printf("<span class=\"%s\">", tagStyle.c_str());
-                        ctx.req->printf("[%s]", htmlEscape(tag.label).c_str());
-                        ctx.req->printf("</span>\n");
-                    }
-
-                }
-
-            }
-
-        }
-
-        ctx.req->printf("</div>\n"); // end header
-
-        std::string m = ee.getMessage();
-        if (! m.empty() && !ee.isAmending()) {
-            ctx.req->printf("<div class=\"sm_entry_message\">");
-            ctx.req->printf("%s\n", convertToRichText(htmlEscape(m)).c_str());
-            ctx.req->printf("</div>\n"); // end message
-        } // else, do not display
-
-
-        // uploaded / attached files
-        std::map<std::string, std::list<std::string> >::iterator files = ee.properties.find(K_FILE);
-        if (files != ee.properties.end() && files->second.size() > 0) {
-            ctx.req->printf("<div class=\"sm_entry_files\">\n");
-            std::list<std::string>::iterator f;
-            FOREACH(f, files->second) {
-                std::string objectId = popToken(*f, '/');
-                std::string basename = *f;
-
-                std::string href = RESOURCE_FILES "/" + urlEncode(objectId) + "/" + urlEncode(basename);
-                ctx.req->printf("<div class=\"sm_entry_file\">\n");
-                ctx.req->printf("<a href=\"../%s\" class=\"sm_entry_file\">", href.c_str());
-                if (isImage(*f)) {
-                    // do not escape slashes
-                    ctx.req->printf("<img src=\"../%s\" class=\"sm_entry_file\"><br>", href.c_str());
-                }
-                ctx.req->printf("%s", htmlEscape(basename).c_str());
-                // size of the file
-                std::string path = Project::getObjectPath(ctx.projectPath, objectId);
-                std::string size = getFileSize(path);
-                ctx.req->printf("<span> (%s)</span>", size.c_str());
-                ctx.req->printf("</a>");
-                ctx.req->printf("</div>\n"); // end file
-            }
-            ctx.req->printf("</div>\n"); // end files
-        }
-
-
-        // -------------------------------------------------
-        // print other modified properties
-        printOtherProperties(ctx, ee, false, "sm_entry_other_properties");
-
-        ctx.req->printf("</div>\n"); // end entry
+        bool beingAmended = (ee.id == entryToBeAmended);
+        printEntry(ctx, issue, ee, beingAmended);
 
         e = e->getNext();
     } // end of entries
