@@ -679,7 +679,7 @@ void printAssociations(const ContextParameters &ctx, const std::string &associat
     ctx.req->printf("</td>");
 }
 
-void RHtmlIssue::printPropertiesTables(const ContextParameters &ctx, const IssueCopy &issue)
+void RHtmlIssue::printPropertiesTable(const ContextParameters &ctx, const IssueCopy &issue)
 {
     // issue properties in a two-column table
     // -------------------------------------------------
@@ -986,7 +986,7 @@ void RHtmlIssue::printIssue(const ContextParameters &ctx, const IssueCopy &issue
 {
     ctx.req->printf("<div class=\"sm_issue\">");
 
-    printPropertiesTables(ctx, issue);
+    printPropertiesTable(ctx, issue);
 
     printTags(ctx, issue);
 

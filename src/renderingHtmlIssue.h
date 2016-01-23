@@ -28,7 +28,7 @@ public:
     static void printIssueForm(const ContextParameters &ctx, const IssueCopy *issue, bool autofocus);
     static std::string convertToRichText(const std::string &raw);
     static void printIssueSummary(const ContextParameters &ctx, const IssueCopy &issue);
-    static void printPropertiesTables(const ContextParameters &ctx, const IssueCopy &issue);
+    static void printPropertiesTable(const ContextParameters &ctx, const IssueCopy &issue);
     static void printTags(const ContextParameters &ctx, const IssueCopy &issue);
     static void printEntry(const ContextParameters &ctx, const IssueCopy &issue, const Entry &ee, bool beingAmended);
     static void printIssue(const ContextParameters &ctx, const IssueCopy &issue, const std::string &entryToBeAmended);
