@@ -1090,7 +1090,7 @@ void RHtmlIssue::printEditMessage(const ContextParameters &ctx, const IssueCopy 
         return;
     }
     ctx.req->printf("<div class=\"sm_amend\">%s: %s</div>", _("Amend Messsage"), urlEncode(eToBeAmended.id).c_str());
-    ctx.req->printf("<form enctype=\"multipart/form-data\" method=\"post\" class=\"sm_issue_form\">");
+    ctx.req->printf("<form id=\"sm_issue_form\" enctype=\"multipart/form-data\" method=\"post\" class=\"sm_issue_form\">");
     ctx.req->printf("<input type=\"hidden\" value=\"%s\" name=\"%s\">", urlEncode(eToBeAmended.id).c_str(), K_AMEND);
     ctx.req->printf("<table class=\"sm_issue_properties\">");
 
