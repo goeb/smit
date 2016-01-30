@@ -40,5 +40,7 @@ int mkdir(const std::string &path);
 int mkdir(const char *path, int mode);
 #endif
 
+int lockFile(const std::string &path);
+void unlockFile(int fd);
 
 #endif

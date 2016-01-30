@@ -46,6 +46,9 @@
 
 #define MAX_PATH 2048
 
+#include <unistd.h>
+#include <fcntl.h>
+
 #endif
 
 
@@ -449,4 +452,57 @@ int cmpContents(const std::string &contents, const std::string &file)
 }
 
 
+#if defined(_WIN32)
+int lockFile(const std::string &path)
+{
+    LOG_ERROR("lockFile not supported on Windows");
+    return 0;
+}
+int lockFile(const std::string &path)
+{
+    LOG_ERROR("unlockFile not supported on Windows");
+    return 0;
+}
+#else // linux
+int lockFile(const std::string &path)
+{
+    int flags = O_WRONLY|O_CREAT|O_CLOEXEC;
+    int mode = 0666;
+    int fd = open(path.c_str(), flags, mode);
+    if (fd < 0) {
+        LOG_ERROR("Cannot create file '%s' for locking: %s", path.c_str(), strerror(errno));
+        return -1;
+    }
 
+    struct flock lockParams;
+    lockParams.l_type = F_WRLCK;
+    lockParams.l_len = 0;
+    lockParams.l_pid = 0;
+    lockParams.l_start = 0;
+    lockParams.l_whence = SEEK_SET;
+
+    int r = fcntl(fd, F_SETLK, &lockParams);
+    if (r != 0) {
+        LOG_ERROR("Cannot lock file '%s' (%d): %s", path.c_str(), fd, strerror(errno));
+        close(fd);
+        return -1;
+    }
+    return fd;
+}
+void unlockFile(int fd)
+{
+    struct flock lockParams;
+    lockParams.l_type = F_UNLCK;
+    lockParams.l_len = 0;
+    lockParams.l_pid = 0;
+    lockParams.l_start = 0;
+    lockParams.l_whence = SEEK_SET;
+
+    int r = fcntl(fd, F_SETLK, &lockParams);
+    if (r != 0) {
+        LOG_ERROR("Cannot unlock file '%d': %s (owned by puid %d)", fd, strerror(errno), lockParams.l_pid);
+    }
+    close(fd);
+}
+
+#endif
