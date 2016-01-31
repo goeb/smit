@@ -63,7 +63,7 @@ smit_SOURCES = \
 			   src/ProjectConfig.cpp \
 			   src/Object.cpp \
 			   src/AuthSha1.cpp \
-			   src/third-party/mongoose.c \
+			   src/third-party/civetweb.c \
 			   src/third-party/fnmatch.c
 
 if CURL_ENABLED

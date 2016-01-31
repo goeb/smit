@@ -2,7 +2,7 @@
 #define _HttpContext_h
 
 #include <string>
-#include "mongoose.h"
+#include "civetweb.h"
 
 // functions not officially exposed by mongoose
 extern "C" {

@@ -45,7 +45,8 @@ SOURCES += \
     ../../src/jTools.cpp \
     ../../src/httpdUtils.cpp \
     ../../src/renderingHtmlIssue.cpp \
-    ../../src/ContextParameters.cpp
+    ../../src/ContextParameters.cpp \
+    ../../src/third-party/civetweb.c
     ../../src/ssoKerberos.cpp
 
 HEADERS += \
@@ -93,6 +94,7 @@ HEADERS += \
     ../../src/jTools.h \
     ../../src/httpdUtils.h \
     ../../src/renderingHtmlIssue.h \
-    ../../src/ContextParameters.h
+    ../../src/ContextParameters.h \
+    ../../src/third-party/civetweb.h
     ../../src/ssoKerberos.h
 

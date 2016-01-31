@@ -90,7 +90,7 @@ am__smit_SOURCES_DIST = src/db.cpp src/Entry.cpp src/Issue.cpp \
 	src/logging.cpp src/Trigger.cpp src/filesystem.cpp \
 	src/console.cpp src/HttpContext.cpp src/localClient.cpp \
 	src/Args.cpp src/ProjectConfig.cpp src/Object.cpp \
-	src/AuthSha1.cpp src/third-party/mongoose.c \
+	src/AuthSha1.cpp src/third-party/civetweb.c \
 	src/third-party/fnmatch.c src/clone.cpp src/httpClient.cpp \
 	src/AuthKrb5.cpp src/AuthLdap.cpp
 am__dirstamp = $(am__leading_dot)dirstamp
@@ -117,7 +117,7 @@ am_smit_OBJECTS = src/smit-db.$(OBJEXT) src/smit-Entry.$(OBJEXT) \
 	src/smit-localClient.$(OBJEXT) src/smit-Args.$(OBJEXT) \
 	src/smit-ProjectConfig.$(OBJEXT) src/smit-Object.$(OBJEXT) \
 	src/smit-AuthSha1.$(OBJEXT) \
-	src/third-party/smit-mongoose.$(OBJEXT) \
+	src/third-party/smit-civetweb.$(OBJEXT) \
 	src/third-party/smit-fnmatch.$(OBJEXT) $(am__objects_1) \
 	$(am__objects_2) $(am__objects_3)
 nodist_smit_OBJECTS = smit-embedcpio.$(OBJEXT)
@@ -383,7 +383,7 @@ smit_SOURCES = src/db.cpp src/Entry.cpp src/Issue.cpp src/Project.cpp \
 	src/logging.cpp src/Trigger.cpp src/filesystem.cpp \
 	src/console.cpp src/HttpContext.cpp src/localClient.cpp \
 	src/Args.cpp src/ProjectConfig.cpp src/Object.cpp \
-	src/AuthSha1.cpp src/third-party/mongoose.c \
+	src/AuthSha1.cpp src/third-party/civetweb.c \
 	src/third-party/fnmatch.c $(am__append_10) $(am__append_11) \
 	$(am__append_12)
 nodist_smit_SOURCES = embedcpio.c embedcpio.h 
@@ -580,7 +580,7 @@ src/third-party/$(am__dirstamp):
 src/third-party/$(DEPDIR)/$(am__dirstamp):
 	@$(MKDIR_P) src/third-party/$(DEPDIR)
 	@: > src/third-party/$(DEPDIR)/$(am__dirstamp)
-src/third-party/smit-mongoose.$(OBJEXT):  \
+src/third-party/smit-civetweb.$(OBJEXT):  \
 	src/third-party/$(am__dirstamp) \
 	src/third-party/$(DEPDIR)/$(am__dirstamp)
 src/third-party/smit-fnmatch.$(OBJEXT):  \
@@ -649,8 +649,8 @@ mostlyclean-compile:
 	-rm -f src/smparser-filesystem.$(OBJEXT)
 	-rm -f src/smparser-parseConfig.$(OBJEXT)
 	-rm -f src/smparser-stringTools.$(OBJEXT)
+	-rm -f src/third-party/smit-civetweb.$(OBJEXT)
 	-rm -f src/third-party/smit-fnmatch.$(OBJEXT)
-	-rm -f src/third-party/smit-mongoose.$(OBJEXT)
 
 distclean-compile:
 	-rm -f *.tab.c
@@ -696,8 +696,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smparser-filesystem.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smparser-parseConfig.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smparser-stringTools.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/third-party/$(DEPDIR)/smit-civetweb.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/third-party/$(DEPDIR)/smit-fnmatch.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@src/third-party/$(DEPDIR)/smit-mongoose.Po@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(AM_V_CC)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.o$$||'`;\
@@ -715,19 +715,19 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(COMPILE) -c -o $@ `$(CYGPATH_W) '$<'`
 
-src/third-party/smit-mongoose.o: src/third-party/mongoose.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT src/third-party/smit-mongoose.o -MD -MP -MF src/third-party/$(DEPDIR)/smit-mongoose.Tpo -c -o src/third-party/smit-mongoose.o `test -f 'src/third-party/mongoose.c' || echo '$(srcdir)/'`src/third-party/mongoose.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/third-party/$(DEPDIR)/smit-mongoose.Tpo src/third-party/$(DEPDIR)/smit-mongoose.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='src/third-party/mongoose.c' object='src/third-party/smit-mongoose.o' libtool=no @AMDEPBACKSLASH@
+src/third-party/smit-civetweb.o: src/third-party/civetweb.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT src/third-party/smit-civetweb.o -MD -MP -MF src/third-party/$(DEPDIR)/smit-civetweb.Tpo -c -o src/third-party/smit-civetweb.o `test -f 'src/third-party/civetweb.c' || echo '$(srcdir)/'`src/third-party/civetweb.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/third-party/$(DEPDIR)/smit-civetweb.Tpo src/third-party/$(DEPDIR)/smit-civetweb.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='src/third-party/civetweb.c' object='src/third-party/smit-civetweb.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o src/third-party/smit-mongoose.o `test -f 'src/third-party/mongoose.c' || echo '$(srcdir)/'`src/third-party/mongoose.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o src/third-party/smit-civetweb.o `test -f 'src/third-party/civetweb.c' || echo '$(srcdir)/'`src/third-party/civetweb.c
 
-src/third-party/smit-mongoose.obj: src/third-party/mongoose.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT src/third-party/smit-mongoose.obj -MD -MP -MF src/third-party/$(DEPDIR)/smit-mongoose.Tpo -c -o src/third-party/smit-mongoose.obj `if test -f 'src/third-party/mongoose.c'; then $(CYGPATH_W) 'src/third-party/mongoose.c'; else $(CYGPATH_W) '$(srcdir)/src/third-party/mongoose.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/third-party/$(DEPDIR)/smit-mongoose.Tpo src/third-party/$(DEPDIR)/smit-mongoose.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='src/third-party/mongoose.c' object='src/third-party/smit-mongoose.obj' libtool=no @AMDEPBACKSLASH@
+src/third-party/smit-civetweb.obj: src/third-party/civetweb.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT src/third-party/smit-civetweb.obj -MD -MP -MF src/third-party/$(DEPDIR)/smit-civetweb.Tpo -c -o src/third-party/smit-civetweb.obj `if test -f 'src/third-party/civetweb.c'; then $(CYGPATH_W) 'src/third-party/civetweb.c'; else $(CYGPATH_W) '$(srcdir)/src/third-party/civetweb.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) src/third-party/$(DEPDIR)/smit-civetweb.Tpo src/third-party/$(DEPDIR)/smit-civetweb.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='src/third-party/civetweb.c' object='src/third-party/smit-civetweb.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o src/third-party/smit-mongoose.obj `if test -f 'src/third-party/mongoose.c'; then $(CYGPATH_W) 'src/third-party/mongoose.c'; else $(CYGPATH_W) '$(srcdir)/src/third-party/mongoose.c'; fi`
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o src/third-party/smit-civetweb.obj `if test -f 'src/third-party/civetweb.c'; then $(CYGPATH_W) 'src/third-party/civetweb.c'; else $(CYGPATH_W) '$(srcdir)/src/third-party/civetweb.c'; fi`
 
 src/third-party/smit-fnmatch.o: src/third-party/fnmatch.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT src/third-party/smit-fnmatch.o -MD -MP -MF src/third-party/$(DEPDIR)/smit-fnmatch.Tpo -c -o src/third-party/smit-fnmatch.o `test -f 'src/third-party/fnmatch.c' || echo '$(srcdir)/'`src/third-party/fnmatch.c
