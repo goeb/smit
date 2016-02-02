@@ -122,6 +122,9 @@ public:
         entryToBeAmended = 0;
         entries = 0;
         searchFromHere = 0;
+        dumpStart = 0;
+        dumpEnd = 0;
+        size = 0;
 
         int n = loadProjectPage(ctx.req, ctx.projectPath, basename, &buffer);
 

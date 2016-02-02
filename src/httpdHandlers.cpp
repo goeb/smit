@@ -85,6 +85,11 @@ int httpPostSignin(const RequestContext *request)
     char password[SIZ+1];
     int n; // number of bytes read
     n = request->read(buffer, SIZ);
+    if (n < 0) {
+        LOG_ERROR("httpPostSignin: read error %d", n);
+        sendHttpHeader500(request, "httpPostSignin: read error");
+        return REQUEST_COMPLETED;
+    }
     if (n == SIZ) {
         LOG_ERROR("Post data for signin too long. Abort request.");
         return sendHttpHeader400(request, "Post data for signin too long");
