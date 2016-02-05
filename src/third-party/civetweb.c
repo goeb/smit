@@ -328,8 +328,8 @@ struct timespec {
 
 #define pid_t HANDLE /* MINGW typedefs pid_t to int. Using #define here. */
 
-static int pthread_mutex_lock(pthread_mutex_t *);
-static int pthread_mutex_unlock(pthread_mutex_t *);
+int pthread_mutex_lock(pthread_mutex_t *);
+int pthread_mutex_unlock(pthread_mutex_t *);
 static void to_unicode(const char *path, wchar_t *wbuf, size_t wbuf_len);
 struct file;
 static char *mg_fgets(char *buf, size_t size, struct file *filep, char **p);
@@ -2113,19 +2113,19 @@ send_http_error(struct mg_connection *conn, int status, const char *fmt, ...)
 }
 
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
-static int pthread_mutex_init(pthread_mutex_t *mutex, void *unused)
+int pthread_mutex_init(pthread_mutex_t *mutex, void *unused)
 {
 	(void)unused;
 	*mutex = CreateMutex(NULL, FALSE, NULL);
 	return *mutex == NULL ? -1 : 0;
 }
 
-static int pthread_mutex_destroy(pthread_mutex_t *mutex)
+int pthread_mutex_destroy(pthread_mutex_t *mutex)
 {
 	return CloseHandle(*mutex) == 0 ? -1 : 0;
 }
 
-static int pthread_mutex_lock(pthread_mutex_t *mutex)
+int pthread_mutex_lock(pthread_mutex_t *mutex)
 {
 	return WaitForSingleObject(*mutex, INFINITE) == WAIT_OBJECT_0 ? 0 : -1;
 }
@@ -2143,7 +2143,7 @@ static int pthread_mutex_trylock(pthread_mutex_t *mutex)
 }
 #endif
 
-static int pthread_mutex_unlock(pthread_mutex_t *mutex)
+int pthread_mutex_unlock(pthread_mutex_t *mutex)
 {
 	return ReleaseMutex(*mutex) == 0 ? -1 : 0;
 }
