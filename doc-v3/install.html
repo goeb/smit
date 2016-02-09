@@ -69,6 +69,8 @@ openssl req -new -x509 -key privkey.pem -out cacert.pub.pem -days 1095
 cat privkey.pem cacert.pub.pem &gt; cacert.pem</code></pre>
 <p>Start Smit:</p>
 <pre><code>smit serve --ssl-cert cacert.pem</code></pre>
+<p>To redirect clients from a non-secured port 8090 to HTTPS on port 8091:</p>
+<pre><code>smit serve --ssl-cert cacert.pem --listen-port 8090r,8091s</code></pre>
 <h2 id="set-up-a-trigger">Set up a trigger</h2>
 <p>A trigger defines an external program to be launched after each new entry. It is typically useful for sending email notifications when some condition occur.</p>
 <p>Triggers are not supported on Windows.</p>
@@ -130,7 +132,7 @@ $SERVER[&quot;socket&quot;] == &quot;:8092&quot; {
 </div>
         </div> <!-- div class page -->
         <div class="footer">
-            Page updated on 18 Sep 2015
+            Page updated on  9 Feb 2016
         </div>
     </body>
 </html>

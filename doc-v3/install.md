@@ -54,6 +54,13 @@ Start Smit:
 smit serve --ssl-cert cacert.pem
 ```
 
+To redirect clients from a non-secured port 8090 to HTTPS on port 8091:
+
+```
+smit serve --ssl-cert cacert.pem --listen-port 8090r,8091s
+```
+
+
 
 ## Set up a trigger
 
