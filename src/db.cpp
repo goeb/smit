@@ -72,8 +72,9 @@ int Database::loadProjects(const std::string &path, bool recurse)
         } else {
             std::string f;
             while ((f = getNextFile(dirp)) != "") {
+                if (f[0] == '.') continue; // do not look through hidden files
                 std::string subpath = path + "/" + f;
-                if (isDir(subpath)) result += loadProjects(subpath, recurse); // recurse
+                result += loadProjects(subpath, recurse); // recurse
             }
             closedir(dirp);
         }
