@@ -980,6 +980,16 @@ int cmdClone(int argc, char * const *argv)
         return helpClone();
     }
 
+    if (fileExists(dir)) {
+        LOG_CLI("Cannot clone: '%s' already exists\n", dir);
+        return 1;
+    }
+    int r = mkdir(dir);
+    if (r != 0) {
+        LOG_CLI("Cannot create directory '%s': %s\n", dir, strerror(errno));
+        return 1;
+    }
+
     if (username.empty()) username = getString("Username: ", false);
 
     std::string password;
@@ -1000,17 +1010,17 @@ int cmdClone(int argc, char * const *argv)
     }
     ctx.cookieSessid = cookieSessid;
 
-    int r = getProjects(url, dir, ctx);
-    if (r < 0) {
-        fprintf(stderr, "Clone failed. Abort.\n");
-        exit(1);
-    }
-
     // create persistent configuration of the local clone
     createSmitDir(dir);
     storeSessid(dir, ctx.cookieSessid);
     storeUsername(dir, username);
     storeUrl(dir, url);
+
+    r = getProjects(url, dir, ctx);
+    if (r < 0) {
+        fprintf(stderr, "Clone failed. Abort.\n");
+        exit(1);
+    }
 
     curl_global_cleanup();
 
