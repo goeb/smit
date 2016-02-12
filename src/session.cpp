@@ -13,8 +13,9 @@
 #include "config.h"
 
 #include <openssl/sha.h>
-#include <stdlib.h>
 #include <sstream>
+#include <openssl/rand.h>
+#include <openssl/err.h>
 
 #include "session.h"
 #include "logging.h"
@@ -148,11 +149,30 @@ int User::loadAuth(std::list<std::string> &tokens)
     return 0; // success
 }
 
+static std::string getRandom8bytes()
+{
+    const size_t SIZE8 = 8;
+    unsigned char buf[SIZE8];
+    int r = RAND_bytes(buf, SIZE8);
+    if (r != 1) {
+        LOG_ERROR("RAND_bytes failed (%lu). Using RAND_pseudo_bytes.", ERR_get_error());
+        r = RAND_pseudo_bytes(buf, SIZE8);
+        if (r == 0) {
+            LOG_ERROR("Warning: RAND_pseudo_bytes not strong.");
+        } else if (r == -1) {
+            // Not supported by the current RAND method
+            // Abort for security reason
+            LOG_ERROR("RAND_pseudo_bytes not supported. Abort.");
+            exit(1);
+        }
+    }
+
+    return bin2hex(buf, SIZE8);
+}
+
 std::string getNewSalt()
 {
-    std::stringstream randomStr;
-    randomStr << std::hex << rand() << rand();
-    return randomStr.str();
+    return getRandom8bytes();
 }
 
 /** Set authentication scheme SHA1 and set password
@@ -797,13 +817,11 @@ std::string SessionBase::createSession(const std::string &username)
 
     garbageCollect();
 
-    std::stringstream randomStr;
-    randomStr << std::hex << rand() << rand();
     Session s;
     s.ctime = time(0);
     // use sha1 in order to make difficult to predict session-id from previous session-ids
     // (an attacker cannot know the randoms, and thus cannot predict the next randoms)
-    s.id = getSha1(randomStr.str());
+    s.id = getSha1(getRandom8bytes());
     LOG_DEBUG("session-id: %s", s.id.c_str());
     s.username = username;
     s.duration = SESSION_DURATION;

@@ -864,9 +864,6 @@ int main(int argc, char **argv)
 {
     if (argc < 2) usage();
 
-    // init random seed
-    srand(time(0));
-
     int i = 1;
     const char *command = 0;
     while (i < argc) {
