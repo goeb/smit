@@ -458,7 +458,7 @@ int lockFile(const std::string &path)
     LOG_ERROR("lockFile not supported on Windows");
     return 0;
 }
-int lockFile(const std::string &path)
+int unlockFile(const std::string &path)
 {
     LOG_ERROR("unlockFile not supported on Windows");
     return 0;
