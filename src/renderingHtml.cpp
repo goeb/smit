@@ -851,7 +851,7 @@ void RHtml::printPageProjectList(const ContextParameters &ctx,
 
 /** Generate javascript that will fulfill the inputs of the project configuration
   */
-std::string RHtml::getScriptProjectConfig(const ContextParameters &ctx)
+std::string RHtml::getScriptProjectConfig(const ContextParameters &ctx, const ProjectConfig *alternateConfig)
 {
     std::string script;
 
@@ -866,12 +866,15 @@ std::string RHtml::getScriptProjectConfig(const ContextParameters &ctx)
     }
 
     // other properties
-    const ProjectConfig &c = ctx.projectConfig;
+    const ProjectConfig *c;
+    if (alternateConfig) c = alternateConfig;
+    else c = &(ctx.projectConfig);
+
     std::list<PropertySpec>::const_iterator pspec;
-    FOREACH(pspec, c.properties) {
+    FOREACH(pspec, c->properties) {
         std::string type = propertyTypeToStr(pspec->type);
 
-        std::string label = ctx.projectConfig.getLabelOfProperty(pspec->name);
+        std::string label = c->getLabelOfProperty(pspec->name);
         std::list<std::string>::const_iterator i;
         std::string options;
         if (pspec->type == F_SELECT || pspec->type == F_MULTISELECT) {
@@ -897,7 +900,7 @@ std::string RHtml::getScriptProjectConfig(const ContextParameters &ctx)
 
     // add tags
     std::map<std::string, TagSpec>::const_iterator tagspec;
-    FOREACH(tagspec, c.tags) {
+    FOREACH(tagspec, c->tags) {
         const TagSpec& tpsec = tagspec->second;
         script += "addTag('" + enquoteJs(tpsec.id) +
                 "', '" + enquoteJs(tpsec.label) + "', ";
@@ -910,7 +913,7 @@ std::string RHtml::getScriptProjectConfig(const ContextParameters &ctx)
     script += "addTag('', '', '', '');\n";
 
     // manage issue numbering policy
-    if (ctx.projectConfig.numberIssueAcrossProjects) {
+    if (c->numberIssueAcrossProjects) {
         script += "setIssueNumberingPolicy(true);\n";
     }
     return script;
@@ -918,11 +921,12 @@ std::string RHtml::getScriptProjectConfig(const ContextParameters &ctx)
 
 
 void RHtml::printProjectConfig(const ContextParameters &ctx,
-                               const std::list<std::pair<std::string, std::string> > &pList)
+                               const std::list<std::pair<std::string, std::string> > &pList,
+                               const ProjectConfig *alternateConfig)
 {
     VariableNavigator vn("project.html", ctx);
     vn.projectList = &pList;
-    vn.script = getScriptProjectConfig(ctx);
+    vn.script = getScriptProjectConfig(ctx, alternateConfig);
 
     if (ctx.user.superadmin) {
         vn.script += "showOrHideClasses('sm_zone_superadmin', true);\n";

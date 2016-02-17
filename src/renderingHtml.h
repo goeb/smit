@@ -26,7 +26,8 @@ public:
                                      const std::list<std::pair<std::string, std::string> > &pList,
                                      const std::map<std::string, std::map<Role, std::set<std::string> > > &userRolesByProject);
 
-    static void printProjectConfig(const ContextParameters &ctx, const std::list<std::pair<std::string, std::string> > &pList);
+    static void printProjectConfig(const ContextParameters &ctx, const std::list<std::pair<std::string, std::string> > &pList,
+                                   const ProjectConfig *alternateConfig = NULL);
     static void printPageIssuesFullContents(const ContextParameters &ctx, const std::vector<IssueCopy> &issueList);
     static void printPageIssueList(const ContextParameters &ctx, const std::vector<IssueCopy> &issueList,
                                    const std::list<std::string> &colspec);
@@ -53,7 +54,7 @@ public:
                               const std::map<std::string, std::map<Role, std::set<std::string> > > &userRolesByProject);
     static void printUsers(const RequestContext *req, const std::list<User> &usersList);
     static void printUserPermissions(const RequestContext *req, const User &u);
-    static std::string getScriptProjectConfig(const ContextParameters &ctx);
+    static std::string getScriptProjectConfig(const ContextParameters &ctx, const ProjectConfig *alternateConfig = 0);
 
     static void printPageEntries(const ContextParameters &ctx, const std::vector<Entry> &entries);
     static void printEntries(const ContextParameters &ctx, const std::vector<Entry> &entries);

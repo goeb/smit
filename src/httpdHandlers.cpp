@@ -803,16 +803,29 @@ void httpGetNewProject(const RequestContext *req, User u)
     RHtml::printProjectConfig(ctx, pList);
 }
 
-void httpGetProjectConfig(const RequestContext *req, Project &p, User u)
+void httpGetProjectConfig(const RequestContext *req, Project p, User u)
 {
     if (u.getRole(p.getName()) != ROLE_ADMIN && ! u.superadmin) return sendHttpHeader403(req);
 
     std::list<std::pair<std::string, std::string> > pList;
     getProjects(u, pList);
 
+    // handle taking/copying config from another project
+    const Project *pPtr = 0;
+    std::string q = req->getQueryString();
+    std::string copyConfigFrom = getFirstParamFromQueryString(q, "copy-config-from");
+    ProjectConfig alternateConfigInstance;
+    ProjectConfig *alternateConfig = NULL;
+    if (!copyConfigFrom.empty()) {
+        // initiate a new config, copied from this one
+        pPtr = Database::Db.lookupProject(copyConfigFrom);
+        alternateConfigInstance = pPtr->getConfig();
+        alternateConfig = &alternateConfigInstance;
+    }
+
     sendHttpHeader200(req);
     ContextParameters ctx = ContextParameters(req, u, p.getProjectParameters());
-    RHtml::printProjectConfig(ctx, pList);
+    RHtml::printProjectConfig(ctx, pList, alternateConfig);
 }
 
 void consolidatePropertyDescription(std::list<std::list<std::string> > &tokens, PropertySpec &pSpec)

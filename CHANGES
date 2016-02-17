@@ -1,3 +1,6 @@
+v3.2.2
+    - use openssl random
+
 v3.2.1, 6 Nov 2015
     - one-click filter-out of a group
     - new filterout logical combination (OR everywhere)

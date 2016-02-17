@@ -8,7 +8,6 @@
         <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/>
         <script src="SM_URL_ROOT/sm/smit.js"></script>
         <style>
-            .on_new_project { display: none; }
             div.help_content {
                 display: none;
                 margin: 5px;
@@ -18,14 +17,6 @@
             }
         </style>
         <script>
-            function showOnNewProject() {
-                if (location.pathname.replace( /.*\//, '' ) != '_') return;
-
-                var items = document.getElementsByClassName('on_new_project');
-                for (var i=0; i<items.length; i++) {
-                    items[i].style.display = 'block';
-                }
-            }
             function show(id) {
                 var item = document.getElementById(id);
                 item.style.display = "block";
@@ -82,12 +73,10 @@
             <code>summary</code>
             . However you may assign a human-readable label to these, as well as for any other.
             </div>
-            <div class="on_new_project">
-                SM_DATALIST_PROJECTS
-                Copy configuration from another project:
-                <input list="sm_projects" id="copy_from">
-                <a href="#" onclick="return getUrlCopyConfigFrom('copy_from');">Load</a>
-            </div>
+            SM_DATALIST_PROJECTS
+            Take the same configuration as another project:
+            <input list="sm_projects" id="copy_from">
+            <a href="#" onclick="return getUrlCopyConfigFrom('copy_from');">Load in this page</a>
             <br>
             <br>
 
