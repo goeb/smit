@@ -121,8 +121,10 @@ Project *Database::loadProject(const std::string &path)
   *   - then 'a/b/c/issues/'                 (no)
   * In this example, the project found is 'a/b/c'.
   */
-Project *Database::lookupProjectNested(std::string &resource)
+Project *Database::lookupProject(std::string &resource)
 {
+    ScopeLocker scopeLocker(Db.locker, LOCK_READ_ONLY);
+
     std::string localResource = resource;
     std::string projectUrl;
     Project *foundProject = 0;
@@ -131,11 +133,11 @@ Project *Database::lookupProjectNested(std::string &resource)
         projectUrl += popToken(localResource, '/');
         std::string projectName = Project::urlNameDecode(projectUrl);
 
-        Project *p = lookupProject(projectName);
-
-        if (p) {
-            foundProject = p;
-            // reduce the resource
+        std::map<std::string, Project*>::iterator p = Database::Db.projects.find(projectName);
+        if (p == Database::Db.projects.end()) {
+            // not found
+        } else {
+            foundProject = p->second;
             resource = localResource;
         }
 
@@ -144,20 +146,6 @@ Project *Database::lookupProjectNested(std::string &resource)
 
     return foundProject;
 }
-
-Project *Database::lookupProject(const std::string &projectName)
-{
-    ScopeLocker scopeLocker(Db.locker, LOCK_READ_ONLY);
-
-    std::map<std::string, Project*>::iterator p = Database::Db.projects.find(projectName);
-    if (p == Database::Db.projects.end()) {
-        // not found
-        return NULL;
-    } else {
-        return p->second;
-    }
-}
-
 
 Project *Database::getProject(const std::string & projectName)
 {

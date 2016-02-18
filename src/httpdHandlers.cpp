@@ -2193,7 +2193,7 @@ int begin_request_handler(const RequestContext *req)
         // We need to concatenate back 'resource' and 'uri', as resource was
         // previously popped from the URI.
         uri = resource + "/" + uri;
-        Project *p = Database::Db.lookupProjectNested(uri);
+        Project *p = Database::Db.lookupProject(uri);
 
         if (!p) {
             // No such project. Bad request
