@@ -774,7 +774,7 @@ void httpGetNewProject(const RequestContext *req, User u)
     std::string copyConfigFrom = getFirstParamFromQueryString(q, "copy-config-from");
     if (!copyConfigFrom.empty()) {
         // initiate a new config, copied from this one
-        pPtr = Database::Db.lookupProject(copyConfigFrom);
+        pPtr = Database::Db.getProject(copyConfigFrom);
     }
 
     if (pPtr) {
@@ -818,9 +818,11 @@ void httpGetProjectConfig(const RequestContext *req, Project p, User u)
     ProjectConfig *alternateConfig = NULL;
     if (!copyConfigFrom.empty()) {
         // initiate a new config, copied from this one
-        pPtr = Database::Db.lookupProject(copyConfigFrom);
-        alternateConfigInstance = pPtr->getConfig();
-        alternateConfig = &alternateConfigInstance;
+        pPtr = Database::Db.getProject(copyConfigFrom);
+        if (pPtr) {
+            alternateConfigInstance = pPtr->getConfig();
+            alternateConfig = &alternateConfigInstance;
+        }
     }
 
     sendHttpHeader200(req);
