@@ -596,6 +596,16 @@ int serveRepository(int argc, char **argv)
     }
 
     if (!repo) repo = ".";
+
+    std::string dotLock = repo;
+    dotLock += "/.lock";
+
+    int lockFd = lockFile(dotLock);
+    if (lockFd < 0) {
+        LOG_ERROR("Cannot lock repository: %s", dotLock.c_str());
+        exit(1);
+    }
+
     std::string mongooseListeningPort = listenPort;
     if (certificatePemFile) mongooseListeningPort += 's'; // force HTTPS listening
 
