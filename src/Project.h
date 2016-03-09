@@ -139,6 +139,8 @@ private:
     // tags
     std::string latestTagId;
 
+    long lastModified; // date of latest entry
+
     static const char *reservedNames[];
 
     // private member methods

@@ -98,6 +98,7 @@ Project *Project::init(const std::string &path, const std::string &repo)
 
     p->path = path;
     p->maxIssueId = 0;
+    p->lastModified = 0;
 
     int r = p->load();
     if (r != 0) {
@@ -227,8 +228,12 @@ int Project::loadIssues()
         }
         issue->project = getName();
 
+        Entry *e = issue->latest; // take the latest entry
+
+        // update lastModified
+        if (e && lastModified < e->ctime) lastModified = e->ctime;
+
         // store the entries in the 'entries' table
-        Entry *e = issue->latest;
         while (e) {
             int r = insertEntryInTable(e);
             if (r != 0) {
@@ -909,7 +914,7 @@ void Project::searchEntries(const char *sortingSpec, std::vector<Entry> &entries
     }
 
     // limit the number of items
-    if (limit >= 0 && limit < entries.size()) entries.erase(entries.begin()+limit, entries.end());
+    if (limit >= 0 && (size_t)limit < entries.size()) entries.erase(entries.begin()+limit, entries.end());
 }
 
 /** search
