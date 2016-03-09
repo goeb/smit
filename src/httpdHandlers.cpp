@@ -707,13 +707,15 @@ int httpGetFile(const RequestContext *request)
   * @param[out] pList
   *     A list of pairs (project-name, user-role)
   */
-void getProjects(const User &u, std::list<std::pair<std::string, std::string> > &pList)
+void getProjects(const User &u, std::list<ProjectSummary> &pList)
 {
     pList.clear();
 
+    std::list<std::pair<std::string, std::string> > userProjects;
+
     if (!u.superadmin) {
         // Get the list of the projects to which the user has permission
-        pList = u.getProjects();
+        userProjects = u.getProjects();
 
     } else {
         // Superadmin
@@ -723,8 +725,25 @@ void getProjects(const User &u, std::list<std::pair<std::string, std::string> > 
         std::list<std::string>::iterator p;
         FOREACH(p, allProjects) {
             Role r = u.getRole(*p);
-            pList.push_back(std::make_pair(*p ,roleToString(r)));
+            userProjects.push_back(std::make_pair(*p ,roleToString(r)));
         }
+    }
+
+    // retrieve the # issues and lastModified
+    std::list<std::pair<std::string, std::string> >::iterator p;
+    FOREACH(p, userProjects) {
+        ProjectSummary ps;
+        ps.name = p->first;
+        ps.myRole = p->second;
+        Project *p = Database::getProject(ps.name);
+        if (!p) {
+            LOG_ERROR("Cannot find project '%s', stats will be invalid", ps.name.c_str());
+        } else {
+            ps.lastModified = p->getLastModified();
+            ps.nIssues = p->getNumIssues();
+        }
+
+        pList.push_back(ps);
     }
 }
 
@@ -732,7 +751,7 @@ void httpGetProjects(const RequestContext *req, User u)
 {
     sendHttpHeader200(req);
     // print list of available projects
-    std::list<std::pair<std::string, std::string> > pList;
+    std::list<ProjectSummary> pList;
     getProjects(u, pList);
     enum RenderingFormat format = getFormat(req);
 
@@ -741,9 +760,9 @@ void httpGetProjects(const RequestContext *req, User u)
     else if (format == X_SMIT) {
         // print the list of the projects (for cloning tool)
         req->printf("Content-Type: text/directory\r\n\r\n");
-        std::list<std::pair<std::string, std::string> >::iterator p;
+        std::list<ProjectSummary>::iterator p;
         FOREACH(p, pList) {
-           req->printf("%s\n", p->first.c_str());
+           req->printf("%s\n", p->name.c_str());
         }
         req->printf("public\n");
         req->printf(PATH_REPO "\n");
@@ -752,10 +771,10 @@ void httpGetProjects(const RequestContext *req, User u)
 
         // get the list of users and roles for each project
         std::map<std::string, std::map<Role, std::set<std::string> > > usersRolesByProject;
-        std::list<std::pair<std::string, std::string> >::const_iterator p;
+        std::list<ProjectSummary>::const_iterator p;
         FOREACH(p, pList) {
-            std::map<Role, std::set<std::string> > ur = UserBase::getUsersByRole(p->first);
-            usersRolesByProject[p->first] = ur;
+            std::map<Role, std::set<std::string> > ur = UserBase::getUsersByRole(p->name);
+            usersRolesByProject[p->name] = ur;
         }
 
         ContextParameters ctx = ContextParameters(req, u);
@@ -795,7 +814,7 @@ void httpGetNewProject(const RequestContext *req, User u)
     Project newEmptyProject;
     newEmptyProject.setConfig(pconfig);
 
-    std::list<std::pair<std::string, std::string> > pList;
+    std::list<ProjectSummary> pList;
     getProjects(u, pList);
 
     sendHttpHeader200(req);
@@ -807,7 +826,7 @@ void httpGetProjectConfig(const RequestContext *req, Project p, User u)
 {
     if (u.getRole(p.getName()) != ROLE_ADMIN && ! u.superadmin) return sendHttpHeader403(req);
 
-    std::list<std::pair<std::string, std::string> > pList;
+    std::list<ProjectSummary> pList;
     getProjects(u, pList);
 
     // handle taking/copying config from another project

@@ -64,7 +64,8 @@ public:
 
     int amendEntry(const std::string &entryId, const std::string &msg, Entry *&entryOut, const std::string &username);
 
-    int getNumIssues() const;
+    size_t getNumIssues() const;
+    long getLastModified() const;
 
     // methods for handling project
     inline std::string getName() const { return name; }

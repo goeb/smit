@@ -14,7 +14,6 @@
 #define QS_GOTO_NEXT "next"
 #define QS_GOTO_PREVIOUS "previous"
 
-
 class RHtml {
 public:
     static void printNavigationGlobal(const ContextParameters &ctx);
@@ -23,10 +22,10 @@ public:
     static void printPageUserList(const ContextParameters &ctx, const std::list<User> &users);
 
     static void printPageProjectList(const ContextParameters &ctx,
-                                     const std::list<std::pair<std::string, std::string> > &pList,
+                                     const std::list<ProjectSummary> &pList,
                                      const std::map<std::string, std::map<Role, std::set<std::string> > > &userRolesByProject);
 
-    static void printProjectConfig(const ContextParameters &ctx, const std::list<std::pair<std::string, std::string> > &pList,
+    static void printProjectConfig(const ContextParameters &ctx, const std::list<ProjectSummary> &pList,
                                    const ProjectConfig *alternateConfig = NULL);
     static void printPageIssuesFullContents(const ContextParameters &ctx, const std::vector<IssueCopy> &issueList);
     static void printPageIssueList(const ContextParameters &ctx, const std::vector<IssueCopy> &issueList,
@@ -48,9 +47,9 @@ public:
     static void printPageListOfViews(const ContextParameters &ctx);
     static void printLinksToPredefinedViews(const ContextParameters &ctx);
     static void printDatalistProjects(const ContextParameters &ctx,
-                                      const std::list<std::pair<std::string, std::string> > &pList);
+                                      const std::list<ProjectSummary> &pList);
     static void printProjects(const ContextParameters &ctx,
-                              const std::list<std::pair<std::string, std::string> > &pList,
+                              const std::list<ProjectSummary> &pList,
                               const std::map<std::string, std::map<Role, std::set<std::string> > > &userRolesByProject);
     static void printUsers(const RequestContext *req, const std::list<User> &usersList);
     static void printUserPermissions(const RequestContext *req, const User &u);

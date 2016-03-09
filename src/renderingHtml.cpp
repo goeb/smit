@@ -99,7 +99,7 @@ public:
     const std::vector<IssueCopy> *issueListFullContents;
     const std::list<std::string> *colspec;
     const ContextParameters &ctx;
-    const std::list<std::pair<std::string, std::string> > *projectList;
+    const std::list<ProjectSummary> *projectList;
     const std::list<User> *usersList;
     const IssueCopy *currentIssue;
     const User *concernedUser;
@@ -704,26 +704,28 @@ void RHtml::printNavigationIssues(const ContextParameters &ctx, bool autofocus)
 }
 
 void RHtml::printDatalistProjects(const ContextParameters &ctx,
-                                  const std::list<std::pair<std::string, std::string> > &pList)
+                                  const std::list<ProjectSummary> &pList)
 {
-    std::list<std::pair<std::string, std::string> >::const_iterator p;
+    std::list<ProjectSummary>::const_iterator p;
 
     ctx.req->printf("<datalist id=\"sm_projects\">\n");
     FOREACH(p, pList) {
-        ctx.req->printf("<option value=\"%s\">\n", htmlEscape(p->first).c_str());
+        ctx.req->printf("<option value=\"%s\">\n", htmlEscape(p->name).c_str());
     }
     ctx.req->printf("</datalist>\n");
 }
 
 void RHtml::printProjects(const ContextParameters &ctx,
-                          const std::list<std::pair<std::string, std::string> > &pList,
+                          const std::list<ProjectSummary> &pList,
                           const std::map<std::string, std::map<Role, std::set<std::string> > > &userRolesByProject)
 {
-    std::list<std::pair<std::string, std::string> >::const_iterator p;
+    std::list<ProjectSummary>::const_iterator p;
     ctx.req->printf("<table class=\"sm_projects\">\n");
     ctx.req->printf("<tr>"
                     "<th>%s</th>"
-                    "<th>%s</th>", _("Projects"), _("My Role"));
+                    "<th>%s</th>"
+                    "<th>%s</th>"
+                    "<th>%s</th>", _("Projects"), _("# Issues"), _("Last Modified"), _("My Role"));
     // put a column for each role
     std::list<Role> roleColumns;
     roleColumns.push_back(ROLE_ADMIN);
@@ -738,15 +740,25 @@ void RHtml::printProjects(const ContextParameters &ctx,
     ctx.req->printf("</tr>\n"); // end header row
 
     for (p=pList.begin(); p!=pList.end(); p++) { // put a row for each project
-        std::string pname = p->first.c_str();
+        std::string pname = p->name;
         ctx.req->printf("<tr>\n");
 
         ctx.req->printf("<td class=\"sm_projects_link\">");
         ctx.req->printf("<a href=\"%s/%s/issues/?defaultView=1\">%s</a></td>\n",
                         MongooseServerContext::getInstance().getUrlRewritingRoot().c_str(),
                         Project::urlNameEncode(pname).c_str(), htmlEscape(pname).c_str());
+
+        // # issues
+        ctx.req->printf("<td>%d</td>\n", _(p->nIssues));
+
+        // last modified
+        ctx.req->printf("<td>");
+        if (p->lastModified < 0) ctx.req->printf("-");
+        else ctx.req->printf("%s", htmlEscape(epochToStringDelta(p->lastModified)).c_str());
+        ctx.req->printf("</td>\n");
+
         // my role
-        ctx.req->printf("<td>%s</td>\n", htmlEscape(_(p->second.c_str())).c_str());
+        ctx.req->printf("<td>%s</td>\n", htmlEscape(_(p->myRole)).c_str());
 
         std::map<std::string, std::map<Role, std::set<std::string> > >::const_iterator urit;
         urit = userRolesByProject.find(pname);
@@ -840,7 +852,7 @@ void RHtml::printPageUserList(const ContextParameters &ctx, const std::list<User
 }
 
 void RHtml::printPageProjectList(const ContextParameters &ctx,
-                                 const std::list<std::pair<std::string, std::string> > &pList,
+                                 const std::list<ProjectSummary> &pList,
                                  const std::map<std::string, std::map<Role, std::set<std::string> > > &userRolesByProject)
 {
     VariableNavigator vn("projects.html", ctx);
@@ -921,7 +933,7 @@ std::string RHtml::getScriptProjectConfig(const ContextParameters &ctx, const Pr
 
 
 void RHtml::printProjectConfig(const ContextParameters &ctx,
-                               const std::list<std::pair<std::string, std::string> > &pList,
+                               const std::list<ProjectSummary> &pList,
                                const ProjectConfig *alternateConfig)
 {
     VariableNavigator vn("project.html", ctx);
@@ -1090,7 +1102,7 @@ void RHtml::printEntries(const ContextParameters &ctx, const std::vector<Entry> 
         ctx.req->printf("</a></td>\n"); // end of issue id
 
         // ctime
-        ctx.req->printf("<td class=\"sm_entries\">%s</td>\n", epochToStringDelta(e->ctime).c_str());
+        ctx.req->printf("<td class=\"sm_entries\">%s</td>\n", htmlEscape(epochToStringDelta(e->ctime)).c_str());
 
         // author
         ctx.req->printf("<td class=\"sm_entries\">%s</td>\n", htmlEscape(e->author).c_str());

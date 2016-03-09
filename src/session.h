@@ -26,10 +26,11 @@ enum Role {
     ROLE_NONE
 };
 
+typedef std::string RoleId;
 
-std::string roleToString(Role r);
-Role stringToRole(const std::string &s);
-std::list<std::string> getAvailableRoles();
+RoleId roleToString(Role r);
+Role stringToRole(const RoleId &s);
+std::list<RoleId> getAvailableRoles();
 
 class User {
 public:

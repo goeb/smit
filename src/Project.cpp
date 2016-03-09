@@ -98,7 +98,7 @@ Project *Project::init(const std::string &path, const std::string &repo)
 
     p->path = path;
     p->maxIssueId = 0;
-    p->lastModified = 0;
+    p->lastModified = -1;
 
     int r = p->load();
     if (r != 0) {
@@ -791,11 +791,18 @@ int Project::addFile(const std::string &objectId)
 }
 
 
-int Project::getNumIssues() const
+size_t Project::getNumIssues() const
 {
     ScopeLocker scopeLocker(locker, LOCK_READ_ONLY);
     return issues.size();
 }
+
+long Project::getLastModified() const
+{
+    ScopeLocker scopeLocker(locker, LOCK_READ_ONLY);
+    return lastModified;
+}
+
 
 void Project::loadPredefinedViews()
 {

@@ -237,7 +237,7 @@ void User::consolidateRoles()
     }
 }
 
-std::string roleToString(Role r)
+RoleId roleToString(Role r)
 {
     if (r == ROLE_ADMIN) return "admin";
     else if (r == ROLE_RW) return "rw";
@@ -246,7 +246,7 @@ std::string roleToString(Role r)
     else return "none";
 }
 
-Role stringToRole(const std::string &s)
+Role stringToRole(const RoleId &s)
 {
     if (s == "ref") return ROLE_REFERENCED;
     else if (s == "ro") return ROLE_RO;
@@ -256,7 +256,7 @@ Role stringToRole(const std::string &s)
 }
 
 
-std::list<std::string> getAvailableRoles()
+std::list<RoleId> getAvailableRoles()
 {
     std::list<std::string> result;
     result.push_back(roleToString(ROLE_REFERENCED));

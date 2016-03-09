@@ -40,13 +40,13 @@ std::string doubleQuoteCsv(const std::string &input, const char *separator)
 }
 
 
-void RCsv::printProjectList(const RequestContext *req, const std::list<std::pair<std::string, std::string> > &pList)
+void RCsv::printProjectList(const RequestContext *req, const std::list<ProjectSummary> &pList)
 {
     req->printf("Content-Type: text/plain\r\n\r\n");
 
-    std::list<std::pair<std::string, std::string> >::const_iterator p;
+    std::list<ProjectSummary>::const_iterator p;
     for (p=pList.begin(); p!=pList.end(); p++) {
-        req->printf("%s,%s\r\n", doubleQuoteCsv(p->first, ",").c_str(), doubleQuoteCsv(p->second, ",").c_str());
+        req->printf("%s,%s\r\n", doubleQuoteCsv(p->name, ",").c_str(), doubleQuoteCsv(p->myRole, ",").c_str());
     }
 }
 

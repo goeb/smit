@@ -17,6 +17,16 @@
 #define P_TEMPLATES "templates"
 #define PATH_REPO_TEMPLATES PATH_REPO "/" P_TEMPLATES
 
+class ProjectSummary {
+public:
+    std::string name;
+    std::string myRole;
+    size_t nIssues;
+    long lastModified;
+
+    ProjectSummary() : nIssues(0), lastModified(-1) {}
+};
+
 class Database {
 public:
     static Database Db;
