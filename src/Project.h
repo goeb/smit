@@ -164,6 +164,7 @@ private:
     void updateAssociations(const Issue *i, const std::string &associationName,
                             const std::list<std::string> &issues);
 
+    void updateLastModified(Entry *e);
 };
 
 #endif

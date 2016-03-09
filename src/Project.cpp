@@ -231,7 +231,7 @@ int Project::loadIssues()
         Entry *e = issue->latest; // take the latest entry
 
         // update lastModified
-        if (e && lastModified < e->ctime) lastModified = e->ctime;
+        updateLastModified(e);
 
         // store the entries in the 'entries' table
         while (e) {
@@ -1043,6 +1043,11 @@ int Project::insertEntryInTable(Entry *e)
     return 0;
 }
 
+void Project::updateLastModified(Entry *e)
+{
+    if (!e) return;
+    if (lastModified < e->ctime) lastModified = e->ctime;
+}
 
 int Project::storeRefIssue(const std::string &issueId, const std::string &entryId)
 {
@@ -1388,6 +1393,8 @@ int Project::addEntry(PropertiesMap properties, std::string &issueId,
     r = storeRefIssue(i->id, e->id);
     if (r < 0) return r;
 
+    updateLastModified(e);
+
     // if some association has been updated, then update the associations tables
     FOREACH(p, properties) {
         const PropertySpec *pspec = config.getPropertySpec(p->first);
@@ -1514,6 +1521,8 @@ int Project::pushEntry(std::string &issueId, const std::string &entryId,
         return -2;
     }
 
+    updateLastModified(e);
+
     return 0;
 }
 
@@ -1585,6 +1594,8 @@ int Project::amendEntry(const std::string &entryId, const std::string &msg, Entr
     // update latest entry of issue on disk
     r = storeRefIssue(e->issue->id, amendingEntry->id);
     if (r < 0) return -2;
+
+    updateLastModified(amendingEntry);
 
     entryOut = amendingEntry;
     return 0;
