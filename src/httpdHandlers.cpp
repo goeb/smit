@@ -1206,68 +1206,6 @@ void httpIssuesAccrossProjects(const RequestContext *req, User u, const std::str
 
 }
 
-void httpIssuesAccrossProjects(const RequestContext *req, User u, const std::string &uri)
-{
-    if (uri != "issues") return sendHttpHeader404(req);
-
-    // get list of projects for that user
-    std::list<std::pair<std::string, std::string> > projectsAndRoles = u.getProjects();
-
-    // get query string parameters
-    std::string q = req->getQueryString();
-    PredefinedView v = PredefinedView::loadFromQueryString(q); // unamed view, used as handle on the viewing parameters
-
-    std::vector<IssueCopy> issues;
-
-    // foreach project, get list of issues
-    std::list<std::pair<std::string, std::string> >::const_iterator pit;
-    FOREACH(pit, projectsAndRoles) {
-        const std::string &project = pit->first;
-
-        const Project *p = Database::Db.getProject(project);
-        if (!p) continue;
-
-        // replace user "me" if any...
-        PredefinedView vcopy = v;
-        replaceUserMe(vcopy.filterin, *p, u.username);
-        replaceUserMe(vcopy.filterout, *p, u.username);
-        if (vcopy.search == "me") vcopy.search = u.username;
-
-        // search, without sorting
-        p->search(vcopy.search.c_str(), vcopy.filterin, vcopy.filterout, 0, issues);
-    }
-
-    // sort
-    std::list<std::pair<bool, std::string> > sSpec = parseSortingSpec(v.sort.c_str());
-    IssueCopy::sort(issues, sSpec);
-
-    // get the colspec
-    std::list<std::string> cols;
-    std::list<std::string> allCols;
-    if (v.colspec.size() > 0) {
-        cols = parseColspec(v.colspec.c_str(), allCols);
-    } else {
-        // prevent having no columns, by forcing all of them
-        cols = ProjectConfig::getReservedProperties();
-    }
-    enum RenderingFormat format = getFormat(req);
-
-    sendHttpHeader200(req);
-
-    if (format == RENDERING_TEXT) req->printf("\r\n\r\nnot supported\r\n");
-    else if (format == RENDERING_CSV) req->printf("\r\n\r\nnot supported\r\n");
-    else {
-        ContextParameters ctx = ContextParameters(req, u);
-        ctx.filterin = v.filterin;
-        ctx.filterout = v.filterout;
-        ctx.search = v.search;
-        ctx.sort = v.sort;
-
-        RHtml::printPageIssueAccrossProjects(ctx, issues, cols);
-    }
-    // display page
-
-}
 
 /** Get some meta-data of the smit repository
   *
@@ -2261,7 +2199,6 @@ int begin_request_handler(const RequestContext *req)
     else if ( (resource == "users") && (method == "DELETE") ) httpDeleteUser(req, user, uri);
     else if ( (resource == "_") && (method == "GET") ) httpGetNewProject(req, user);
     else if ( (resource == "_") && (method == "POST") ) httpPostNewProject(req, user);
-    else if ( (resource == "*") && (method == "GET") ) httpIssuesAccrossProjects(req, user, uri);
     else if ( (resource == ".smit") && (method == "GET") ) return httpGetSmitRepo(req, user, uri);
     else {
         // Get the projects given by the uri.
@@ -2269,7 +2206,14 @@ int begin_request_handler(const RequestContext *req)
         // previously popped from the URI.
         uri = resource + "/" + uri;
         std::list<Project *> projects;
-        Database::lookupProjectsWildcard(uri, user.getProjectsNames(), projects);
+
+        // Prepare the list of the projects where the user has reading permission
+        std::list<std::string> projectsNames;
+        if (user.superadmin) projectsNames = Database::getProjects();
+        else projectsNames = user.getProjectsNames();
+
+        // Look for the projects that match the URI
+        Database::lookupProjectsWildcard(uri, projectsNames, projects);
 
         if (projects.size() == 0) {
             // No project found. Bad request or permission denied.
@@ -2279,8 +2223,10 @@ int begin_request_handler(const RequestContext *req)
             return handleUnauthorizedAccess(req, true);
         }
 
+        // At this point the user has read access to the resource inside the project(s)
+
         if (projects.size() > 1) {
-            // multi project
+            // multi projects
             // only page "issues" is supported
             resource = popToken(uri, '/');
             httpIssuesAccrossProjects(req, user, resource, projects);
@@ -2289,21 +2235,6 @@ int begin_request_handler(const RequestContext *req)
 
         // case of a single project
         Project *p = projects.front();
-
-        LOG_DIAG("project %s, %p", p->getName().c_str(), p);
-
-        //TODO check redundant with previous xxx
-
-        // check if user has at least read access
-        enum Role r = user.getRole(p->getName());
-        if (r != ROLE_ADMIN && r != ROLE_RW && r != ROLE_RO && ! user.superadmin) {
-            // no access granted for this user to this project
-            return handleUnauthorizedAccess(req, true);
-        }
-
-        // at this point the user has read access to the resource inside the project
-        LOG_DIAG("user '%s' has role '%s' on project '%s'", user.username.c_str(),
-                 roleToString(r).c_str(), p->getName().c_str());
 
         bool isdir = false;
         if (!uri.empty() && uri[uri.size()-1] == '/') isdir = true;
