@@ -693,7 +693,7 @@ enum Role User::getRole(const std::string &project) const
 /** Get the projects where the user has access (read or write)
   * List of pairs (project, role)
   */
-std::list<std::pair<std::string, std::string> > User::getProjects() const
+std::list<std::pair<std::string, RoleId> > User::getProjects() const
 {
     std::list<std::pair<std::string, std::string> > result;
     std::map<std::string, enum Role>::const_iterator r;
@@ -704,7 +704,19 @@ std::list<std::pair<std::string, std::string> > User::getProjects() const
     }
     return result;
 }
-
+/** Get the projects names where the user has access (read or write)
+  */
+std::list<std::string> User::getProjectsNames() const
+{
+    std::list<std::string> result;
+    std::map<std::string, enum Role>::const_iterator r;
+    for (r = rolesOnProjects.begin(); r != rolesOnProjects.end(); r++) {
+        if (r->second <= ROLE_RO) {
+            result.push_back(r->first);
+        }
+    }
+    return result;
+}
 
 /** Check user credentials and initiate a session
   *

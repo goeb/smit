@@ -36,6 +36,7 @@
 #include "mg_win32.h"
 #include "filesystem.h"
 #include "Project.h"
+#include "fnmatch.h"
 
 
 // global var Db
@@ -146,6 +147,39 @@ Project *Database::lookupProject(std::string &resource)
 
     return foundProject;
 }
+void Database::lookupProjectsWildcard(std::string &resource, const std::list<std::string> &projects,
+                                      std::list<Project *> &result)
+{
+    ScopeLocker scopeLocker(Db.locker, LOCK_READ_ONLY);
+
+    std::string localResource = resource;
+    std::string projectUrl;
+
+    while (!localResource.empty()) {
+        projectUrl += popToken(localResource, '/');
+        std::string projectWildcard = Project::urlNameDecode(projectUrl);
+
+        std::list<std::string>::const_iterator pName;
+        FOREACH(pName, projects) {
+            if (0 == fnmatch(projectWildcard.c_str(), pName->c_str(), 0)) {
+                // match
+                std::map<std::string, Project*>::iterator p = Database::Db.projects.find(*pName);
+
+                if (p == Database::Db.projects.end()) {
+                    // should not happen, as the list of project should be valid
+                    LOG_ERROR("Unexpected invalid project name: %s", pName->c_str());
+                    continue;
+                }
+
+                result.push_back(p->second);
+                resource = localResource; // update resource for return, the smallest possible
+            }
+        }
+
+        projectUrl += "/"; // prepare for next iteration
+    }
+}
+
 
 Project *Database::getProject(const std::string & projectName)
 {

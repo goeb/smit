@@ -45,7 +45,8 @@ public:
     User& operator=(const User &rhs);
     ~User();
     enum Role getRole(const std::string &project) const;
-    std::list<std::pair<std::string, std::string> >  getProjects() const;
+    std::list<std::pair<std::string, RoleId> >  getProjects() const;
+    std::list<std::string>  getProjectsNames() const;
     std::string serializePermissions() const;
     std::string serializeAuth();
     int loadAuth(std::list<std::string> &tokens);

@@ -1151,6 +1151,60 @@ std::string getRedirectionToIssue(const Project &p, std::vector<IssueCopy> &issu
     }
     return redirectUrl;
 }
+void httpIssuesAccrossProjects(const RequestContext *req, User u, const std::string &uri, const std::list<Project *> &projects)
+{
+    if (uri != "issues") return sendHttpHeader404(req);
+
+    // get query string parameters
+    std::string q = req->getQueryString();
+    PredefinedView v = PredefinedView::loadFromQueryString(q); // unamed view, used as handle on the viewing parameters
+
+    std::vector<IssueCopy> issues;
+
+    // foreach project, get list of issues
+    std::list<Project *>::const_iterator p;
+    FOREACH(p, projects) {
+        // replace user "me" if any...
+        PredefinedView vcopy = v;
+        replaceUserMe(vcopy.filterin, **p, u.username);
+        replaceUserMe(vcopy.filterout, **p, u.username);
+        if (vcopy.search == "me") vcopy.search = u.username;
+
+        // search, without sorting
+        (*p)->search(vcopy.search.c_str(), vcopy.filterin, vcopy.filterout, 0, issues);
+    }
+
+    // sort
+    std::list<std::pair<bool, std::string> > sSpec = parseSortingSpec(v.sort.c_str());
+    IssueCopy::sort(issues, sSpec);
+
+    // get the colspec
+    std::list<std::string> cols;
+    std::list<std::string> allCols;
+    if (v.colspec.size() > 0) {
+        cols = parseColspec(v.colspec.c_str(), allCols);
+    } else {
+        // prevent having no columns, by forcing all of them
+        cols = ProjectConfig::getReservedProperties();
+    }
+    enum RenderingFormat format = getFormat(req);
+
+    sendHttpHeader200(req);
+
+    if (format == RENDERING_TEXT) req->printf("\r\n\r\nnot supported\r\n");
+    else if (format == RENDERING_CSV) req->printf("\r\n\r\nnot supported\r\n");
+    else {
+        ContextParameters ctx = ContextParameters(req, u);
+        ctx.filterin = v.filterin;
+        ctx.filterout = v.filterout;
+        ctx.search = v.search;
+        ctx.sort = v.sort;
+
+        RHtml::printPageIssueAccrossProjects(ctx, issues, cols);
+    }
+    // display page
+
+}
 
 void httpIssuesAccrossProjects(const RequestContext *req, User u, const std::string &uri)
 {
@@ -1166,9 +1220,9 @@ void httpIssuesAccrossProjects(const RequestContext *req, User u, const std::str
     std::vector<IssueCopy> issues;
 
     // foreach project, get list of issues
-    std::list<std::pair<std::string, std::string> >::const_iterator p;
-    FOREACH(p, projectsAndRoles) {
-        const std::string &project = p->first;
+    std::list<std::pair<std::string, std::string> >::const_iterator pit;
+    FOREACH(pit, projectsAndRoles) {
+        const std::string &project = pit->first;
 
         const Project *p = Database::Db.getProject(project);
         if (!p) continue;
@@ -2210,20 +2264,35 @@ int begin_request_handler(const RequestContext *req)
     else if ( (resource == "*") && (method == "GET") ) httpIssuesAccrossProjects(req, user, uri);
     else if ( (resource == ".smit") && (method == "GET") ) return httpGetSmitRepo(req, user, uri);
     else {
-        // Get the project given by the uri.
+        // Get the projects given by the uri.
         // We need to concatenate back 'resource' and 'uri', as resource was
         // previously popped from the URI.
         uri = resource + "/" + uri;
-        Project *p = Database::Db.lookupProject(uri);
+        std::list<Project *> projects;
+        Database::lookupProjectsWildcard(uri, user.getProjectsNames(), projects);
 
-        if (!p) {
-            // No such project. Bad request
-            LOG_DIAG("Unknown project for URI '%s'", uri.c_str());
+        if (projects.size() == 0) {
+            // No project found. Bad request or permission denied.
             // Send same error as for existing project in order to prevent
             // an attacker from deducing existing projects after the http status code
+            LOG_DIAG("No project for URI '%s' (for user %s)", uri.c_str(), user.username.c_str());
             return handleUnauthorizedAccess(req, true);
         }
+
+        if (projects.size() > 1) {
+            // multi project
+            // only page "issues" is supported
+            resource = popToken(uri, '/');
+            httpIssuesAccrossProjects(req, user, resource, projects);
+            return REQUEST_COMPLETED;
+        }
+
+        // case of a single project
+        Project *p = projects.front();
+
         LOG_DIAG("project %s, %p", p->getName().c_str(), p);
+
+        //TODO check redundant with previous xxx
 
         // check if user has at least read access
         enum Role r = user.getRole(p->getName());
