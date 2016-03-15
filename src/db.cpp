@@ -147,6 +147,21 @@ Project *Database::lookupProject(std::string &resource)
 
     return foundProject;
 }
+/** Look a project up after a wildcard uri resource
+  *
+  * @param resource[out]
+  *    The part of the resource that indicates the project wildcard
+  *    is consumed by the method.
+  *
+  * When the URI is like 'a*x/b/c/issues/'
+  *   (in parenthesis an example of response)
+  *   - first look if 'a*x' matches a known project (yes)
+  *   - then 'a*x/b'                                (no)
+  *   - then 'a*x/b/c'                              (yes)
+  *   - then 'a*x/b/c/issues/'                      (no)
+  * In this example, the project found is 'a*x/b/c'.
+  */
+
 void Database::lookupProjectsWildcard(std::string &resource, const std::list<std::string> &projects,
                                       std::list<Project *> &result)
 {
@@ -158,6 +173,8 @@ void Database::lookupProjectsWildcard(std::string &resource, const std::list<std
     while (!localResource.empty()) {
         projectUrl += popToken(localResource, '/');
         std::string projectWildcard = Project::urlNameDecode(projectUrl);
+
+        std::list<Project *> tmpResult;
 
         std::list<std::string>::const_iterator pName;
         FOREACH(pName, projects) {
@@ -171,10 +188,12 @@ void Database::lookupProjectsWildcard(std::string &resource, const std::list<std
                     continue;
                 }
 
-                result.push_back(p->second);
+                tmpResult.push_back(p->second);
                 resource = localResource; // update resource for return, the smallest possible
             }
         }
+
+        if (tmpResult.size() > 0) result = tmpResult; // take the longest matching URI (the latest possible)
 
         projectUrl += "/"; // prepare for next iteration
     }

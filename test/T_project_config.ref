@@ -1,5 +1,7 @@
 Modification of project config by authorized user
+postconfig p1/config
 204
+postconfig p1/sub1/config
 204
 Configuration of project 'trepo/p1':
 +smv ...

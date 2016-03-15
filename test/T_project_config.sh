@@ -39,12 +39,14 @@ startServer
 echo "Modification of project config by authorized user" >> $TEST_NAME.out
 SMITC=$srcdir/../bin/smitc
 $SMITC signin http://127.0.0.1:$PORT user2 user2
+echo "postconfig p1/config" >> $TEST_NAME.out
 $SMITC postconfig "http://127.0.0.1:$PORT/p1/config" \
     projectName=p1 \
     propertyName=propx \
     type=text \
     label="the-label-of-propx" \
     >> $TEST_NAME.out
+echo "postconfig p1/sub1/config" >> $TEST_NAME.out
 $SMITC postconfig "http://127.0.0.1:$PORT/p1/sub1/config" \
     projectName=p1/sub1 \
     propertyName=propx_sub1 \
