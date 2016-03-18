@@ -44,7 +44,7 @@
         <form method="POST" action="">
             <div class="sm_zone_superadmin">
                 Project name:
-                <input type="text" size="50" id="projectName" name="projectName" required="required"> 
+                <input type="text" size="50" id="projectName" name="projectName" required="required" pattern="[^\*\?\\\[\]]*" title="forebidden characters: *?\[]"> 
                 <br>
                 Creating a new project or modifying the name of a project requires superadmin capability.
             </div>

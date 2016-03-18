@@ -159,10 +159,11 @@ bool ProjectConfig::isValidPropertyName(const std::string &name) const
 /** Check if a name is valid for a project
   *
   * Characters \r and \n are forbidden
+  * Characters used in wildcards are forebidden: *?\[]
   */
 bool ProjectConfig::isValidProjectName(const std::string &name)
 {
-    std::size_t found = name.find_first_of("\r\n");
+    std::size_t found = name.find_first_of("\r\n*?\\[]");
     if (found != std::string::npos) return false;
     return true;
 }
