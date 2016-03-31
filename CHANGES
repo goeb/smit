@@ -1,5 +1,10 @@
-v3.2.2
+v3.2.2, 31 Mar 2016
     - use openssl random
+    - list of issues: enable wildcards in projects names
+    - projects: add columns for # issues and last modified
+    - use a file lock to prevent 2 servers on same repo
+    - enable copying other projet config
+    - fix preview when amending an entry
 
 v3.2.1, 6 Nov 2015
     - one-click filter-out of a group
