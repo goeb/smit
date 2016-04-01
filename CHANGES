@@ -1,3 +1,6 @@
+v3.3.0
+    - pre-filled template for textarea2 properties
+
 v3.2.2, 31 Mar 2016
     - use openssl random
     - list of issues: enable wildcards in projects names
