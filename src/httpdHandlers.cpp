@@ -877,9 +877,13 @@ void consolidatePropertyDescription(std::list<std::list<std::string> > &tokens, 
             // add options
             line.insert(line.end(), pSpec.selectOptions.begin(), pSpec.selectOptions.end());
 
-        } else if  (pSpec.type == F_ASSOCIATION) {
+        } else if  (pSpec.type == F_ASSOCIATION && !pSpec.reverseLabel.empty()) {
             line.push_back("-reverseLabel");
             line.push_back(pSpec.reverseLabel);
+
+        } else if  (pSpec.type == F_TEXTAREA2 && !pSpec.ta2Template.empty()) {
+            line.push_back("-template");
+            line.push_back(pSpec.ta2Template);
         }
         tokens.push_back(line);
     }
@@ -957,6 +961,7 @@ void parsePostedProjectConfig(std::string &postData, std::list<std::list<std::st
         } else if (key == "selectOptions") {
             pSpec.selectOptions = splitLinesAndTrimBlanks(value);
         }
+        else if (key == "textarea2Template") pSpec.ta2Template = value;
         else if (key == "reverseAssociation") pSpec.reverseLabel = value;
         else if (key == "tagDisplay") tagDisplay = value;
         else if (key == "propertyName" || key == "tagName" || key == "sm_numberIssues") {

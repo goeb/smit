@@ -896,6 +896,11 @@ std::string RHtml::getScriptProjectConfig(const ContextParameters &ctx, const Pr
             }
         } else if (pspec->type == F_ASSOCIATION) {
             options = pspec->reverseLabel;
+            options = enquoteJs(options);
+
+        } else if (pspec->type == F_TEXTAREA2) {
+            options = pspec->ta2Template;
+            options = enquoteJs(options);
         }
         script +=  "addProperty('" + enquoteJs(pspec->name) +
                 "', '" + enquoteJs(label) +
@@ -907,8 +912,6 @@ std::string RHtml::getScriptProjectConfig(const ContextParameters &ctx, const Pr
     script += "addProperty('', '', '', '');\n";
     script += "addProperty('', '', '', '');\n";
     script += "addProperty('', '', '', '');\n";
-
-    script += "replaceContentInContainer();\n";
 
     // add tags
     std::map<std::string, TagSpec>::const_iterator tagspec;

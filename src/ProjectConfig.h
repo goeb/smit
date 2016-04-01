@@ -26,12 +26,13 @@ int strToPropertyType(const std::string &s, PropertyType &out);
 std::list<std::pair<bool, std::string> > parseSortingSpec(const char *sortingSpec);
 
 struct PropertySpec {
-    PropertySpec() : type(F_TEXT) {};
+    PropertySpec() : type(F_TEXT) {}
     std::string name;
     std::string label;
     enum PropertyType type;
     std::list<std::string> selectOptions; // for F_SELECT and F_MULTISELECT only
     std::string reverseLabel; // for F_RELATIONSHIP
+    std::string ta2Template; // template for textarea2 properties
 
     static PropertySpec parsePropertySpec(std::list<std::string> & tokens);
 };
@@ -42,6 +43,7 @@ struct PropertySpec {
 #define KEY_TAG "tag"
 #define OPT_LABEL "-label"
 #define OPT_REVERSE_LABEL "-reverseLabel"
+#define OPT_TEMPLATE "-template"
 #define OPT_DISPLAY "-display"
 
 struct ProjectConfig {

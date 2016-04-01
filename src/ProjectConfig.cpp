@@ -286,6 +286,15 @@ PropertySpec PropertySpec::parsePropertySpec(std::list<std::string> & tokens)
                 tokens.pop_front();
             }
         }
+    } else if (F_TEXTAREA2 == pspec.type) {
+        if (tokens.size() > 1) {
+            // expect -template
+            if (tokens.front() == OPT_TEMPLATE) {
+                tokens.pop_front();
+                pspec.ta2Template = tokens.front();
+                tokens.pop_front();
+            }
+        }
     }
     return pspec;
 }
@@ -355,6 +364,9 @@ std::string ProjectConfig::serialize() const
 
         } else if (pspec.type == F_ASSOCIATION && !pspec.reverseLabel.empty()) {
             result += " " OPT_REVERSE_LABEL " " + serializeSimpleToken(pspec.reverseLabel);
+
+        } else if (pspec.type == F_TEXTAREA2 && !pspec.ta2Template.empty()) {
+            result += " " OPT_TEMPLATE " " + serializeSimpleToken(pspec.ta2Template);
         }
 
         result += "\n";

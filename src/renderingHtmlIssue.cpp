@@ -1264,7 +1264,17 @@ void RHtmlIssue::printIssueForm(const ContextParameters &ctx, const IssueCopy *i
 
             if (propertyValues.size()>0) value = propertyValues.front();
             input << "<textarea class=\"sm_ta2 sm_issue_pinput_" << urlEncode(pname) << "\" name=\""
-                  << urlEncode(pname) << "\">" << htmlEscape(value) << "</textarea>\n";
+                  << urlEncode(pname) << "\">";
+
+            // textarea contents
+            if (!value.empty()) {
+                // print the regular value
+                input << htmlEscape(value);
+            } else if (! pspec->ta2Template.empty()) {
+                // print the template
+                input << htmlEscape(pspec->ta2Template);
+            }
+            input << "</textarea>\n";
 
         } else if (pspec->type == F_ASSOCIATION) {
             if (propertyValues.size()>0) value = join(propertyValues, ", ");

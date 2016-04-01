@@ -381,7 +381,7 @@ div.sm_entry_files {
 .sm_project_label {
     width: 25em;
 }
-.sm_project_list {
+.sm_project_list, .sm_project_ta2_template {
     width: 25em;
     height: 4.5em;
 }

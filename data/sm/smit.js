@@ -247,7 +247,6 @@ function addProperty(name, label, type, opts) {
         var options = ['text', 'select', 'multiselect', 'selectUser', 'textarea', 'textarea2', 'association'];
         i = createSelect(options, type, false);
         i.name = 'type';
-        i.className = "updatable";
         i.onchange = fupdateThis;
         cell.appendChild(i);
         fupdate(i, opts);
@@ -260,19 +259,19 @@ function fupdateThis() { fupdate(this); }
 function fupdate(item, value) {
     //alert(item.value);
     var type = item.options[item.selectedIndex].value;
-    if (type == "text") show_size_input(item.parentNode);
-    else if (type == "textarea") show_size_input(item.parentNode);
-    else if (type == "textarea2") show_size_input(item.parentNode);
+    if (type == "text") hide_option(item.parentNode);
+    else if (type == "textarea") hide_option(item.parentNode);
+    else if (type == "textarea2") show_textarea2_input(item.parentNode, value);
     else if (type == "select") show_list_input(item.parentNode, value);
     else if (type == "multiselect") show_list_input(item.parentNode, value);
-    else if (type == "selectUser") show_user_input(item.parentNode);
+    else if (type == "selectUser") hide_option(item.parentNode);
     else if (type == "association") show_association_input(item.parentNode, value);
 }
 
-function show_size_input(item) {
+function hide_option(item) {
     // hide extra details
-    x = document.getElementById(item.id + '_opt');
-    if (x != null) item.removeChild(x);
+    var i = document.getElementById(item.id + '_opt');
+    if (i != null) item.removeChild(i);
 }
 
 function show_list_input(item, value) {
@@ -282,39 +281,36 @@ function show_list_input(item, value) {
         i.name = "selectOptions";
         i.id = item.id + '_opt';
         i.className = 'sm_project_list';
-        i.value = "one\r\nvalue\nper\nline"
-            item.appendChild(i);
-    }
+        item.appendChild(i);
+        i.value = "one\r\nvalue\nper\nline";
+    } // else keep the already existing instance
+    if (value) i.value = value;
+}
+function show_textarea2_input(item, value) {
+    var i = document.getElementById(item.id + '_opt');
+    if (i == null) {
+        i = document.createElement('textarea');
+        i.name = 'textarea2Template';
+        i.id = item.id + '_opt';
+        i.placeholder = "Template of the textarea";
+        i.className = 'sm_project_ta2_template';
+        item.appendChild(i);
+    } // else keep the already existing instance
     if (value) i.value = value;
 }
 function show_association_input(item, value) {
-	var i = document.getElementById(item.id + '_opt');
-    if (i == null) {
-        i = document.createElement('input');
-        i.name = 'reverseAssociation';
-        i.id = item.id + '_opt';
-        i.placeholder = "label of the reverse association";
-        item.appendChild(i);
-    }
+    var i = document.getElementById(item.id + '_opt');
+    if (i != null) item.removeChild(i);
+
+    i = document.createElement('input');
+    i.name = 'reverseAssociation';
+    i.id = item.id + '_opt';
+    i.placeholder = "Label of the reverse association";
+    item.appendChild(i);
+
     if (value) i.value = value;
 }
 
-function show_user_input(item) {
-    x = document.getElementById(item.id + '_opt');
-    if (x != null) item.removeChild(x);
-}
-
-function replaceContentInContainer() {
-    matchClass = "updatable";
-
-    var elems = document.getElementsByTagName('*'), i;
-    for (i in elems) {
-        if((' ' + elems[i].className + ' ').indexOf(' ' + matchClass + ' ')
-                > -1) {
-                    fupdate(elems[i]);
-                }
-    }
-}
 function setProjectName(value) {
     var iname = 'projectName';
     var input = document.getElementById(iname);
