@@ -1,5 +1,19 @@
 # News
 
+## 31 Mars 2016
+
+Smit v3.2.2 is released
+
+Main changes:
+
+- HTML interface
+    * list of issues: enable wildcards in projects names
+    * list of projects: add columns for # issues and last modified
+    * project config: copying config from another project
+    * fix preview when amending an entry
+
+Source code: [git tag v3.2.2](https://github.com/goeb/smit/tree/v3.2.2)
+
 ## 6 November 2015
 
 Smit v3.2.1 is released
