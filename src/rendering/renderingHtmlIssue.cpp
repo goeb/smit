@@ -888,7 +888,8 @@ void RHtmlIssue::printEntry(const ContextParameters &ctx, const IssueCopy &issue
     if (as != issue.amendments.end()) {
         std::list<std::string>::const_iterator a;
         FOREACH(a, as->second) {
-            ctx.req->printf(", <a href=\"/%s/" RESOURCE_FILES "/%s\" class=\"sm_entry_raw\">%s%d</a>",
+            ctx.req->printf(", <a href=\"%s/%s/" RESOURCE_FILES "/%s\" class=\"sm_entry_raw\">%s%d</a>",
+                            ctx.req->getUrlRewritingRoot().c_str(),
                             ctx.getProjectUrlName().c_str(),
                             urlEncode(*a).c_str(), _("amend"), i);
             i++;
