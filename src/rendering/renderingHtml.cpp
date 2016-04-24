@@ -189,8 +189,7 @@ public:
                 else ctx.req->printf("%s", htmlEscape(ctx.projectName).c_str());
 
             } else if (varname == K_SM_URL_PROJECT && ctx.hasProject()) {
-                MongooseServerContext &mc = MongooseServerContext::getInstance();
-                ctx.req->printf("%s/%s", mc.getUrlRewritingRoot().c_str(),
+                ctx.req->printf("%s/%s", ctx.req->getUrlRewritingRoot().c_str(),
                                 ctx.getProjectUrlName().c_str());
 
             } else if (varname == K_SM_DIV_NAVIGATION_GLOBAL) {
@@ -245,8 +244,7 @@ public:
 
             } else if (varname == K_SM_URL_ROOT) {
                 // url-rewriting
-                MongooseServerContext &mc = MongooseServerContext::getInstance();
-                ctx.req->printf("%s", mc.getUrlRewritingRoot().c_str());
+                ctx.req->printf("%s", ctx.req->getUrlRewritingRoot().c_str());
 
             } else if (varname == K_SM_DIV_ISSUE_MSG_PREVIEW) {
                 ctx.req->printf("<div id=\"sm_entry_preview\" class=\"sm_entry_message\">"
@@ -407,7 +405,7 @@ void RHtml::printPageView(const ContextParameters &ctx, const PredefinedView &pv
 
     ctx.req->printf("setSearch('%s');\n", enquoteJs(pv.search).c_str());
     ctx.req->printf("setUrl('%s/%s/issues/?%s');\n",
-                    MongooseServerContext::getInstance().getUrlRewritingRoot().c_str(),
+                    ctx.req->getUrlRewritingRoot().c_str(),
                     ctx.getProjectUrlName().c_str(),
                     pv.generateQueryString().c_str());
 
@@ -484,16 +482,16 @@ void RHtml::printPageListOfViews(const ContextParameters &ctx)
 #define LOCAL_SIZE 512
 class HtmlNode {
 public:
-    HtmlNode(const std::string &_nodeName) {
+    HtmlNode(const ContextParameters &c, const std::string &_nodeName) : ctx(c) {
         nodeName = _nodeName;
     }
     /** Constructor for text contents */
-    HtmlNode() { }
+    HtmlNode(const ContextParameters &c) : ctx(c) { }
 
     std::string nodeName;// empty if text content only
     std::map<std::string, std::string> attributes;
     std::string text;
-
+    const ContextParameters &ctx;
     std::list<HtmlNode> contents;
 
     /** the values must be html-escaped */
@@ -511,7 +509,7 @@ public:
             // do url rewriting if needed
             if ( ( (sname == "href") || (sname == "src") || (sname == "action") )
                  && value[0] == '/') {
-                val = MongooseServerContext::getInstance().getUrlRewritingRoot() + val;
+                val = ctx.req->getUrlRewritingRoot() + val;
             }
 
             attributes[name] = val;
@@ -550,7 +548,7 @@ public:
         if (n >= LOCAL_SIZE || n < 0) {
             LOG_ERROR("addText error: vsnprintf n=%d", n);
         } else {
-            HtmlNode node;
+            HtmlNode node(ctx);
             node.text = htmlEscape(buffer);
             contents.push_back(node);
         }
@@ -570,9 +568,9 @@ public:
   */
 void RHtml::printNavigationGlobal(const ContextParameters &ctx)
 {
-    HtmlNode div("div");
+    HtmlNode div(ctx, "div");
     div.addAttribute("class", "sm_navigation_global");
-    HtmlNode linkToProjects("a");
+    HtmlNode linkToProjects(ctx, "a");
     linkToProjects.addAttribute("class", "sm_link_projects");
     linkToProjects.addAttribute("href", "/");
     linkToProjects.addContents("%s", _("Projects"));
@@ -580,7 +578,7 @@ void RHtml::printNavigationGlobal(const ContextParameters &ctx)
 
     if (ctx.user.superadmin) {
         // link to all users
-        HtmlNode allUsers("a");
+        HtmlNode allUsers(ctx, "a");
         allUsers.addAttribute("class", "sm_link_users");
         allUsers.addAttribute("href", "/users");
         allUsers.addContents("%s", _("Users"));
@@ -590,7 +588,7 @@ void RHtml::printNavigationGlobal(const ContextParameters &ctx)
 
     if (ctx.hasProject() && (ctx.userRole == ROLE_ADMIN || ctx.user.superadmin) ) {
         // link for modifying project structure
-        HtmlNode linkToModify("a");
+        HtmlNode linkToModify(ctx, "a");
         linkToModify.addAttribute("class", "sm_link_modify_project");
         linkToModify.addAttribute("href", "/%s/config", ctx.getProjectUrlName().c_str());
         linkToModify.addContents("%s", _("Project config"));
@@ -598,7 +596,7 @@ void RHtml::printNavigationGlobal(const ContextParameters &ctx)
         div.addContents(linkToModify);
 
         // link to config of predefined views
-        HtmlNode linkToViews("a");
+        HtmlNode linkToViews(ctx, "a");
         linkToViews.addAttribute("class", "sm_link_views");
         linkToViews.addAttribute("href", "/%s/views/", ctx.getProjectUrlName().c_str());
         linkToViews.addContents("%s", _("Views"));
@@ -607,7 +605,7 @@ void RHtml::printNavigationGlobal(const ContextParameters &ctx)
     }
 
     if (ctx.hasProject()) {
-        HtmlNode linkToStat("a");
+        HtmlNode linkToStat(ctx, "a");
         linkToStat.addAttribute("class", "sm_link_stat");
         linkToStat.addAttribute("href", "/%s/stat", ctx.getProjectUrlName().c_str());
         linkToStat.addContents("%s", _("Stat"));
@@ -616,10 +614,10 @@ void RHtml::printNavigationGlobal(const ContextParameters &ctx)
     }
 
     // signed-in
-    HtmlNode userinfo("span");
+    HtmlNode userinfo(ctx, "span");
     userinfo.addAttribute("class", "sm_userinfo");
     userinfo.addContents("%s", _("Logged in as: "));
-    HtmlNode username("span");
+    HtmlNode username(ctx, "span");
     username.addAttribute("class", "sm_username");
     username.addContents("%s", ctx.user.username.c_str());
     userinfo.addContents(username);
@@ -627,11 +625,11 @@ void RHtml::printNavigationGlobal(const ContextParameters &ctx)
     div.addContents(" - ");
 
     // form to sign-out
-    HtmlNode signout("form");
+    HtmlNode signout(ctx, "form");
     signout.addAttribute("action", "/signout");
     signout.addAttribute("method", "post");
     signout.addAttribute("id", "sm_signout");
-    HtmlNode linkSignout("a");
+    HtmlNode linkSignout(ctx, "a");
     linkSignout.addAttribute("href", "javascript:;");
     linkSignout.addAttribute("onclick", "document.getElementById('sm_signout').submit();");
     linkSignout.addContents("%s", _("Sign out"));
@@ -641,7 +639,7 @@ void RHtml::printNavigationGlobal(const ContextParameters &ctx)
     div.addContents(" - ");
 
     // link to user profile
-    HtmlNode linkToProfile("a");
+    HtmlNode linkToProfile(ctx, "a");
     linkToProfile.addAttribute("href", "/users/%s", urlEncode(ctx.user.username).c_str());
     linkToProfile.addContents(_("Profile"));
     div.addContents(linkToProfile);
@@ -658,10 +656,10 @@ void RHtml::printNavigationGlobal(const ContextParameters &ctx)
   */
 void RHtml::printNavigationIssues(const ContextParameters &ctx, bool autofocus)
 {
-    HtmlNode div("div");
+    HtmlNode div(ctx, "div");
     div.addAttribute("class", "sm_navigation_project");
     if (ctx.userRole == ROLE_ADMIN || ctx.userRole == ROLE_RW || ctx.user.superadmin) {
-        HtmlNode a("a");
+        HtmlNode a(ctx, "a");
         a.addAttribute("href", "/%s/issues/new", ctx.getProjectUrlName().c_str());
         a.addAttribute("class", "sm_link_new_issue");
         a.addContents("%s", _("New issue"));
@@ -670,7 +668,7 @@ void RHtml::printNavigationIssues(const ContextParameters &ctx, bool autofocus)
 
     std::map<std::string, PredefinedView>::const_iterator pv;
     FOREACH (pv, ctx.projectViews) {
-        HtmlNode a("a");
+        HtmlNode a(ctx, "a");
         a.addAttribute("href", "/%s/issues/?%s", ctx.getProjectUrlName().c_str(),
                        pv->second.generateQueryString().c_str());
         a.addAttribute("class", "sm_predefined_view");
@@ -678,12 +676,12 @@ void RHtml::printNavigationIssues(const ContextParameters &ctx, bool autofocus)
         div.addContents(a);
     }
 
-    HtmlNode form("form");
+    HtmlNode form(ctx, "form");
     form.addAttribute("class", "sm_searchbox");
     form.addAttribute("action", "/%s/issues/", ctx.getProjectUrlName().c_str());
     form.addAttribute("method", "get");
 
-    HtmlNode input("input");
+    HtmlNode input(ctx, "input");
     input.addAttribute("class", "sm_searchbox");
     input.addAttribute("placeholder", htmlEscape(_("Search text...")).c_str());
     input.addAttribute("type", "text");
@@ -693,7 +691,7 @@ void RHtml::printNavigationIssues(const ContextParameters &ctx, bool autofocus)
     div.addContents(form);
 
     // advanced search
-    HtmlNode a("a");
+    HtmlNode a(ctx, "a");
     a.addAttribute("href", "/%s/views/_", ctx.getProjectUrlName().c_str());
     a.addAttribute("class", "sm_advanced_search");
     a.addContents(_("Advanced Search"));
@@ -745,7 +743,7 @@ void RHtml::printProjects(const ContextParameters &ctx,
 
         ctx.req->printf("<td class=\"sm_projects_link\">");
         ctx.req->printf("<a href=\"%s/%s/issues/?defaultView=1\">%s</a></td>\n",
-                        MongooseServerContext::getInstance().getUrlRewritingRoot().c_str(),
+                        ctx.req->getUrlRewritingRoot().c_str(),
                         Project::urlNameEncode(pname).c_str(), htmlEscape(pname).c_str());
 
         // # issues
@@ -804,7 +802,7 @@ void RHtml::printUsers(const RequestContext *req, const std::list<User> &usersLi
         req->printf("<tr class=\"sm_users\">");
         req->printf("<td class=\"sm_users\">\n");
         req->printf("<a href=\"%s/users/%s\">%s<a><br>",
-                    MongooseServerContext::getInstance().getUrlRewritingRoot().c_str(),
+                    req->getUrlRewritingRoot().c_str(),
                     urlEncode(u->username).c_str(), htmlEscape(u->username).c_str());
         req->printf("</td>");
         // capability
@@ -826,7 +824,7 @@ void RHtml::printUsers(const RequestContext *req, const std::list<User> &usersLi
     req->printf("</table><br>\n");
     req->printf("<div class=\"sm_users_new\">"
                 "<a href=\"%s/users/_\" class=\"sm_users_new\">%s</a></div><br>",
-                MongooseServerContext::getInstance().getUrlRewritingRoot().c_str(),
+                req->getUrlRewritingRoot().c_str(),
                 htmlEscape(_("New User")).c_str());
 
 }
@@ -1093,7 +1091,7 @@ void RHtml::printEntries(const ContextParameters &ctx, const std::vector<Entry> 
         ctx.req->printf("<tr class=\"sm_entries\">\n");
 
         // id of the issue (not id of the entry)
-        std::string href = MongooseServerContext::getInstance().getUrlRewritingRoot() + "/";
+        std::string href =ctx.req->getUrlRewritingRoot() + "/";
         href += Project::urlNameEncode(e->issue->project) + "/issues/";
         href += urlEncode(e->issue->id);
         href += "?display=properties_changes#" + urlEncode(e->id);

@@ -26,13 +26,6 @@ MongooseServerContext::MongooseServerContext()
     init();
 }
 
-MongooseServerContext &MongooseServerContext::getInstance()
-{
-    static MongooseServerContext *instance = 0;
-    if (!instance) instance = new MongooseServerContext();
-    return *instance;
-}
-
 void MongooseServerContext::init()
 {
     int i;
@@ -47,7 +40,7 @@ void MongooseServerContext::init()
 
 int MongooseServerContext::start()
 {
-    mongooseCtx = mg_start(&callbacks, NULL, params);
+    mongooseCtx = mg_start(&callbacks, this, params);
     if (!mongooseCtx) return -1;
     return 0;
 }
@@ -78,6 +71,9 @@ void MongooseServerContext::setRequestHandler(int (*handler)(const RequestContex
 int MongooseServerContext::handleRequest(struct mg_connection *conn)
 {
     MongooseRequestContext mrc(conn);
+    // Retrieve the server context and pass it on to the request context
+    const struct mg_request_info *req = mg_get_request_info(conn);
+    mrc.setServerContext((MongooseServerContext *)(req->user_data));
     return requestHandler(&mrc);
 }
 

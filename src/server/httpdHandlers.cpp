@@ -66,15 +66,15 @@ void httpPostRoot(const RequestContext *req, User u)
 {
 }
 
-int httpPostSignin(const RequestContext *request)
+int httpPostSignin(const RequestContext *req)
 {
     LOG_FUNC();
 
-    ContentType ct = getContentType(request);
+    ContentType ct = getContentType(req);
 
     if (ct != CT_WWW_FORM_URLENCODED) {
-        LOG_ERROR("Unsupported Content-Type in httpPostSignin: %s", getContentTypeString(request));
-        return sendHttpHeader400(request, "Unsupported Content-Type");
+        LOG_ERROR("Unsupported Content-Type in httpPostSignin: %s", getContentTypeString(req));
+        return sendHttpHeader400(req, "Unsupported Content-Type");
     }
 
     // application/x-www-form-urlencoded
@@ -84,15 +84,15 @@ int httpPostSignin(const RequestContext *request)
     char buffer[SIZ+1];
     char password[SIZ+1];
     int n; // number of bytes read
-    n = request->read(buffer, SIZ);
+    n = req->read(buffer, SIZ);
     if (n < 0) {
         LOG_ERROR("httpPostSignin: read error %d", n);
-        sendHttpHeader500(request, "httpPostSignin: read error");
+        sendHttpHeader500(req, "httpPostSignin: read error");
         return REQUEST_COMPLETED;
     }
     if (n == SIZ) {
         LOG_ERROR("Post data for signin too long. Abort request.");
-        return sendHttpHeader400(request, "Post data for signin too long");
+        return sendHttpHeader400(req, "Post data for signin too long");
     }
     buffer[n] = 0;
     LOG_DEBUG("postData=%s", buffer);
@@ -104,7 +104,7 @@ int httpPostSignin(const RequestContext *request)
     if (r<=0) {
         // error: empty, or too long, or not present
         LOG_DEBUG("Cannot get username. r=%d, postData=%s", r, postData.c_str());
-        return sendHttpHeader400(request, "Missing user name");
+        return sendHttpHeader400(req, "Missing user name");
     }
     std::string username = buffer;
 
@@ -115,7 +115,7 @@ int httpPostSignin(const RequestContext *request)
     if (r<0) {
         // error: empty, or too long, or not present
         LOG_DEBUG("Cannot get password. r=%d, postData=%s", r, postData.c_str());
-        return sendHttpHeader400(request, "Missing password");
+        return sendHttpHeader400(req, "Missing password");
     }
 
     // check credentials
@@ -125,18 +125,18 @@ int httpPostSignin(const RequestContext *request)
 
     if (sessionId.size() == 0) {
         LOG_DEBUG("Authentication refused");
-        sendHttpHeader403(request);
+        sendHttpHeader403(req);
         return REQUEST_COMPLETED;
     }
 
     // Sign-in accepted
 
     std::string redirect;
-    enum RenderingFormat format = getFormat(request);
+    enum RenderingFormat format = getFormat(req);
 
     if (format == X_SMIT || format == RENDERING_TEXT) {
-        std::string cookieSessid = getServerCookie(COOKIE_SESSID_PREFIX, sessionId, SESSION_DURATION);
-        sendHttpHeader204(request, cookieSessid.c_str());
+        std::string cookieSessid = getServerCookie(req, COOKIE_SESSID_PREFIX, sessionId, SESSION_DURATION);
+        sendHttpHeader204(req, cookieSessid.c_str());
     } else {
         // HTML rendering
         // Get the redirection page
@@ -146,52 +146,51 @@ int httpPostSignin(const RequestContext *request)
         if (r<0) {
             // error: empty, or too long, or not present
             LOG_DEBUG("Cannot get redirect. r=%d, postData=%s", r, postData.c_str());
-            return sendHttpHeader400(request, "Cannot get redirection");
+            return sendHttpHeader400(req, "Cannot get redirection");
         }
         redirect = buffer;
 
         if (redirect.empty()) redirect = "/";
-        std::string s = getServerCookie(COOKIE_SESSID_PREFIX, sessionId, SESSION_DURATION);
-        sendHttpRedirect(request, redirect, s.c_str());
+        std::string s = getServerCookie(req, COOKIE_SESSID_PREFIX, sessionId, SESSION_DURATION);
+        sendHttpRedirect(req, redirect, s.c_str());
     }
 
     return REQUEST_COMPLETED;
 }
 
-void redirectToSignin(const RequestContext *request, const char *resource = 0)
+void redirectToSignin(const RequestContext *req, const char *resource = 0)
 {
     LOG_DIAG("redirectToSignin");
-    sendHttpHeader200(request);
+    sendHttpHeader200(req);
 
     // delete session cookie
-    request->printf("%s\r\n", getDeletedCookieString(COOKIE_SESSID_PREFIX).c_str());
+    req->printf("%s\r\n", getDeletedCookieString(req, COOKIE_SESSID_PREFIX).c_str());
 
     // prepare the redirection parameter
     std::string url;
     if (!resource) {
-        url = request->getUri();
-        const char *qs = request->getQueryString();
+        url = req->getUri();
+        const char *qs = req->getQueryString();
         if (qs && strlen(qs)) url = url + '?' + qs;
         resource = url.c_str();
     }
     User noUser;
-    ContextParameters ctx = ContextParameters(request, noUser);
+    ContextParameters ctx = ContextParameters(req, noUser);
     RHtml::printPageSignin(ctx, resource);
 }
 
-void httpPostSignout(const RequestContext *request, const std::string &sessionId)
+void httpPostSignout(const RequestContext *req, const std::string &sessionId)
 {
     SessionBase::destroySession(sessionId);
 
-    enum RenderingFormat format = getFormat(request);
+    enum RenderingFormat format = getFormat(req);
     if (format == RENDERING_HTML) {
-        redirectToSignin(request, "/");
+        redirectToSignin(req, "/");
 
     } else {
         // delete session cookie
-        std::string cookieSessid = getDeletedCookieString(COOKIE_SESSID_PREFIX);
-        sendHttpHeader204(request, cookieSessid.c_str());
-
+        std::string cookieSessid = getDeletedCookieString(req, COOKIE_SESSID_PREFIX);
+        sendHttpHeader204(req, cookieSessid.c_str());
     }
 }
 
@@ -1441,7 +1440,7 @@ void httpGetListOfIssues(const RequestContext *req, const Project &p, User u)
         // clean the query string from next=, previous=
         std::string newQs = removeParam(q, QS_GOTO_NEXT);
         newQs = removeParam(newQs, QS_GOTO_PREVIOUS);
-        std::string cookie = getServerCookie(COOKIE_ORIGIN_VIEW, newQs, -1);
+        std::string cookie = getServerCookie(req, COOKIE_ORIGIN_VIEW, newQs, -1);
         sendHttpRedirect(req, redirectionUrl.c_str(), cookie.c_str());
         return;
     }
@@ -1880,7 +1879,7 @@ int httpGetIssue(const RequestContext *req, Project &p, const std::string &issue
             // clear this cookie, so that getting any other issue
             // without coming from a view does not display get/next
             // (get/next use a redirection from a view, so the cookie will be set for these)
-            req->printf("%s\r\n", getDeletedCookieString(COOKIE_ORIGIN_VIEW).c_str());
+            req->printf("%s\r\n", getDeletedCookieString(req, COOKIE_ORIGIN_VIEW).c_str());
             if (ctx.originView) LOG_DEBUG("originView=%s", ctx.originView);
             RHtml::printPageIssue(ctx, issue, entryToBeAmended);
         }

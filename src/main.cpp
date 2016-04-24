@@ -623,33 +623,33 @@ int serveRepository(int argc, char **argv)
 
     initHttpStats();
 
-    MongooseServerContext &mc = MongooseServerContext::getInstance();
-    mc.setRequestHandler(begin_request_handler);
-    mc.setListeningPort(listenPort);
+    MongooseServerContext *mc = new MongooseServerContext();
+    mc->setRequestHandler(begin_request_handler);
+    mc->setListeningPort(listenPort);
 
-    if (urlRewritingRoot) mc.setUrlRewritingRoot(urlRewritingRoot);
+    if (urlRewritingRoot) mc->setUrlRewritingRoot(urlRewritingRoot);
     std::string serverMsg = "Starting http server on port " + mongooseListeningPort;
     if (urlRewritingRoot) serverMsg += std::string(" --url-rewrite-root ") + urlRewritingRoot;
     LOG_INFO("%s", serverMsg.c_str());
 
-    mc.addParam("listening_ports");
-    mc.addParam(mongooseListeningPort.c_str());
-    mc.addParam("document_root");
-    mc.addParam(repo);
-    mc.addParam("enable_directory_listing");
-    mc.addParam("no");
+    mc->addParam("listening_ports");
+    mc->addParam(mongooseListeningPort.c_str());
+    mc->addParam("document_root");
+    mc->addParam(repo);
+    mc->addParam("enable_directory_listing");
+    mc->addParam("no");
 
     if (certificatePemFile) {
-        mc.addParam("ssl_certificate");
-        mc.addParam(certificatePemFile);
+        mc->addParam("ssl_certificate");
+        mc->addParam(certificatePemFile);
     }
 
     if (UserBase::isLocalUserInterface()) {
-        mc.addParam("num_threads");
-        mc.addParam("1");
+        mc->addParam("num_threads");
+        mc->addParam("1");
     }
 
-    r = mc.start();
+    r = mc->start();
 
     if (r < 0) {
         LOG_ERROR("Cannot start http server. Aborting.");
@@ -660,6 +660,8 @@ int serveRepository(int argc, char **argv)
         while (1) sleep(1); // block until ctrl-C
     }
     // else, we return, and the cmdUi() will launch the web browser
+
+    // TODO psosible memory leak as reference to 'mc' is lost
     return 0;
 }
 #ifndef _WIN32

@@ -248,7 +248,7 @@ int sendHttpRedirect(const RequestContext *request, const std::string &redirectU
     std::string location = scheme;
     location += "://";
     location += host;
-    location += MongooseServerContext::getInstance().getUrlRewritingRoot();
+    location += request->getUrlRewritingRoot();
     location += redirectUrl;
     request->printf("Location: %s", location.c_str());
 
@@ -260,40 +260,40 @@ int sendHttpRedirect(const RequestContext *request, const std::string &redirectU
     return REQUEST_COMPLETED;
 }
 
-std::string mangleCookieName(const std::string &prefix)
+std::string mangleCookieName(const RequestContext *req, const std::string &prefix)
 {
     std::string result = prefix;
-    result += MongooseServerContext::getInstance().getListeningPort();
+    result += req->getListeningPort();
     return result;
 }
 
-std::string getServerCookie(const std::string &prefix, const std::string &value, int maxAgeSeconds)
+std::string getServerCookie(const RequestContext *req, const std::string &prefix, const std::string &value, int maxAgeSeconds)
 {
     std::ostringstream s;
     s << "Set-Cookie: ";
-    s << mangleCookieName(prefix);
+    s << mangleCookieName(req, prefix);
     s << "=" << value;
-    s << "; Path=" << MongooseServerContext::getInstance().getUrlRewritingRoot() << "/";
+    s << "; Path=" << req->getUrlRewritingRoot() << "/";
     if (maxAgeSeconds > 0) s << ";  Max-Age=" << maxAgeSeconds;
     return s.str();
 }
 
-std::string getDeletedCookieString(const std::string &prefix)
+std::string getDeletedCookieString(const RequestContext *req, const std::string &prefix)
 {
     std::string cookieString;
     cookieString = "Set-Cookie: ";
-    cookieString += mangleCookieName(prefix);
+    cookieString += mangleCookieName(req, prefix);
     cookieString += "=deleted";
-    cookieString += ";Path=" + MongooseServerContext::getInstance().getUrlRewritingRoot() + "/" ;
+    cookieString += ";Path=" + req->getUrlRewritingRoot() + "/" ;
     cookieString += ";expires=Thu, 01 Jan 1970 00:00:00 GMT";
     return cookieString;
 }
 
-void sendCookie(const RequestContext *request, const std::string &name, const std::string &value, int duration)
+void sendCookie(const RequestContext *req, const std::string &name, const std::string &value, int duration)
 {
-    std::string s = getServerCookie(name, value, duration);
+    std::string s = getServerCookie(req, name, value, duration);
 
-    request->printf("%s\r\n", s.c_str());
+    req->printf("%s\r\n", s.c_str());
 }
 
 int sendHttpHeaderInvalidResource(const RequestContext *request)
@@ -333,14 +333,14 @@ enum RenderingFormat getFormat(const RequestContext *request)
   *     0 if cookie found
   *    -1 if no such cookie found
   */
-int getFromCookie(const RequestContext *request, const std::string &prefix, std::string &value)
+int getFromCookie(const RequestContext *req, const std::string &prefix, std::string &value)
 {
-    const char *cookies = request->getHeader("Cookie");
+    const char *cookies = req->getHeader("Cookie");
     // There is a most 1 cookie as stated in rfc6265 "HTTP State Management Mechanism":
     //     When the user agent generates an HTTP request, the user agent MUST
     //     NOT attach more than one Cookie header field.
     if (cookies) {
-        std::string wantedCookie = mangleCookieName(prefix);
+        std::string wantedCookie = mangleCookieName(req, prefix);
 
         LOG_DEBUG("Cookies found: %s", cookies);
         std::string c = cookies;

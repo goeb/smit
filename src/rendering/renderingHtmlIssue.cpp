@@ -418,7 +418,7 @@ void RHtmlIssue::printIssueList(const ContextParameters &ctx, const std::vector<
             std::string href_rhs = "";
             if ( (column == "id") || (column == "summary") ) {
                 href_lhs = "<a href=\"";
-                std::string href = MongooseServerContext::getInstance().getUrlRewritingRoot() + "/";
+                std::string href = ctx.req->getUrlRewritingRoot() + "/";
                 href += Project::urlNameEncode(i->project) + "/issues/";
                 href += urlEncode(i->id);
                 href_lhs = href_lhs + href;
@@ -870,7 +870,7 @@ void RHtmlIssue::printEntry(const ContextParameters &ctx, const IssueCopy &issue
         // entry was created less than 10 minutes ago, and by same user, and is latest in the issue
         ctx.req->printf("<a href=\"%s/%s/issues/%s?amend=%s\" class=\"sm_entry_edit\" "
                         "title=\"Edit this message (at most %d minutes after posting)\">",
-                        MongooseServerContext::getInstance().getUrlRewritingRoot().c_str(),
+                        ctx.req->getUrlRewritingRoot().c_str(),
                         ctx.getProjectUrlName().c_str(), enquoteJs(issue.id).c_str(),
                         enquoteJs(ee.id).c_str(), (DELETE_DELAY_S/60));
         ctx.req->printf("&#9998; %s", _("edit"));
@@ -879,7 +879,7 @@ void RHtmlIssue::printEntry(const ContextParameters &ctx, const IssueCopy &issue
 
     // link to raw entry
     ctx.req->printf("(<a href=\"%s/%s/" RESOURCE_FILES "/%s\" class=\"sm_entry_raw\">%s</a>",
-                    MongooseServerContext::getInstance().getUrlRewritingRoot().c_str(),
+                    ctx.req->getUrlRewritingRoot().c_str(),
                     ctx.getProjectUrlName().c_str(),
                     urlEncode(ee.id).c_str(), _("raw"));
     // link to possible amendments
