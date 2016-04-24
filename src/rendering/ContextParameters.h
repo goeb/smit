@@ -4,7 +4,7 @@
 #include "user/session.h"
 #include "project/Project.h"
 #include "global.h"
-#include "HttpContext.h"
+#include "server/HttpContext.h"
 
 class ContextParameters {
 public:

@@ -79,7 +79,8 @@ SOURCES += \
     ../../src/utils/identifiers.cpp \
     ../../src/utils/filesystem.cpp \
     ../../src/utils/dateTools.cpp \
-    ../../src/utils/cpio.cpp
+    ../../src/utils/cpio.cpp \
+    ../../src/server/HttpContext.cpp
     ../../src/ssoKerberos.cpp
 
 HEADERS += \
@@ -163,6 +164,7 @@ HEADERS += \
     ../../src/utils/identifiers.h \
     ../../src/utils/filesystem.h \
     ../../src/utils/dateTools.h \
-    ../../src/utils/cpio.h
+    ../../src/utils/cpio.h \
+    ../../src/server/HttpContext.h
     ../../src/ssoKerberos.h
 

@@ -4,7 +4,7 @@
 #include <vector>
 #include <string>
 
-#include "HttpContext.h"
+#include "server/HttpContext.h"
 #include "project/Issue.h"
 
 class RJson {

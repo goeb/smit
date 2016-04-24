@@ -5,7 +5,7 @@
 #include <string>
 #include <stdint.h>
 
-#include "HttpContext.h"
+#include "server/HttpContext.h"
 #include "ContextParameters.h"
 #include "user/session.h"
 #include "repository/db.h"

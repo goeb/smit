@@ -29,7 +29,7 @@
 #include <signal.h>
 #include <getopt.h>
 
-#include "HttpContext.h"
+#include "server/HttpContext.h"
 #include "server/httpdHandlers.h"
 #include "server/httpdUtils.h"
 #include "utils/logging.h"

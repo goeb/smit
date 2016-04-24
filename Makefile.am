@@ -51,6 +51,7 @@ smit_SOURCES = \
 			   src/server/httpdHandlers.cpp \
 			   src/server/httpdUtils.cpp \
 			   src/server/Trigger.cpp \
+			   src/server/HttpContext.cpp \
 			   src/rendering/renderingText.cpp \
 			   src/rendering/renderingJson.cpp \
 			   src/rendering/renderingCsv.cpp \
@@ -61,7 +62,6 @@ smit_SOURCES = \
 			   src/user/AuthSha1.cpp \
 			   src/local/console.cpp \
 			   src/local/localClient.cpp \
-			   src/HttpContext.cpp \
 			   src/Args.cpp \
 			   src/third-party/mongoose.c \
 			   src/third-party/fnmatch.c
