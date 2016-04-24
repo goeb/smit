@@ -30,19 +30,19 @@
 #include <getopt.h>
 
 #include "HttpContext.h"
-#include "httpdHandlers.h"
-#include "httpdUtils.h"
-#include "logging.h"
-#include "db.h"
-#include "cpio.h"
-#include "session.h"
+#include "server/httpdHandlers.h"
+#include "server/httpdUtils.h"
+#include "utils/logging.h"
+#include "utils/cpio.h"
+#include "utils/identifiers.h"
+#include "utils/filesystem.h"
+#include "repository/db.h"
+#include "user/session.h"
 #include "global.h"
-#include "identifiers.h"
-#include "filesystem.h"
-#include "localClient.h"
+#include "local/localClient.h"
 
 #ifdef CURL_ENABLED
-  #include "clone.h"
+  #include "local/clone.h"
 #endif
 
 void usage()

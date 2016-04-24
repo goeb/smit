@@ -30,6 +30,7 @@ public:
     inline int isSSL() const { return mg_get_request_info(conn)->is_ssl; }
     const char *getQueryString() const;
     void sendObject(const std::string &basemane, const std::string &realpath) const;
+    std::string urlRewritingRoot;
 
 private:
     mutable struct mg_connection *conn;

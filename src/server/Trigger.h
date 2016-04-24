@@ -2,8 +2,8 @@
 #ifndef _trigger_h
 #define _trigger_h
 
-#include "db.h"
-#include "session.h"
+#include "user/session.h"
+#include "project/Project.h"
 
 class Trigger {
 public:

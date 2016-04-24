@@ -19,15 +19,16 @@
 #include <stdarg.h>
 
 #include "renderingHtmlIssue.h"
-#include "db.h"
-#include "parseConfig.h"
-#include "logging.h"
-#include "stringTools.h"
-#include "dateTools.h"
+#include "repository/db.h"
+#include "utils/parseConfig.h"
+#include "utils/logging.h"
+#include "utils/stringTools.h"
+#include "utils/dateTools.h"
+#include "utils/filesystem.h"
+#include "utils/jTools.h"
 #include "global.h"
-#include "filesystem.h"
 #include "restApi.h"
-#include "jTools.h"
+
 
 
 /** Add "filterout" to the query string

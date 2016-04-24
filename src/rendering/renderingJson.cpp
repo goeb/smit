@@ -15,9 +15,8 @@
 #include <sstream>
 
 #include "renderingJson.h"
-#include "db.h"
-#include "logging.h"
-#include "jTools.h"
+#include "utils/logging.h"
+#include "utils/jTools.h"
 
 #define CONTENT_TYPE_JSON "application/json"
 

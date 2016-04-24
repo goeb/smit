@@ -13,9 +13,9 @@
 #include "config.h"
 
 #include "renderingCsv.h"
-#include "db.h"
-#include "logging.h"
-#include "stringTools.h"
+#include "repository/db.h"
+#include "utils/logging.h"
+#include "utils/stringTools.h"
 
 /** Double quoting is needed when the string contains:
   *    a " character

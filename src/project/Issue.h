@@ -8,9 +8,9 @@
 #include <set>
 #include <stdint.h>
 
-#include "ustring.h"
-#include "mutexTools.h"
-#include "stringTools.h"
+#include "utils/ustring.h"
+#include "utils/mutexTools.h"
+#include "utils/stringTools.h"
 #include "Entry.h"
 
 #define DIR_DELETED_OLD "_del"

@@ -30,13 +30,13 @@
 #include <unistd.h>
 
 #include "Project.h"
-#include "db.h"
-#include "parseConfig.h"
-#include "filesystem.h"
-#include "logging.h"
-#include "identifiers.h"
+#include "repository/db.h"
+#include "utils/parseConfig.h"
+#include "utils/filesystem.h"
+#include "utils/logging.h"
+#include "utils/identifiers.h"
+#include "utils/stringTools.h"
 #include "global.h"
-#include "stringTools.h"
 #include "mg_win32.h"
 #include "Tag.h"
 

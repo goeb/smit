@@ -45,7 +45,41 @@ SOURCES += \
     ../../src/jTools.cpp \
     ../../src/httpdUtils.cpp \
     ../../src/renderingHtmlIssue.cpp \
-    ../../src/ContextParameters.cpp
+    ../../src/ContextParameters.cpp \
+    ../../src/local/localClient.cpp \
+    ../../src/local/httpClient.cpp \
+    ../../src/local/console.cpp \
+    ../../src/local/clone.cpp \
+    ../../src/project/View.cpp \
+    ../../src/project/Tag.cpp \
+    ../../src/project/ProjectConfig.cpp \
+    ../../src/project/Project.cpp \
+    ../../src/project/Object.cpp \
+    ../../src/project/Issue.cpp \
+    ../../src/project/Entry.cpp \
+    ../../src/rendering/renderingText.cpp \
+    ../../src/rendering/renderingJson.cpp \
+    ../../src/rendering/renderingHtmlIssue.cpp \
+    ../../src/rendering/renderingHtml.cpp \
+    ../../src/rendering/renderingCsv.cpp \
+    ../../src/rendering/ContextParameters.cpp \
+    ../../src/repository/db.cpp \
+    ../../src/server/Trigger.cpp \
+    ../../src/server/httpdUtils.cpp \
+    ../../src/server/httpdHandlers.cpp \
+    ../../src/user/session.cpp \
+    ../../src/user/AuthSha1.cpp \
+    ../../src/user/AuthLdap.cpp \
+    ../../src/user/AuthKrb5.cpp \
+    ../../src/utils/stringTools.cpp \
+    ../../src/utils/parseConfig.cpp \
+    ../../src/utils/mutexTools.cpp \
+    ../../src/utils/logging.cpp \
+    ../../src/utils/jTools.cpp \
+    ../../src/utils/identifiers.cpp \
+    ../../src/utils/filesystem.cpp \
+    ../../src/utils/dateTools.cpp \
+    ../../src/utils/cpio.cpp
     ../../src/ssoKerberos.cpp
 
 HEADERS += \
@@ -93,6 +127,42 @@ HEADERS += \
     ../../src/jTools.h \
     ../../src/httpdUtils.h \
     ../../src/renderingHtmlIssue.h \
-    ../../src/ContextParameters.h
+    ../../src/ContextParameters.h \
+    ../../src/local/localClient.h \
+    ../../src/local/httpClient.h \
+    ../../src/local/console.h \
+    ../../src/local/clone.h \
+    ../../src/project/View.h \
+    ../../src/project/Tag.h \
+    ../../src/project/ProjectConfig.h \
+    ../../src/project/Project.h \
+    ../../src/project/Object.h \
+    ../../src/project/Issue.h \
+    ../../src/project/Entry.h \
+    ../../src/rendering/renderingText.h \
+    ../../src/rendering/renderingJson.h \
+    ../../src/rendering/renderingHtmlIssue.h \
+    ../../src/rendering/renderingHtml.h \
+    ../../src/rendering/renderingCsv.h \
+    ../../src/rendering/ContextParameters.h \
+    ../../src/repository/db.h \
+    ../../src/server/Trigger.h \
+    ../../src/server/httpdUtils.h \
+    ../../src/server/httpdHandlers.h \
+    ../../src/user/session.h \
+    ../../src/user/AuthSha1.h \
+    ../../src/user/AuthLdap.h \
+    ../../src/user/AuthKrb5.h \
+    ../../src/user/Auth.h \
+    ../../src/utils/ustring.h \
+    ../../src/utils/stringTools.h \
+    ../../src/utils/parseConfig.h \
+    ../../src/utils/mutexTools.h \
+    ../../src/utils/logging.h \
+    ../../src/utils/jTools.h \
+    ../../src/utils/identifiers.h \
+    ../../src/utils/filesystem.h \
+    ../../src/utils/dateTools.h \
+    ../../src/utils/cpio.h
     ../../src/ssoKerberos.h
 

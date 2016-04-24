@@ -30,54 +30,54 @@ endif
 # Main program
 bin_PROGRAMS = smit smparser
 smit_SOURCES = \
-			   src/db.cpp  \
-			   src/Entry.cpp  \
-			   src/Issue.cpp  \
-			   src/Project.cpp  \
-			   src/View.cpp  \
-			   src/Tag.cpp  \
-			   src/parseConfig.cpp \
-			   src/identifiers.cpp \
+			   src/repository/db.cpp  \
+			   src/project/Entry.cpp  \
+			   src/project/Issue.cpp  \
+			   src/project/Project.cpp  \
+			   src/project/View.cpp  \
+			   src/project/Tag.cpp  \
+			   src/project/ProjectConfig.cpp \
+			   src/project/Object.cpp \
+			   src/utils/parseConfig.cpp \
+			   src/utils/identifiers.cpp \
+			   src/utils/cpio.cpp \
+			   src/utils/stringTools.cpp \
+			   src/utils/jTools.cpp \
+			   src/utils/mutexTools.cpp \
+			   src/utils/dateTools.cpp \
+			   src/utils/logging.cpp \
+			   src/utils/filesystem.cpp \
 			   src/main.cpp \
-			   src/httpdHandlers.cpp \
-			   src/httpdUtils.cpp \
-			   src/renderingText.cpp \
-			   src/renderingJson.cpp \
-			   src/renderingCsv.cpp \
-			   src/renderingHtml.cpp \
-			   src/ContextParameters.cpp \
-			   src/renderingHtmlIssue.cpp \
-			   src/cpio.cpp \
-			   src/stringTools.cpp \
-			   src/jTools.cpp \
-			   src/mutexTools.cpp \
-			   src/session.cpp \
-			   src/dateTools.cpp \
-			   src/logging.cpp \
-			   src/Trigger.cpp \
-			   src/filesystem.cpp \
-			   src/console.cpp \
+			   src/server/httpdHandlers.cpp \
+			   src/server/httpdUtils.cpp \
+			   src/server/Trigger.cpp \
+			   src/rendering/renderingText.cpp \
+			   src/rendering/renderingJson.cpp \
+			   src/rendering/renderingCsv.cpp \
+			   src/rendering/renderingHtml.cpp \
+			   src/rendering/ContextParameters.cpp \
+			   src/rendering/renderingHtmlIssue.cpp \
+			   src/user/session.cpp \
+			   src/user/AuthSha1.cpp \
+			   src/local/console.cpp \
+			   src/local/localClient.cpp \
 			   src/HttpContext.cpp \
-			   src/localClient.cpp \
 			   src/Args.cpp \
-			   src/ProjectConfig.cpp \
-			   src/Object.cpp \
-			   src/AuthSha1.cpp \
 			   src/third-party/mongoose.c \
 			   src/third-party/fnmatch.c
 
 if CURL_ENABLED
 smit_SOURCES += \
-			   src/clone.cpp \
-			   src/httpClient.cpp
+			   src/local/clone.cpp \
+			   src/local/httpClient.cpp
 endif
 
 if KERBEROS_ENABLED
-smit_SOURCES += src/AuthKrb5.cpp
+smit_SOURCES += src/user/AuthKrb5.cpp
 endif
 
 if LDAP_ENABLED
-smit_SOURCES += src/AuthLdap.cpp
+smit_SOURCES += src/user/AuthLdap.cpp
 endif
 
 
@@ -105,7 +105,7 @@ embedcpio.c embedcpio.h: @srcdir@/tools/convertToC.cpp @srcdir@/data/sm/smit.js
 clean-local-embedded-data:
 	rm -rf $(X)
 
-smit_CPPFLAGS = -I@srcdir@/src/third-party @OPENSSL_CFLAGS@ @CURL_CFLAGS@
+smit_CPPFLAGS = -I @srcdir@/src -I @srcdir@/src/third-party @OPENSSL_CFLAGS@ @CURL_CFLAGS@
 smit_LDADD = @OPENSSL_LIBS@ @CURL_LIBS@
 
 if CURL_ENABLED
@@ -130,11 +130,11 @@ smit_LDADD += -ldl
 endif
 
 smparser_SOURCES = \
-				   src/parseConfig.cpp \
-				   src/filesystem.cpp \
-				   src/stringTools.cpp
+				   src/utils/parseConfig.cpp \
+				   src/utils/filesystem.cpp \
+				   src/utils/stringTools.cpp
 
-smparser_CPPFLAGS = -DSM_PARSER -DSM_NO_LOGGING
+smparser_CPPFLAGS = -DSM_PARSER -DSM_NO_LOGGING -I @srcdir@/src
 
 
 

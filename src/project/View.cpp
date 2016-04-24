@@ -14,9 +14,9 @@
 
 #include "View.h"
 #include "global.h"
-#include "logging.h"
-#include "parseConfig.h"
-#include "filesystem.h"
+#include "utils/logging.h"
+#include "utils/parseConfig.h"
+#include "utils/filesystem.h"
 
 /** @param filter
   *     [ "version:v1.0", "version:1.0", "owner:John Doe" ]

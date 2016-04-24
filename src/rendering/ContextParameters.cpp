@@ -8,16 +8,15 @@
 #include <stdarg.h>
 
 #include "ContextParameters.h"
-#include "db.h"
-#include "session.h"
+#include "user/session.h"
 #include "global.h"
 
 #ifdef KERBEROS_ENABLED
-  #include "AuthKrb5.h"
+  #include "user/AuthKrb5.h"
 #endif
 
 #ifdef LDAP_ENABLED
-  #include "AuthLdap.h"
+  #include "user/AuthLdap.h"
 #endif
 
 

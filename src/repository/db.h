@@ -8,10 +8,10 @@
 #include <set>
 #include <stdint.h>
 
-#include "ustring.h"
-#include "mutexTools.h"
-#include "stringTools.h"
-#include "Project.h"
+#include "utils/ustring.h"
+#include "utils/mutexTools.h"
+#include "utils/stringTools.h"
+#include "project/Project.h"
 
 #define PATH_REPO ".smit"
 #define P_TEMPLATES "templates"

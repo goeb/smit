@@ -1,8 +1,8 @@
 
 #include "AuthSha1.h"
-#include "logging.h"
-#include "parseConfig.h"
-#include "identifiers.h"
+#include "utils/logging.h"
+#include "utils/parseConfig.h"
+#include "utils/identifiers.h"
 
 /** Authenticate
   *

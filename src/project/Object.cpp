@@ -1,10 +1,10 @@
 #include "config.h"
 
 #include "Object.h"
-#include "identifiers.h"
-#include "filesystem.h"
-#include "stringTools.h"
-#include "logging.h"
+#include "utils/identifiers.h"
+#include "utils/filesystem.h"
+#include "utils/stringTools.h"
+#include "utils/logging.h"
 
 
 std::string Object::getSubpath(const std::string &id) {

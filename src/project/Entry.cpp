@@ -30,12 +30,12 @@
 #include <unistd.h>
 
 #include "Entry.h"
-#include "parseConfig.h"
-#include "filesystem.h"
-#include "logging.h"
-#include "identifiers.h"
+#include "utils/parseConfig.h"
+#include "utils/filesystem.h"
+#include "utils/logging.h"
+#include "utils/identifiers.h"
+#include "utils/stringTools.h"
 #include "global.h"
-#include "stringTools.h"
 #include "mg_win32.h"
 
 const std::string Entry::EMPTY_MESSAGE("");

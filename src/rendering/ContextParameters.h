@@ -1,8 +1,8 @@
 #ifndef _ContextParameters_h
 #define _ContextParameters_h
 
-#include "session.h"
-#include "Project.h"
+#include "user/session.h"
+#include "project/Project.h"
 #include "global.h"
 #include "HttpContext.h"
 

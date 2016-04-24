@@ -25,12 +25,12 @@
 
 #include "localClient.h"
 #include "global.h"
-#include "stringTools.h"
+#include "utils/stringTools.h"
+#include "utils/filesystem.h"
+#include "utils/logging.h"
 #include "mg_win32.h"
 #include "console.h"
-#include "filesystem.h"
-#include "db.h"
-#include "logging.h"
+#include "repository/db.h"
 #include "clone.h"
 
 bool Verbose_localClient = false;

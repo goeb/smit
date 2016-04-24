@@ -16,9 +16,9 @@
 
 #include "ProjectConfig.h"
 #include "global.h"
-#include "logging.h"
-#include "filesystem.h"
-#include "parseConfig.h"
+#include "utils/logging.h"
+#include "utils/filesystem.h"
+#include "utils/parseConfig.h"
 
 /** Convert a property type to a string
   *

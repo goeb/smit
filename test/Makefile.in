@@ -54,11 +54,12 @@ CONFIG_CLEAN_FILES = parseConfig1.txt parseConfig2.txt
 CONFIG_CLEAN_VPATH_FILES =
 am__dirstamp = $(am__leading_dot)dirstamp
 am_T_parseConfig_OBJECTS = T_parseConfig.$(OBJEXT) \
-	../src/parseConfig.$(OBJEXT) ../src/stringTools.$(OBJEXT)
+	../src/utils/parseConfig.$(OBJEXT) \
+	../src/utils/stringTools.$(OBJEXT)
 T_parseConfig_OBJECTS = $(am_T_parseConfig_OBJECTS)
 T_parseConfig_LDADD = $(LDADD)
 am_T_stringTools_OBJECTS = T_stringTools.$(OBJEXT) \
-	../src/stringTools.$(OBJEXT)
+	../src/utils/stringTools.$(OBJEXT)
 T_stringTools_OBJECTS = $(am_T_stringTools_OBJECTS)
 T_stringTools_LDADD = $(LDADD)
 am_get_random_value_OBJECTS = get_random_value.$(OBJEXT)
@@ -220,10 +221,10 @@ target_vendor = @target_vendor@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-T_parseConfig_SOURCES = T_parseConfig.cpp ../src/parseConfig.cpp ../src/stringTools.cpp
-T_stringTools_SOURCES = T_stringTools.cpp ../src/stringTools.cpp
+T_parseConfig_SOURCES = T_parseConfig.cpp ../src/utils/parseConfig.cpp ../src/utils/stringTools.cpp
+T_stringTools_SOURCES = T_stringTools.cpp ../src/utils/stringTools.cpp
 get_random_value_SOURCES = get_random_value.c
-AM_CPPFLAGS = -I$(top_srcdir)/src -include logging.h
+AM_CPPFLAGS = -I$(top_srcdir)/src -I$(top_srcdir)/src/utils -include logging.h
 
 # include the tests on the distribution
 EXTRA_DIST = .
@@ -268,16 +269,16 @@ parseConfig2.txt: $(top_builddir)/config.status $(srcdir)/parseConfig2.txt.in
 
 clean-checkPROGRAMS:
 	-test -z "$(check_PROGRAMS)" || rm -f $(check_PROGRAMS)
-../src/$(am__dirstamp):
-	@$(MKDIR_P) ../src
-	@: > ../src/$(am__dirstamp)
-../src/$(DEPDIR)/$(am__dirstamp):
-	@$(MKDIR_P) ../src/$(DEPDIR)
-	@: > ../src/$(DEPDIR)/$(am__dirstamp)
-../src/parseConfig.$(OBJEXT): ../src/$(am__dirstamp) \
-	../src/$(DEPDIR)/$(am__dirstamp)
-../src/stringTools.$(OBJEXT): ../src/$(am__dirstamp) \
-	../src/$(DEPDIR)/$(am__dirstamp)
+../src/utils/$(am__dirstamp):
+	@$(MKDIR_P) ../src/utils
+	@: > ../src/utils/$(am__dirstamp)
+../src/utils/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) ../src/utils/$(DEPDIR)
+	@: > ../src/utils/$(DEPDIR)/$(am__dirstamp)
+../src/utils/parseConfig.$(OBJEXT): ../src/utils/$(am__dirstamp) \
+	../src/utils/$(DEPDIR)/$(am__dirstamp)
+../src/utils/stringTools.$(OBJEXT): ../src/utils/$(am__dirstamp) \
+	../src/utils/$(DEPDIR)/$(am__dirstamp)
 T_parseConfig$(EXEEXT): $(T_parseConfig_OBJECTS) $(T_parseConfig_DEPENDENCIES) $(EXTRA_T_parseConfig_DEPENDENCIES) 
 	@rm -f T_parseConfig$(EXEEXT)
 	$(AM_V_CXXLD)$(CXXLINK) $(T_parseConfig_OBJECTS) $(T_parseConfig_LDADD) $(LIBS)
@@ -290,14 +291,14 @@ get_random_value$(EXEEXT): $(get_random_value_OBJECTS) $(get_random_value_DEPEND
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
-	-rm -f ../src/parseConfig.$(OBJEXT)
-	-rm -f ../src/stringTools.$(OBJEXT)
+	-rm -f ../src/utils/parseConfig.$(OBJEXT)
+	-rm -f ../src/utils/stringTools.$(OBJEXT)
 
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@../src/$(DEPDIR)/parseConfig.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@../src/$(DEPDIR)/stringTools.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@../src/utils/$(DEPDIR)/parseConfig.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@../src/utils/$(DEPDIR)/stringTools.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/T_parseConfig.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/T_stringTools.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/get_random_value.Po@am__quote@
@@ -544,8 +545,8 @@ clean-generic:
 distclean-generic:
 	-test -z "$(CONFIG_CLEAN_FILES)" || rm -f $(CONFIG_CLEAN_FILES)
 	-test . = "$(srcdir)" || test -z "$(CONFIG_CLEAN_VPATH_FILES)" || rm -f $(CONFIG_CLEAN_VPATH_FILES)
-	-rm -f ../src/$(DEPDIR)/$(am__dirstamp)
-	-rm -f ../src/$(am__dirstamp)
+	-rm -f ../src/utils/$(DEPDIR)/$(am__dirstamp)
+	-rm -f ../src/utils/$(am__dirstamp)
 
 maintainer-clean-generic:
 	@echo "This command is intended for maintainers to use"
@@ -555,7 +556,7 @@ clean: clean-am
 clean-am: clean-checkPROGRAMS clean-generic clean-local mostlyclean-am
 
 distclean: distclean-am
-	-rm -rf ../src/$(DEPDIR) ./$(DEPDIR)
+	-rm -rf ../src/utils/$(DEPDIR) ./$(DEPDIR)
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-tags
@@ -601,7 +602,7 @@ install-ps-am:
 installcheck-am:
 
 maintainer-clean: maintainer-clean-am
-	-rm -rf ../src/$(DEPDIR) ./$(DEPDIR)
+	-rm -rf ../src/utils/$(DEPDIR) ./$(DEPDIR)
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 

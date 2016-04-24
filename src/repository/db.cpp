@@ -29,13 +29,13 @@
 #include <unistd.h>
 
 #include "db.h"
-#include "logging.h"
-#include "identifiers.h"
+#include "utils/logging.h"
+#include "utils/identifiers.h"
+#include "utils/stringTools.h"
+#include "utils/filesystem.h"
 #include "global.h"
-#include "stringTools.h"
 #include "mg_win32.h"
-#include "filesystem.h"
-#include "Project.h"
+#include "project/Project.h"
 #include "fnmatch.h"
 
 

@@ -30,16 +30,16 @@
 
 #include "clone.h"
 #include "global.h"
-#include "stringTools.h"
+#include "utils/stringTools.h"
+#include "utils/filesystem.h"
+#include "utils/logging.h"
 #include "mg_win32.h"
 #include "console.h"
-#include "filesystem.h"
-#include "db.h"
-#include "logging.h"
+#include "repository/db.h"
 #include "httpClient.h"
 #include "Args.h"
 #include "restApi.h"
-#include "Project.h"
+#include "project/Project.h"
 #include "localClient.h"
 
 #define LOG_CLI(...) { printf(__VA_ARGS__); fflush(stdout);}

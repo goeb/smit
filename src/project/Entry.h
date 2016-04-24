@@ -8,8 +8,8 @@
 #include <set>
 #include <stdint.h>
 
-#include "ustring.h"
-#include "stringTools.h"
+#include "utils/ustring.h"
+#include "utils/stringTools.h"
 #include "Object.h"
 
 #define K_MESSAGE     "+message" // keyword used for the message

@@ -27,11 +27,11 @@
 #include <sstream>
 #include <fstream>
 
-#include "logging.h"
-#include "stringTools.h"
+#include "utils/logging.h"
+#include "utils/stringTools.h"
 #include "global.h"
 #include "mg_win32.h"
-#include "filesystem.h"
+#include "utils/filesystem.h"
 #include "httpdUtils.h"
 
 // global variable statictics

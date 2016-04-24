@@ -10,11 +10,11 @@ TESTS = T_parseConfig \
 		T_user_config.sh
 
 check_PROGRAMS = T_parseConfig T_stringTools get_random_value
-T_parseConfig_SOURCES = T_parseConfig.cpp ../src/parseConfig.cpp ../src/stringTools.cpp
-T_stringTools_SOURCES = T_stringTools.cpp ../src/stringTools.cpp
+T_parseConfig_SOURCES = T_parseConfig.cpp ../src/utils/parseConfig.cpp ../src/utils/stringTools.cpp
+T_stringTools_SOURCES = T_stringTools.cpp ../src/utils/stringTools.cpp
 get_random_value_SOURCES = get_random_value.c
 
-AM_CPPFLAGS = -I$(top_srcdir)/src -include logging.h
+AM_CPPFLAGS = -I$(top_srcdir)/src -I$(top_srcdir)/src/utils -include logging.h
 
 
 # include the tests on the distribution

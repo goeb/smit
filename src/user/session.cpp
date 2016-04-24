@@ -18,12 +18,12 @@
 #include <openssl/err.h>
 
 #include "session.h"
-#include "logging.h"
-#include "identifiers.h"
-#include "filesystem.h"
+#include "utils/logging.h"
+#include "utils/identifiers.h"
+#include "utils/filesystem.h"
+#include "utils/parseConfig.h"
 #include "global.h"
-#include "parseConfig.h"
-#include "db.h"
+#include "repository/db.h"
 #include "AuthSha1.h"
 #include "fnmatch.h"
 

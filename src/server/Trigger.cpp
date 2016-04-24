@@ -21,12 +21,12 @@
 #include <signal.h>
 
 #include "Trigger.h"
-#include "stringTools.h"
-#include "parseConfig.h"
-#include "db.h"
-#include "logging.h"
+#include "utils/stringTools.h"
+#include "utils/parseConfig.h"
+#include "utils/logging.h"
+#include "repository/db.h"
 #include "global.h"
-#include "session.h"
+#include "user/session.h"
 
 
 std::string toJson(const std::string &text)

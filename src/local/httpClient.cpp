@@ -24,11 +24,11 @@
 
 #include "httpClient.h"
 #include "global.h"
-#include "stringTools.h"
+#include "utils/stringTools.h"
+#include "utils/filesystem.h"
+#include "utils/logging.h"
 #include "mg_win32.h"
 #include "console.h"
-#include "filesystem.h"
-#include "logging.h"
 #include "restApi.h"
 
 HttpClientContext::HttpClientContext()

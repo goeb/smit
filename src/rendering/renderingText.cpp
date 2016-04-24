@@ -13,9 +13,8 @@
 #include "config.h"
 
 #include "renderingText.h"
-#include "db.h"
-#include "logging.h"
-#include "stringTools.h"
+#include "utils/logging.h"
+#include "utils/stringTools.h"
 #include "global.h"
 
 void RText::printProjectList(const RequestContext *req, const std::list<ProjectSummary> &pList)

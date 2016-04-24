@@ -7,8 +7,8 @@
 
 #include "HttpContext.h"
 #include "ContextParameters.h"
-#include "db.h"
-#include "session.h"
+#include "user/session.h"
+#include "repository/db.h"
 
 
 #define QS_GOTO_NEXT "next"

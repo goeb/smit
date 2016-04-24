@@ -1,11 +1,11 @@
 #ifndef _renderingJson_h
 #define _renderingJson_h
 
-#include <list>
+#include <vector>
 #include <string>
 
-#include "db.h"
 #include "HttpContext.h"
+#include "project/Issue.h"
 
 class RJson {
 public:

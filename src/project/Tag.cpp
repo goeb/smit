@@ -3,10 +3,10 @@
 #include <stdlib.h>
 
 #include "Tag.h"
-#include "parseConfig.h"
+#include "utils/parseConfig.h"
+#include "utils/filesystem.h"
+#include "utils/logging.h"
 #include "Object.h"
-#include "filesystem.h"
-#include "logging.h"
 #include "global.h"
 
 #define K_TAG "+tag"

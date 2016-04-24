@@ -15,7 +15,7 @@
 #include <string.h>
 
 #include "HttpContext.h"
-#include "logging.h"
+#include "utils/logging.h"
 
 // static members
 int  (*MongooseServerContext::requestHandler)(const RequestContext*) = 0;

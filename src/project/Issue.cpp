@@ -30,12 +30,12 @@
 #include <unistd.h>
 
 #include "Issue.h"
-#include "parseConfig.h"
-#include "filesystem.h"
-#include "logging.h"
-#include "identifiers.h"
+#include "utils/parseConfig.h"
+#include "utils/filesystem.h"
+#include "utils/logging.h"
+#include "utils/identifiers.h"
+#include "utils/stringTools.h"
 #include "global.h"
-#include "stringTools.h"
 #include "mg_win32.h"
 #include "fnmatch.h"
 
