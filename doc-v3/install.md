@@ -126,7 +126,7 @@ tar cvfz $REPO.tar.gz $REPO
 Use the `--url-rewrite-root` option. Eg:
 
 ```
-linux/smit serve demo --url-rewrite-root /bugtracker
+linux/smit serve demo --url-rewrite-root /bt
 ```
 
 Example of reverse proxy configuration with lighttpd:

@@ -113,7 +113,7 @@ notifyNewEntry.py</code></pre>
 <pre><code>tar cvfz $REPO.tar.gz $REPO</code></pre>
 <h2 id="setup-behind-a-reverse-proxy">Setup behind a reverse proxy</h2>
 <p>Use the <code>--url-rewrite-root</code> option. Eg:</p>
-<pre><code>linux/smit serve demo --url-rewrite-root /bugtracker</code></pre>
+<pre><code>linux/smit serve demo --url-rewrite-root /bt</code></pre>
 <p>Example of reverse proxy configuration with lighttpd: (tested with lighttpd-1.4.35)</p>
 <pre><code>server.document-root = &quot;/tmp&quot;
 server.port = 3000
@@ -132,7 +132,7 @@ $SERVER[&quot;socket&quot;] == &quot;:8092&quot; {
 </div>
         </div> <!-- div class page -->
         <div class="footer">
-            Page updated on  9 Feb 2016
+            Page updated on 24 Apr 2016
         </div>
     </body>
 </html>
