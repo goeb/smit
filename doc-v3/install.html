@@ -113,14 +113,14 @@ notifyNewEntry.py</code></pre>
 <pre><code>tar cvfz $REPO.tar.gz $REPO</code></pre>
 <h2 id="setup-behind-a-reverse-proxy">Setup behind a reverse proxy</h2>
 <p>Use the <code>--url-rewrite-root</code> option. Eg:</p>
-<pre><code>linux/smit serve demo --url-rewrite-root /bt</code></pre>
+<pre><code>linux/smit serve demo --url-rewrite-root /bugtracker</code></pre>
 <p>Example of reverse proxy configuration with lighttpd: (tested with lighttpd-1.4.35)</p>
 <pre><code>server.document-root = &quot;/tmp&quot;
 server.port = 3000
 server.modules += ( &quot;mod_proxy&quot; , &quot;mod_rewrite&quot;)
 
 $SERVER[&quot;socket&quot;] == &quot;:8092&quot; {
-    url.rewrite-once = ( &quot;^/bt/(.*)$&quot; =&gt; &quot;/$1&quot; )
+    url.rewrite-once = ( &quot;^/bugtracker/(.*)$&quot; =&gt; &quot;/$1&quot; )
     proxy.server = ( &quot;&quot; =&gt; ( (
         &quot;host&quot; =&gt; &quot;127.0.0.1&quot;,
         &quot;port&quot; =&gt; 8090
@@ -128,7 +128,7 @@ $SERVER[&quot;socket&quot;] == &quot;:8092&quot; {
     )
 }
 </code></pre>
-<p>In this example, Smit is available at address: <code>http://127.0.0.1:8092/bt/</code></p>
+<p>In this example, Smit is available at address: <code>http://127.0.0.1:8092/bugtracker/</code></p>
 </div>
         </div> <!-- div class page -->
         <div class="footer">

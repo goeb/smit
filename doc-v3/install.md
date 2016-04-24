@@ -126,7 +126,7 @@ tar cvfz $REPO.tar.gz $REPO
 Use the `--url-rewrite-root` option. Eg:
 
 ```
-linux/smit serve demo --url-rewrite-root /bt
+linux/smit serve demo --url-rewrite-root /bugtracker
 ```
 
 Example of reverse proxy configuration with lighttpd:
@@ -138,7 +138,7 @@ server.port = 3000
 server.modules += ( "mod_proxy" , "mod_rewrite")
 
 $SERVER["socket"] == ":8092" {
-    url.rewrite-once = ( "^/bt/(.*)$" => "/$1" )
+    url.rewrite-once = ( "^/bugtracker/(.*)$" => "/$1" )
     proxy.server = ( "" => ( (
         "host" => "127.0.0.1",
         "port" => 8090
@@ -148,5 +148,5 @@ $SERVER["socket"] == ":8092" {
 
 ```
 
-In this example, Smit is available at address: `http://127.0.0.1:8092/bt/`
+In this example, Smit is available at address: `http://127.0.0.1:8092/bugtracker/`
 
