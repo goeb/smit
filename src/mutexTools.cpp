@@ -17,6 +17,10 @@
   * a mutex locked by another thread. Hence the sleep during a few milliseconds.
   * Maybe should be improved. I should read the MSDN doc.
   *
+  * TODO, use:
+  * - pthread_rwlock on Linux
+  * - Slim Reader/Writer (SRW) Locks on Windows
+  *
   */
 #include "mutexTools.h"
 #include "logging.h"
