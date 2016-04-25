@@ -75,14 +75,14 @@ std::string toJson(const std::list<std::string> &items)
   *
   */
 std::string Trigger::formatEntry(const Project &project, const Issue &issue, const Entry &entry,
-                                 const std::map<std::string, Role> &users, bool isNewIssue)
+                                 const std::map<std::string, Role> &users)
 {
     ProjectConfig pconfig = project.getConfig();
 
     std::ostringstream s;
     s << "{\n" << toJson("project") << ":" << toJson(project.getName()) << ",\n";
     s << toJson("issue") << ":" << toJson(issue.id) << ",\n";
-    s << toJson("isNew") << ":" << (isNewIssue?"true":"false") << ",\n";
+    s << toJson("isNew") << ":" << ( (entry.parent == K_PARENT_NULL) ? "true":"false") << ",\n";
     s << toJson("entry") << ":" << toJson(entry.id) << ",\n";
     s << toJson("author") << ":" << toJson(entry.author) << ",\n";
 
@@ -148,7 +148,7 @@ std::string Trigger::formatEntry(const Project &project, const Issue &issue, con
 
 /** Run an external program for notifying a new entry
   */
-void Trigger::notifyEntry(const Project &project, const Entry *entry, bool isNewIssue)
+void Trigger::notifyEntry(const Project &project, const Entry *entry)
 {
     LOG_FUNC();
     if (!entry) return;
@@ -166,7 +166,7 @@ void Trigger::notifyEntry(const Project &project, const Entry *entry, bool isNew
         // format the data that will be given to the external program on its stdin
         Issue *i = entry->issue;
         std::map<std::string, Role> users = UserBase::getUsersRolesOfProject(project.getName());
-        std::string text = formatEntry(project, *i, *entry, users, isNewIssue);
+        std::string text = formatEntry(project, *i, *entry, users);
 
         run(programPath, text);
     }

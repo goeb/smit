@@ -2063,7 +2063,6 @@ void httpPostEntry(const RequestContext *req, Project &pro, const std::string & 
 
     parseMultipartAndStoreUploadedFiles(postData, boundary, vars, pro);
 
-    bool isNewIssue = false;
     std::string id = issueId;
     Entry *entry = 0;
 
@@ -2085,7 +2084,6 @@ void httpPostEntry(const RequestContext *req, Project &pro, const std::string & 
 
         if (id == "new") {
             id = "";
-            isNewIssue = true;
         }
         r = pro.addEntry(vars, id, entry, u.username);
         if (r < 0) {
@@ -2097,7 +2095,7 @@ void httpPostEntry(const RequestContext *req, Project &pro, const std::string & 
 #if !defined(_WIN32)
     if (entry) {
         // launch the trigger only if a new entry was actually created
-        if (! UserBase::isLocalUserInterface()) Trigger::notifyEntry(pro, entry, isNewIssue);
+        if (! UserBase::isLocalUserInterface()) Trigger::notifyEntry(pro, entry);
     }
 #endif
 
