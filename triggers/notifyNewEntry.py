@@ -233,6 +233,7 @@ def parseCommandLine():
     parser.add_argument('--if-property-modified', help='send an email if any of the given properties is modified (separated by commas)')
     parser.add_argument('--mailto-property', help='send the email to the people in the given property')
     parser.add_argument('--mailto-admins', action='store_true', help='send the email to all administrators of the project')
+    parser.add_argument('--mailto', help='additionnal email addressees (separated by commas)')
     parser.add_argument('--test', action='store_true', help='test with dummy data (useful for command line debugging)')
     parser.add_argument('--verbose', action='store_true', help='be verbose')
     args = parser.parse_args()
@@ -284,6 +285,12 @@ if args.mailto_property:
 if args.mailto_admins:
     # send email to admins
     addressees = addressees.union(getMailOfAdmins(jsonMsg))
+
+if args.mailto:
+    # send email to additionnal addressees
+    emails = args.mailto.split(',')
+    emails = [ x.strip() for x in emails ]
+    addressees = addressees.union(emails)
 
 if len(addressees) == 0:
     # no addressees, no email to send
