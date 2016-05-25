@@ -45,6 +45,8 @@
 #define K_SM_DIV_NAVIGATION_ISSUES "SM_DIV_NAVIGATION_ISSUES"
 #define K_SM_HTML_PROJECT "SM_HTML_PROJECT"
 #define K_SM_URL_PROJECT "SM_URL_PROJECT" // including the SM_URL_ROOT
+#define K_SM_URL_USER "SM_URL_USER"
+#define K_SM_HTML_USER "SM_HTML_USER"
 #define K_SM_RAW_ISSUE_ID "SM_RAW_ISSUE_ID"
 #define K_SM_DIV_PREDEFINED_VIEWS "SM_DIV_PREDEFINED_VIEWS"
 #define K_SM_DIV_PROJECTS "SM_DIV_PROJECTS"
@@ -191,6 +193,12 @@ public:
             } else if (varname == K_SM_URL_PROJECT && ctx.hasProject()) {
                 ctx.req->printf("%s/%s", ctx.req->getUrlRewritingRoot().c_str(),
                                 ctx.getProjectUrlName().c_str());
+
+            } else if (varname == K_SM_URL_USER) {
+                ctx.req->printf("%s", urlEncode(ctx.user.username).c_str());
+
+            } else if (varname == K_SM_HTML_USER) {
+                ctx.req->printf("%s", htmlEscape(ctx.user.username).c_str());
 
             } else if (varname == K_SM_DIV_NAVIGATION_GLOBAL) {
                 RHtml::printNavigationGlobal(ctx);
