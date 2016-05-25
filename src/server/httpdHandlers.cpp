@@ -2094,8 +2094,18 @@ void httpPostEntry(const RequestContext *req, Project &pro, const std::string & 
 
 #if !defined(_WIN32)
     if (entry) {
-        // launch the trigger only if a new entry was actually created
-        if (! UserBase::isLocalUserInterface()) Trigger::notifyEntry(pro, entry);
+        // TODO: At the moment the notification is not thread-safe, as the message of the entry
+        // may be modified by an amendment in the meanwhile, and in that case the notification will
+        // contain the latest message instead of the former one.
+        IssueCopy issue;
+        int r = pro.get(entry->issue, issue); // TODO rework this
+        if (r != 0) {
+            // should not happen
+            LOG_ERROR("Cannot get issue '%s' of entry '%s'", entry->issue->c_str(), entry->id.c_str());
+        } else {
+            // launch the trigger only if a new entry was actually created
+            if (! UserBase::isLocalUserInterface()) Trigger::notifyEntry(pro, entry);
+        }
     }
 #endif
 

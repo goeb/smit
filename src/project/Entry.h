@@ -78,6 +78,7 @@ private:
       * - or this->properties[K_MESSAGE]
       * - or to the message of the latest amending entry
       */
+    // TODO: replace the *message by a const Entry* amendedBy; (that must be mutexed)
     const std::string *message;
     static const std::string EMPTY_MESSAGE;
 

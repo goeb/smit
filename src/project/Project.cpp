@@ -305,7 +305,7 @@ void Project::consolidateAssociations(IssueCopy &issue, bool forward) const
 /** Return a given issue
   *
   * @param[out] issue
-  *     Thread-safe, as the returned issue is a copy.
+  *     The returned issue is a copy, and can thus be used without threading conflict.
   */
 int Project::get(const std::string &issueId, IssueCopy &issue) const
 {

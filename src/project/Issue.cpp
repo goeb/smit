@@ -173,6 +173,9 @@ void Issue::consolidateWithSingleEntry(Entry *e) {
 }
 
 /** Consolidate a possible amended entry
+  *
+  * @param e
+  *    The amending entry
   */
 void Issue::consolidateAmendment(Entry *e)
 {
