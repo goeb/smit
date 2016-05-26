@@ -1,5 +1,6 @@
 v3.3.0
     - pre-filled template for textarea2 properties
+    - HTML templates: server side includes (SM_INCLUDE)
 
 v3.2.2, 31 Mar 2016
     - use openssl random
