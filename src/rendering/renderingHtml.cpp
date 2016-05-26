@@ -61,11 +61,12 @@
 #define K_SM_SCRIPT "SM_SCRIPT"
 #define K_SM_DIV_ENTRIES "SM_DIV_ENTRIES"
 #define K_SM_DATALIST_PROJECTS "SM_DATALIST_PROJECTS"
+#define K_SM_INCLUDE "SM_INCLUDE"
 
 /** Load a page template of a specific project
   *
-  * By default pages (typically HTML pages) are loaded from $REPO/public/ directory.
-  * But the administrator may override this by pages located in $REPO/$PROJECT/html/ directory.
+  * By default pages (typically HTML pages) are loaded from $REPO/.smit/templates/ directory.
+  * But the administrator may override this by pages located in $REPO/$PROJECT/.smip/templates/ directory.
   *
   * The caller is responsible for calling 'free' on the returned pointer (if not null).
   */
@@ -96,11 +97,13 @@ int loadProjectPage(const RequestContext *req, const std::string &projectPath, c
   */
 class VariableNavigator {
 public:
+
+    const ContextParameters &ctx;
+
     const std::vector<IssueCopy> *issueList;
     const std::vector<IssueCopy> *issuesOfAllProjects;
     const std::vector<IssueCopy> *issueListFullContents;
     const std::list<std::string> *colspec;
-    const ContextParameters &ctx;
     const std::list<ProjectSummary> *projectList;
     const std::list<User> *usersList;
     const IssueCopy *currentIssue;
@@ -110,7 +113,7 @@ public:
     std::string script; // javascript to be inserted in SM_SCRIPT
     const std::vector<Entry> *entries;
 
-    VariableNavigator(const std::string basename, const ContextParameters &context) : ctx(context) {
+    VariableNavigator(const std::string &basename, const ContextParameters &context) : ctx(context) {
         buffer = 0;
         issueList = 0;
         issuesOfAllProjects = 0;
@@ -127,15 +130,7 @@ public:
         dumpStart = 0;
         dumpEnd = 0;
         size = 0;
-
-        int n = loadProjectPage(ctx.req, ctx.projectPath, basename, &buffer);
-
-        if (n > 0) {
-            size = n;
-            dumpStart = buffer;
-            dumpEnd = buffer;
-            searchFromHere = buffer;
-        } else buffer = 0;
+        filename = basename;
     }
 
     ~VariableNavigator() {
@@ -146,6 +141,11 @@ public:
         }
     }
 
+    /** Look for the next SM_ variable
+      *
+      * A SM_ variable is syntactically like this:
+      *    "SM_" followed by any character letter, digit or '_'
+      */
     std::string getNextVariable() {
 
         if (searchFromHere >= (buffer+size)) return "";
@@ -167,6 +167,48 @@ public:
         return varname;
     }
 
+    /** Return the filename after a SM_INCLUDE
+      *
+      * When this function is called, the next expected characters are: '(' <filename> ')'.
+      * On invalid syntax, an empty string is returned, and offset are kept unchanged.
+      */
+    std::string getInclude() {
+        if (searchFromHere >= (buffer+size)) return "";
+        if (*searchFromHere != '(') {
+            LOG_ERROR("getInclude: missing '('");
+            return "";
+        }
+
+        const char *p0 = searchFromHere + 1; // offset of the start of he filename
+
+        // go to the next ')'
+        const char *p = p0;
+        while ( (p < buffer+size) && (*p != ')') ) p++;
+
+        if (p >= buffer+size) {
+            LOG_ERROR("getInclude: missing ')'");
+            return "";
+        }
+
+        // from p0 to p-1
+        std::string filename(p0, p-p0);
+
+        // Do some checks, and keep only the basename
+        std::string filenameBase = getBasename(filename);
+        if (filenameBase != filename || filename.empty()) {
+            LOG_ERROR("getInclude: malformed file name '%s'. It should not contain sub-directories, etc.",
+                      filename.c_str());
+            return "";
+        }
+        // ok, accept the filename
+        // update the offsets
+        searchFromHere = p+1;
+        dumpStart = searchFromHere;
+        dumpEnd = dumpStart;
+
+        return filename;
+    }
+
     void dumpPrevious(const RequestContext *req) {
         if (dumpEnd == dumpStart) {
             LOG_ERROR("dumpPrevious: dumpEnd == dumpStart");
@@ -178,8 +220,29 @@ public:
     }
 
     void printPage() {
-        if (!buffer) return;
+
         ctx.req->printf("Content-Type: text/html\r\n\r\n");
+
+        printPageContents(0);
+    }
+
+    void printPageContents(int includeLevel) {
+
+        const int MAX_INCLUDE_LEVEL = 5;
+        if (includeLevel > MAX_INCLUDE_LEVEL) {
+            // Basic mechanism to protect against circular includes
+            LOG_ERROR("printPageContents: max include level reached (%d)", MAX_INCLUDE_LEVEL);
+            return;
+        }
+
+        int n = loadProjectPage(ctx.req, ctx.projectPath, filename, &buffer);
+
+        if (n <= 0) return;
+
+        size = n;
+        dumpStart = buffer;
+        dumpEnd = buffer;
+        searchFromHere = buffer;
 
         while (1) {
             std::string varname = getNextVariable();
@@ -265,6 +328,13 @@ public:
                 }
             } else if (varname == K_SM_DIV_ENTRIES && entries) {
                 RHtml::printEntries(ctx, *entries);
+
+            } else if (varname == K_SM_INCLUDE) {
+                // Expected syntax: SM_INCLUDE(filename.html)
+                std::string filename = getInclude();
+                VariableNavigator vn(filename, ctx);
+                vn.printPageContents(includeLevel+1);
+
             } else {
                 // unknown variable name
                 ctx.req->printf("%s", varname.c_str());
@@ -279,6 +349,7 @@ private:
     const char * dumpStart;
     const char * dumpEnd;
     const char * searchFromHere;
+    std::string filename;
 
 };
 
