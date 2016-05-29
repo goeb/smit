@@ -1,6 +1,10 @@
 v3.3.0
     - pre-filled template for textarea2 properties
     - HTML templates: server side includes (SM_INCLUDE)
+    - HTML templates: modified CSS class names:
+        'sm_zone_superadmin' -> 'sm_cap_superadmin'
+        'sm_zone_non_superadmin' -> (removed)
+        projects.html: link to "new project" moved into the template
 
 v3.2.2, 31 Mar 2016
     - use openssl random

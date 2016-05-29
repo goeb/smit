@@ -1,4 +1,3 @@
-
 <table>
     <tr>
         <td>
@@ -7,21 +6,22 @@
         <td class="no_print">
             SM_INCLUDE(global-bar.html)
 
-            <br>
+            <div style="border-top: 1px solid grey;">
+                <span style="margin: 0.5em; padding: 3px;">Project: </span>
+                <a class="sm_link_modify_project" href="SM_URL_PROJECT/config">Config</a>
+                <a class="sm_link_views" href="SM_URL_PROJECT/views/">Views</a>
+                <a class="sm_link_stat" href="SM_URL_PROJECT/stat">Stat</a>
+                <a class="sm_link_stat" href="SM_URL_PROJECT/entries/?sort=-ctime&limit=50">Latest entries</a>
+                <a class="sm_link_new_issue" href="SM_URL_PROJECT/issues/new">New issue</a>
 
-            <a class="sm_link_modify_project" href="SM_URL_PROJECT/config">Project config</a>
-            <a class="sm_link_views" href="SM_URL_PROJECT/views/">Views</a>
-            <a class="sm_link_stat" href="SM_URL_PROJECT/stat">Stat</a>
-            <a class="sm_link_stat" href="SM_URL_PROJECT/entries/?sort=-ctime&limit=50">Latest entries</a>
-            <a class="sm_link_new_issue" href="SM_URL_PROJECT/issues/new">New issue</a>
+                <br>
 
-            <br>
-
-            SM_SPAN_VIEWS_MENU
-            <form action="SM_URL_PROJECT/issues/" class="sm_searchbox" method="get">
-                <input class="sm_searchbox" name="search" placeholder="Search text..." type="text">
-            </form>
-            <a class="sm_advanced_search" href="SM_URL_PROJECT/views/_" >Advanced Search</a>
+                SM_SPAN_VIEWS_MENU
+                <form action="SM_URL_PROJECT/issues/" class="sm_searchbox" method="get">
+                    <input class="sm_searchbox" name="search" placeholder="Search text..." type="text">
+                </form>
+                <a class="sm_advanced_search" href="SM_URL_PROJECT/views/_" >Advanced Search</a>
+            </div>
         </td>
     </tr>
 </table>

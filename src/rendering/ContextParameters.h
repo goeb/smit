@@ -13,7 +13,7 @@ public:
     void init(const RequestContext *request, const User &u);
 
     User user; // signed-in user
-    enum Role userRole;
+    enum Role userRole; // role of the signed-in user on the current project (if there is a current project)
     std::string search;
     std::string sort;
     std::map<std::string, std::list<std::string> > filterin;

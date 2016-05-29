@@ -388,23 +388,42 @@ void RHtml::printPageStat(const ContextParameters &ctx, const User &u)
     vn.printPage();
 }
 
+
+std::string jsSetUserCapAndRole(const ContextParameters &ctx)
+{
+    std::string script = "setUserCapabilityAndRole(";
+
+    if (ctx.user.superadmin) script += "SmCapability.superadmin";
+    else script += "SmCapability.none";
+
+    script += ", ";
+
+    switch(ctx.userRole)     {
+    case ROLE_ADMIN: script += "SmRole.admin"; break;
+    case ROLE_RW:    script += "SmRole.rw"; break;
+    case ROLE_RO:    script += "SmRole.ro"; break;
+    case ROLE_REFERENCED:
+    case ROLE_NONE:
+    default:
+        script += "SmRole.none"; break;
+    }
+
+    script += ");\n";
+
+    return script;
+}
+
 void RHtml::printPageUser(const ContextParameters &ctx, const User *u)
 {
     VariableNavigator vn("user.html", ctx);
     vn.concernedUser = u;
 
     // add javascript for updating the form fields
-    vn.script = "";
+    vn.script = jsSetUserCapAndRole(ctx);
 
     if (ctx.user.superadmin) {
-        vn.script += "showOrHideClasses('sm_zone_superadmin', true);\n";
-        vn.script += "showOrHideClasses('sm_zone_non_superadmin', false);\n";
         if (u) vn.script += "setName('" + enquoteJs(u->username) + "');\n";
 
-    } else {
-        // hide what is reserved to superadmin
-        vn.script += "showOrHideClasses('sm_zone_superadmin', false);\n";
-        vn.script += "showOrHideClasses('sm_zone_non_superadmin', true);\n";
     }
 
     if (u && u->superadmin) {
@@ -896,10 +915,7 @@ void RHtml::printProjects(const ContextParameters &ctx,
         }
         ctx.req->printf("</tr>\n"); // end row for this project
     }
-    ctx.req->printf("</table><br>\n");
-    if (ctx.user.superadmin) ctx.req->printf("<div class=\"sm_projects_new\">"
-                                             "<a href=\"_\" class=\"sm_projects_new\">%s</a></div><br>",
-                                             htmlEscape(_("New Project")).c_str());
+    ctx.req->printf("</table>");
 }
 
 void RHtml::printUsers(const RequestContext *req, const std::list<User> &usersList)
@@ -973,6 +989,7 @@ void RHtml::printPageProjectList(const ContextParameters &ctx,
     VariableNavigator vn("projects.html", ctx);
     vn.projectList = &pList;
     vn.userRolesByProject = &userRolesByProject;
+    vn.script = jsSetUserCapAndRole(ctx);
     vn.printPage();
 }
 
@@ -1056,17 +1073,11 @@ void RHtml::printProjectConfig(const ContextParameters &ctx,
 {
     VariableNavigator vn("project.html", ctx);
     vn.projectList = &pList;
-    vn.script = getScriptProjectConfig(ctx, alternateConfig);
+    vn.script = jsSetUserCapAndRole(ctx);
+    vn.script += getScriptProjectConfig(ctx, alternateConfig);
 
-    if (ctx.user.superadmin) {
-        vn.script += "showOrHideClasses('sm_zone_superadmin', true);\n";
-        if (ctx.hasProject()) {
-            vn.script += "setProjectName('" + enquoteJs(ctx.projectName) + "');\n";
-        }
-
-    } else {
-        // hide what is reserved to superadmin
-        vn.script += "showOrHideClasses('sm_zone_superadmin', false);\n";
+    if (ctx.user.superadmin && ctx.hasProject()) {
+        vn.script += "setProjectName('" + enquoteJs(ctx.projectName) + "');\n";
     }
 
     vn.printPage();

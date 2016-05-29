@@ -1,4 +1,6 @@
 /* Small Issue Tracker */
+
+
 function changeWrapping() {
     var msg = document.getElementsByName('+message')[0];
     if (msg.wrap != "off") msg.wrap = "off";
@@ -563,8 +565,10 @@ function showOrHideClasses(className, show) {
         var item = items[i];
         var classList = item.className.split(' '); // IE 9 does not support classList
         if (classList.indexOf(className) > -1) {
-            if (show) item.style.display='block';
-            else item.style.display='none';
+            if (show) {
+                if ( item.tagName == 'div') item.style.display = 'block';
+                else item.style.display = 'inline';
+            } else item.style.display = 'none';
 
             // disable child inputs
             var inputs = item.getElementsByTagName('input');
@@ -576,3 +580,29 @@ function showOrHideClasses(className, show) {
     }
 }
 
+SmCapability = {
+    superadmin : 0,
+    none : 1
+}
+
+SmRole = {
+    admin : 0,
+    rw : 1,
+    ro : 2,
+    ref : 3,
+    none : 4
+}
+
+function setUserCapabilityAndRole(cap, role) {
+    var classname = 'sm_cap_superadmin';
+    if (cap == SmCapability.superadmin) showOrHideClasses(classname, true);
+    else showOrHideClasses(classname, false);
+
+    classname = 'sm_role_rw';
+    if (role <= SmRole.rw) showOrHideClasses(classname, true);
+    else showOrHideClasses(classname, false);
+
+    classname = 'sm_role_admin';
+    if (role == SmRole.admin) showOrHideClasses(classname, true);
+    else showOrHideClasses(classname, false);
+}
