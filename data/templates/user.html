@@ -18,8 +18,18 @@
         <h1>User Configuration</h1>
 
         <form action="" method="POST">
-            <div class="sm_zone_non_superadmin">
-                <h2>Password</h2>
+            <table class="sm_cap_superadmin">
+                <tr><td>User name:</td><td><input id="name" name="name" type="text" required="required"></td></tr>
+                <tr><td><label for="superadmin">Superadmin:</label></td><td><input id="superadmin" name="sm_superadmin" type="checkbox"></td></tr>
+            </table>
+            <br>
+            <h2>Authentication</h2>
+            <div class="sm_cap_superadmin">
+                <label><input onclick="selectAuth(this);" type="radio" name="sm_auth_type" value="sha1">Password</label>
+                <label><input onclick="selectAuth(this);" type="radio" name="sm_auth_type" value="krb5">Kerberos</label>
+                <label><input onclick="selectAuth(this);" type="radio" name="sm_auth_type" value="ldap">LDAP</label>
+            </div>
+            <div class="box_auth_sha1 box_auth">
                 <table><tr><td>Password:</td><td>
                             <input name="sm_passwd1" type="password" size="30" placeholder="leave empty to keep unchanged">
                     </td></tr>
@@ -27,49 +37,28 @@
                             <input name="sm_passwd2" type="password" size="30">
                 </td></tr></table>
             </div>
-            <div class="sm_zone_superadmin">
-                <table>
-                    <tr><td>User name:</td><td><input id="name" name="name" type="text" required="required"></td></tr>
-                    <tr><td><label for="superadmin">Superadmin:</label></td><td><input id="superadmin" name="sm_superadmin" type="checkbox"></td></tr>
-                </table>
-                <br>
-                <h2>Authentication</h2>
-                <label><input onclick="selectAuth(this);" type="radio" name="sm_auth_type" value="sha1">Password</label>
-                <label><input onclick="selectAuth(this);" type="radio" name="sm_auth_type" value="krb5">Kerberos</label>
-                <label><input onclick="selectAuth(this);" type="radio" name="sm_auth_type" value="ldap">LDAP</label>
-                <div class="box_auth_sha1 box_auth">
-                    <table><tr><td>Password:</td><td>
-                                <input name="sm_passwd1" type="password" size="30" placeholder="leave empty to keep unchanged">
-                        </td></tr>
-                        <tr><td>Re-enter password:</td><td>
-                                <input name="sm_passwd2" type="password" size="30">
-                    </td></tr></table>
-                </div>
-                <div class="box_auth_krb5 box_auth">
-                    <table><tr><td>Kerberos name:</td><td>
-                                <input name="sm_krb5_primary" type="text" size="30"> (if different from the username)
-                        </td></tr>
-                        <tr><td>Kerberos Realm:</td><td>
-                                <input name="sm_krb5_realm" type="text" placeholder="EXAMPLE.COM" size="30"> (must be upper case)
-                    </td></tr></table>
-                </div>
-                <div class="box_auth_ldap box_auth">
-                    <table><tr><td>LDAP URI:</td><td>
-                                <input name="sm_ldap_uri" type="text" placeholder="ldaps://example.com:636" size="30">
-                        </td></tr>
-                        <tr><td>LDAP Distinguished Name:</td><td>
-                                <input name="sm_ldap_dname" type="text" placeholder="cn=John Doe,ou=People,dc=example,dc=com" size="60">
-                    </td></tr></table>
-                </div>
-                <br>
-                <br>
+            <div class="box_auth_krb5 box_auth sm_cap_superadmin">
+                <table><tr><td>Kerberos name:</td><td>
+                            <input name="sm_krb5_primary" type="text" size="30"> (if different from the username)
+                    </td></tr>
+                    <tr><td>Kerberos Realm:</td><td>
+                            <input name="sm_krb5_realm" type="text" placeholder="EXAMPLE.COM" size="30"> (must be upper case)
+                </td></tr></table>
+            </div>
+            <div class="box_auth_ldap box_auth sm_cap_superadmin">
+                <table><tr><td>LDAP URI:</td><td>
+                            <input name="sm_ldap_uri" type="text" placeholder="ldaps://example.com:636" size="30">
+                    </td></tr>
+                    <tr><td>LDAP Distinguished Name:</td><td>
+                            <input name="sm_ldap_dname" type="text" placeholder="cn=John Doe,ou=People,dc=example,dc=com" size="60">
+                </td></tr></table>
+            </div>
+            <div class="sm_cap_superadmin">
                 <h2>Configure Permissions on Projects</h2>
                 Enter the names of the projects and the related permissions.<br>
                 Several projects can be referred at once using a wildcard (Eg: appolo*).
                 <div id="sm_permissions"></div>
                 <div onclick="addPermission('sm_permissions', '', '');" class="clickable">+ Click for more...</div>
-                <br>
-
             </div>
             <input type="submit" value="Apply">
         </form>
@@ -77,7 +66,7 @@
         <h2>Permissions</h2>
 SM_TABLE_USER_PERMISSIONS
         <br>
-        <div class="sm_zone_superadmin">
+        <div class="sm_cap_superadmin">
             <button type="button" onclick="sm_deleteResource('./');">Delete this user</button>
         </div>
         SM_SCRIPT
