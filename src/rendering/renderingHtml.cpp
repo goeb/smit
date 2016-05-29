@@ -41,27 +41,38 @@
 #endif
 
 
+// Basic items
+#define K_SM_URL_ROOT "SM_URL_ROOT"
+#define K_SM_HTML_PROJECT       "SM_HTML_PROJECT"  // Project name
+#define K_SM_URL_PROJECT        "SM_URL_PROJECT"   // URL to project, including the SM_URL_ROOT
+#define K_SM_URL_USER           "SM_URL_USER"      // User name, in url-encoded format
+#define K_SM_HTML_USER          "SM_HTML_USER"     // User name, in html-escaped format
+#define K_SM_RAW_ISSUE_ID       "SM_RAW_ISSUE_ID"  // Issue ID, no formatting
+#define K_SM_HTML_ISSUE_SUMMARY "SM_HTML_ISSUE_SUMMARY" // Summary of an issue, html-escaped
+#define K_SM_DATALIST_PROJECTS "SM_DATALIST_PROJECTS" // <datalist> of projects names
+
+// Whole blocks of page
+// ---- in the scope of a project
+#define K_SM_SPAN_VIEWS_MENU      "SM_SPAN_VIEWS_MENU" // Menu of views
+#define K_SM_DIV_PREDEFINED_VIEWS "SM_DIV_PREDEFINED_VIEWS" // page for editing views
+#define K_SM_DIV_PROJECTS         "SM_DIV_PROJECTS"
+#define K_SM_DIV_ISSUES           "SM_DIV_ISSUES"
+#define K_SM_DIV_ISSUE            "SM_DIV_ISSUE"
+#define K_SM_DIV_ISSUE_FORM       "SM_DIV_ISSUE_FORM"
+#define K_SM_DIV_ISSUE_MSG_PREVIEW "SM_DIV_ISSUE_MSG_PREVIEW"
+#define K_SM_DIV_ENTRIES          "SM_DIV_ENTRIES"
+// ---- not related to any specific project
+#define K_SM_DIV_USERS              "SM_DIV_USERS"
+#define K_SM_TABLE_USER_PERMISSIONS "SM_TABLE_USER_PERMISSIONS"
+
+// Technical SM variables
+#define K_SM_INCLUDE "SM_INCLUDE"
+#define K_SM_SCRIPT  "SM_SCRIPT"
+
+// Obsolete SM variables
 #define K_SM_DIV_NAVIGATION_GLOBAL "SM_DIV_NAVIGATION_GLOBAL"
 #define K_SM_DIV_NAVIGATION_ISSUES "SM_DIV_NAVIGATION_ISSUES"
-#define K_SM_HTML_PROJECT "SM_HTML_PROJECT"
-#define K_SM_URL_PROJECT "SM_URL_PROJECT" // including the SM_URL_ROOT
-#define K_SM_URL_USER "SM_URL_USER"
-#define K_SM_HTML_USER "SM_HTML_USER"
-#define K_SM_RAW_ISSUE_ID "SM_RAW_ISSUE_ID"
-#define K_SM_DIV_PREDEFINED_VIEWS "SM_DIV_PREDEFINED_VIEWS"
-#define K_SM_DIV_PROJECTS "SM_DIV_PROJECTS"
-#define K_SM_DIV_USERS "SM_DIV_USERS"
-#define K_SM_DIV_ISSUES "SM_DIV_ISSUES"
-#define K_SM_DIV_ISSUE "SM_DIV_ISSUE"
-#define K_SM_HTML_ISSUE_SUMMARY "SM_HTML_ISSUE_SUMMARY"
-#define K_SM_DIV_ISSUE_FORM "SM_DIV_ISSUE_FORM"
-#define K_SM_DIV_ISSUE_MSG_PREVIEW "SM_DIV_ISSUE_MSG_PREVIEW"
-#define K_SM_URL_ROOT "SM_URL_ROOT"
-#define K_SM_TABLE_USER_PERMISSIONS "SM_TABLE_USER_PERMISSIONS"
-#define K_SM_SCRIPT "SM_SCRIPT"
-#define K_SM_DIV_ENTRIES "SM_DIV_ENTRIES"
-#define K_SM_DATALIST_PROJECTS "SM_DATALIST_PROJECTS"
-#define K_SM_INCLUDE "SM_INCLUDE"
+
 
 /** Load a page template of a specific project
   *
@@ -282,6 +293,9 @@ public:
             } else if (varname == K_SM_TABLE_USER_PERMISSIONS) {
                 if (concernedUser) RHtml::printUserPermissions(ctx.req, *concernedUser);
                 // else, dont print the table
+
+            } else if (varname == K_SM_SPAN_VIEWS_MENU && ctx.hasProject()) {
+                ctx.req->printf("%s", RHtml::getMenuViews(ctx).c_str());
 
             } else if (varname == K_SM_RAW_ISSUE_ID && currentIssue) {
                 ctx.req->printf("%s", htmlEscape(currentIssue->id).c_str());
@@ -595,29 +609,39 @@ public:
         }
     }
 
-    void print(const RequestContext *req) {
+    std::string getHtml() {
         if (nodeName.empty()) {
-            // text contents
-            req->printf("%s", text.c_str());
-        } else {
-            req->printf("<%s ", nodeName.c_str());
-            std::map<std::string, std::string>::iterator i;
-            FOREACH(i, attributes) {
-                req->printf("%s=\"%s\" ", i->first.c_str(), i->second.c_str());
-            }
-            req->printf(">\n");
-
-            if (nodeName == "input") return; // no closing tag nor any contents
-
-            std::list<HtmlNode>::iterator c;
-            FOREACH(c, contents) {
-                c->print(req);
-            }
-            // close HTML node
-            req->printf("</%s>\n", nodeName.c_str());
+             // text contents
+            return text;
         }
 
+        std::string html = "";
+        html += "<" +  nodeName + " ";
+
+        std::map<std::string, std::string>::iterator i;
+        FOREACH(i, attributes) {
+            html += i->first + "=\"" + i->second + "\" ";
+        }
+        html += ">\n";
+
+        if (nodeName == "input") return html; // no closing tag nor any contents
+
+        std::list<HtmlNode>::iterator c;
+        FOREACH(c, contents) {
+            html += c->getHtml();
+        }
+        // close HTML node
+        html += "</" +  nodeName + ">";
+
+        return html;
     }
+
+    void print(const RequestContext *req) {
+
+        req->printf("%s", getHtml().c_str());
+
+    }
+
     void addContents(const char* format, ...) {
         va_list list;
         va_start(list, format);
@@ -631,6 +655,12 @@ public:
             node.text = htmlEscape(buffer);
             contents.push_back(node);
         }
+    }
+
+    void addRawContents(const std::string &rawText) {
+        HtmlNode node(ctx);
+        node.text = rawText;
+        contents.push_back(node);
     }
 
     void addContents(const class HtmlNode &node) {
@@ -727,6 +757,22 @@ void RHtml::printNavigationGlobal(const ContextParameters &ctx)
 
 }
 
+std::string RHtml::getMenuViews(const ContextParameters &ctx)
+{
+    HtmlNode span(ctx, "span");
+
+    std::map<std::string, PredefinedView>::const_iterator pv;
+    FOREACH (pv, ctx.projectViews) {
+        HtmlNode a(ctx, "a");
+        a.addAttribute("href", "/%s/issues/?%s", ctx.getProjectUrlName().c_str(),
+                       pv->second.generateQueryString().c_str());
+        a.addAttribute("class", "sm_predefined_view");
+        a.addContents("%s", pv->first.c_str());
+        span.addContents(a);
+    }
+
+    return span.getHtml();
+}
 
 /** Print links for navigating through issues;
   * - "create new issue"
@@ -745,15 +791,7 @@ void RHtml::printNavigationIssues(const ContextParameters &ctx, bool autofocus)
         div.addContents(a);
     }
 
-    std::map<std::string, PredefinedView>::const_iterator pv;
-    FOREACH (pv, ctx.projectViews) {
-        HtmlNode a(ctx, "a");
-        a.addAttribute("href", "/%s/issues/?%s", ctx.getProjectUrlName().c_str(),
-                       pv->second.generateQueryString().c_str());
-        a.addAttribute("class", "sm_predefined_view");
-        a.addContents("%s", pv->first.c_str());
-        div.addContents(a);
-    }
+    div.addRawContents(getMenuViews(ctx));
 
     HtmlNode form(ctx, "form");
     form.addAttribute("class", "sm_searchbox");

@@ -14,9 +14,12 @@
 #define QS_GOTO_NEXT "next"
 #define QS_GOTO_PREVIOUS "previous"
 
+class HtmlNode;
+
 class RHtml {
 public:
     static void printNavigationGlobal(const ContextParameters &ctx);
+    static std::string getMenuViews(const ContextParameters &ctx);
     static void printNavigationIssues(const ContextParameters &ctx, bool autofocus);
 
     static void printPageUserList(const ContextParameters &ctx, const std::list<User> &users);

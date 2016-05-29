@@ -1,2 +1,27 @@
-    <table><tr><td><img src="SM_URL_ROOT/public/logo.png" class="logo" alt="Logo"></td>
-            <td>SM_DIV_NAVIGATION_GLOBAL SM_DIV_NAVIGATION_ISSUES</td></tr></table>
+
+<table>
+    <tr>
+        <td>
+            <img src="SM_URL_ROOT/public/logo.png" class="logo" alt="Logo">
+        </td>
+        <td class="no_print">
+            SM_INCLUDE(global-bar.html)
+
+            <br>
+
+            <a class="sm_link_modify_project" href="SM_URL_PROJECT/config">Project config</a>
+            <a class="sm_link_views" href="SM_URL_PROJECT/views/">Views</a>
+            <a class="sm_link_stat" href="SM_URL_PROJECT/stat">Stat</a>
+            <a class="sm_link_stat" href="SM_URL_PROJECT/entries/?sort=-ctime&limit=50">Latest entries</a>
+            <a class="sm_link_new_issue" href="SM_URL_PROJECT/issues/new">New issue</a>
+
+            <br>
+
+            SM_SPAN_VIEWS_MENU
+            <form action="SM_URL_PROJECT/issues/" class="sm_searchbox" method="get">
+                <input class="sm_searchbox" name="search" placeholder="Search text..." type="text">
+            </form>
+            <a class="sm_advanced_search" href="SM_URL_PROJECT/views/_" >Advanced Search</a>
+        </td>
+    </tr>
+</table>
