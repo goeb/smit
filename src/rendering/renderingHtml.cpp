@@ -21,6 +21,7 @@
 #include "renderingHtml.h"
 #include "ContextParameters.h"
 #include "renderingHtmlIssue.h"
+#include "renderingHtmlUtil.h"
 #include "repository/db.h"
 #include "utils/parseConfig.h"
 #include "utils/logging.h"

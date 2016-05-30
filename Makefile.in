@@ -94,7 +94,8 @@ am__smit_SOURCES_DIST = src/repository/db.cpp src/project/Entry.cpp \
 	src/rendering/renderingJson.cpp src/rendering/renderingCsv.cpp \
 	src/rendering/renderingHtml.cpp \
 	src/rendering/ContextParameters.cpp \
-	src/rendering/renderingHtmlIssue.cpp src/user/session.cpp \
+	src/rendering/renderingHtmlIssue.cpp \
+	src/rendering/renderingHtmlUtil.cpp src/user/session.cpp \
 	src/user/AuthSha1.cpp src/local/console.cpp \
 	src/local/localClient.cpp src/Args.cpp \
 	src/third-party/mongoose.c src/third-party/fnmatch.c \
@@ -132,6 +133,7 @@ am_smit_OBJECTS = src/repository/smit-db.$(OBJEXT) \
 	src/rendering/smit-renderingHtml.$(OBJEXT) \
 	src/rendering/smit-ContextParameters.$(OBJEXT) \
 	src/rendering/smit-renderingHtmlIssue.$(OBJEXT) \
+	src/rendering/smit-renderingHtmlUtil.$(OBJEXT) \
 	src/user/smit-session.$(OBJEXT) \
 	src/user/smit-AuthSha1.$(OBJEXT) \
 	src/local/smit-console.$(OBJEXT) \
@@ -406,7 +408,8 @@ smit_SOURCES = src/repository/db.cpp src/project/Entry.cpp \
 	src/rendering/renderingJson.cpp src/rendering/renderingCsv.cpp \
 	src/rendering/renderingHtml.cpp \
 	src/rendering/ContextParameters.cpp \
-	src/rendering/renderingHtmlIssue.cpp src/user/session.cpp \
+	src/rendering/renderingHtmlIssue.cpp \
+	src/rendering/renderingHtmlUtil.cpp src/user/session.cpp \
 	src/user/AuthSha1.cpp src/local/console.cpp \
 	src/local/localClient.cpp src/Args.cpp \
 	src/third-party/mongoose.c src/third-party/fnmatch.c \
@@ -625,6 +628,9 @@ src/rendering/smit-ContextParameters.$(OBJEXT):  \
 src/rendering/smit-renderingHtmlIssue.$(OBJEXT):  \
 	src/rendering/$(am__dirstamp) \
 	src/rendering/$(DEPDIR)/$(am__dirstamp)
+src/rendering/smit-renderingHtmlUtil.$(OBJEXT):  \
+	src/rendering/$(am__dirstamp) \
+	src/rendering/$(DEPDIR)/$(am__dirstamp)
 src/user/$(am__dirstamp):
 	@$(MKDIR_P) src/user
 	@: > src/user/$(am__dirstamp)
@@ -697,6 +703,7 @@ mostlyclean-compile:
 	-rm -f src/rendering/smit-renderingCsv.$(OBJEXT)
 	-rm -f src/rendering/smit-renderingHtml.$(OBJEXT)
 	-rm -f src/rendering/smit-renderingHtmlIssue.$(OBJEXT)
+	-rm -f src/rendering/smit-renderingHtmlUtil.$(OBJEXT)
 	-rm -f src/rendering/smit-renderingJson.$(OBJEXT)
 	-rm -f src/rendering/smit-renderingText.$(OBJEXT)
 	-rm -f src/repository/smit-db.$(OBJEXT)
@@ -746,6 +753,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/rendering/$(DEPDIR)/smit-renderingCsv.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/rendering/$(DEPDIR)/smit-renderingHtml.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/rendering/$(DEPDIR)/smit-renderingHtmlIssue.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/rendering/$(DEPDIR)/smit-renderingHtmlUtil.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/rendering/$(DEPDIR)/smit-renderingJson.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/rendering/$(DEPDIR)/smit-renderingText.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/repository/$(DEPDIR)/smit-db.Po@am__quote@
@@ -1237,6 +1245,20 @@ src/rendering/smit-renderingHtmlIssue.obj: src/rendering/renderingHtmlIssue.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/rendering/renderingHtmlIssue.cpp' object='src/rendering/smit-renderingHtmlIssue.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/rendering/smit-renderingHtmlIssue.obj `if test -f 'src/rendering/renderingHtmlIssue.cpp'; then $(CYGPATH_W) 'src/rendering/renderingHtmlIssue.cpp'; else $(CYGPATH_W) '$(srcdir)/src/rendering/renderingHtmlIssue.cpp'; fi`
+
+src/rendering/smit-renderingHtmlUtil.o: src/rendering/renderingHtmlUtil.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/rendering/smit-renderingHtmlUtil.o -MD -MP -MF src/rendering/$(DEPDIR)/smit-renderingHtmlUtil.Tpo -c -o src/rendering/smit-renderingHtmlUtil.o `test -f 'src/rendering/renderingHtmlUtil.cpp' || echo '$(srcdir)/'`src/rendering/renderingHtmlUtil.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/rendering/$(DEPDIR)/smit-renderingHtmlUtil.Tpo src/rendering/$(DEPDIR)/smit-renderingHtmlUtil.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/rendering/renderingHtmlUtil.cpp' object='src/rendering/smit-renderingHtmlUtil.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/rendering/smit-renderingHtmlUtil.o `test -f 'src/rendering/renderingHtmlUtil.cpp' || echo '$(srcdir)/'`src/rendering/renderingHtmlUtil.cpp
+
+src/rendering/smit-renderingHtmlUtil.obj: src/rendering/renderingHtmlUtil.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/rendering/smit-renderingHtmlUtil.obj -MD -MP -MF src/rendering/$(DEPDIR)/smit-renderingHtmlUtil.Tpo -c -o src/rendering/smit-renderingHtmlUtil.obj `if test -f 'src/rendering/renderingHtmlUtil.cpp'; then $(CYGPATH_W) 'src/rendering/renderingHtmlUtil.cpp'; else $(CYGPATH_W) '$(srcdir)/src/rendering/renderingHtmlUtil.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/rendering/$(DEPDIR)/smit-renderingHtmlUtil.Tpo src/rendering/$(DEPDIR)/smit-renderingHtmlUtil.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/rendering/renderingHtmlUtil.cpp' object='src/rendering/smit-renderingHtmlUtil.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/rendering/smit-renderingHtmlUtil.obj `if test -f 'src/rendering/renderingHtmlUtil.cpp'; then $(CYGPATH_W) 'src/rendering/renderingHtmlUtil.cpp'; else $(CYGPATH_W) '$(srcdir)/src/rendering/renderingHtmlUtil.cpp'; fi`
 
 src/user/smit-session.o: src/user/session.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/user/smit-session.o -MD -MP -MF src/user/$(DEPDIR)/smit-session.Tpo -c -o src/user/smit-session.o `test -f 'src/user/session.cpp' || echo '$(srcdir)/'`src/user/session.cpp

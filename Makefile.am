@@ -58,6 +58,7 @@ smit_SOURCES = \
 			   src/rendering/renderingHtml.cpp \
 			   src/rendering/ContextParameters.cpp \
 			   src/rendering/renderingHtmlIssue.cpp \
+			   src/rendering/renderingHtmlUtil.cpp \
 			   src/user/session.cpp \
 			   src/user/AuthSha1.cpp \
 			   src/local/console.cpp \

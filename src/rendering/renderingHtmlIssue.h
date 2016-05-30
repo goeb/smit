@@ -12,7 +12,6 @@
 #define QS_GOTO_PREVIOUS "previous"
 
 std::string getQsRemoveColumn(std::string qs, const std::string &property, const std::list<std::string> &defaultCols);
-void printFilters(const ContextParameters &ctx);
 std::string getQsSubSorting(std::string qs, const std::string &property, bool exclusive);
 
 
