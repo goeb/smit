@@ -74,10 +74,6 @@ tr.sm_issue_asso td.sm_issue_asso {
 }
 .sm_issue_asso_summary {
 }
-.sm_not_found {
-    color: #844;
-    font-weight: bold;
-}
 .sm_entry {
     clear: both;
     border: 0;
@@ -265,10 +261,6 @@ a.sm_issues_delete_col, a.sm_entries_delete_col { }
     margin: 0;
     padding: 0;
 }
-.sm_entry_delete {
-    cursor: pointer;
-    color: red;
-}
 span.sm_issues_filters {
     font-weight: bold;
 }
@@ -329,10 +321,14 @@ table.sm_projects tr:hover, table.sm_users tr:hover {
     padding: 3px;
     margin: 0.5em;
 }
-.sm_link_projects, .sm_link_users, .sm_link_modify_project, .sm_link_views, .sm_link_users, .sm_link_stat {
+.sm_link_projects, .sm_link_users, .sm_link_users {
     padding: 3px;
     margin: 0.5em;
     font-weight: bold;
+}
+.sm_link_modify_project, .sm_link_views, .sm_link_stat {
+    padding: 3px;
+    margin: 0.5em;
 }
 .sm_navigation_project {
     padding-top: 5px;
@@ -392,4 +388,8 @@ div.sm_entry_files {
 }
 .sm_amend {
     font-size: 150%;
+}
+
+.sm_cap_superadmin, .sm_role_admin, .sm_role_rw { 
+    visibility: hidden;
 }

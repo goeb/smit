@@ -74,10 +74,6 @@ tr.sm_issue_asso td.sm_issue_asso {
 }
 .sm_issue_asso_summary {
 }
-.sm_not_found {
-    color: #844;
-    font-weight: bold;
-}
 .sm_entry {
     clear: both;
     border: 0;
@@ -264,10 +260,6 @@ a.sm_issues_delete_col, a.sm_entries_delete_col { }
     /*border: 1px solid black;*/
     margin: 0;
     padding: 0;
-}
-.sm_entry_delete {
-    cursor: pointer;
-    color: red;
 }
 span.sm_issues_filters {
     font-weight: bold;
