@@ -398,10 +398,6 @@ div.sm_entry_files {
     font-size: 150%;
 }
 
-.sm_cap_superadmin { 
-    display: none;
-}
-
-.sm_role_admin, .sm_role_rw {
-    display: none;
+.sm_cap_superadmin, .sm_role_admin, .sm_role_rw { 
+    visibility: hidden;
 }

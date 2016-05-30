@@ -18,15 +18,17 @@
         SM_INCLUDE(header_fixed.html)
 
         <form action="" method="POST">
-            <h1>Advanced Search<span class="sm_view_admin_zone"> / Predefined View</span></h1>
+            <h1>Advanced Search<span class="sm_role_admin"> / Predefined View</span></h1>
             <table>
-                <tr class="sm_view_admin_zone">
-                    <td colspan="2">
+                <tr class="sm_role_admin">
+                    <td class="align_right">
                         Current configuration of this view: 
+                    </td>
+                    <td>
                         <a id="sm_view_current_url" href=""></a>
                     </td>
                 </tr>
-                <tr class="sm_view_admin_zone">
+                <tr class="sm_role_admin">
                     <td class="align_right">
                         <h2>Name</h2>
                         Give it a name if you want to get it stored and displayed
@@ -34,11 +36,12 @@
                     </td>
                     <td>
                         <input id="name" name="name" type="text">
-                </td>
+                    </td>
                 </tr>
-                <tr class="sm_view_admin_zone">
+                <tr class="sm_role_admin">
                     <td class="align_right">
-                        <h2><label for="sm_default_view">Set as default</label></h2></td>
+                        <h2><label for="sm_default_view">Set as default</label></h2>
+                    </td>
                     <td>
                         <input id="sm_default_view" name="default" type="checkbox">
                     </td>
@@ -110,10 +113,12 @@
                 </tr>
             </table>
         </form>
-        <form class="sm_view_admin_zone" onsubmit="return confirm('Really delete this view?');" method="post">
+        <form class="sm_role_admin" onsubmit="return confirm('Really delete this view?');" method="post">
             <input type="hidden" name="delete" value="1">
             <input type="submit" value="Delete Predefined view">
         </form>
         <br>
         <br>
-</body></html>
+        SM_SCRIPT
+    </body>
+</html>

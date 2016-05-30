@@ -448,3 +448,29 @@ void printFilters(const ContextParameters &ctx)
     ctx.req->printf("</div>");
 }
 
+/** Get the JS code for setting the capability and role of the signed-in user
+  *
+  */
+std::string jsSetUserCapAndRole(const ContextParameters &ctx)
+{
+    std::string script = "setUserCapabilityAndRole(";
+
+    if (ctx.user.superadmin) script += "SmCapability.superadmin";
+    else script += "SmCapability.none";
+
+    script += ", ";
+
+    switch(ctx.userRole)     {
+    case ROLE_ADMIN: script += "SmRole.admin"; break;
+    case ROLE_RW:    script += "SmRole.rw"; break;
+    case ROLE_RO:    script += "SmRole.ro"; break;
+    case ROLE_REFERENCED:
+    case ROLE_NONE:
+    default:
+        script += "SmRole.none"; break;
+    }
+
+    script += ");\n";
+
+    return script;
+}

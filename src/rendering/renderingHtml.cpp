@@ -386,32 +386,8 @@ void RHtml::printPageSignin(const ContextParameters &ctx, const char *redirect)
 void RHtml::printPageStat(const ContextParameters &ctx, const User &u)
 {
     VariableNavigator vn("stat.html", ctx);
+    vn.script = jsSetUserCapAndRole(ctx);
     vn.printPage();
-}
-
-
-std::string jsSetUserCapAndRole(const ContextParameters &ctx)
-{
-    std::string script = "setUserCapabilityAndRole(";
-
-    if (ctx.user.superadmin) script += "SmCapability.superadmin";
-    else script += "SmCapability.none";
-
-    script += ", ";
-
-    switch(ctx.userRole)     {
-    case ROLE_ADMIN: script += "SmRole.admin"; break;
-    case ROLE_RW:    script += "SmRole.rw"; break;
-    case ROLE_RO:    script += "SmRole.ro"; break;
-    case ROLE_REFERENCED:
-    case ROLE_NONE:
-    default:
-        script += "SmRole.none"; break;
-    }
-
-    script += ");\n";
-
-    return script;
 }
 
 void RHtml::printPageUser(const ContextParameters &ctx, const User *u)
@@ -420,6 +396,7 @@ void RHtml::printPageUser(const ContextParameters &ctx, const User *u)
     vn.concernedUser = u;
 
     // add javascript for updating the form fields
+
     vn.script = jsSetUserCapAndRole(ctx);
 
     if (ctx.user.superadmin) {
@@ -475,21 +452,18 @@ void RHtml::printPageUser(const ContextParameters &ctx, const User *u)
 void RHtml::printPageView(const ContextParameters &ctx, const PredefinedView &pv)
 {
     VariableNavigator vn("view.html", ctx);
-    vn.printPage();
-
+    vn.script = jsSetUserCapAndRole(ctx);
 
     // add javascript for updating the inputs
-    ctx.req->printf("<script>\n");
 
-    if (ctx.userRole != ROLE_ADMIN && !ctx.user.superadmin) {
-        // hide what is reserved to admin
-        ctx.req->printf("hideAdminZone();\n");
-    } else {
-        ctx.req->printf("setName('%s');\n", enquoteJs(pv.name).c_str());
+    if (ctx.userRole == ROLE_ADMIN) {
+        vn.script += "setName('" + enquoteJs(pv.name) + "');\n";
     }
-    if (pv.isDefault) ctx.req->printf("setDefaultCheckbox();\n");
+
+    if (pv.isDefault) vn.script += "setDefaultCheckbox();\n";
+
     std::list<std::string> properties = ctx.projectConfig.getPropertiesNames();
-    ctx.req->printf("Properties = %s;\n", toJavascriptArray(properties).c_str());
+    vn.script += "Properties = " + toJavascriptArray(properties) + ";\n";
 
     // add datalists, for proposing the values in filterin/out
     // datalists are name 'datalist_' + <property-name>
@@ -510,64 +484,56 @@ void RHtml::printPageView(const ContextParameters &ctx, const PredefinedView &pv
         }
 
         if (!propname.empty()) {
-            ctx.req->printf("addFilterDatalist('filterin', 'datalist_%s', %s);\n",
-                            enquoteJs(propname).c_str(),
-                            toJavascriptArray(proposedValues).c_str());
+            vn.script += "addFilterDatalist('filterin', 'datalist_" + enquoteJs(propname) + "', "
+                    + toJavascriptArray(proposedValues) + ");\n";
         }
     }
 
-    ctx.req->printf("setSearch('%s');\n", enquoteJs(pv.search).c_str());
-    ctx.req->printf("setUrl('%s/%s/issues/?%s');\n",
-                    ctx.req->getUrlRewritingRoot().c_str(),
-                    ctx.getProjectUrlName().c_str(),
-                    pv.generateQueryString().c_str());
+    vn.script += "setSearch('" + enquoteJs(pv.search) + "');\n";
+    vn.script += "setUrl('" +
+            ctx.req->getUrlRewritingRoot() + "/" +
+            ctx.getProjectUrlName() + "/issues/?" +
+            pv.generateQueryString() + "');\n";
 
     // add datalists for all types select, multiselect and selectuser
-
 
     // filter in and out
     std::map<std::string, std::list<std::string> >::const_iterator f;
     std::list<std::string>::const_iterator v;
     FOREACH(f, pv.filterin) {
         FOREACH(v, f->second) {
-            ctx.req->printf("addFilter('filterin', '%s', '%s');\n",
-                            enquoteJs(f->first).c_str(),
-                            enquoteJs(*v).c_str());
+            vn.script += "addFilter('filterin', '" + enquoteJs(f->first) + "', '" + enquoteJs(*v) + "');\n";
         }
     }
-    ctx.req->printf("addFilter('filterin', '', '');\n");
+    vn.script += "addFilter('filterin', '', '');\n";
 
     FOREACH(f, pv.filterout) {
         FOREACH(v, f->second) {
-            ctx.req->printf("addFilter('filterout', '%s', '%s');\n",
-                            enquoteJs(f->first).c_str(),
-                            enquoteJs(*v).c_str());
+            vn.script += "addFilter('filterout', '" + enquoteJs(f->first) + "', '" + enquoteJs(*v) + "');\n";
         }
     }
-    ctx.req->printf("addFilter('filterout', '', '');\n");
+    vn.script += "addFilter('filterout', '', '');\n";
 
     // Colums specification
     if (!pv.colspec.empty()) {
         std::list<std::string> items = split(pv.colspec, " +");
         std::list<std::string>::iterator i;
         FOREACH(i, items) {
-            ctx.req->printf("addColspec('%s');\n", enquoteJs(*i).c_str());
+            vn.script += "addColspec('" + enquoteJs(*i) + "');\n";
         }
     }
-    ctx.req->printf("addColspec('');\n");
+    vn.script += "addColspec('');\n";
 
     // sort
     std::list<std::pair<bool, std::string> > sSpec = parseSortingSpec(pv.sort.c_str());
     std::list<std::pair<bool, std::string> >::iterator s;
     FOREACH(s, sSpec) {
         std::string direction = PredefinedView::getDirectionName(s->first);
-        ctx.req->printf("addSort('%s', '%s');\n", enquoteJs(direction).c_str(),
-                        enquoteJs(s->second).c_str());
+        vn.script += "addSort('" + enquoteJs(direction) + "', '" + enquoteJs(s->second) + "');\n";
     }
-    ctx.req->printf("addSort('', '');\n");
+    vn.script += "addSort('', '');\n";
 
-
-    ctx.req->printf("</script>\n");
+    vn.printPage();
 }
 
 void RHtml::printLinksToPredefinedViews(const ContextParameters &ctx)
@@ -589,6 +555,7 @@ void RHtml::printLinksToPredefinedViews(const ContextParameters &ctx)
 void RHtml::printPageListOfViews(const ContextParameters &ctx)
 {
     VariableNavigator vn("views.html", ctx);
+    vn.script = jsSetUserCapAndRole(ctx);
     vn.printPage();
 }
 
@@ -980,6 +947,7 @@ void RHtml::printPageUserList(const ContextParameters &ctx, const std::list<User
 {
     VariableNavigator vn("users.html", ctx);
     vn.usersList = &users;
+    vn.script = jsSetUserCapAndRole(ctx);
     vn.printPage();
 }
 
@@ -1092,6 +1060,7 @@ void RHtml::printPageIssuesFullContents(const ContextParameters &ctx, const std:
 {
     VariableNavigator vn("issues.html", ctx);
     vn.issueListFullContents = &issueList;
+    vn.script = jsSetUserCapAndRole(ctx);
     vn.printPage();
 }
 
@@ -1101,6 +1070,7 @@ void RHtml::printPageIssueList(const ContextParameters &ctx,
     VariableNavigator vn("issues.html", ctx);
     vn.issueList = &issueList;
     vn.colspec = &colspec;
+    vn.script = jsSetUserCapAndRole(ctx);
     vn.printPage();
 }
 void RHtml::printPageIssueAccrossProjects(const ContextParameters &ctx,
@@ -1110,6 +1080,7 @@ void RHtml::printPageIssueAccrossProjects(const ContextParameters &ctx,
     VariableNavigator vn("issuesAccross.html", ctx);
     vn.issuesOfAllProjects = &issues;
     vn.colspec = &colspec;
+    vn.script = jsSetUserCapAndRole(ctx);
     vn.printPage();
 }
 
@@ -1119,6 +1090,7 @@ void RHtml::printPageIssue(const ContextParameters &ctx, const IssueCopy &issue,
     VariableNavigator vn("issue.html", ctx);
     vn.currentIssue = &issue;
     vn.entryToBeAmended = eToBeAmended;
+    vn.script = jsSetUserCapAndRole(ctx);
     vn.printPage();
 
     // update the next/previous links
@@ -1158,6 +1130,7 @@ void RHtml::printPageIssue(const ContextParameters &ctx, const IssueCopy &issue,
 void RHtml::printPageNewIssue(const ContextParameters &ctx)
 {
     VariableNavigator vn("newIssue.html", ctx);
+    vn.script = jsSetUserCapAndRole(ctx);
     vn.printPage();
 }
 
@@ -1166,7 +1139,8 @@ void RHtml::printPageEntries(const ContextParameters &ctx,
 {
     VariableNavigator vn("entries.html", ctx);
     vn.entries = &entries;
-    vn.script = "showPropertiesChanges();"; // because by default they are hidden
+    vn.script = jsSetUserCapAndRole(ctx);
+    vn.script += "showPropertiesChanges();"; // because by default they are hidden
     vn.printPage();
 }
 

@@ -19,6 +19,7 @@ std::string convertToRichTextInline(const std::string &in, const char *begin, co
                                     bool dropDelimiters, bool multiline, const char *htmlTag, const char *htmlClass);
 bool isImage(const std::string &filename);
 void printFilters(const ContextParameters &ctx);
+std::string jsSetUserCapAndRole(const ContextParameters &ctx);
 
 
 #endif

@@ -425,14 +425,6 @@ function setUrl(value) {
     a.href = value;
     a.innerHTML = value;
 }
-function hideAdminZone() {
-    var divs = document.getElementsByClassName('sm_view_admin_zone');
-    for(var i=0; i<divs.length; i++) { 
-        divs[i].style.display='none';
-        var inputs = divs[i].getElementsByTagName('input');
-        for(var j=0; j<inputs.length; j++) inputs[j].disabled = true;
-    }
-}
 function setDefaultCheckbox() {
     var input = document.getElementById('sm_default_view');
     input.checked = true;
@@ -566,9 +558,12 @@ function showOrHideClasses(className, show) {
         var classList = item.className.split(' '); // IE 9 does not support classList
         if (classList.indexOf(className) > -1) {
             if (show) {
-                if ( item.tagName == 'div') item.style.display = 'block';
-                else item.style.display = 'inline';
-            } else item.style.display = 'none';
+                item.style.display = '';
+                item.style.visibility = 'visible';
+            } else {
+                item.style.display = 'none';
+                item.style.visibility = 'hidden';
+            }
 
             // disable child inputs
             var inputs = item.getElementsByTagName('input');
