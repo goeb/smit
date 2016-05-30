@@ -253,7 +253,6 @@ function addProperty(name, label, type, opts) {
         cell.appendChild(i);
         fupdate(i, opts);
     }
-
 }
 
 function fupdateThis() { fupdate(this); }
@@ -411,11 +410,6 @@ function addSort(selectedDirection, selectedProperty) {
 }
 function setSearch(value) {
     var iname = 'search';
-    var input = document.getElementById(iname);
-    input.value = value;
-}
-function setName(value) {
-    var iname = 'name'; 
     var input = document.getElementById(iname);
     input.value = value;
 }
