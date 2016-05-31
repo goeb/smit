@@ -1,7 +1,5 @@
 # Customize HTML
 
-<div style="font-size:300%;">(&#9888; page not up-to-date)</div>
-
 ## Introduction
 
 This page deals with the look and feel of the web interface, and how the HTML pages may be customized.
@@ -9,51 +7,44 @@ This page deals with the look and feel of the web interface, and how the HTML pa
 To customize the HTML look and feel, the administrator needs:
 
 - some knowledge about HTML and CSS
-- write access to the files of the smit repository
+- write access to the files of the Smit repository
 
+*Note:*
+
+This page documents Smit version >= 3.3.
 
 ## Overview of the Web Pages
 
-The HTML pages, Javascript and CSS served by Smit are of 3 types:
+The files by Smit are of 3 types:
 
-- dynamic page
-- static file
-- static embedded file
+- dynamic page (eg: list of issues)
+- static file (eg: image of a logo, style.css)
+- static embedded file (eg: smit.js)
 
 ### Dynamic Page
 
-Smit serves 9 types of dynamic pages, and each of these has a HTML template:
+Smit serves dynamic contents through templates:
 
-- Signin: `signin.html`
-- Create an issue: `newIssue.html`
-- View an issue: `issue.html`
-- List issues: `issues.html`
-- Configuration of a project: `project.html`
-- List projects: `projects.html`
-- Profile of a user: `user.html`
-- Configuration of a view: `view.html`
-- List of predefined views: `views.html`
+Page                       Template                Example URL
+------                     ----------              -------------
+Signin                     `signin.html`           
+List of projects           `projects.html`         /
+Create an issue            `newIssue.html`         /proj/issues/new
+View an issue              `issue.html`            /proj/issues/1234
+List of issue              `issues.html`           /proj/issues/
+Configuration of a project `project.html`          /proj/config
+Configuration of a view    `view.html`             /proj/views/Open issues
+List of predefined views   `views.html`            /proj/views/
+List of entries            `entries.html`          /proj/entries/
+Statistics                 `stat.html`             /proj/stat
+Issues accross projects    `issuesAccross.html`    /*/issues/
+Profile of a user          `user.html`             /users/John Smith
+List of users              `users.html`            /users/
 
-*Example:*
+Templates are located in either directories:
 
-```
-/
-/<project>/issues/
-/<project>/issues/234
-```
-
-### Static Embedded File
-
-Static embedded files are embedded in the smit executable. They are served as is, and cannot be customized by the administrator.
-
-They are located in `/sm/` (in the URL).
-
-*Example:*
-
-```
-/sm/version
-/sm/smit.js
-```
+- `$REPO/.smit/templates/`
+- `$REPO/$PROJECT/.smip/templates/`
 
 ### Static File
 
@@ -64,8 +55,25 @@ These are typically the logos, uploaded files,...
 *Example:*
 
 ```
-/public/log.png
+/public/logo.png
 /public/style.css
+```
+
+Note that uploaded files (those attached to issues) are available through the `files` virtual directory.  Example:
+
+`/proj/files/2a0dfb888becb7ca697c3470c41a86cf6c69c3bf/screenshot.png`
+
+### Static Embedded File
+
+Static embedded files are embedded in the `smit` executable. They are served as is, and cannot be customized by the administrator.
+
+There URL start by `/sm/`.
+
+*Example:*
+
+```
+/sm/version
+/sm/smit.js
 ```
 
 ## File Access
@@ -81,78 +89,110 @@ Other files cannot be read via the web interface.
 *Files:*
 
 ```
-public/style.css
-public/print.css
+/public/style.css
+/public/print.css
 ```
 
 These files define styles that are used in the dynamic pages.
 You may customize them, provided that you keep the same names of the styles.
 
-## HTML Customization
+## HTML Templates Customization
 
-By default the templates for the dynamic HTML pages are the same for all projects. It is possible to have templates dedicated to a project (see below).
+By default the templates of the dynamic HTML pages are the same for all projects. It is possible to have templates dedicated to a project (see below).
 
 When modifying a template, be sure to keep the following items, as Smit needs them:
 
-- inclusion of `/sm/smit.js`: Smit uses this to update dynamic contents
+- inclusion of `/sm/smit.js`: used by Smit to update dynamic contents
 - the SM variables (see description below)
 - the `id="sm_..."`
 - the `class="sm_..."`
 
-*Example of customizing the logo*
+*Example of customizing the logo:*
 
 Modify the `$REPO/public/logo.png`, or modify the HTML templates to point to another image.
 
     
 ## SM variables
 
-In order to let a maximum customization freedom, Smit lets the user define the global structure of the HTML pages, and inserts the dynamic contents at users' defined places, indicated by SM variables:
+In order to give a maximum customization freedom, Smit lets the administrator define the global structure of the HTML pages, and inserts the dynamic contents at specific locations within the pages, indicated by SM variables.
 
-    SM_DIV_NAVIGATION_GLOBAL
-    SM_URL_ROOT
-
-Insert a navigation bar, that gives links to project list, project configuration (when relevant), predefined views (when relevant), signing-out and user's profile.
-
-
-### Inside a project
-
-`SM_DIV_NAVIGATION_ISSUES`
-
-Insert a navigation bar for browsing through the issues of a project.
+Example of a template text:
 
 ```
-SM_HTML_PROJECT_NAME
-SM_URL_PROJECT
+<span>Logged in as: SM_HTML_USER</span>
 ```
 
-Insert the name of the project, either for printing on the screen, or for an hyperlink.
-
-### Page Issue
+Example of the resulting generated HTML:
 
 ```
-SM_RAW_ISSUE_ID
-SM_HTML_ISSUE_SUMMARY
-SM_DIV_ISSUE
-SM_DIV_ISSUE_MSG_PREVIEW
-SM_DIV_ISSUE_FORM
+<span>Logged in as: John Smith</span>
 ```
 
-### Other SM variables
 
-    SM_DIV_ISSUES
-    SM_DIV_PREDEFINED_VIEWS
-    SM_DIV_PROJECTS
-    SM_DIV_USERS
-    SM_SCRIPT_PROJECT_CONFIG_UPDATE
- 
+
+### Basic SM variables
+
+SM variable                Description                                     Example
+-------------              -------------                                   ---------
+SM_URL_ROOT                Root URL                                        /tracker
+SM_HTML_PROJECT            Name of current project (HTML display)          My Project
+SM_URL_PROJECT             URL to current project (includes SM_URL_ROOT)   /tracker/My Project
+SM_URL_USER                Name of the signed-in user (URL format)         John%20Smith
+SM_HTML_USER               Name of the signed-in user (HTML display)       John Smith
+SM_RAW_ISSUE_ID            Id of the current issue                         421
+SM_HTML_ISSUE_SUMMARY      Summary of the current issue                    
+SM_DATALIST_PROJECTS       `<datalist>` of projects names                    
+
+
+### Whole blocks of dynamic contents in the scope of a project
+
+SM variable                Description
+-------------              -------------
+SM_SPAN_VIEWS_MENU         Menu of the views
+SM_DIV_PREDEFINED_VIEWS    List of the views
+SM_DIV_PROJECTS            List of the projects
+SM_DIV_ISSUES              List of issues
+SM_DIV_ISSUE               Contents of an issue
+SM_DIV_ISSUE_FORM          Form for editing an issue
+SM_DIV_ISSUE_MSG_PREVIEW   Message preview
+SM_DIV_ENTRIES             List of entries
+
+
+### Whole blocks of dynamic contents not related to any specific project
+
+SM variable                Description
+-------------              -------------
+SM_DIV_USERS               List of users
+SM_TABLE_USER_PERMISSIONS  Table of computed permissions
+
+
+### Technical SM variables
+
+SM variable                Description
+-------------              -------------
+SM_INCLUDE                 Include another HTML template file
+SM_SCRIPT                  Include some contextual script
+
+### Obsolete SM variables
+
+These SM variables may be removed in a future release.
+
+SM variable                Description
+-------------              -------------
+SM_DIV_NAVIGATION_GLOBAL   Global menu bar
+SM_DIV_NAVIGATION_ISSUES   Project specific menu bar
+
+
 
 ## Project with dedicated HTML pages
 
-The dynamic HTML templates are first looked after in `$REPO/<project>/html/` and, if not present, Smit looks in the `$REPO/public` directory.
+This may be useful to customize the HTML pages of a specific project.
+
+The dynamic HTML templates are first looked after in `$REPO/<project>/.smip/templates` and, if not present, Smit looks in the `$REPO/.smit/templates` directory.
 
 Therefore, if you want to customize - for example - the 'issues' page for a project:
 
-- copy `$REPO/public/issues.html` to `$REPO/<project>/html/issues.html`
-- modify `$REPO/<project>/html/issues.html`
+- copy `$REPO/.smit/templates/issues.html` to `$REPO/<project>/.smip/templates/issues.html`
+- customize `$REPO/<project>/.smip/templates/issues.html`
 
 

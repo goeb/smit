@@ -88,7 +88,7 @@ POST /<project>/issues/new
 
 *Parameters:*
 
-- A hash of the issue properties
+- the properties of the new issue
     * Syntax: multipart/form-data
 
 Files can be attached.
@@ -104,15 +104,10 @@ POST /<project>/issues/<id>
 
 *Parameters:*
 
-- the issue properties
+- the new properties of the issue
     * Syntax: multipart/form-data
 
 Files can be attached.
 
-
-## Deleting an issue
-REST API:
-
-work in progress...
 
 
