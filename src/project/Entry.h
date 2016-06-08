@@ -50,7 +50,17 @@ public:
     void updateMessage();
     std::string serialize() const;
     int getCtime() const;
-    const std::string &getMessage() const;
+
+    inline const std::string &getMessage() const { return *(__atomic_load_n(&message,__ATOMIC_ACQUIRE)); }
+    inline void setMessage(const std::string *msg) { __atomic_store_n(&message, msg, __ATOMIC_RELEASE); }
+
+    inline Entry *getNext() const { return __atomic_load_n(&next,__ATOMIC_ACQUIRE); }
+    inline void setNext(Entry *nextEntry) { __atomic_store_n(&next, nextEntry, __ATOMIC_RELEASE); }
+
+    inline Entry *getPrev() const { return __atomic_load_n(&prev,__ATOMIC_ACQUIRE); }
+    inline void setPrev(Entry *prevEntry) { __atomic_store_n(&prev, prevEntry, __ATOMIC_RELEASE); }
+
+
     bool isAmending() const;
     inline std::string getSubpath() const { return Object::getSubpath(id); }
     static inline std::string getSubpath(const std::string identifier) { return Object::getSubpath(identifier); }
@@ -58,10 +68,6 @@ public:
 
     // methods managing the linked list
     void append(Entry *e);
-    inline Entry *getNext() const { return next; } // TODO use std::atomic to make it thread-safe for reading
-    inline Entry *getPrev() const { return prev; }
-    /** set a message */ // TODO use std::atomic to make it thread-safe for reading
-    inline void setMessage(const std::string *msg) { message = msg; }
 
     static void sort(std::vector<Entry> &inout, const std::list<std::pair<bool, std::string> > &sortingSpec);
     bool lessThan(const Entry &other, const std::list<std::pair<bool, std::string> > &sortingSpec) const;
@@ -80,6 +86,7 @@ private:
       */
     // TODO: replace the *message by a const Entry* amendedBy; (that must be mutexed)
     const std::string *message;
+
     static const std::string EMPTY_MESSAGE;
 
 };

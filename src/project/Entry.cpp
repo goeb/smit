@@ -112,12 +112,6 @@ Entry *Entry::loadEntry(const std::string &path, const std::string &id, bool che
     return e;
 }
 
-
-const std::string &Entry::getMessage() const
-{
-    return *message;
-}
-
 bool Entry::isAmending() const
 {
     std::string a = getProperty(properties, K_AMEND);
@@ -141,8 +135,11 @@ void Entry::updateMessage()
 {
     // update pointer to message
     std::map<std::string, std::list<std::string> >::const_iterator t = properties.find(K_MESSAGE);
-    if (t != properties.end() && (t->second.size()>0) ) message = &(t->second.front());
-    else message = &EMPTY_MESSAGE;
+    const std::string *m;
+    if (t != properties.end() && (t->second.size()>0) ) m = &(t->second.front());
+    else m = &EMPTY_MESSAGE;
+
+    setMessage(m);
 }
 
 Entry *Entry::createNewEntry(const PropertiesMap &props, const std::string &author, const Entry *eParent)
@@ -164,14 +161,11 @@ Entry *Entry::createNewEntry(const PropertiesMap &props, const std::string &auth
 
 /** Append an entry after this
   *
-  * This ensures the following concurrent access protection:
-  * - other threads can safely read the entries linked list
-  * - other threads that modify the linked list must use a mutex
   */
 void Entry::append(Entry *e)
 {
-    e->prev = this;
-    next = e;
+    e->setPrev(this);
+    setNext(e);
 }
 
 std::string Entry::serialize() const
