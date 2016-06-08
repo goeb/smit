@@ -43,25 +43,25 @@
 
 
 // Basic items
-#define K_SM_URL_ROOT "SM_URL_ROOT"
+#define K_SM_URL_ROOT           "SM_URL_ROOT"
 #define K_SM_HTML_PROJECT       "SM_HTML_PROJECT"  // Project name
 #define K_SM_URL_PROJECT        "SM_URL_PROJECT"   // URL to project, including the SM_URL_ROOT
 #define K_SM_URL_USER           "SM_URL_USER"      // User name, in url-encoded format
 #define K_SM_HTML_USER          "SM_HTML_USER"     // User name, in html-escaped format
 #define K_SM_RAW_ISSUE_ID       "SM_RAW_ISSUE_ID"  // Issue ID, no formatting
 #define K_SM_HTML_ISSUE_SUMMARY "SM_HTML_ISSUE_SUMMARY" // Summary of an issue, html-escaped
-#define K_SM_DATALIST_PROJECTS "SM_DATALIST_PROJECTS" // <datalist> of projects names
+#define K_SM_DATALIST_PROJECTS  "SM_DATALIST_PROJECTS" // <datalist> of projects names
 
 // Whole blocks of page
 // ---- in the scope of a project
-#define K_SM_SPAN_VIEWS_MENU      "SM_SPAN_VIEWS_MENU" // Menu of views
-#define K_SM_DIV_PREDEFINED_VIEWS "SM_DIV_PREDEFINED_VIEWS" // page for editing views
-#define K_SM_DIV_PROJECTS         "SM_DIV_PROJECTS"
-#define K_SM_DIV_ISSUES           "SM_DIV_ISSUES"
-#define K_SM_DIV_ISSUE            "SM_DIV_ISSUE"
-#define K_SM_DIV_ISSUE_FORM       "SM_DIV_ISSUE_FORM"
+#define K_SM_SPAN_VIEWS_MENU       "SM_SPAN_VIEWS_MENU" // Menu of views
+#define K_SM_DIV_PREDEFINED_VIEWS  "SM_DIV_PREDEFINED_VIEWS" // page for editing views
+#define K_SM_DIV_PROJECTS          "SM_DIV_PROJECTS"
+#define K_SM_DIV_ISSUES            "SM_DIV_ISSUES"
+#define K_SM_DIV_ISSUE             "SM_DIV_ISSUE"
+#define K_SM_DIV_ISSUE_FORM        "SM_DIV_ISSUE_FORM"
 #define K_SM_DIV_ISSUE_MSG_PREVIEW "SM_DIV_ISSUE_MSG_PREVIEW"
-#define K_SM_DIV_ENTRIES          "SM_DIV_ENTRIES"
+#define K_SM_DIV_ENTRIES           "SM_DIV_ENTRIES"
 // ---- not related to any specific project
 #define K_SM_DIV_USERS              "SM_DIV_USERS"
 #define K_SM_TABLE_USER_PERMISSIONS "SM_TABLE_USER_PERMISSIONS"

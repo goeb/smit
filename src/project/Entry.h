@@ -30,7 +30,7 @@ public:
 
     /** The id of an entry
       * - must not start by a dot (reserved for hidden file)
-      * - must notcontain characters forbidden for file names (Linux and Windows):
+      * - must not contain characters forbidden for file names (Linux and Windows):
       *        <>:"/\|?*
       * - must be unique case insensitively (as HTML identifiers are case insensitive)
       *

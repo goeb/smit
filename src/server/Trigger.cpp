@@ -176,6 +176,22 @@ void Trigger::run(const std::string &program, const std::string &toStdin)
 {
     LOG_FUNC();
 #ifndef _WIN32
+    // TODO
+    // As after a fork one should not call non async-safe functions, the following
+    // code is incorrect, because of the logging and the popen).
+    // It must be reworked as follows:
+    // - remove logging
+    // - create a pipe
+    // - fork
+    //
+    // In child:
+    // - chdir
+    // - redirect the pipe to stdin (dup*)
+    // - exec
+    //
+    // In parent:
+    // - set O_NONBLOCK on the pipe (so that if the called process is broken, it does not block the smit server)
+    // - write data to the pipe
     signal(SIGCHLD, SIG_IGN); // ignore return values from child processes
     pid_t p = fork();
     if (p) {
