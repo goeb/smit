@@ -39,7 +39,6 @@ typedef std::string AssociationId;
 // An issue is consolidated over all its entries
 struct Issue {
     std::string id; // same as the first entry
-    std::string path; // path of the directory where the issue is stored
     Entry *first; // the first entry
     std::string project; // name of the project
     int ctime; // creation time (the one of the first entry)

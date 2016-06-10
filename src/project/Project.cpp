@@ -1229,6 +1229,7 @@ Issue *Project::createNewIssue()
 
     Issue *i = new Issue();
     i->id = issueId;
+    i->project = getName();
 
     return i;
 }
@@ -1370,7 +1371,6 @@ int Project::addEntry(PropertiesMap properties, std::string &issueId,
         newIssueCreated = true;
         i = createNewIssue();
         if (!i) return -1;
-        i->project = getName();
         issueId = i->id; // update @param[out]
     }
 
@@ -1478,7 +1478,6 @@ int Project::pushEntry(std::string &issueId, const std::string &entryId,
         newI = createNewIssue();
         i = newI;
         issueId = newI->id; // update the IN/OUT parameter
-        newI->project = getName();
 
     } else {
         i = getIssue(issueId);
