@@ -19,6 +19,8 @@
 #include <stdio.h>
 #include <errno.h>
 #include <signal.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 #include "Trigger.h"
 #include "utils/stringTools.h"
@@ -192,32 +194,60 @@ void Trigger::run(const std::string &program, const std::string &toStdin)
     // In parent:
     // - set O_NONBLOCK on the pipe (so that if the called process is broken, it does not block the smit server)
     // - write data to the pipe
-    signal(SIGCHLD, SIG_IGN); // ignore return values from child processes
     pid_t p = fork();
-    if (p) {
-        // in parent
-        // do nothing
-    } else {
-        LOG_DEBUG("chdir '%s'...", Database::Db.pathToRepository.c_str());
-        int r = chdir(Database::Db.pathToRepository.c_str());
-        if (r != 0) {
-            LOG_ERROR("Cannot chdir to repo '%s': %s", Database::Db.pathToRepository.c_str(),
-                      strerror(errno));
-            return;
-        }
-        FILE *fp;
-        fp = popen(program.c_str(), "w");
-        if (fp == NULL) {
-            LOG_ERROR("popen error: %s", strerror(errno));
-        } else {
+    if (p < 0) {
+        LOG_ERROR("fork error: %s", strerror(errno));
+
+    } else if (0 == p) {
+        // Child process
+        // Fork again so that:
+        // - the child terminates quickly
+        // - the grand-child new parent becomes 'init'
+        // - the smit parent does not have to wait for its child
+        pid_t p2 = fork();
+        if (p2 < 0) {
+            // TODO this logging should not be done as it is not async-safe
+            LOG_ERROR("fork error (2): %s", strerror(errno));
+            _exit(1);
+
+        } else if (p2 > 0) {
+            // Exit immediately in order to kill parenthood with the smit process
+            // to have to wait for its child. Init will do it.
+            _exit(0);
+
+        } else if (0 == p2) {
+            // Grand-child process
+            int r = chdir(Database::Db.pathToRepository.c_str());
+            if (r != 0) {
+                // TODO this logging should not be done as it is not async-safe
+                LOG_ERROR("Cannot chdir to repo '%s': %s", Database::Db.pathToRepository.c_str(),
+                          strerror(errno));
+                _exit(1);
+            }
+            FILE *fp;
+            // TODO check if 'popen' is async-safe
+            fp = popen(program.c_str(), "w");
+            if (fp == NULL) {
+                // TODO this logging should not be done as it is not async-safe
+                LOG_ERROR("popen error: %s", strerror(errno));
+                _exit(1);
+            }
+
             size_t n = fwrite(toStdin.c_str(), 1, toStdin.size(), fp);
             if (n != toStdin.size()) {
+                // TODO this logging should not be done as it is not async-safe
                 LOG_ERROR("fwrite error: %lu bytes sent (%lu requested)", L(n), L(toStdin.size()));
             }
+
             pclose(fp);
+
+            _exit(0);
         }
-        exit(0);
     }
+    // Parent process continuing here...
+    int wstatus;
+    waitpid(p, &wstatus, 0);
+
 #endif
 }
 
