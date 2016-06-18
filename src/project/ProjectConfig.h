@@ -52,7 +52,7 @@ struct ProjectConfig {
     // user defined configuration
     std::list<PropertySpec> properties; // user defined properties
     std::map<std::string, std::string> propertyLabels;
-    std::map<std::string, std::string> propertyReverseLabels;
+    std::map<std::string, std::string> propertyReverseLabels; // used for associations
     std::map<std::string, TagSpec> tags;
     bool numberIssueAcrossProjects; // accross project
 
