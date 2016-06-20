@@ -923,11 +923,6 @@ void RHtml::printUsers(const RequestContext *req, const std::list<User> &usersLi
 
     }
     req->printf("</table><br>\n");
-    req->printf("<div class=\"sm_users_new\">"
-                "<a href=\"%s/users/_\" class=\"sm_users_new\">%s</a></div><br>",
-                req->getUrlRewritingRoot().c_str(),
-                htmlEscape(_("New User")).c_str());
-
 }
 
 void RHtml::printUserPermissions(const RequestContext *req, const User &u)

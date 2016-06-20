@@ -8,27 +8,25 @@
         <link id="printCSS" media="print" rel="stylesheet" type="text/css" href="SM_URL_ROOT/public/print.css">
         <meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
         <script type="text/javascript" src="SM_URL_ROOT/sm/smit.js"></script>
-        <script type="text/javascript" src="SM_URL_ROOT/public/general.js"></script>
-    <style>
-        table#memo td {
-            border-bottom: 1px solid grey;
-            padding-left: 1em;
-            font-size: small;
-        }
+        <script type="text/javascript">SM_INCLUDE(print_preview.js)</script>
+        <style>
+table#memo td {
+    border-bottom: 1px solid grey;
+    padding-left: 1em;
+    font-size: small;
+}
         table#memo { border-collapse:collapse; }
-    </style>
+        </style>
     </head>
     <body>
         <div style="padding-top: 15px; width: 100%; background: white;">
             SM_INCLUDE(header.html)
-            <i style="font-size:150%;">SM_HTML_PROJECT</i>
             <div class="sm_issue_header"><a href="SM_RAW_ISSUE_ID" class="sm_issue_id">SM_RAW_ISSUE_ID</a> <span class="">SM_HTML_ISSUE_SUMMARY</span></div>
             <span class="no_print"><a class="sm_issue_previous">previous</a> <a class="sm_issue_next">next</a></span>
         </div>
 <!-- the fixed block is repeated in order to occupy the exact space and not have subsequent HTML hidden behing the fixed block -->
         <div class="no_print" style="position: fixed; top: 0; padding-top: 15px; width: 100%; background: white;">
             SM_INCLUDE(header.html)
-            <i style="font-size:150%;">SM_HTML_PROJECT</i>
             <div class="sm_issue_header"><a href="SM_RAW_ISSUE_ID" class="sm_issue_id">SM_RAW_ISSUE_ID</a> <span class="">SM_HTML_ISSUE_SUMMARY</span></div>
             <span class="no_print"><a class="sm_issue_previous">previous</a> <a class="sm_issue_next">next</a></span>
         </div>

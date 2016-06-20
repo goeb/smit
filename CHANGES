@@ -5,6 +5,7 @@ v3.3.0
         'sm_zone_superadmin' -> 'sm_cap_superadmin'
         'sm_zone_non_superadmin' -> (removed)
         projects.html: link to "new project" moved into the template
+        users.html: link to "new user" moved into the template
 
 v3.2.2, 31 Mar 2016
     - use openssl random

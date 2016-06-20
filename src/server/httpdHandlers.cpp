@@ -2125,11 +2125,12 @@ void httpPostEntry(const RequestContext *req, Project &pro, const std::string & 
   * Resources               Methods    Acces Granted     Description
   * -------------------------------------------------------------------------
   * /                       GET/POST   user              list of projects / management of projects (create, ...)
+  * /_                      GET/POST   superadmin        new project
   * /public/...             GET        all               public pages, javascript, CSS, logo
   * /signin                 POST       all               sign-in
   * /users/                            superadmin        management of users for all projects
   * /users/<user>           GET/POST   user, superadmin  management of a single user
-  * /_                      GET/POST   superadmin        new project
+  * /users/_                GET/POST   superadmin        new user
   * /.smit                  GET        user              .smit directory
   * /<p>/config             GET/POST   admin             configuration of the project
   * /<p>/views/             GET/POST   admin             list predefined views / create new view
