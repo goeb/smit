@@ -107,6 +107,15 @@
         <form onsubmit="return confirm('Really reload project?');" method="post" action="reload">
             <input type="submit" value="Reload Project From Disk Storage">
         </form>
+        <script>
+// If new project, then hide menu related to project
+var str = location.pathname;
+var base = str.substring(str.lastIndexOf('/') + 1);
+if (base == '_') { // New project. Hide.
+    var divs = document.getElementsByClassName('header_project');
+    for (var i = 0; i < divs.length; i++) divs[i].style.display = 'none';
+}
+        </script>
         SM_SCRIPT
     </body>
 </html>
