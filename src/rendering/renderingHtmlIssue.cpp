@@ -723,8 +723,12 @@ void RHtmlIssue::printIssueForm(const ContextParameters &ctx, const IssueCopy *i
 
     // other properties
 
-    int workingColumn = 1;
-    const uint8_t MAX_COLUMNS = 2;
+    // Table of subcolumns:
+    // - 1 column for the labels
+    // - 3 columns for values of type F_TEXTAREA2
+    // - 1 column for other values
+    const uint8_t MAX_COLUMNS = 4; // only 4 supported
+    int workingColumn = 1; // 1 or 3
     std::list<PropertySpec>::const_iterator pspec;
 
     FOREACH(pspec, pconfig.properties) {
@@ -737,8 +741,7 @@ void RHtmlIssue::printIssueForm(const ContextParameters &ctx, const IssueCopy *i
 
         std::ostringstream input;
         std::string value;
-        const char *colspan = "";
-        int workingColumnIncrement = 1;
+        int colspan = 1;
 
         if (pspec->type == F_TEXT) {
             if (propertyValues.size()>0) value = propertyValues.front();
@@ -823,16 +826,7 @@ void RHtmlIssue::printIssueForm(const ContextParameters &ctx, const IssueCopy *i
 
         } else if (pspec->type == F_TEXTAREA2) {
             // the property spans over 4 columns (1 col for the label and 3 for the value)
-            if (workingColumn == 1) {
-                // nothing to do
-            } else {
-                // add a placeholder in order to align the property with next row
-                // close current row and start a new row
-                ctx.req->printf("<td></td><td></td></tr><tr>\n");
-            }
-            colspan = "colspan=\"3\"";
-            workingColumn = 1;
-            workingColumnIncrement = 2;
+            colspan = 3;
 
             if (propertyValues.size()>0) value = propertyValues.front();
             input << "<textarea class=\"sm_ta2 sm_issue_pinput_" << urlEncode(pname) << "\" name=\""
@@ -860,6 +854,11 @@ void RHtmlIssue::printIssueForm(const ContextParameters &ctx, const IssueCopy *i
 
         if (workingColumn == 1) {
             ctx.req->printf("<tr>\n");
+
+        } else if (workingColumn + colspan > MAX_COLUMNS) {
+            // add cells placeholders in order to align the property with next row
+            // close current row and start a new row
+            ctx.req->printf("<td></td><td></td></tr><tr>\n");
         }
 
         // label
@@ -867,9 +866,9 @@ void RHtmlIssue::printIssueForm(const ContextParameters &ctx, const IssueCopy *i
                         urlEncode(pname).c_str(), htmlEscape(label).c_str());
 
         // input
-        ctx.req->printf("<td %s class=\"sm_issue_pinput\">%s</td>\n", colspan, input.str().c_str());
+        ctx.req->printf("<td colspan=\"%d\" class=\"sm_issue_pinput\">%s</td>\n", colspan, input.str().c_str());
 
-        workingColumn += workingColumnIncrement;
+        workingColumn += colspan + 1;
         if (workingColumn > MAX_COLUMNS) {
             ctx.req->printf("</tr>\n");
             workingColumn = 1;
