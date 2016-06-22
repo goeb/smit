@@ -1,5 +1,16 @@
 # News
 
+## 20 June 2016
+
+Smit v3.3.0 is released.
+
+This new version brings server side inclusion in HTML templates.
+The default HTML pages have also been redesigned and clarified.
+
+As a few modifications in the generated CSS classnames and links have been done,
+installing this version in a preexisting repository and templates should be
+slightly adapted. See the [CHANGES](https://raw.githubusercontent.com/goeb/smit/master/CHANGES) for details.
+
 ## 31 Mars 2016
 
 Smit v3.2.2 is released
