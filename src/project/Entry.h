@@ -21,6 +21,41 @@
 
 #define DELETE_DELAY_S (10*60) // seconds
 
+// Define atomic builtins for gcc < 4.7
+#ifdef __GNUC__
+
+  #define GCC_VERSION (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
+
+  #if GCC_VERSION < 40700
+    #define HAVE_ATOMIC 0
+  #else
+    #define HAVE_ATOMIC 1
+  #endif // GCC_VERSION < 40700
+
+#endif // __GNUC__
+
+inline const void * atomicGet(const void *ptr) {
+	const void *pout;
+#if HAVE_ATOMIC
+	pout = __atomic_load_n(&ptr, __ATOMIC_ACQUIRE);
+#else
+	__sync_synchronize();
+	pout = ptr;
+	__sync_synchronize();
+#endif
+	return pout;
+}
+
+inline void atomicSet(const void **ptr, const void *val) {
+#if HAVE_ATOMIC
+	__atomic_store_n(ptr, val, __ATOMIC_RELEASE);
+#else
+	__sync_synchronize();
+	*ptr = val;
+	__sync_synchronize();
+#endif
+}
+
 class Issue;
 
 // Entry
@@ -51,14 +86,14 @@ public:
     std::string serialize() const;
     int getCtime() const;
 
-    inline const std::string &getMessage() const { return *(__atomic_load_n(&message,__ATOMIC_ACQUIRE)); }
-    inline void setMessage(const std::string *msg) { __atomic_store_n(&message, msg, __ATOMIC_RELEASE); }
+    inline const std::string &getMessage() const { return *((const std::string*)atomicGet(message)); }
+    inline void setMessage(const std::string *msg) { atomicSet((const void**)&message, msg); }
 
-    inline Entry *getNext() const { return __atomic_load_n(&next,__ATOMIC_ACQUIRE); }
-    inline void setNext(Entry *nextEntry) { __atomic_store_n(&next, nextEntry, __ATOMIC_RELEASE); }
+    inline Entry *getNext() const { return (Entry *)atomicGet(next); }
+    inline void setNext(Entry *nextEntry) { atomicSet((const void**)&next, nextEntry); }
 
-    inline Entry *getPrev() const { return __atomic_load_n(&prev,__ATOMIC_ACQUIRE); }
-    inline void setPrev(Entry *prevEntry) { __atomic_store_n(&prev, prevEntry, __ATOMIC_RELEASE); }
+    inline Entry *getPrev() const { return (Entry *)atomicGet(prev); }
+    inline void setPrev(Entry *prevEntry) { atomicSet((const void**)&prev, prevEntry); }
 
 
     bool isAmending() const;
