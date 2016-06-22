@@ -24,11 +24,6 @@ extern "C" {
 }
 
 
-  inline struct tm *localtime_r(const time_t *timep, struct tm *result) {
-      struct tm *lt = localtime(timep); // TODO probably not thread-safe
-      *result = *lt;
-      return result;
-  }
 
   inline long gettid()
   {

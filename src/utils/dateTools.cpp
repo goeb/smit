@@ -12,6 +12,10 @@
  */
 #include "config.h"
 
+// Workaround so that mingw32 find localtime_r (in time.h)
+// include unistd.h before sys/time.h and time.h
+#include <unistd.h>
+
 #include <sys/time.h>
 #include <time.h>
 #include <stdio.h>

@@ -20,7 +20,10 @@
 #include <errno.h>
 #include <signal.h>
 #include <sys/types.h>
-#include <sys/wait.h>
+
+#ifndef _WIN32
+  #include <sys/wait.h>
+#endif
 
 #include "Trigger.h"
 #include "utils/stringTools.h"
