@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.63])
-AC_INIT([Smit], [3.3.0], [], [smit], [http://goeb.github.io/smit])
+AC_INIT([Smit], [3.3.1-x], [], [smit], [http://goeb.github.io/smit])
 AC_CONFIG_HEADERS([src/config.h])
 AC_CANONICAL_TARGET
 AM_INIT_AUTOMAKE([-Wall -Werror subdir-objects])
