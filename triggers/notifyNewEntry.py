@@ -126,20 +126,23 @@ def getMailSubject(jsonMsg):
     return s
 
 def gpgEncrypt(clearText, addressees):
-    "Encrypt text, if at least one GPG key is configured"
+    '''Encrypt text, if at least one GPG key is configured'''
 
     gpgKeys = set()
+    addresseesWithCiphering = set()
+
     # check if at least one addressee has a GPG key
     for a in addressees:
 	k = getGpgKey(a)
 	if k is None:
             print('Missing GPG key for \'%s\'' % (a))
 	else:
+            addresseesWithCiphering.add(a)
             gpgKeys.add(k)
 
     if len(gpgKeys) == 0:
-        if Verbose: print "Mail in clear text"
-        return text
+        if Verbose: print "No GPG key available"
+        return '', addresseesWithCiphering
 
     # build the gpg command line
     gpgArgs = '-e --trust-model always --armor'
@@ -150,7 +153,7 @@ def gpgEncrypt(clearText, addressees):
     if exitCode != 0:
         print "gpgExec error: ", stderr
 
-    return cipheredText
+    return cipheredText, addresseesWithCiphering
 
 def urlEscapeProjectName(pname):
     'escape characters for passing the project name in an URL'
@@ -234,16 +237,44 @@ def parseCommandLine():
     parser.add_argument('--mailto-property', help='send the email to the people in the given property')
     parser.add_argument('--mailto-admins', action='store_true', help='send the email to all administrators of the project')
     parser.add_argument('--mailto', help='additionnal email addressees (separated by commas)')
+    parser.add_argument('--force-ciphering', action='store_true', help='send ciphered emails, never send in clear text.')
     parser.add_argument('--test', action='store_true', help='test with dummy data (useful for command line debugging)')
-    parser.add_argument('--verbose', action='store_true', help='be verbose')
+    parser.add_argument('--verbose', '-v', action='store_true', help='be verbose')
     args = parser.parse_args()
 
     return args
 	
+def getAddressees(args, jsonMsg):
+    '''Get the list of addressees'''
+    addressees = set()
+    if args.mailto_property:
+        # send email if
+        addressees = addressees.union(getMailOfProperty(jsonMsg, args.mailto_property))
+
+    if args.mailto_admins:
+        # send email to admins
+        addressees = addressees.union(getMailOfAdmins(jsonMsg))
+
+    if args.mailto:
+        # send email to additionnal addressees
+        emails = args.mailto.split(',')
+        emails = [ x.strip() for x in emails ]
+        addressees = addressees.union(emails)
+
+    return addressees
+
+def sendEmail(addressees, subject, body):
+    if Verbose: print('sendEmail to: %s' % addressees)
+    msg = MIMEText(body, 'plain', 'utf-8')
+    msg['Subject'] = Header(subject, 'utf-8')
+    msg['From'] = MailConfig.EMAIL_FROM
+    msg['To'] = ";".join(addressees)
+    s = smtplib.SMTP(MailConfig.SMTP_HOST)
+    s.sendmail(MailConfig.EMAIL_FROM, addressees, msg.as_string())
+    s.quit()
 
 # main --------------------------------------------
 
-#print "triggers/notifyNewEntry.py(%s)" % (sys.argv)
 args = parseCommandLine()
 
 if args.verbose: Verbose = True
@@ -276,21 +307,8 @@ if not doSendMail:
     #print('doSendMail=False') # debug
     sys.exit(0)
 
-# build the list of addressees
-addressees = set()
-if args.mailto_property:
-    # send email if
-    addressees = addressees.union(getMailOfProperty(jsonMsg, args.mailto_property))
 
-if args.mailto_admins:
-    # send email to admins
-    addressees = addressees.union(getMailOfAdmins(jsonMsg))
-
-if args.mailto:
-    # send email to additionnal addressees
-    emails = args.mailto.split(',')
-    emails = [ x.strip() for x in emails ]
-    addressees = addressees.union(emails)
+addressees = getAddressees(args, jsonMsg)
 
 if len(addressees) == 0:
     # no addressees, no email to send
@@ -302,11 +320,15 @@ if Verbose: print("addressees: ", addressees)
 # set contents of the email
 subject = getMailSubject(jsonMsg)
 body = getMailBody(jsonMsg)
-body = gpgEncrypt(body, addressees)
-msg = MIMEText(body, 'plain', 'utf-8')
-msg['Subject'] = Header(subject, 'utf-8')
-msg['From'] = MailConfig.EMAIL_FROM
-msg['To'] = ";".join(addressees)
-s = smtplib.SMTP(MailConfig.SMTP_HOST)
-s.sendmail(MailConfig.EMAIL_FROM, addressees, msg.as_string())
-s.quit()
+
+cipheredBody, addresseesWithCiphering = gpgEncrypt(body, addressees)
+if len(addresseesWithCiphering) > 0:
+    # Send ciphered email
+    sendEmail(addresseesWithCiphering, subject, cipheredBody)
+
+if not args.force_ciphering:
+    addresseesClearText = addressees.difference(addresseesWithCiphering)
+    if len(addresseesClearText) > 0:
+        # send also in clear text to those that do not have a GPG key
+        sendEmail(addresseesClearText, subject, body)
+
