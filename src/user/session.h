@@ -8,6 +8,7 @@
 
 #include "utils/mutexTools.h"
 #include "Auth.h"
+#include "notification.h"
 
 #define SESSION_DURATION (60*60*36) // 1.5 day
 #define COOKIE_VIEW_DURATION (60*60*24) // 1 day
@@ -39,6 +40,7 @@ public:
     std::map<std::string, enum Role> rolesOnProjects;
     bool superadmin;
     std::map<std::string, Role> permissions; // map of projectWildcard => role
+    Notification *notification;
 
     User();
     User(const User &other);
@@ -60,6 +62,7 @@ public:
     static int init(const char *repository);
     static int loadPermissions(const std::string &path, std::map<std::string, User*> &users);
     static int load(const std::string &repository, std::map<std::string, User*> &users);
+    static void loadNotifications(const std::string &path, std::map<std::string, User*> &users);
     static void setLocalInterfaceUser(const std::string &username);
     static int store(const std::string &repository);
     static int initUsersFile(const char *repository);

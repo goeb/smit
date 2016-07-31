@@ -69,7 +69,8 @@ Notification *Notification::load(const std::string &path)
         if (key == K_EMAIL) notif->email = firstArg;
         else if (key == K_GPG_KEY) notif->gpgPublicKey = firstArg;
         else if (key == K_NOTIFY_POLICY) notif->notificationPolicy = firstArg;
-        else if (key == K_NOTIFY_CUSTOM) {
+        else if (key == K_NOTIFY_CUSTOM) notif->notificationPolicy = firstArg;
+        else if (notif->notificationPolicy == K_NOTIFY_POLICY_CUSTOM) {
             if (firstArg == K_NOTIFY_CUSTOM_OPT_MSG_FILE) {
                 notif->customPolicy.notifyOnewMessageOrFile = true;
 

@@ -49,7 +49,7 @@ public:
     NotificationPolicyCustom customPolicy;
 
     // Methods
-    Notification *load(const std::string &path);
+    static Notification *load(const std::string &path);
     int store(const std::string &path) const;
 };
 

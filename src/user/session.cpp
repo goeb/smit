@@ -35,6 +35,8 @@
   #include "AuthLdap.h"
 #endif
 
+#define DIR_NOTIFICATIONS  "users/notifications"
+
 
 // static members
 SessionBase SessionBase::SessionDb;
@@ -47,7 +49,8 @@ const char *FILE_USERS = "users";
 User::User()
 {
     superadmin = false;
-    authHandler = 0;
+    authHandler = NULL;
+    notification = NULL;
 }
 
 User::User(const User &other)
@@ -361,7 +364,22 @@ int UserBase::load(const std::string &path, std::map<std::string, User*> &users)
         }
     }
 
-    return loadPermissions(path, users);
+    int rc = loadPermissions(path, users);
+    if (rc < 0) return rc;
+
+    loadNotifications(path, users);
+
+    return rc;
+}
+
+void UserBase::loadNotifications(const std::string &path, std::map<std::string, User*> &users)
+{
+    std::map<std::string, User*>::iterator user;
+    FOREACH(user, users) {
+        std::string mangled = urlEncode(user->first);
+        std::string file = std::string(path) + "/" PATH_REPO "/" + DIR_NOTIFICATIONS + "/" + mangled;
+        user->second->notification = Notification::load(file);
+    }
 }
 
 /** Load the users of a repository
