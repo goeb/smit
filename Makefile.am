@@ -61,6 +61,7 @@ smit_SOURCES = \
 			   src/rendering/renderingHtmlUtil.cpp \
 			   src/user/session.cpp \
 			   src/user/AuthSha1.cpp \
+			   src/user/notification.cpp \
 			   src/local/console.cpp \
 			   src/local/localClient.cpp \
 			   src/Args.cpp \
