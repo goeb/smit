@@ -6,11 +6,20 @@
         <meta content="text/html;charset=UTF-8" http-equiv="Content-Type">
         <script src="SM_URL_ROOT/sm/smit.js"></script>
         <script type="text/javascript">
+            function selectCustomNotificationPolicy(bool) {
+                showOrHideClasses('box_notif_custom', bool);
+            }
             function selectAuth(item) {
                 showOrHideClasses('box_auth', false);
                 showOrHideClasses('box_auth_' + item.value, true);
             }
-</script>
+		</script>
+        <style>
+            .box_notif_custom {
+                border: solid grey 1px;
+                padding: 5px;
+            }
+        </style>
     </head>
     <body>
         SM_INCLUDE(header_no_project_fixed.html)
@@ -22,8 +31,13 @@
                 <tr><td>User name:</td><td><input id="name" name="name" type="text" required="required"></td></tr>
                 <tr><td><label for="superadmin">Superadmin:</label></td><td><input id="superadmin" name="sm_superadmin" type="checkbox"></td></tr>
             </table>
+			<ul>
+				<li><a href="#authentication">Authentication</a></li>
+				<li class="sm_cap_superadmin"><a href="#permissions">Permissions</a></li>
+				<li><a href="#notifications">Email Notifications</a></li>
+			</ul>
             <br>
-            <h2>Authentication</h2>
+			<h2><a name="authentication">Authentication</a></h2>
             <div class="sm_cap_superadmin">
                 <label><input onclick="selectAuth(this);" type="radio" name="sm_auth_type" value="sha1">Password</label>
                 <label><input onclick="selectAuth(this);" type="radio" name="sm_auth_type" value="krb5">Kerberos</label>
@@ -54,7 +68,7 @@
                 </td></tr></table>
             </div>
             <div class="sm_cap_superadmin">
-                <h2>Configure Permissions on Projects</h2>
+				<h2><a name="permissions">Configure Permissions on Projects</a></h2>
                 Enter the names of the projects and the related permissions.<br>
                 Several projects can be referred at once using a wildcard (Eg: appolo*).
                 <div id="sm_permissions"></div>
@@ -65,6 +79,67 @@
         <br>
         <h2>Permissions</h2>
 SM_TABLE_USER_PERMISSIONS
+        <br>
+		<h2><a name="notifications">Email Notifications</a></h2>
+        <form action="notifications" method="POST">
+            <table>
+                <tr><td>Email:</td><td><input type="text" name="sm_email" size="50"></td></tr>
+                <tr><td>Current GPG Key:</td><td>
+						<pre>
+pub   4096R/2B90D010 2014-11-21 [expires: 2022-11-19]
+uid                  Debian Archive Automatic Signing Key (8/jessie) <ftpmaster@debian.org>
+						</pre>
+					</td></tr>
+
+				<tr><td>Add New Public GPG Key:<br>(optional)</td><td><textarea name="sm_gpg_key" cols="70" rows="10"></textarea></td></tr>
+                <tr><td>Notification Policy:</td>
+                    <td>
+                        <label><input onclick="selectCustomNotificationPolicy(false);" 
+                            type="radio" name="sm_notif_policy" value="none">No notification at all</label><br>
+                        <label><input onclick="selectCustomNotificationPolicy(false);" 
+                            type="radio" name="sm_notif_policy" value="all">Notify all changes</label><br>
+                        <label><input onclick="selectCustomNotificationPolicy(true);" 
+                            type="radio" name="sm_notif_policy" value="custom">Custom</label><br>
+
+                        <div class="box_notif_custom">
+                            Select which properties changes shall make notifications:
+                            <table>
+                                <tr><th>Property</th><th>Action</th><th>Value</th></tr>
+                                <tr>
+                                    <td><input name="sm_notif_pname_001" type="text" size="20"></td>
+                                    <td><select name="sm_notif_paction_001">
+                                            <option value="sm_notif_pequals">becomes/leaves/equals</option>
+                                            <option value="sm_notif_pchange">changes (any value)</option>
+                                        </select>
+                                    </td>
+                                    <td><input name="sm_notif_pvalue_001" type="text" size="20"></td>
+                                </tr>
+                                <tr>
+                                    <td><input name="sm_notif_pname" type="text" size="20"></td>
+                                    <td><select name="sm_notif_property_verb">
+                                            <option value="sm_property_equals">becomes/leaves/equals</option>
+                                            <option value="sm_property_change">changes (any value)</option>
+                                        </select>
+                                    </td>
+                                    <td><input name="sm_notif_pvalue" type="text" size="20"></td>
+                                </tr>
+                                <tr>
+                                    <td><input name="sm_notif_pname" type="text" size="20"></td>
+                                    <td><select name="sm_notif_property_verb">
+                                            <option value="sm_property_equals">becomes/leaves/equals</option>
+                                            <option value="sm_property_change">changes (any value)</option>
+                                        </select>
+                                    </td>
+                                    <td><input name="sm_notif_pvalue" type="text" size="20"></td>
+                                </tr>
+                            </table>
+                            <input id="sm_notif_msg_file" name="sm_notif_msg_file" type="checkbox">
+                            <label for="sm_notif_msg_file">Notify on new message or file</label>
+                        </div>
+                    </td>
+            </table>
+            <input type="submit" value="Apply Notifications">
+        </form>
         <br>
         <div class="sm_cap_superadmin">
             <button type="button" onclick="sm_deleteResource('./');">Delete this user</button>
