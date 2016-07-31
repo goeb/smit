@@ -84,14 +84,7 @@ SM_TABLE_USER_PERMISSIONS
         <form action="notifications" method="POST">
             <table>
                 <tr><td>Email:</td><td><input type="text" name="sm_email" size="50"></td></tr>
-                <tr><td>Current GPG Key:</td><td>
-						<pre>
-pub   4096R/2B90D010 2014-11-21 [expires: 2022-11-19]
-uid                  Debian Archive Automatic Signing Key (8/jessie) <ftpmaster@debian.org>
-						</pre>
-					</td></tr>
-
-				<tr><td>Add New Public GPG Key:<br>(optional)</td><td><textarea name="sm_gpg_key" cols="70" rows="10"></textarea></td></tr>
+				<tr><td>GPG Public Key:<br>(optional)</td><td><textarea name="sm_gpg_key" cols="70" rows="10"></textarea></td></tr>
                 <tr><td>Notification Policy:</td>
                     <td>
                         <label><input onclick="selectCustomNotificationPolicy(false);" 
