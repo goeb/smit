@@ -50,7 +50,6 @@ User::User()
 {
     superadmin = false;
     authHandler = NULL;
-    notification = NULL;
 }
 
 User::User(const User &other)
@@ -378,7 +377,7 @@ void UserBase::loadNotifications(const std::string &path, std::map<std::string, 
     FOREACH(user, users) {
         std::string mangled = urlEncode(user->first);
         std::string file = std::string(path) + "/" PATH_REPO "/" + DIR_NOTIFICATIONS + "/" + mangled;
-        user->second->notification = Notification::load(file);
+        Notification::load(file, user->second->notification);
     }
 }
 

@@ -43,6 +43,7 @@
 #include "rendering/renderingCsv.h"
 #include "rendering/renderingJson.h"
 #include "user/session.h"
+#include "user/notification.h"
 #include "global.h"
 #include "mg_win32.h"
 #include "server/Trigger.h"
@@ -492,6 +493,112 @@ void httpPostUserEmpty(const RequestContext *req, const User &signedInUser)
     sendHttpRedirect(req, "/users", 0);
 }
 
+struct UserConfGeneral {
+    std::string newName;
+    bool superadmin;
+    UserConfGeneral(): superadmin(false) {}
+};
+
+struct UserConfPermissions {
+    std::map<std::string, Role> permissions;
+};
+
+struct UserConfAuthentication {
+    std::string passwd1;
+    std::string passwd2;
+    std::string authType;
+    std::string ldapUri;
+    std::string ldapDname;
+    std::string krb5Primary;
+    std::string krb5Realm;
+    UserConfAuthentication(): authType("sha1") {}
+};
+
+/** Parse POST request of user configuration
+ *
+ *  The expected input format is "application/x-www-form-urlencoded".
+ */
+static int parseUserConfPost(const RequestContext *req, UserConfGeneral &ucg, UserConfPermissions &ucp, UserConfAuthentication &uca, Notification &ucn)
+{
+    ContentType ct = getContentType(req);
+
+    if (ct != CT_WWW_FORM_URLENCODED) {
+        LOG_ERROR("Bad contentType: %s", getContentTypeString(req));
+        return -1;
+    }
+
+    std::string postData;
+    int rc = readMgreq(req, postData, 4096*2); // allow size of GPG key
+    if (rc < 0) {
+        sendHttpHeader413(req, "You tried to upload too much data. Max is 4096 bytes.");
+        return -1;
+    }
+
+    // Parse the parameters
+
+    // application/x-www-form-urlencoded
+    // post_data is "var1=val1&var2=val2...".
+
+    std::string projectWildcard, role;
+    NotificationRule tmpRule;
+
+    while (postData.size() > 0) {
+        std::string tokenPair = popToken(postData, '&');
+        std::string key = popToken(tokenPair, '=');
+        std::string value = urlDecode(tokenPair);
+
+        if (key == "name") ucg.newName = value;
+        else if (key == "sm_superadmin" && value == "on") ucg.superadmin = true;
+
+        else if (key == "sm_auth_type") uca.authType = value;
+        else if (key == "sm_passwd1") uca.passwd1 = value;
+        else if (key == "sm_passwd2") uca.passwd2 = value;
+        else if (key == "sm_ldap_uri") uca.ldapUri = value;
+        else if (key == "sm_ldap_dname") uca.ldapDname = value;
+        else if (key == "sm_krb5_primary") uca.krb5Primary = value;
+        else if (key == "sm_krb5_realm") uca.krb5Realm = value;
+
+        else if (key == "project_wildcard") projectWildcard = value;
+        else if (key == "role") role = value;
+
+        else if (key == "sm_email") ucn.email = value;
+        else if (key == "sm_gpg_key") ucn.gpgPublicKey = value;
+        else if (key == "sm_notif_policy") ucn.notificationPolicy = value;
+        else if (key == "sm_notif_pname") {
+            if (!tmpRule.propertyName.empty()) {
+                // There is a pending tmpRule, take it into account.
+                ucn.customPolicy.rules.push_back(tmpRule);
+                tmpRule = NotificationRule(); // clear variable tmpRule
+            }
+            tmpRule.propertyName = value;
+        }
+        else if (key == "sm_notif_verb") {
+            if (value == "sm_notif_pequal") tmpRule.verb = RV_ANY_CHANGE;
+            else if (value == "sm_notif_pchange") tmpRule.verb = RV_BECOME_LEAVES_EQUAL;
+        }
+        else if (key == "sm_notif_pvalue") tmpRule.value = value;
+
+        else {
+            LOG_ERROR("httpPostUsers: unexpected parameter '%s'", key.c_str());
+        }
+
+        // look if the pair project/role is complete
+        if (!projectWildcard.empty() && !role.empty()) {
+            Role r = stringToRole(role);
+            if (r != ROLE_NONE) ucp.permissions[projectWildcard] = r;
+            projectWildcard.clear();
+            role.clear();
+        }
+    }
+    if (!tmpRule.propertyName.empty()) {
+        // There is a pending tmpRule, take it into account.
+        ucn.customPolicy.rules.push_back(tmpRule);
+        tmpRule = NotificationRule(); // clear variable tmpRule
+    }
+
+    return 0;
+}
+
 /** Post configuration of a new or existing user
   *
   * Non-superadmin users may only post their password.
@@ -505,90 +612,47 @@ void httpPostUser(const RequestContext *request, User signedInUser, const std::s
 
     if (username.empty()) return httpPostUserEmpty(request, signedInUser);
 
-    // get the posted parameters
-    ContentType ct = getContentType(request);
+    UserConfGeneral ucg;
+    UserConfPermissions ucp;
+    UserConfAuthentication uca;
+    Notification ucn;
 
-    if (ct != CT_WWW_FORM_URLENCODED) {
-        LOG_ERROR("Bad contentType: %s", getContentTypeString(request));
-        return;
-    }
-
-    // application/x-www-form-urlencoded
-    // post_data is "var1=val1&var2=val2...".
-
-    std::string postData;
-    int rc = readMgreq(request, postData, 4096);
-    if (rc < 0) {
-        sendHttpHeader413(request, "You tried to upload too much data. Max is 4096 bytes.");
-        return;
-    }
-
-    User newUserConfig;
-    std::string passwd1, passwd2;
-    std::string projectWildcard, role;
-    std::string authType = "sha1"; // default value
-    std::string ldapUri, ldapDname;
-    std::string krb5Primary, krb5Realm;
-
-    while (postData.size() > 0) {
-        std::string tokenPair = popToken(postData, '&');
-        std::string key = popToken(tokenPair, '=');
-        std::string value = urlDecode(tokenPair);
-
-        if (key == "name") newUserConfig.username = value;
-        else if (key == "sm_superadmin" && value == "on") newUserConfig.superadmin = true;
-        else if (key == "sm_auth_type") authType = value;
-        else if (key == "sm_passwd1") passwd1 = value;
-        else if (key == "sm_passwd2") passwd2 = value;
-        else if (key == "sm_ldap_uri") ldapUri = value;
-        else if (key == "sm_ldap_dname") ldapDname = value;
-        else if (key == "sm_krb5_primary") krb5Primary = value;
-        else if (key == "sm_krb5_realm") krb5Realm = value;
-        else if (key == "project_wildcard") projectWildcard = value;
-        else if (key == "role") role = value;
-        else {
-            LOG_ERROR("httpPostUsers: unexpected parameter '%s'", key.c_str());
-        }
-
-        // look if the pair project/role is complete
-        if (!projectWildcard.empty() && !role.empty()) {
-            Role r = stringToRole(role);
-            if (r != ROLE_NONE) newUserConfig.permissions[projectWildcard] = r;
-            projectWildcard.clear();
-            role.clear();
-        }
-    }
+    int r = parseUserConfPost(request, ucg, ucp, uca, ucn);
+    if (r != 0) return;
 
     // Check that the username given in the form is not empty.
     // Only superadmin has priviledge for modifying this.
     // For other users, the disabled field makes the username empty.
     if (signedInUser.superadmin) {
-        if (newUserConfig.username.empty() || newUserConfig.username == "_") {
+        if (ucg.newName.empty() || ucg.newName == "_") {
             LOG_INFO("Ignore user parameters as username is empty or '_'");
             sendHttpHeader400(request, "Invalid user name");
             return;
         }
     }
 
-    int r = 0;
+    User newUserConfig;
+    newUserConfig.username = ucg.newName;
+    newUserConfig.superadmin = ucg.superadmin;
+    newUserConfig.permissions = ucp.permissions;
+    r = 0;
     std::string error;
 
     // check the parameters
-    if (passwd1 != passwd2) {
-        LOG_INFO("passwd1 (%s) != passwd2 (%s)", passwd1.c_str(), passwd2.c_str());
+    if (uca.passwd1 != uca.passwd2) {
+        LOG_INFO("passwd1 (%s) != passwd2 (%s)", uca.passwd1.c_str(), uca.passwd2.c_str());
         sendHttpHeader400(request, "passwords 1 and 2 do not match");
         return;
     }
 
-
-    LOG_INFO("authType=%s", authType.c_str()); // TODO remove this debug
+    LOG_INFO("authType=%s", uca.authType.c_str());
 
     if (!signedInUser.superadmin) {
         // if signedInUser is not superadmin, only password is updated
         newUserConfig.username = username; // used below for redirection
 
-        if (!passwd1.empty()) {
-            r = UserBase::updatePassword(username, passwd1);
+        if (!uca.passwd1.empty()) {
+            r = UserBase::updatePassword(username, uca.passwd1);
             if (r != 0) {
                 LOG_ERROR("Cannot update password of user '%s'", username.c_str());
                 error = "Cannot update password";
@@ -600,28 +664,28 @@ void httpPostUser(const RequestContext *request, User signedInUser, const std::s
 
     } else {
         // superadmin: update all parameters of the user's configuration
-        if (authType == "sha1") {
-            if (!passwd1.empty()) newUserConfig.setPasswd(passwd1);
+        if (uca.authType == "sha1") {
+            if (!uca.passwd1.empty()) newUserConfig.setPasswd(uca.passwd1);
 
 #ifdef LDAP_ENABLED
-        } else if (authType == "ldap") {
-            if (ldapUri.empty() || ldapDname.empty()) {
+        } else if (uca.authType == "ldap") {
+            if (uca.ldapUri.empty() || uca.ldapDname.empty()) {
                 sendHttpHeader400(request, "Missing parameter. Check the LDAP URI and Distinguished Name.");
                 return;
             }
-            newUserConfig.authHandler = new AuthLdap(newUserConfig.username, ldapUri, ldapDname);
+            newUserConfig.authHandler = new AuthLdap(newUserConfig.username, uca.ldapUri, uca.ldapDname);
 #endif
 #ifdef KERBEROS_ENABLED
-        } else if (authType == "krb5") {
-            if (krb5Realm.empty()) {
+        } else if (uca.authType == "krb5") {
+            if (uca.krb5Realm.empty()) {
                 sendHttpHeader400(request, "Empty parameter: Kerberos Realm.");
                 return;
             }
-            newUserConfig.authHandler = new AuthKrb5(newUserConfig.username, krb5Realm, krb5Primary);
+            newUserConfig.authHandler = new AuthKrb5(newUserConfig.username, uca.krb5Realm, uca.krb5Primary);
 #endif
         } else {
             // unsupported authentication type
-            std::string msg = "Unsupported authentication type: " + authType;
+            std::string msg = "Unsupported authentication type: " + uca.authType;
             sendHttpHeader400(request, msg.c_str());
             return;
         }
@@ -649,7 +713,7 @@ void httpPostUser(const RequestContext *request, User signedInUser, const std::s
         sendHttpHeader400(request, error.c_str());
 
     } else {
-        // POST accepted and processed ok
+        // the request has been accepted and processed ok
         enum RenderingFormat format = getFormat(request);
 
         if (format == RENDERING_TEXT) {
@@ -657,7 +721,7 @@ void httpPostUser(const RequestContext *request, User signedInUser, const std::s
             sendHttpHeader204(request, 0);
 
         } else {
-            // ok, redirect
+            // Redirect
             std::string redirectUrl = "/users/" + urlEncode(newUserConfig.username);
             sendHttpRedirect(request, redirectUrl.c_str(), 0);
         }

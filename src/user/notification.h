@@ -17,7 +17,7 @@ enum RuleVerb {
 
 // Types of notification policies
 #define K_NOTIFY_POLICY_ALL           "all"
-#define K_NOTIFY_POLICY_NONE          "none"
+#define K_NOTIFY_POLICY_NONE          "none"    // default value
 #define K_NOTIFY_POLICY_CUSTOM        "custom"
 
 
@@ -26,6 +26,7 @@ public:
     std::string propertyName;
     RuleVerb verb;
     std::string value; // used with some verbs
+    NotificationRule(): verb(RV_ANY_CHANGE) {}
 };
 
 class NotificationPolicyCustom {
@@ -45,11 +46,11 @@ class Notification {
 public:
     std::string email;
     std::string gpgPublicKey; // armored, format of gpg --armor --export ...
-    std::string notificationPolicy;
+    std::string notificationPolicy; // empty value (default) means no notification at all
     NotificationPolicyCustom customPolicy;
 
     // Methods
-    static Notification *load(const std::string &path);
+    static void load(const std::string &path, Notification &notif);
     int store(const std::string &path) const;
 };
 

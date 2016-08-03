@@ -81,7 +81,7 @@
 SM_TABLE_USER_PERMISSIONS
         <br>
 		<h2><a name="notifications">Email Notifications</a></h2>
-        <form action="notifications" method="POST">
+        <form action="" method="POST">
             <table>
                 <tr><td>Email:</td><td><input type="text" name="sm_email" size="50"></td></tr>
 				<tr><td>GPG Public Key:<br>(optional)</td><td><textarea name="sm_gpg_key" cols="70" rows="10"></textarea></td></tr>
@@ -99,28 +99,28 @@ SM_TABLE_USER_PERMISSIONS
                             <table>
                                 <tr><th>Property</th><th>Action</th><th>Value</th></tr>
                                 <tr>
-                                    <td><input name="sm_notif_pname_001" type="text" size="20"></td>
-                                    <td><select name="sm_notif_paction_001">
-                                            <option value="sm_notif_pequals">becomes/leaves/equals</option>
-                                            <option value="sm_notif_pchange">changes (any value)</option>
-                                        </select>
-                                    </td>
-                                    <td><input name="sm_notif_pvalue_001" type="text" size="20"></td>
-                                </tr>
-                                <tr>
                                     <td><input name="sm_notif_pname" type="text" size="20"></td>
-                                    <td><select name="sm_notif_property_verb">
-                                            <option value="sm_property_equals">becomes/leaves/equals</option>
-                                            <option value="sm_property_change">changes (any value)</option>
+                                    <td><select name="sm_notif_verb">
+                                            <option value="sm_notif_pequal">becomes/leaves/equals</option>
+                                            <option value="sm_notif_pchange">changes (any value)</option>
                                         </select>
                                     </td>
                                     <td><input name="sm_notif_pvalue" type="text" size="20"></td>
                                 </tr>
                                 <tr>
                                     <td><input name="sm_notif_pname" type="text" size="20"></td>
-                                    <td><select name="sm_notif_property_verb">
-                                            <option value="sm_property_equals">becomes/leaves/equals</option>
-                                            <option value="sm_property_change">changes (any value)</option>
+                                    <td><select name="sm_notif_verb">
+                                            <option value="sm_notif_pequal">becomes/leaves/equals</option>
+                                            <option value="sm_notif_pchange">changes (any value)</option>
+                                        </select>
+                                    </td>
+                                    <td><input name="sm_notif_pvalue" type="text" size="20"></td>
+                                </tr>
+                                <tr>
+                                    <td><input name="sm_notif_pname" type="text" size="20"></td>
+                                    <td><select name="sm_notif_verb">
+                                            <option value="sm_notif_pequal">becomes/leaves/equals</option>
+                                            <option value="sm_notif_pchange">changes (any value)</option>
                                         </select>
                                     </td>
                                     <td><input name="sm_notif_pvalue" type="text" size="20"></td>

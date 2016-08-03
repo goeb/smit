@@ -40,7 +40,7 @@ public:
     std::map<std::string, enum Role> rolesOnProjects;
     bool superadmin;
     std::map<std::string, Role> permissions; // map of projectWildcard => role
-    Notification *notification;
+    Notification notification;
 
     User();
     User(const User &other);

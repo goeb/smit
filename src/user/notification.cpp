@@ -33,7 +33,7 @@ int NotificationPolicyCustom::match(IssueCopy oldi, IssueCopy newi)
  * notifyCustom -propertyAnyChange <property-name>
  */
 
-Notification *Notification::load(const std::string &path)
+void Notification::load(const std::string &path, Notification &notif)
 {
     // load a given entry
     std::string buf;
@@ -42,10 +42,7 @@ Notification *Notification::load(const std::string &path)
     if (n < 0) {
         // error loading the file
         LOG_INFO("Cannot load notification '%s': %s", path.c_str(), strerror(errno));
-        return NULL;
     }
-
-    Notification *notif = new Notification;
 
     std::list<std::list<std::string> > lines = parseConfigTokens(buf.c_str(), buf.size());
 
@@ -66,13 +63,13 @@ Notification *Notification::load(const std::string &path)
         std::string firstArg = line->front();
         line->pop_front(); // remove the first arg
 
-        if (key == K_EMAIL) notif->email = firstArg;
-        else if (key == K_GPG_KEY) notif->gpgPublicKey = firstArg;
-        else if (key == K_NOTIFY_POLICY) notif->notificationPolicy = firstArg;
-        else if (key == K_NOTIFY_CUSTOM) notif->notificationPolicy = firstArg;
-        else if (notif->notificationPolicy == K_NOTIFY_POLICY_CUSTOM) {
+        if (key == K_EMAIL) notif.email = firstArg;
+        else if (key == K_GPG_KEY) notif.gpgPublicKey = firstArg;
+        else if (key == K_NOTIFY_POLICY) notif.notificationPolicy = firstArg;
+        else if (key == K_NOTIFY_CUSTOM) notif.notificationPolicy = firstArg;
+        else if (notif.notificationPolicy == K_NOTIFY_POLICY_CUSTOM) {
             if (firstArg == K_NOTIFY_CUSTOM_OPT_MSG_FILE) {
-                notif->customPolicy.notifyOnewMessageOrFile = true;
+                notif.customPolicy.notifyOnewMessageOrFile = true;
 
             } else if (firstArg == K_NOTIFY_CUSTOM_OPT_PROP_VALUE) {
                 if (line->size() != 2) {
@@ -83,7 +80,7 @@ Notification *Notification::load(const std::string &path)
                 nr.propertyName = line->front();
                 nr.verb = RV_BECOME_LEAVES_EQUAL;
                 nr.value = line->back();
-                notif->customPolicy.rules.push_back(nr);
+                notif.customPolicy.rules.push_back(nr);
 
             } else if (firstArg == K_NOTIFY_CUSTOM_OPT_ANY) {
                 if (line->size() != 1) {
@@ -93,7 +90,7 @@ Notification *Notification::load(const std::string &path)
                 NotificationRule nr;
                 nr.propertyName = line->front();
                 nr.verb = RV_ANY_CHANGE;
-                notif->customPolicy.rules.push_back(nr);
+                notif.customPolicy.rules.push_back(nr);
 
             } else {
                 LOG_ERROR("Malformed line in '%s', line %d", path.c_str(), lineNum);
@@ -102,8 +99,8 @@ Notification *Notification::load(const std::string &path)
 
         }
     }
-    return notif;
 }
+
 int Notification::store(const std::string &path) const
 {
     std::ostringstream serialized;
