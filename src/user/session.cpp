@@ -24,7 +24,6 @@
 #include "utils/parseConfig.h"
 #include "global.h"
 #include "repository/db.h"
-#include "AuthSha1.h"
 #include "fnmatch.h"
 
 #ifdef KERBEROS_ENABLED
@@ -60,7 +59,7 @@ User& User::operator=(const User &rhs)
 {
     username = rhs.username;
     if (rhs.authHandler) authHandler = rhs.authHandler->createCopy();
-    else authHandler = 0;
+    else authHandler = NULL;
     rolesOnProjects = rhs.rolesOnProjects;
     superadmin = rhs.superadmin;
     permissions = rhs.permissions;
@@ -69,7 +68,7 @@ User& User::operator=(const User &rhs)
 User::~User()
 {
     if (authHandler) delete authHandler;
-    authHandler = 0;
+    authHandler = NULL;
 }
 
 
@@ -670,14 +669,14 @@ int UserBase::updateUser(const std::string &username, User newConfig)
     return 0;
 }
 
-int UserBase::updatePassword(const std::string &username, const std::string &password)
+int UserBase::updatePassword(const std::string &username, const AuthSha1 *authSha1)
 {
     ScopeLocker scopeLocker(UserDb.locker, LOCK_READ_WRITE);
     std::map<std::string, User*>::iterator u = UserDb.configuredUsers.find(username);
     if (u == UserDb.configuredUsers.end()) return -1;
 
     LOG_DIAG("updatePassword for %s", username.c_str());
-    u->second->setPasswd(password);
+    u->second->authHandler = authSha1->createCopy();
     return store(Repository);
 }
 

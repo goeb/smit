@@ -8,6 +8,7 @@
 
 #include "utils/mutexTools.h"
 #include "Auth.h"
+#include "AuthSha1.h"
 #include "notification.h"
 
 #define SESSION_DURATION (60*60*36) // 1.5 day
@@ -76,7 +77,7 @@ public:
     static std::map<std::string, Role> getUsersRolesOfProject(const std::string &project);
     static std::map<Role, std::set<std::string> > getUsersByRole(const std::string &project);
     static int updateUser(const std::string &username, User newConfig);
-    static int updatePassword(const std::string &username, const std::string &password);
+    static int updatePassword(const std::string &username, const AuthSha1 *authSha1);
     static std::list<User> getAllUsers();
     static inline bool isLocalUserInterface() {return !localInterfaceUsername.empty(); }
     static const std::string getLocalInterfaceUser() { return localInterfaceUsername; }

@@ -13,7 +13,7 @@ struct AuthKrb5 : public Auth {
     std::string alternateUsername; // Optional. If empty, then username is used.
     virtual int authenticate(char *password);
     virtual std::string serialize();
-    virtual Auth *createCopy();
+    virtual Auth *createCopy() const;
     static Auth *deserialize(std::list<std::string> &tokens);
     inline ~AuthKrb5() { }
     inline AuthKrb5(const std::string &u, const std::string &r, const std::string &p) :

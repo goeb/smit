@@ -103,7 +103,7 @@ Auth *AuthLdap::deserialize(std::list<std::string> &tokens)
 }
 
 
-Auth *AuthLdap::createCopy()
+Auth *AuthLdap::createCopy() const
 {
     AuthLdap *ah = new AuthLdap(*this);
     return ah;
