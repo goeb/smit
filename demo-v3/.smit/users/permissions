@@ -3,7 +3,9 @@ setperm "John Smith" rw things_to_do
 setperm "John the ripper" ro *
 setperm "Mister Myster" ro myproject
 setperm "Mister Myster" rw mypxxx
-setperm alicex ro *
+setperm alice ro *
+setperm c3323/john1 ro myproject
+setperm c3323/john1 rw mypxxx
 setperm fred superadmin
 setperm fred admin myproject*
 setperm fred rw smit
@@ -13,8 +15,6 @@ setperm fred rw tutuut
 setperm homer superadmin
 setperm homer ro myproject
 setperm homer admin things_to_do
-setperm john1 ro myproject
-setperm john1 rw mypxxx
 setperm john2 ro myproject
 setperm john2 rw mypxxx
 setperm ldapToto rw myproject

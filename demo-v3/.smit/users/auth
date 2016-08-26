@@ -1,10 +1,10 @@
 adduser "John Smith" -type sha1 -hash e61a3587b3f7a142b8c7b9263c82f8119398ecb7
 adduser "John the ripper" -type sha1 -hash e61a3587b3f7a142b8c7b9263c82f8119398ecb7
 adduser "Mister Myster" -type sha1 -hash e61a3587b3f7a142b8c7b9263c82f8119398ecb7
-adduser alicex -type sha1 -hash e21bb6043d5487dace8896ad83536a748731644a -salt ee2ad8d60ead3a93
-adduser fred -type sha1 -hash bb28a780a234b32ba4362b3a64b4e1297f29928c -salt 1f2d9360ffbd7a5
+adduser alice -type sha1 -hash fedb566df93963f90086e50cd722dba2b91ec503 -salt 05fa4a22a43a4130
+adduser c3323/john1 -type sha1 -hash 270bf4a4ad3dbf86c089d6ff3b8c88c4ef00f6e0 -salt dddadad0baaebe3a
+adduser fred -type sha1 -hash f22d0c87f92164ed0320b31fd2fb5b01fe681932 -salt cb15c125e8be5972
 adduser homer -type sha1 -hash 9c38e24cb7d4f0b73f8b9cdf4f6a3612f989ce2b -salt 6cc8be554574aa67
-adduser john1 -type sha1 -hash 9c38e24cb7d4f0b73f8b9cdf4f6a3612f989ce2b -salt 6cc8be554574aa67
 adduser john2 -type sha1 -hash 9c38e24cb7d4f0b73f8b9cdf4f6a3612f989ce2b -salt 6cc8be554574aa67
 adduser ldapToto
 adduser x/y

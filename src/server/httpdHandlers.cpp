@@ -500,6 +500,12 @@ void httpPostUserEmpty(const RequestContext *req, const User &signedInUser)
     sendHttpRedirect(req, "/users", 0);
 }
 
+struct UserPostedParams : User
+{
+    std::string authType; // sha1 | krb5 | ldap
+
+};
+
 /** Parse POST request of user configuration
  *
  *  The expected input format is "application/x-www-form-urlencoded".
@@ -535,6 +541,7 @@ static int parseUserConfPost(const RequestContext *req, User &userConfig)
     std::string passwd1;
     std::string passwd2;
     AuthSha1 authSha1("", "", "");
+    Auth *currentAuth = NULL;
 #ifdef KERBEROS_ENABLED
     AuthKrb5 authKrb5("", "", "");
 #endif
@@ -550,15 +557,15 @@ static int parseUserConfPost(const RequestContext *req, User &userConfig)
         if (key == "name") userConfig.username = value;
         else if (key == "sm_superadmin" && value == "on") userConfig.superadmin = true;
 
-        else if (key == "sm_auth_type" && value == AUTH_SHA1) userConfig.authHandler = &authSha1; // Warning, pointer to local
+        else if (key == "sm_auth_type" && value == AUTH_SHA1) currentAuth = &authSha1;
 
 #ifdef KERBEROS_ENABLED
-        else if (key == "sm_auth_type" && value == AUTH_KRB5) userConfig.authHandler = &authKrb5; // Warning, pointer to local
+        else if (key == "sm_auth_type" && value == AUTH_KRB5) currentAuth = &authKrb5;
         else if (key == "sm_krb5_primary") AuthKrb5.krb5Primary = value;
         else if (key == "sm_krb5_realm") AuthKrb5.krb5Realm = value;
 #endif
 #ifdef LDAP_ENABLED
-        else if (key == "sm_auth_type" && value == AUTH_LDAP) userConfig.authHandler = &authLdap; // Warning, pointer to local
+        else if (key == "sm_auth_type" && value == AUTH_LDAP) currentAuth = &authLdap;
         else if (key == "sm_ldap_uri") authLdap.ldapUri = value;
         else if (key == "sm_ldap_dname") authLdap.ldapDname = value;
 #endif
@@ -605,16 +612,21 @@ static int parseUserConfPost(const RequestContext *req, User &userConfig)
         userConfig.notification.customPolicy.rules.push_back(tmpRule);
     }
 
-    // Copy the authentication handler, if any (because it points to a local)
-    if (userConfig.authHandler) userConfig.authHandler = userConfig.authHandler->createCopy();
-
     if (passwd1 != passwd2) {
         LOG_ERROR("Passwords do not match");
         return -1;
     }
 
+    // Copy the authentication handler, if any (because it points to a local)
+    if (currentAuth) userConfig.authHandler = currentAuth->createCopy();
+
     if (userConfig.authHandler && userConfig.authHandler->type == AUTH_SHA1) {
         if (! passwd1.empty()) userConfig.setPasswd(passwd1);
+        else {
+            // remove the Auth object
+            delete userConfig.authHandler;
+            userConfig.authHandler = NULL;
+        }
     }
 
     return 0;
@@ -646,7 +658,7 @@ void httpPostUser(const RequestContext *request, User signedInUser, const std::s
     r = 0;
     std::string error;
 
-    LOG_INFO("authType=%s", newUserConfig.authHandler ? newUserConfig.authHandler->type.c_str() : "none");
+    LOG_INFO("newUserConfig.authHandler=%s", newUserConfig.authHandler ? newUserConfig.authHandler->type.c_str() : "none");
 
     if (!signedInUser.superadmin) {
         // if signedInUser is not superadmin, only password associated to
@@ -658,9 +670,6 @@ void httpPostUser(const RequestContext *request, User signedInUser, const std::s
             if (NULL == authSha1) {
                 LOG_ERROR("dynamic_cast<AuthSha1*> failed");
                 error = "Internal error";
-
-            } else if (authSha1->hash.empty()) {
-                    // no change
 
             } else {
                 r = UserBase::updatePassword(username, authSha1);
