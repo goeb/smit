@@ -214,6 +214,8 @@ int User::authenticate(char *passwd)
   */
 void User::consolidateRoles()
 {
+    rolesOnProjects.clear();
+
     //std::list<Permission> permissions;
     Project *p = Database::Db.getNextProject(0);
     while (p) {
