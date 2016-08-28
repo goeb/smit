@@ -26,8 +26,6 @@ std::string htmlEscape(const std::string &value);
 std::string pop(std::list<std::string> & L);
 std::string getProperty(const PropertiesMap &properties, const std::string &name);
 std::string replaceAll(const std::string &in, char c, const char *replaceBy);
-std::string enquoteJs(const std::string &in);
-std::string toJavascriptArray(const std::list<std::string> &items);
 std::list<std::string> split(const std::string &s, const char *c, int limit = -1);
 std::list<std::string> splitLinesAndTrimBlanks(const std::string &s);
 

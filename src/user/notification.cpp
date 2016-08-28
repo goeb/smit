@@ -69,7 +69,7 @@ void Notification::load(const std::string &path, Notification &notif)
         else if (key == K_NOTIFY_CUSTOM) notif.notificationPolicy = firstArg;
         else if (notif.notificationPolicy == K_NOTIFY_POLICY_CUSTOM) {
             if (firstArg == K_NOTIFY_CUSTOM_OPT_MSG_FILE) {
-                notif.customPolicy.notifyOnewMessageOrFile = true;
+                notif.customPolicy.notifyOnNewMessageOrFile = true;
 
             } else if (firstArg == K_NOTIFY_CUSTOM_OPT_PROP_VALUE) {
                 if (line->size() != 2) {
@@ -113,7 +113,7 @@ int Notification::store(const std::string &path) const
     serialized <<  K_GPG_KEY << " " << gpgPublicKey << "\n";
     serialized <<  K_NOTIFY_POLICY << " " << notificationPolicy << "\n";
     if (notificationPolicy == K_NOTIFY_POLICY_CUSTOM) {
-        if (customPolicy.notifyOnewMessageOrFile) {
+        if (customPolicy.notifyOnNewMessageOrFile) {
             serialized << K_NOTIFY_CUSTOM << " " << K_NOTIFY_CUSTOM_OPT_MSG_FILE;
             serialized << "\n";
         }

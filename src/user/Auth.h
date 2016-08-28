@@ -1,6 +1,8 @@
 #ifndef _Auth_h
 #define _Auth_h
 
+#define AUTH_NONE "none"
+
 struct Auth {
     std::string type;
     std::string username;

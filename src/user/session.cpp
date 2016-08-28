@@ -648,14 +648,6 @@ int UserBase::updateUser(const std::string &username, User newConfig)
     existingUser = UserDb.configuredUsers.find(username);
     if (existingUser == UserDb.configuredUsers.end()) return -3;
 
-    if (!newConfig.authHandler) {
-        // keep same authentication parameters as before
-        newConfig.authHandler = existingUser->second->authHandler->createCopy();
-    } else if (existingUser->second->authHandler) {
-        // delete old authentication parameters, that will be replaced by the new ones
-        delete existingUser->second->authHandler;
-        existingUser->second->authHandler = 0;
-    }
     *(existingUser->second) = newConfig;
 
     // change the key in the map if name of user was modified

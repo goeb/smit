@@ -34,11 +34,11 @@ public:
 
 
     std::list<NotificationRule> rules;
-    bool notifyOnewMessageOrFile; // notify
+    bool notifyOnNewMessageOrFile; // notify
 
     // Methods
     int match(IssueCopy oldi, IssueCopy newi);
-    NotificationPolicyCustom(): notifyOnewMessageOrFile(false) {}
+    NotificationPolicyCustom(): notifyOnNewMessageOrFile(false) {}
 
 };
 
