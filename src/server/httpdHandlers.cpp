@@ -1303,10 +1303,7 @@ void httpSendIssueList(const RequestContext *req, const Project &p,
     if (format == RENDERING_TEXT) RText::printIssueList(req, issueList, cols);
     else if (format == RENDERING_JSON) RJson::printIssueList(req, issueList, cols);
     else if (format == RENDERING_CSV) {
-
-        std::string separator = getFirstParamFromQueryString(q, "sep");
-        separator = urlDecode(separator);
-        RCsv::printIssueList(req, issueList, cols, separator.c_str());
+        RCsv::printIssueList(req, issueList, cols);
     } else {
         ContextParameters ctx = ContextParameters(req, u, p.getProjectParameters());
         ctx.filterin = v.filterin;
@@ -1855,7 +1852,10 @@ int httpGetIssue(const RequestContext *req, Project &p, const std::string &issue
         sendHttpHeader200(req);
 
         if (format == RENDERING_TEXT) RText::printIssue(req, issue);
-        else {
+        else if (format == RENDERING_CSV) {
+            ProjectConfig pconfig = p.getConfig();
+            RCsv::printIssue(req, issue, pconfig);
+        }else {
 
             std::string q = req->getQueryString();
             std::string amend = getFirstParamFromQueryString(q, "amend");

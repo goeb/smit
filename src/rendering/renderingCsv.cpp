@@ -12,18 +12,29 @@
  */
 #include "config.h"
 
+#include <stdlib.h>
+
+#include "global.h"
 #include "renderingCsv.h"
 #include "repository/db.h"
 #include "utils/logging.h"
 #include "utils/stringTools.h"
+
+static char *getSep() {
+    static char *CsvSeparator = getenv("CSV_SEPARATOR");
+    if (!CsvSeparator) return (char*)",";
+    else return CsvSeparator;
+}
 
 /** Double quoting is needed when the string contains:
   *    a " character
   *    \n or \r
   *    a comma ,
   */
-std::string doubleQuoteCsv(const std::string &input, const char *separator)
+std::string doubleQuoteCsv(const std::string &input)
 {
+    char *separator = getSep();
+
     if (input.find_first_of("\n\r\"") == std::string::npos &&
             input.find(separator) == std::string::npos ) return input; // no need for quotes
 
@@ -39,29 +50,39 @@ std::string doubleQuoteCsv(const std::string &input, const char *separator)
     return result;
 }
 
+static void printHeaders(const RequestContext *req, const char *filename)
+{
+    req->printf("Content-Type: text/csv\r\n");
+    req->printf("Content-Disposition: attachment; filename=\"%s.csv\"\r\n", filename);
+    req->printf("\r\n\r\n");
+}
 
 void RCsv::printProjectList(const RequestContext *req, const std::list<ProjectSummary> &pList)
 {
-    req->printf("Content-Type: text/plain\r\n\r\n");
+    printHeaders(req, "projects");
+
+    char *separator = getSep();
 
     std::list<ProjectSummary>::const_iterator p;
     for (p=pList.begin(); p!=pList.end(); p++) {
-        req->printf("%s,%s\r\n", doubleQuoteCsv(p->name, ",").c_str(), doubleQuoteCsv(p->myRole, ",").c_str());
+        req->printf("%s", doubleQuoteCsv(p->name).c_str());
+        req->printf("%s", separator);
+        req->printf("%s\r\n", doubleQuoteCsv(p->myRole).c_str());
     }
 }
 
 void RCsv::printIssueList(const RequestContext *req, const std::vector<IssueCopy> &issueList,
-                          std::list<std::string> colspec, const char *separator)
+                          std::list<std::string> colspec)
 {
-    req->printf("Content-Type: text/plain\r\n\r\n");
+    printHeaders(req, "issues");
 
-    if (!separator || separator[0] == 0) separator = ","; // comma, for Comma-Separated Values
+    char *separator = getSep();
 
     // print names of columns
     std::list<std::string>::iterator colname;
     for (colname = colspec.begin(); colname != colspec.end(); colname++) {
-        if (colname != colspec.begin()) req->printf(",");
-        req->printf("%s", doubleQuoteCsv(*colname, separator).c_str());
+        if (colname != colspec.begin()) req->printf("%s", separator);
+        req->printf("%s", doubleQuoteCsv(*colname).c_str());
     }
     req->printf("\r\n");
 
@@ -89,9 +110,79 @@ void RCsv::printIssueList(const RequestContext *req, const std::vector<IssueCopy
                 if (p != properties.end()) text = toString(p->second);
             }
 
-            req->printf("%s", doubleQuoteCsv(text, separator).c_str());
+            req->printf("%s", doubleQuoteCsv(text).c_str());
         }
         req->printf("\r\n");
+    }
+}
+
+void RCsv::printIssue(const RequestContext *req, const IssueCopy &issue, const ProjectConfig &config)
+{
+    LOG_DEBUG("RCsv::printIssue...");
+    printHeaders(req, issue.id.c_str());
+
+    char *separator = getSep();
+
+    // print columns headers
+
+    // author
+    req->printf("author");
+
+    // ctime
+    req->printf("%s", separator);
+    req->printf("ctime");
+
+    std::list<std::string> props = config.getPropertiesNames();
+    std::list<std::string>::const_iterator p;
+    FOREACH(p, props) {
+        req->printf("%s", separator);
+        req->printf("%s", doubleQuoteCsv(*p).c_str());
+    }
+
+    // message
+    req->printf("%s", separator);
+    req->printf("message");
+
+    // files
+    req->printf("%s", separator);
+    req->printf("files");
+
+    req->printf("\r\n"); // new line
+
+    // print entries
+    PropertiesIt pit;
+    Entry *e = issue.first;
+    while (e) {
+        // author
+        req->printf("%s", doubleQuoteCsv(e->author).c_str());
+        // ctime
+        req->printf("%s", separator);
+        req->printf("%d", e->ctime);
+
+        FOREACH(p, props) {
+            req->printf("%s", separator);
+            pit = e->properties.find(*p);
+            if (pit != e->properties.end()) {
+                req->printf("%s", doubleQuoteCsv(toString(pit->second)).c_str());
+            }
+        }
+
+        // message
+        req->printf("%s", separator);
+        pit = e->properties.find(K_MESSAGE);
+        if (pit != e->properties.end()) {
+            req->printf("%s", doubleQuoteCsv(toString(pit->second)).c_str());
+        }
+
+        // files
+        req->printf("%s", separator);
+        pit = e->properties.find(K_FILE);
+        if (pit != e->properties.end()) {
+            req->printf("%s", doubleQuoteCsv(toString(pit->second)).c_str());
+        }
+
+        req->printf("\r\n"); // new line
+        e = e->getNext();
     }
 }
 

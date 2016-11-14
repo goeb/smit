@@ -11,7 +11,9 @@ class RCsv {
 public:
     static void printProjectList(const RequestContext *req, const std::list<ProjectSummary> &pList);
     static void printIssueList(const RequestContext *req, const std::vector<IssueCopy> &issueList,
-                               std::list<std::string> colspec, const char *separator);
+                               std::list<std::string> colspec);
+    static void printIssue(const RequestContext *req, const IssueCopy &issue, const ProjectConfig &config);
+
 };
 
 #endif
