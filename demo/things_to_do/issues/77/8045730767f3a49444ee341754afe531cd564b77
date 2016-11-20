@@ -1,9 +1,0 @@
-+smv 1.7.0
-+parent null
-+author fred
-+ctime 1400962552
-due_date ""
-in_charge homer
-parent 2
-status open
-summary "test issue association"
