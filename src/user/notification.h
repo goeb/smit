@@ -16,9 +16,10 @@ enum RuleVerb {
 };
 
 // Types of notification policies
-#define K_NOTIFY_POLICY_ALL           "all"
-#define K_NOTIFY_POLICY_NONE          "none"    // default value
-#define K_NOTIFY_POLICY_CUSTOM        "custom"
+#define NOTIFY_POLICY_ALL           "all"
+#define NOTIFY_POLICY_NONE          "none"    // default value
+#define NOTIFY_POLICY_ME            "me"      // things that concerne the user
+#define NOTIFY_POLICY_CUSTOM        "custom"
 
 
 class NotificationRule {

@@ -91,6 +91,9 @@ private:
 
     // Local Interface refers to "smit ui command": browsing a local clone of a smit repository
     static std::string localInterfaceUsername;
+
+    static std::string getPathNotification(const std::string &topdir, const std::string &username);
+
 };
 
 struct Session {

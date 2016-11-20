@@ -41,7 +41,8 @@ void Notification::load(const std::string &path, Notification &notif)
 
     if (n < 0) {
         // error loading the file
-        LOG_INFO("Cannot load notification '%s': %s", path.c_str(), strerror(errno));
+        LOG_DIAG("Cannot load notification '%s': %s", path.c_str(), strerror(errno));
+        return;
     }
 
     std::list<std::list<std::string> > lines = parseConfigTokens(buf.c_str(), buf.size());
@@ -67,7 +68,7 @@ void Notification::load(const std::string &path, Notification &notif)
         else if (key == K_GPG_KEY) notif.gpgPublicKey = firstArg;
         else if (key == K_NOTIFY_POLICY) notif.notificationPolicy = firstArg;
         else if (key == K_NOTIFY_CUSTOM) notif.notificationPolicy = firstArg;
-        else if (notif.notificationPolicy == K_NOTIFY_POLICY_CUSTOM) {
+        else if (notif.notificationPolicy == NOTIFY_POLICY_CUSTOM) {
             if (firstArg == K_NOTIFY_CUSTOM_OPT_MSG_FILE) {
                 notif.customPolicy.notifyOnNewMessageOrFile = true;
 
@@ -104,34 +105,21 @@ void Notification::load(const std::string &path, Notification &notif)
 int Notification::store(const std::string &path) const
 {
     std::ostringstream serialized;
-#define K_NOTIFY_CUSTOM               "notifyCustom"
-#define K_NOTIFY_CUSTOM_OPT_MSG_FILE  "-messageOrFile"
-#define K_NOTIFY_CUSTOM_OPT_PROP_VALUE   "-propertyValue"
-#define K_NOTIFY_CUSTOM_OPT_ANY       "-propertyAnyChange"
 
-    serialized << K_EMAIL <<  " " <<  email <<  "\n";
-    serialized <<  K_GPG_KEY << " " << gpgPublicKey << "\n";
-    serialized <<  K_NOTIFY_POLICY << " " << notificationPolicy << "\n";
-    if (notificationPolicy == K_NOTIFY_POLICY_CUSTOM) {
-        if (customPolicy.notifyOnNewMessageOrFile) {
-            serialized << K_NOTIFY_CUSTOM << " " << K_NOTIFY_CUSTOM_OPT_MSG_FILE;
-            serialized << "\n";
+    if (email.empty() && gpgPublicKey.empty()) {
+        int ret = unlink(path.c_str());
+        if (ret != 0) {
+            LOG_ERROR("Cannot unlink '%s': %s", path.c_str(), STRERROR(errno));
+            return -1;
         }
-
-        std::list<NotificationRule>::const_iterator rule;
-        FOREACH(rule, customPolicy.rules) {
-            if (rule->verb == RV_ANY_CHANGE) {
-                serialized << K_NOTIFY_CUSTOM << " " << K_NOTIFY_CUSTOM_OPT_PROP_VALUE << " ";
-                serialized << serializeSimpleToken(rule->propertyName) << " ";
-                serialized << serializeSimpleToken(rule->value);
-                serialized << "\n";
-            } else {
-                serialized << K_NOTIFY_CUSTOM << " " << K_NOTIFY_CUSTOM_OPT_ANY << " ";
-                serialized << serializeSimpleToken(rule->propertyName);
-                serialized << "\n";
-            }
-        }
+        return 0;
     }
+
+    serialized << K_EMAIL <<  " " <<  serializeSimpleToken(email) <<  "\n";
+    serialized << K_GPG_KEY << " " << serializeSimpleToken(gpgPublicKey) << "\n";
+    serialized << K_NOTIFY_POLICY << " " << serializeSimpleToken(notificationPolicy) << "\n";
+
+    // NOTIFY_POLICY_CUSTOM not supported at the moment
 
     int r = writeToFile(path, serialized.str());
     return r;

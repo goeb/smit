@@ -487,8 +487,12 @@ static std::string pkvGetValue(const PairKeyValueList &params, const std::string
 {
     PairKeyValueListIt param;
     FOREACH(param, params) {
-        if (param->key == key) return param->value;
+        if (param->key == key) {
+            LOG_DIAG("pkvGetValue(%s) -> %s", key.c_str(), param->value.c_str());
+            return param->value;
+        }
     }
+    LOG_DIAG("pkvGetValue(%s) -> (null)", key.c_str());
     return "";
 }
 static std::string pkvGetNext(const PairKeyValueList &params, PairKeyValueListIt &it, const std::string &key)
@@ -526,7 +530,7 @@ int parseFormUrlEncoded(const RequestContext *req, PairKeyValueList &params)
 
     // Receive the whole data
     std::string data;
-    int rc = readMgreq(req, data, 4096*2); // allow size of one GPG key
+    int rc = readMgreq(req, data, 4096*10); // allow size of one GPG key
     if (rc < 0) {
         LOG_ERROR("parseFormUrlEncoded: too much data uploaded");
         return -1;
@@ -706,42 +710,18 @@ void httpPostUser(const RequestContext *req, User signedInUser, const std::strin
     if (pkvHasKey(params, "sm_notif_policy")) {
         newUserConfig.notification.notificationPolicy = pkvGetValue(params, "sm_notif_policy");
 
-        if (newUserConfig.notification.notificationPolicy == K_NOTIFY_POLICY_CUSTOM) {
-            // Expected: sm_notif_pname=x, sm_notif_verb=y, (optional) sm_notif_pvalue=z
-            PairKeyValueListIt pit = params.end();
-            while (pit != params.end()) {
-                // Look for all custom rules
-                std::string pname = pkvGetNext(params, pit, "sm_notif_pname");
-                if (pit != params.end() && !pit->value.empty()) {
-                    NotificationRule rule;
+        // NOTIFY_POLICY_CUSTOM not supported at the moment.
 
-                    pit++; // go to next parameter
-                    if (pit == params.end() || pit->key != "sm_notif_verb") {
-                        LOG_ERROR("Use config: Missing 'sm_notif_verb'");
-                        continue;
-                    }
-                    std::string verb = pit->value;
-                    if (verb == "any_value") rule.verb = RV_ANY_CHANGE;
-                    else if (verb == "given_value") rule.verb = RV_BECOME_LEAVES_EQUAL;
-                    else LOG_ERROR("Unsupported notification verb: %s", verb.c_str());
-
-                    if (rule.verb == RV_BECOME_LEAVES_EQUAL) {
-                        pit++; // go to next parameter
-                        if (pit == params.end() || pit->key != "sm_notif_pvalue") {
-                            LOG_ERROR("Use config: Missing 'sm_notif_pvalue'");
-                            continue;
-                        }
-                        rule.value = pit->value;
-                    }
-                    newUserConfig.notification.customPolicy.rules.push_back(rule);
-                }
-            }
-            if (pkvHasKey(params, "sm_notif_msg_file")) {
-                if (pkvGetValue(params, "sm_notif_msg_file") == "on") newUserConfig.notification.customPolicy.notifyOnNewMessageOrFile = true;
-                else newUserConfig.notification.customPolicy.notifyOnNewMessageOrFile = false;
-
-            }
-       }
+        if (newUserConfig.notification.notificationPolicy == NOTIFY_POLICY_ALL) {
+            // ok, nothing to do
+        } else if (newUserConfig.notification.notificationPolicy == NOTIFY_POLICY_NONE) {
+            // ok, nothing to do
+        } else if (newUserConfig.notification.notificationPolicy == NOTIFY_POLICY_ME) {
+            // ok, nothing to do
+        } else {
+            LOG_ERROR("Invalid notification policy: %s", newUserConfig.notification.notificationPolicy.c_str());
+            newUserConfig.notification.notificationPolicy = NOTIFY_POLICY_NONE;
+        }
     }
 
     // If no error, then take into account the new configuration

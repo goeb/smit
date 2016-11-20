@@ -63,6 +63,7 @@ User& User::operator=(const User &rhs)
     rolesOnProjects = rhs.rolesOnProjects;
     superadmin = rhs.superadmin;
     permissions = rhs.permissions;
+    notification = rhs.notification;
     return *this;
 }
 User::~User()
@@ -372,12 +373,18 @@ int UserBase::load(const std::string &path, std::map<std::string, User*> &users)
     return rc;
 }
 
+std::string UserBase::getPathNotification(const std::string &topdir, const std::string &username)
+{
+    std::string mangled = urlEncode(username);
+    std::string file = std::string(topdir) + "/" PATH_REPO "/" + DIR_NOTIFICATIONS + "/" + mangled;
+    return file;
+}
+
 void UserBase::loadNotifications(const std::string &path, std::map<std::string, User*> &users)
 {
     std::map<std::string, User*>::iterator user;
     FOREACH(user, users) {
-        std::string mangled = urlEncode(user->first);
-        std::string file = std::string(path) + "/" PATH_REPO "/" + DIR_NOTIFICATIONS + "/" + mangled;
+        std::string file = getPathNotification(path, user->first);
         Notification::load(file, user->second->notification);
     }
 }
@@ -443,6 +450,8 @@ int UserBase::store(const std::string &repository)
 
     std::string pathAuth = repository + "/" PATH_REPO "/" PATH_AUTH;
     r = writeToFile(pathAuth, auth);
+    if (r < 0) return r;
+
     return r;
 }
 
@@ -490,6 +499,12 @@ int UserBase::addUser(User newUser)
     if (r < 0) return r;
 
     u->consolidateRoles();
+
+    // store notification (dedicated file)
+    std::string pathNotification = getPathNotification(Repository, newUser.username);
+    r = newUser.notification.store(pathNotification);
+    if (r < 0) return r;
+
     return 0;
 }
 
@@ -512,6 +527,12 @@ int UserBase::deleteUser(const std::string &username)
     int r = store(Repository);
     if (r < 0) {
         LOG_ERROR("Cannot store deletion of user '%s'", username.c_str());
+    }
+
+    std::string pathNotification = getPathNotification(Repository, username);
+    r = unlink(pathNotification.c_str());
+    if (r < 0) {
+        LOG_ERROR("Cannot remove notification file '%s': %s", pathNotification.c_str(), STRERROR(errno));
     }
 
     return r;
@@ -660,6 +681,12 @@ int UserBase::updateUser(const std::string &username, User newConfig)
     if (r < 0) return r;
 
     existingUser->second->consolidateRoles();
+
+    // store notification (dedicated file)
+    std::string pathNotification = getPathNotification(Repository, newConfig.username);
+    r = newConfig.notification.store(pathNotification);
+    if (r < 0) return r;
+
     return 0;
 }
 
