@@ -595,3 +595,25 @@ function setUserCapabilityAndRole(cap, role) {
     if (role == SmRole.admin) showOrHideClasses(classname, true);
     else showOrHideClasses(classname, false);
 }
+
+function setFormValue(name, value) {
+    var item = document.getElementsByName(name);
+	if (!item[0]) return;
+	
+	tagName = item[0].tagName.toUpperCase();
+	if (tagName == 'INPUT') {
+		type = item[0].type.toUpperCase();
+	   	if (type == 'TEXT') item[0].value = value;
+		else if (type == 'RADIO') {
+			for (var i=0; i<item.length; i++) {
+				if (item[i].value == value) {
+					item[i].checked = true;
+					return;
+				}
+			}
+		}
+	} else if (tagName == 'TEXTAREA') {
+		item[0].value = value;
+	}
+
+}

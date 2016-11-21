@@ -445,6 +445,10 @@ void RHtml::printPageUser(const ContextParameters &ctx, const User *u)
         }
     }
 
+    vn.script += "setFormValue('sm_email', '" + enquoteJs(u->notification.email) + "');\n";
+    vn.script += "setFormValue('sm_gpg_key', '" + enquoteJs(u->notification.gpgPublicKey) + "');\n";
+    vn.script += "setFormValue('sm_notif_policy', '" + enquoteJs(u->notification.notificationPolicy) + "');\n";
+
     vn.printPage();
 
 }
