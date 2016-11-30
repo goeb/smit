@@ -318,11 +318,17 @@ int Project::get(const std::string &issueId, IssueCopy &issue) const
         return -1;
     }
 
-    issue = *i; // make a copy
-    consolidateAssociations(issue, true);
-    consolidateAssociations(issue, false);
+    issue = copyIssue(*i); // make a copy
 
     return 0;
+}
+
+IssueCopy Project::copyIssue(const Issue &issue) const
+{
+    IssueCopy copy = issue; // make a copy
+    consolidateAssociations(copy, true);
+    consolidateAssociations(copy, false);
+    return copy;
 }
 
 /** Return a non-thread-safe list of pointers to the issues
@@ -1260,8 +1266,11 @@ int Project::storeEntry(const Entry *e)
   *     - a new issue is created
   *     - its id is returned within parameter 'issueId'
   *
+  * @param         properties
   * @param[in/out] issueId
   * @param[out]    entry
+  * @param         username
+  * @param[out]    oldIssue
   *
   * @return
   *     0 if no error. The entryId is fullfilled.
@@ -1269,7 +1278,7 @@ int Project::storeEntry(const Entry *e)
   *    -1 error
   */
 int Project::addEntry(PropertiesMap properties, std::string &issueId,
-                      Entry *&entry, std::string username)
+                      Entry *&entry, std::string username, IssueCopy &oldIssue)
 {
     ScopeLocker scopeLocker(locker, LOCK_READ_WRITE);
     ScopeLocker scopeLockerConfig(lockerForConfig, LOCK_READ_ONLY);
@@ -1312,7 +1321,7 @@ int Project::addEntry(PropertiesMap properties, std::string &issueId,
 
     }
 
-    Issue *i = 0;
+    Issue *i = NULL;
     if (issueId.size() > 0) {
         // adding an entry to an existing issue
 
@@ -1321,6 +1330,8 @@ int Project::addEntry(PropertiesMap properties, std::string &issueId,
             LOG_INFO("Cannot add new entry to unknown issue: %s", issueId.c_str());
             return -1;
         }
+
+        oldIssue = copyIssue(*i);
 
         // Simplify the entry by removing properties that have the same value
         // in the issue (only the modified fields are stored)
@@ -1554,14 +1565,19 @@ ProjectParameters Project::getProjectParameters() const
   *
   * This creates a new entry that contains the amendment.
   *
-  * @param[out]    entry
+  * @param      entryId
+  * @param      msg
+  * @param[out] entryOut
+  * @param      username
+  * @param[out] oldIssue
   *
   * @return
   *     0 success, an entry has been created
   *    >0 no entry was created due to no change
   *    <0 error
   */
-int Project::amendEntry(const std::string &entryId, const std::string &msg, Entry *&entryOut, const std::string &username)
+int Project::amendEntry(const std::string &entryId, const std::string &msg,
+                        Entry *&entryOut, const std::string &username, IssueCopy &oldIssue)
 {
     LOCK_SCOPE(locker, LOCK_READ_WRITE);
 
@@ -1577,6 +1593,9 @@ int Project::amendEntry(const std::string &entryId, const std::string &msg, Entr
     if (msg == e->getMessage()) return 0; // no change (the message is the same)
 
     // ok, we can proceed
+
+    oldIssue = copyIssue(*(e->issue));
+
     Entry *amendingEntry = e->issue->amendEntry(entryId, msg, username);
     if (!amendingEntry) {
         // should never happen

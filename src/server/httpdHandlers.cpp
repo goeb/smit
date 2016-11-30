@@ -2167,11 +2167,14 @@ void httpPostEntry(const RequestContext *req, Project &pro, const std::string & 
     Entry *entry = 0;
 
     std::string amendedEntry = getProperty(vars, K_AMEND);
+
     int r = 0;
+    IssueCopy oldIssue;
+
     if (!amendedEntry.empty()) {
         // this post is an amendment to an existing entry
         std::string newMessage = getProperty(vars, K_MESSAGE);
-        r = pro.amendEntry(amendedEntry, newMessage, entry, u.username);
+        r = pro.amendEntry(amendedEntry, newMessage, entry, u.username, oldIssue);
         if (r < 0) {
             // failure
             LOG_ERROR("amendEntry returned %d", r);
@@ -2185,7 +2188,7 @@ void httpPostEntry(const RequestContext *req, Project &pro, const std::string & 
         if (id == "new") {
             id = "";
         }
-        r = pro.addEntry(vars, id, entry, u.username);
+        r = pro.addEntry(vars, id, entry, u.username, oldIssue);
         if (r < 0) {
             // error
             sendHttpHeader500(req, "Cannot add entry");
@@ -2194,10 +2197,8 @@ void httpPostEntry(const RequestContext *req, Project &pro, const std::string & 
 
 #if !defined(_WIN32)
     if (entry) {
-        // TODO: At the moment the notification is not thread-safe, as the message of the entry
-        // may be modified by an amendment in the meanwhile, and in that case the notification will
-        // contain the latest message instead of the former one.
-        if (! UserBase::isLocalUserInterface()) Trigger::notifyEntry(pro, entry);
+        std::list<Recipient> recipients; // TODO populate this
+        if (! UserBase::isLocalUserInterface()) Trigger::notifyEntry(pro, entry, oldIssue, recipients);
     }
 #endif
 

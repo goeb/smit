@@ -58,11 +58,13 @@ public:
     void consolidateAssociations(IssueCopy &issue, bool forward) const;
 
     // methods for handling entries
-    int addEntry(PropertiesMap properties, std::string &iid, Entry *&entry, std::string username);
+    int addEntry(PropertiesMap properties, std::string &iid,
+                 Entry *&entry, std::string username, IssueCopy &oldIssue);
     int pushEntry(std::string &issueId, const std::string &entryId,
                   const std::string &user, const std::string &tmpPath);
 
-    int amendEntry(const std::string &entryId, const std::string &msg, Entry *&entryOut, const std::string &username);
+    int amendEntry(const std::string &entryId, const std::string &msg,
+                   Entry *&entryOut, const std::string &username, IssueCopy &oldIssue);
 
     size_t getNumIssues() const;
     long getLastModified() const;
@@ -165,6 +167,8 @@ private:
                             const std::list<std::string> &issues);
 
     void updateLastModified(Entry *e);
+    IssueCopy copyIssue(const Issue &issue) const;
+
 };
 
 #endif

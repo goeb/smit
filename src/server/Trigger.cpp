@@ -66,8 +66,19 @@ std::string toJson(const std::list<std::string> &items)
 
 }
 
+std::string toJson(const PropertiesMap &properties)
+{
+    std::string jobject = "{";
+    PropertiesIt p = properties.begin();
+    FOREACH(p, properties) {
+        if (p != properties.begin()) jobject += ",";
+        jobject += toJson(p->first) + ":" + toJson(p->second);
+    }
+    jobject += "}";
+    return jobject;
+}
 
-/** Format the text ti JSON, for the external program
+/** Format the text to JSON, for feeding to the external program
   *
   * First, some info that is not in the properties of the issue:
   *     project name, issue id, entry id, author,
@@ -79,81 +90,87 @@ std::string toJson(const std::list<std::string> &items)
   * Finally, the message, if any
   *
   */
-std::string Trigger::formatEntry(const Project &project, const Issue &issue, const Entry &entry,
-                                 const std::map<std::string, Role> &users)
+std::string Trigger::formatEntry(const Project &project, const IssueCopy &oldIssue, const Entry &entry,
+                                 const std::list<Recipient> &recipients)
 {
-    ProjectConfig pconfig = project.getConfig();
-
+    //
+    // Typical output:
+    // { "project": "...",
+    //   "old_issue" : { "id": "...",
+    //                  "properties": { ... },
+    //                },
+    //   "entry": { "id": "...",
+    //              "ctime": "...",
+    //              "author": "...",
+    //              "properties": { ... }
+    //            },
+    //   "recipients": [ { "email": "...",
+    //                     "gpg_pub_key", "..." },
+    //                   ...
+    //                 ],
+    //   "properties_labels": { <property_id>: <property_label>,
+    //                          ...
+    //                        }
+    //
+    //
+    // Notes:
+    // - if old_issue is null, it denotes a new issue
+    // - gpg_pub_key may be null
+    //
     std::ostringstream s;
     s << "{\n" << toJson("project") << ":" << toJson(project.getName()) << ",\n";
-    s << toJson("issue") << ":" << toJson(issue.id) << ",\n";
-    s << toJson("isNew") << ":" << ( (entry.parent == K_PARENT_NULL) ? "true":"false") << ",\n";
-    s << toJson("entry") << ":" << toJson(entry.id) << ",\n";
+
+    s << toJson("old_issue") << ":";
+    if (oldIssue.id.empty()) s << "null"; // no old issue
+    else {
+        s << "{";
+        s << toJson("id") << ":" << toJson(oldIssue.id) << ",\n";
+        s << toJson("properties") << ":" << toJson(oldIssue.properties);
+        s << "}";
+    }
+    s << ",\n";
+
+    s << toJson("entry") << ":";
+    s << "{";
+    s << toJson("id") << ":" << toJson(entry.id) << ",\n";
+    //s << toJson("ctime") << ":" << toJson(entry.ctime) << ",\n";
     s << toJson("author") << ":" << toJson(entry.author) << ",\n";
+    s << toJson("properties") << ":" << toJson(entry.properties);
+    s << "},\n";
 
-    // put the users of the project
-    std::map<std::string, Role>::const_iterator u;
-    s << toJson("users") << ":" << "{\n";
-    FOREACH(u, users) {
-        if (u != users.begin()) s << ",\n";
-        s << "  " << toJson(u->first) << ":" << toJson(roleToString(u->second));
+    // recipients
+    s << toJson("recipients") << ":";
+    s << "[";
+    std::list<Recipient>::const_iterator r;
+    FOREACH(r, recipients) {
+        if (r != recipients.begin()) s << ",";
+        s << "{";
+        s << toJson("email") << ":" << toJson(r->email);
+        s << ",";
+        s << toJson("gpg_pub_key") << ":" << toJson(r->gpgPubKey);
+        s << "}";
     }
-    s << "}";
+    s << "],";
 
-    std::map<std::string, std::list<std::string> >::const_iterator p;
-
-    // put the uploaded files, if any
-    std::string files;
-    p = entry.properties.find(K_FILE);
-    if (p != entry.properties.end()) {
-        files = toJson(p->second);
+    // properties_labels
+    ProjectConfig pconfig = project.getConfig();
+    std::map<std::string, std::string>::const_iterator plabel;
+    s << "{";
+    FOREACH(plabel, pconfig.propertyLabels) {
+        if (plabel != pconfig.propertyLabels.begin()) s << ",";
+        s << toJson(plabel->first) << ":" << toJson(plabel->second);
     }
-    if (files.size() > 0) s << ",\n" << toJson("files") << ": " << files << "\n";
+    s << "}"; // end of labels
 
-    // put the list of the properties modified by the entry
-    s << ",\n" << toJson("modified") << ":[";
-    std::ostringstream modifiedProperties;
-    FOREACH(p, entry.properties) {
-        if (p->first[0] != '+') {
-            if (modifiedProperties.str().size()) modifiedProperties << ",";
-            modifiedProperties << toJson(p->first);
-        }
-    }
-    s << modifiedProperties.str() << "]";
+    s << "}"; // end of main object
 
-    // put the properties of the issue
-    // { property1 : [ label, value ],
-    //   property2 : [ label, value ],
-    //   ... }
-    // (value may be a list, for multiselect)
-    s << ",\n" << toJson("properties") << ":{\n";
-    std::string consolidatedProps;
-    FOREACH(p, issue.properties) {
-        if (!pconfig.isValidPropertyName(p->first)) continue;
-
-        if (!consolidatedProps.empty()) consolidatedProps += ",\n";
-        consolidatedProps += "  " + toJson(p->first) + ":[";
-        consolidatedProps += toJson(pconfig.getLabelOfProperty(p->first)) + ",";
-        if (p->second.size() == 1) {
-            consolidatedProps += toJson(p->second.front());
-        } else {
-            // multiple values
-            consolidatedProps += toJson(p->second);
-        }
-        consolidatedProps += "]";
-    }
-    s << consolidatedProps << "\n}";
-
-    // put the message, if any
-    s << ",\n" << toJson("message") << ":" << toJson(entry.getMessage());
-
-    s << "\n}\n";
-    return s.str();
+   return s.str();
 }
 
 /** Run an external program for notifying a new entry
   */
-void Trigger::notifyEntry(const Project &project, const Entry *entry)
+void Trigger::notifyEntry(const Project &project, const Entry *entry,
+                          const IssueCopy &oldIssue, const std::list<Recipient> &recipients)
 {
     LOG_FUNC();
     if (!entry) return;
@@ -169,9 +186,8 @@ void Trigger::notifyEntry(const Project &project, const Entry *entry)
 
     if (programPath.size()) {
         // format the data that will be given to the external program on its stdin
-        Issue *i = entry->issue;
         std::map<std::string, Role> users = UserBase::getUsersRolesOfProject(project.getName());
-        std::string text = formatEntry(project, *i, *entry, users);
+        std::string text = formatEntry(project, oldIssue, *entry, recipients);
 
         run(programPath, text);
     }

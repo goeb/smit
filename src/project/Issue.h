@@ -45,7 +45,7 @@ struct Issue {
 
     // mutable members, that may be modified when a user posts an entry
     int mtime; // modification time (the one of the last entry)
-    std::map<std::string, std::list<std::string> > properties;
+    PropertiesMap properties;
     Entry *latest; // the latest entry
     std::map<std::string, std::list<std::string> > amendments; // key: amended entry-id, value: amending entries
     std::map<std::string, std::set<std::string> > tags; // key: entry-id, value: tags
