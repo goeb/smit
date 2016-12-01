@@ -25,6 +25,7 @@ std::string urlEncode(const std::string &src, char mark = '%', const char *dontE
 std::string htmlEscape(const std::string &value);
 std::string pop(std::list<std::string> & L);
 std::string getProperty(const PropertiesMap &properties, const std::string &name);
+bool hasPropertyValue(const PropertiesMap &properties, const std::string &value);
 std::string replaceAll(const std::string &in, char c, const char *replaceBy);
 std::list<std::string> split(const std::string &s, const char *c, int limit = -1);
 std::list<std::string> splitLinesAndTrimBlanks(const std::string &s);

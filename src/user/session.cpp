@@ -241,6 +241,23 @@ void User::consolidateRoles()
     }
 }
 
+bool User::shouldBeNotified(const Entry *entry, const IssueCopy &oldIssue)
+{
+    if (notification.notificationPolicy.empty()) return false;
+    if (notification.notificationPolicy == NOTIFY_POLICY_NONE) return false;
+    if (notification.notificationPolicy == NOTIFY_POLICY_ALL) return true;
+
+    if (notification.notificationPolicy == NOTIFY_POLICY_ME) {
+        // if any property of the entry or oldIssue is the user name,
+        // then return that the user should be notified
+        if (hasPropertyValue(entry->properties, username)) return true;
+        if (hasPropertyValue(oldIssue.properties, username)) return true;
+    }
+
+    return false;
+}
+
+
 RoleId roleToString(Role r)
 {
     if (r == ROLE_ADMIN) return "admin";
@@ -712,6 +729,36 @@ std::list<User> UserBase::getAllUsers()
     }
     return result;
 }
+
+std::list<Recipient> UserBase::getRecipients(const std::string &projectName,
+                                             const Entry *entry,
+                                             const IssueCopy &oldIssue)
+{
+    ScopeLocker scopeLocker(UserDb.locker, LOCK_READ_ONLY);
+
+    std::list<Recipient> recipients;
+
+    std::map<std::string, User*>::const_iterator uit;
+    FOREACH(uit, UserDb.configuredUsers) {
+        User *u = uit->second;
+        if (u->shouldBeNotified(entry, oldIssue)) {
+            // Ok, this user should be notified.
+
+            // Double check if user has read-access on project...
+            if (u->getRole(projectName) <= ROLE_RO) {
+                Recipient recipient;
+                recipient.email = u->notification.email;
+                recipient.gpgPubKey = u->notification.gpgPublicKey;
+                recipients.push_back(recipient);
+            } else {
+                // internal error, as we should not get here
+                LOG_ERROR("Notification attempt to unauthorized user");
+            }
+        }
+    }
+    return recipients;
+}
+
 
 
 static UserBase UserDb;

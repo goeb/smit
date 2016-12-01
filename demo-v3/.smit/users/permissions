@@ -4,16 +4,15 @@ setperm "John the ripper" ro *
 setperm "Mister Myster" ro myproject
 setperm "Mister Myster" rw mypxxx
 setperm alice ro *
-setperm fred superadmin
 setperm fred admin myproject*
 setperm fred rw smit
 setperm fred admin things_to_do
 setperm fred admin toto
 setperm fred rw tutuut
+setperm fred ro xx
 setperm homer superadmin
 setperm homer ro myproject
 setperm homer admin things_to_do
-setperm john1 rw a*
 setperm john2 ro myproject
 setperm john2 rw mypxxx
 setperm ldapToto rw myproject

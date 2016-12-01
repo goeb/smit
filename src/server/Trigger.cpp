@@ -155,6 +155,7 @@ std::string Trigger::formatEntry(const Project &project, const IssueCopy &oldIss
     // properties_labels
     ProjectConfig pconfig = project.getConfig();
     std::map<std::string, std::string>::const_iterator plabel;
+    s << toJson("properties_labels") << ":";
     s << "{";
     FOREACH(plabel, pconfig.propertyLabels) {
         if (plabel != pconfig.propertyLabels.begin()) s << ",";

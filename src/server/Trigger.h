@@ -3,12 +3,8 @@
 #define _trigger_h
 
 #include "user/session.h"
+#include "user/Recipient.h"
 #include "project/Project.h"
-
-struct Recipient {
-    std::string email;
-    std::string gpgPubKey;
-};
 
 class Trigger {
 public:

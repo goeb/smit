@@ -4,7 +4,6 @@ adduser "Mister Myster" -type sha1 -hash e61a3587b3f7a142b8c7b9263c82f8119398ecb
 adduser alice -type sha1 -hash fedb566df93963f90086e50cd722dba2b91ec503 -salt 05fa4a22a43a4130
 adduser fred -type sha1 -hash f22d0c87f92164ed0320b31fd2fb5b01fe681932 -salt cb15c125e8be5972
 adduser homer -type sha1 -hash 9c38e24cb7d4f0b73f8b9cdf4f6a3612f989ce2b -salt 6cc8be554574aa67
-adduser john1 -type sha1 -hash 6968cb80241b44f9bd4dc2855f6be217cdd7521d -salt bb4d9e0b8e2d3187
 adduser john2 -type sha1 -hash 9c38e24cb7d4f0b73f8b9cdf4f6a3612f989ce2b -salt 6cc8be554574aa67
 adduser ldapToto
 adduser x/y

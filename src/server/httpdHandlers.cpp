@@ -43,6 +43,7 @@
 #include "rendering/renderingCsv.h"
 #include "rendering/renderingJson.h"
 #include "user/session.h"
+#include "user/Recipient.h"
 #include "user/AuthSha1.h"
 #ifdef KERBEROS_ENABLED
   #include "user/AuthKrb5.h"
@@ -2130,7 +2131,8 @@ void cleanMultiselectProperties(const ProjectConfig &config, std::map<std::strin
   */
 void httpPostEntry(const RequestContext *req, Project &pro, const std::string & issueId, User u)
 {
-    enum Role role = u.getRole(pro.getName());
+    std::string projectName = pro.getName();
+    enum Role role = u.getRole(projectName);
     if (role != ROLE_RW && role != ROLE_ADMIN) {
         sendHttpHeader403(req);
         return;
@@ -2198,6 +2200,7 @@ void httpPostEntry(const RequestContext *req, Project &pro, const std::string & 
 #if !defined(_WIN32)
     if (entry) {
         std::list<Recipient> recipients; // TODO populate this
+        recipients = UserBase::getRecipients(projectName, entry, oldIssue);
         if (! UserBase::isLocalUserInterface()) Trigger::notifyEntry(pro, entry, oldIssue, recipients);
     }
 #endif

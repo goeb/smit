@@ -10,6 +10,7 @@
 #include "Auth.h"
 #include "AuthSha1.h"
 #include "notification.h"
+#include "Recipient.h"
 
 #define SESSION_DURATION (60*60*36) // 1.5 day
 #define COOKIE_VIEW_DURATION (60*60*24) // 1 day
@@ -56,6 +57,7 @@ public:
     void setPasswd(const std::string &passwd);
     int authenticate(char *passwd);
     void consolidateRoles();
+    bool shouldBeNotified(const Entry *entry, const IssueCopy &oldIssue);
 };
 
 class UserBase {
@@ -81,6 +83,8 @@ public:
     static std::list<User> getAllUsers();
     static inline bool isLocalUserInterface() {return !localInterfaceUsername.empty(); }
     static const std::string getLocalInterfaceUser() { return localInterfaceUsername; }
+    static std::list<Recipient> getRecipients(const std::string &projectName,
+                                              const Entry *entry, const IssueCopy &oldIssue);
 
 private:
     static UserBase UserDb;
