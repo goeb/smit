@@ -452,8 +452,11 @@ void httpDeleteUser(const RequestContext *request, User signedInUser, const std:
 }
 
 /** Hot reload of users (if hotreload=1)
-  */
-void httpUserHotReload(const RequestContext *req, const User &signedInUser)
+ *
+ * Verification that the signed-in user is a superadmin
+ * must have been done before calling this function.
+ */
+void httpUserHotReload(const RequestContext *req)
 {
     // execute the hot reload
     int r = UserBase::hotReload();
@@ -552,20 +555,48 @@ int parseFormUrlEncoded(const RequestContext *req, PairKeyValueList &params)
     return 0;
 }
 
-/** Post configuration of a new or existing user
-  *
-  * Non-superadmin users may only post:
-  * - their new password
-  * - their notification configuration
-  */
-void httpPostUser(const RequestContext *req, User signedInUser, const std::string &username)
+/** Process a user notification config POST request
+ *
+ *  @param postedParams
+ *      The parameters of the POST request
+ *
+ *  @param[out] newUserConfig
+ *      The object where the configuration is stored
+ */
+static void processNofiticationConfig(const PairKeyValueList &postedParams, User &newUserConfig)
 {
-    // Only superadmin has permission to configure other users
-    if (!signedInUser.superadmin && username != signedInUser.username) {
-        sendHttpHeader403(req);
-        return;
-    }
+    const PairKeyValueList &params = postedParams;
 
+    // Process notifications
+    if (pkvHasKey(params, "sm_email")) newUserConfig.notification.email = pkvGetValue(params, "sm_email");
+
+    if (pkvHasKey(params, "sm_gpg_key")) newUserConfig.notification.gpgPublicKey = pkvGetValue(params, "sm_gpg_key");
+
+    if (pkvHasKey(params, "sm_notif_policy")) {
+        newUserConfig.notification.notificationPolicy = pkvGetValue(params, "sm_notif_policy");
+
+        // NOTIFY_POLICY_CUSTOM not supported at the moment.
+
+        if (newUserConfig.notification.notificationPolicy == NOTIFY_POLICY_ALL) {
+            // ok, nothing to do
+        } else if (newUserConfig.notification.notificationPolicy == NOTIFY_POLICY_NONE) {
+            // ok, nothing to do
+        } else if (newUserConfig.notification.notificationPolicy == NOTIFY_POLICY_ME) {
+            // ok, nothing to do
+        } else {
+            LOG_ERROR("Invalid notification policy: %s", newUserConfig.notification.notificationPolicy.c_str());
+            newUserConfig.notification.notificationPolicy = NOTIFY_POLICY_NONE;
+        }
+    }
+}
+
+/** Process POST request on /users
+ *
+ * Verification that the signed-in user is a superadmin
+ * must have been done before calling this function.
+ */
+void httpPostUserAsSuperadmin(const RequestContext *req, const std::string &username, const std::string &superadminName)
+{
     PairKeyValueList params;
     int r = parseFormUrlEncoded(req, params);
     if (r < 0) {
@@ -575,9 +606,7 @@ void httpPostUser(const RequestContext *req, User signedInUser, const std::strin
 
     // Check if hot reload request
     if (username.empty() && pkvGetValue(params, "hotreload") == "1") {
-        if (!signedInUser.superadmin) return sendHttpHeader403(req);
-        // ok, permission granted
-        return httpUserHotReload(req, signedInUser);
+        return httpUserHotReload(req);
     }
 
     User newUserConfig;
@@ -588,14 +617,12 @@ void httpPostUser(const RequestContext *req, User signedInUser, const std::strin
             sendHttpHeader400(req, "No such user");
             return;
         }
-        newUserConfig = *existingUser;
+        newUserConfig = *existingUser; // copy
     }
 
     // Process 'sm_username'
     const char *key = "sm_username";
     if (pkvHasKey(params, key)) {
-
-        if (!signedInUser.superadmin) return sendHttpHeader403(req);
 
         newUserConfig.username = pkvGetValue(params, key);
 
@@ -612,9 +639,6 @@ void httpPostUser(const RequestContext *req, User signedInUser, const std::strin
     // Process 'superadmin'
     key = "sm_superadmin";
     if (pkvHasKey(params, key)) {
-
-        if (!signedInUser.superadmin) return sendHttpHeader403(req);
-
         if (pkvGetValue(params, key) == "on") newUserConfig.superadmin = true;
         else newUserConfig.superadmin = false;
 
@@ -622,7 +646,7 @@ void httpPostUser(const RequestContext *req, User signedInUser, const std::strin
         // Some browsers do not post checkboxes 'off', so deactivate 'superadmin' if not present
         newUserConfig.superadmin = false;
     }
-    LOG_DIAG("Superadmin=%d for user '%s'", newUserConfig.superadmin, username.c_str());
+    LOG_INFO("Superadmin=%d for user '%s'", newUserConfig.superadmin, username.c_str());
 
 
     // Process authentication parameters
@@ -641,8 +665,6 @@ void httpPostUser(const RequestContext *req, User signedInUser, const std::strin
         newUserConfig.setPasswd(passwd1);
 
     } else if (authType != AUTH_SHA1 && ! authType.empty()) {
-
-        if (!signedInUser.superadmin) return sendHttpHeader403(req);
 
         if (authType == AUTH_NONE) {
                // Remove authentication: the user will not be able to sign in
@@ -687,8 +709,6 @@ void httpPostUser(const RequestContext *req, User signedInUser, const std::strin
 
         // The parameters require a configuration for permissions/roles
 
-        if (!signedInUser.superadmin) return sendHttpHeader403(req);
-
         newUserConfig.permissions.clear(); // the new config will replace the old one
 
         while (pit != params.end()) {
@@ -705,27 +725,8 @@ void httpPostUser(const RequestContext *req, User signedInUser, const std::strin
         }
     }
 
-    // Process notifications
-    if (pkvHasKey(params, "sm_email")) newUserConfig.notification.email = pkvGetValue(params, "sm_email");
-
-    if (pkvHasKey(params, "sm_gpg_key")) newUserConfig.notification.gpgPublicKey = pkvGetValue(params, "sm_gpg_key");
-
-    if (pkvHasKey(params, "sm_notif_policy")) {
-        newUserConfig.notification.notificationPolicy = pkvGetValue(params, "sm_notif_policy");
-
-        // NOTIFY_POLICY_CUSTOM not supported at the moment.
-
-        if (newUserConfig.notification.notificationPolicy == NOTIFY_POLICY_ALL) {
-            // ok, nothing to do
-        } else if (newUserConfig.notification.notificationPolicy == NOTIFY_POLICY_NONE) {
-            // ok, nothing to do
-        } else if (newUserConfig.notification.notificationPolicy == NOTIFY_POLICY_ME) {
-            // ok, nothing to do
-        } else {
-            LOG_ERROR("Invalid notification policy: %s", newUserConfig.notification.notificationPolicy.c_str());
-            newUserConfig.notification.notificationPolicy = NOTIFY_POLICY_NONE;
-        }
-    }
+    // Notifications
+    processNofiticationConfig(params, newUserConfig);
 
     // If no error, then take into account the new configuration
     std::string error;
@@ -745,8 +746,7 @@ void httpPostUser(const RequestContext *req, User signedInUser, const std::strin
     if (r != 0) LOG_ERROR("Cannot update user '%s': %s", username.c_str(), error.c_str());
     else if (newUserConfig.username != username) {
         LOG_INFO("User '%s' renamed '%s'", username.c_str(), newUserConfig.username.c_str());
-    } else LOG_INFO("Parameters of user '%s' updated by '%s'", username.c_str(), signedInUser.username.c_str());
-
+    } else LOG_INFO("Parameters of user '%s' updated by '%s'", username.c_str(), superadminName.c_str());
 
     if (r != 0) {
         sendHttpHeader500(req, error.c_str());
@@ -765,6 +765,99 @@ void httpPostUser(const RequestContext *req, User signedInUser, const std::strin
         std::string redirectUrl = "/users/" + urlEncode(newUserConfig.username);
         sendHttpRedirect(req, redirectUrl.c_str(), 0);
     }
+}
+
+/** Process POST request on /users/<self>
+ *
+ * This considers the case of a regular user requesting to modify
+ * his/her own profile.
+ *
+ * Permission given to the signed-in user
+ * must have been verified before calling this function.
+ */
+void httpPostUserSelf(const RequestContext *req, const std::string &username)
+{
+    PairKeyValueList params;
+    int r = parseFormUrlEncoded(req, params);
+    if (r < 0) {
+        sendHttpHeader400(req, "Invalid submitted data");
+        return;
+    }
+
+    User newUserConfig;
+
+    User *existingUser = UserBase::getUser(username);
+    if (!existingUser) {
+        sendHttpHeader400(req, "No such user");
+        return;
+    }
+    newUserConfig = *existingUser; // Copy existing config into newUserConfig
+
+    // Process password
+
+    std::string passwd1 = pkvGetValue(params, "sm_passwd1");
+    if (!passwd1.empty()) {
+        // A password is submitted
+
+        if (pkvGetValue(params, "sm_passwd2") != passwd1) {
+            const char *msg = "passwords 1 and 2 do not match";
+            LOG_ERROR("PhttpPostUser: %s", msg);
+            sendHttpHeader400(req, msg);
+            return;
+        }
+        LOG_DIAG("Password changing for user '%s'", username.c_str());
+        newUserConfig.setPasswd(passwd1);
+
+    } // else, do not modify the password, nor any other authentication parameter
+
+    // Notifications
+    processNofiticationConfig(params, newUserConfig);
+
+    std::string error;
+    r = UserBase::updateUser(username, newUserConfig);
+    if (r == -1) error = "Cannot create user with empty name";
+    else if (r == -2) error = "Cannot change name as new name already exists";
+    else if (r < 0) error = "Cannot update non existing user";
+
+    if (r != 0) {
+        LOG_ERROR("Cannot update user '%s': %s", username.c_str(), error.c_str());
+        sendHttpHeader500(req, error.c_str());
+        return;
+    }
+
+    LOG_INFO("Parameters of user '%s' updated by self", username.c_str());
+
+    // the request has been accepted and processed ok
+    enum RenderingFormat format = getFormat(req);
+
+    if (format == RENDERING_TEXT) {
+        // No redirection
+        sendHttpHeader204(req, 0);
+
+    } else {
+        // Redirect
+        std::string redirectUrl = "/users/" + urlEncode(username);
+        sendHttpRedirect(req, redirectUrl.c_str(), 0);
+    }
+}
+
+/** Post configuration of a new or existing user
+  *
+  * Non-superadmin users may only post:
+  * - their new password
+  * - their notification configuration
+  */
+void httpPostUser(const RequestContext *req, User signedInUser, const std::string &username)
+{
+    // Only superadmin has permission to configure other users
+    if (signedInUser.superadmin) return httpPostUserAsSuperadmin(req, username, signedInUser.username);
+
+    if (username != signedInUser.username) {
+        sendHttpHeader403(req);
+        return;
+    }
+
+    return httpPostUserSelf(req, username);
 }
 
 int handleUnauthorizedAccess(const RequestContext *req, bool signedIn)

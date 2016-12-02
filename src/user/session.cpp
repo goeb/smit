@@ -547,9 +547,13 @@ int UserBase::deleteUser(const std::string &username)
     }
 
     std::string pathNotification = getPathNotification(Repository, username);
-    r = unlink(pathNotification.c_str());
-    if (r < 0) {
-        LOG_ERROR("Cannot remove notification file '%s': %s", pathNotification.c_str(), STRERROR(errno));
+    int ret = unlink(pathNotification.c_str());
+    if (ret < 0) {
+        if (errno != ENOENT) {
+            LOG_ERROR("Cannot remove notification file '%s': %s", pathNotification.c_str(), STRERROR(errno));
+        }
+        // ENOENT is not an error, as a user that never
+        // configured notifications will not have a notification file
     }
 
     return r;

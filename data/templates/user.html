@@ -21,13 +21,13 @@
             <table class="sm_cap_superadmin">
                 <tr><td>User name:</td><td><input id="name" name="sm_username" type="text" required="required"></td></tr>
                 <tr><td><label for="superadmin">Superadmin:</label></td><td><input id="superadmin" name="sm_superadmin" type="checkbox"></td></tr>
+				<tr><td colspan="2"><button type="button" onclick="sm_deleteResource('./');">Delete this user</button></td></tr>
             </table>
             <ul>
                 <li><a href="#authentication">Authentication</a></li>
                 <li class="sm_cap_superadmin"><a href="#permissions">Permissions</a></li>
                 <li><a href="#notifications">Email Notifications</a></li>
             </ul>
-            <br>
             <h2><a name="authentication">Authentication</a></h2>
             <div class="sm_cap_superadmin">
                 <label><input onclick="selectAuth(this);" type="radio" name="sm_auth_type" value="sha1">Password</label>
@@ -65,14 +65,11 @@
                 <div id="sm_permissions"></div>
                 <div onclick="addPermission('sm_permissions', '', '');" class="clickable">+ Click for more...</div>
             </div>
-            <input type="submit" value="Apply">
-        </form>
         <br>
         <h2>Permissions</h2>
 SM_TABLE_USER_PERMISSIONS
         <br>
         <h2><a name="notifications">Email Notifications</a></h2>
-        <form action="" method="POST">
             <table>
                 <tr><td>Email:</td><td><input type="text" name="sm_email" size="50"></td></tr>
                 <tr><td>GPG Public Key:<br>(optional)</td><td><textarea name="sm_gpg_key" cols="70" rows="10"></textarea></td></tr>
@@ -83,11 +80,8 @@ SM_TABLE_USER_PERMISSIONS
                         <label><input type="radio" name="sm_notif_policy" value="all">Notify all changes</label><br>
                     </td>
             </table>
-            <input type="submit" value="Apply Notifications">
+            <input type="submit" value="Apply">
         </form>
         <br>
-        <div class="sm_cap_superadmin">
-            <button type="button" onclick="sm_deleteResource('./');">Delete this user</button>
-        </div>
         SM_SCRIPT
 </body></html>
