@@ -902,6 +902,7 @@ void RHtml::printUsers(const RequestContext *req, const std::list<User> &usersLi
     req->printf("<th class=\"sm_users\">%s</th>\n", _("Users"));
     req->printf("<th class=\"sm_users\">%s</th>\n", _("Capabilities"));
     req->printf("<th class=\"sm_users\">%s</th>\n", _("Authentication"));
+    req->printf("<th class=\"sm_users\">%s</th>\n", _("Notification"));
     req->printf("</tr>");
 
     FOREACH(u, usersList) {
@@ -924,6 +925,9 @@ void RHtml::printUsers(const RequestContext *req, const std::list<User> &usersLi
         }
         req->printf("</td>\n");
 
+        // notification
+        req->printf("<td class=\"sm_users\">\n");
+        req->printf("%s\n", u->notification.email.c_str());
         req->printf("</tr>\n");
 
     }
