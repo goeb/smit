@@ -554,7 +554,9 @@ int parseFormUrlEncoded(const RequestContext *req, PairKeyValueList &params)
 
 /** Post configuration of a new or existing user
   *
-  * Non-superadmin users may only post their password.
+  * Non-superadmin users may only post:
+  * - their new password
+  * - their notification configuration
   */
 void httpPostUser(const RequestContext *req, User signedInUser, const std::string &username)
 {

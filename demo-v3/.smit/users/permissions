@@ -4,6 +4,7 @@ setperm "John the ripper" ro *
 setperm "Mister Myster" ro myproject
 setperm "Mister Myster" rw mypxxx
 setperm alice ro *
+setperm fred superadmin
 setperm fred admin myproject*
 setperm fred rw smit
 setperm fred admin things_to_do

@@ -690,6 +690,7 @@ int UserBase::updateUser(const std::string &username, User newConfig)
 
     // change the key in the map if name of user was modified
     if (username != newConfig.username) {
+        LOG_INFO("User renamed: %s -> %s", username.c_str(), newConfig.username.c_str());
         UserDb.configuredUsers[newConfig.username] = existingUser->second;
         UserDb.configuredUsers.erase(username);
     }
