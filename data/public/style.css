@@ -299,16 +299,21 @@ table.sm_projects, table.sm_users {
 }
 
 table.sm_projects th, table.sm_projects td, table.sm_users th, table.sm_users td {
-    border-bottom: 1px solid #DDD;
+    /*border-bottom: 1px solid #DDD;
     border-left: 1px solid #DDD;
+	*/
     padding-left: 0.5em;
     padding-right: 1em;
     vertical-align: top;
+}
+table.sm_projects tr:nth-child(even), table.sm_users tr:nth-child(even) {
+	background-color: #f6f6f6;
 }
 table.sm_projects tr:hover, table.sm_users tr:hover {
     background-color: #E8E8E8;
 }
 .sm_projects_stakeholder { color: #444; }
+.sm_projects_stakeholder_me { font-weight: bold; }
 .sm_issues_count, .sm_entries_count {
     font-weight: bold;
     margin-bottom: 1em;

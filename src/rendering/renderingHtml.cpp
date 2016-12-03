@@ -832,8 +832,7 @@ void RHtml::printProjects(const ContextParameters &ctx,
                     "<th>%s</th>"
                     "<th>%s</th>"
                     "<th>%s</th>"
-                    "<th>%s</th>"
-                    "<th>%s</th>", _("Projects"), _("Trigger"), _("# Issues"), _("Last Modified"), _("My Role"));
+                    "<th>%s</th>", _("Projects"), _("Trigger"), _("# Issues"), _("Last Modified"));
     // put a column for each role
     std::list<Role> roleColumns;
     roleColumns.push_back(ROLE_ADMIN);
@@ -873,9 +872,6 @@ void RHtml::printProjects(const ContextParameters &ctx,
         else ctx.req->printf("%s", htmlEscape(epochToStringDelta(p->lastModified)).c_str());
         ctx.req->printf("</td>\n");
 
-        // my role
-        ctx.req->printf("<td>%s</td>\n", htmlEscape(_(p->myRole)).c_str());
-
         std::map<std::string, std::map<Role, std::set<std::string> > >::const_iterator urit;
         urit = userRolesByProject.find(pname);
         if (urit != userRolesByProject.end()) {
@@ -889,7 +885,11 @@ void RHtml::printProjects(const ContextParameters &ctx,
                     std::set<std::string>::iterator user;
                     FOREACH(user, urole->second) {
                         if (user != urole->second.begin()) ctx.req->printf(", ");
-                        ctx.req->printf("<span class=\"sm_projects_stakeholder\">%s</span>", htmlEscape(*user).c_str());
+                        const char *extra = "";
+                        if ( (*user) == ctx.user.username) extra = "sm_projects_stakeholder_me";
+
+                        ctx.req->printf("<span class=\"sm_projects_stakeholder %s\">%s</span>",
+                                        extra, htmlEscape(*user).c_str());
                     }
                     ctx.req->printf("</td>");
                 }
