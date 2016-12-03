@@ -52,7 +52,8 @@ public:
 
     // Methods
     static void load(const std::string &path, Notification &notif);
-    int store(const std::string &path) const;    
+    static int deleteStorageFile(const std::string &path);
+    int store(const std::string &path) const;
 };
 
 

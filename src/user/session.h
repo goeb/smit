@@ -65,7 +65,7 @@ public:
     static int init(const char *repository);
     static int loadPermissions(const std::string &path, std::map<std::string, User*> &users);
     static int load(const std::string &repository, std::map<std::string, User*> &users);
-    static void loadNotifications(const std::string &path, std::map<std::string, User*> &users);
+    static void loadNotifications(const std::string &pathRepo, std::map<std::string, User*> &users);
     static void setLocalInterfaceUser(const std::string &username);
     static int store(const std::string &repository);
     static int initUsersFile(const char *repository);

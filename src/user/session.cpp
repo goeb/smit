@@ -341,6 +341,18 @@ int UserBase::loadPermissions(const std::string &path, std::map<std::string, Use
     return 0;
 }
 
+static int initNotificationDir(const std::string &pathRepo)
+{
+    std::string path = std::string(pathRepo) + "/" PATH_REPO "/" + DIR_NOTIFICATIONS;
+    if (isDir(path)) return 0;
+
+    int ret = mkdir(path.c_str());
+    if (ret != 0) {
+        LOG_ERROR("Cannot init directory '%s': %s", path.c_str(), strerror(errno));
+    }
+    return ret;
+}
+
 /** Load user authentication parameters and permissions
   *
   * @param[out] users
@@ -385,23 +397,27 @@ int UserBase::load(const std::string &path, std::map<std::string, User*> &users)
     int rc = loadPermissions(path, users);
     if (rc < 0) return rc;
 
+    // init dir for notification configs
+    int ret = initNotificationDir(path);
+    if (ret != 0) return -1;
+
     loadNotifications(path, users);
 
     return rc;
 }
 
-std::string UserBase::getPathNotification(const std::string &topdir, const std::string &username)
+std::string UserBase::getPathNotification(const std::string &pathRepo, const std::string &username)
 {
     std::string mangled = urlEncode(username);
-    std::string file = std::string(topdir) + "/" PATH_REPO "/" + DIR_NOTIFICATIONS + "/" + mangled;
+    std::string file = std::string(pathRepo) + "/" PATH_REPO "/" + DIR_NOTIFICATIONS + "/" + mangled;
     return file;
 }
 
-void UserBase::loadNotifications(const std::string &path, std::map<std::string, User*> &users)
+void UserBase::loadNotifications(const std::string &pathRepo, std::map<std::string, User*> &users)
 {
     std::map<std::string, User*>::iterator user;
     FOREACH(user, users) {
-        std::string file = getPathNotification(path, user->first);
+        std::string file = getPathNotification(pathRepo, user->first);
         Notification::load(file, user->second->notification);
     }
 }
@@ -547,14 +563,7 @@ int UserBase::deleteUser(const std::string &username)
     }
 
     std::string pathNotification = getPathNotification(Repository, username);
-    int ret = unlink(pathNotification.c_str());
-    if (ret < 0) {
-        if (errno != ENOENT) {
-            LOG_ERROR("Cannot remove notification file '%s': %s", pathNotification.c_str(), STRERROR(errno));
-        }
-        // ENOENT is not an error, as a user that never
-        // configured notifications will not have a notification file
-    }
+    Notification::deleteStorageFile(pathNotification);
 
     return r;
 

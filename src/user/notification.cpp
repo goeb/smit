@@ -20,19 +20,8 @@ int NotificationPolicyCustom::match(IssueCopy oldi, IssueCopy newi)
 #define K_NOTIFY_CUSTOM_OPT_PROP_VALUE   "-propertyValue"
 #define K_NOTIFY_CUSTOM_OPT_ANY       "-propertyAnyChange"
 
-/** Example of config file:
- * email "foo@example.com"
- * gpgPublicKey < boundary------
- * ...
- * boundary------
- * notifyPolicy none
- * notifyPolicy all
- * notifyPolicy custom
- * notifyCustom -messageOrFile
- * notifyCustom -propertyValue <property-name> <value>
- * notifyCustom -propertyAnyChange <property-name>
+/** Load a notification config file
  */
-
 void Notification::load(const std::string &path, Notification &notif)
 {
     // load a given entry
@@ -102,16 +91,29 @@ void Notification::load(const std::string &path, Notification &notif)
     }
 }
 
+int Notification::deleteStorageFile(const std::string &path)
+{
+    int result = 0;
+    int ret = unlink(path.c_str());
+    if (ret < 0) {
+        if (errno != ENOENT) {
+            LOG_ERROR("Cannot remove notification file '%s': %s", path.c_str(), STRERROR(errno));
+            result = -1;
+        }
+        // ENOENT is not an error, as a user that never
+        // configured notifications will not have a notification file
+    }
+    return result;
+}
+
 int Notification::store(const std::string &path) const
 {
     std::ostringstream serialized;
 
     if (email.empty() && gpgPublicKey.empty()) {
-        int ret = unlink(path.c_str());
-        if (ret != 0) {
-            LOG_ERROR("Cannot unlink '%s': %s", path.c_str(), STRERROR(errno));
-            return -1;
-        }
+        int ret = deleteStorageFile(path);
+        if (ret != 0) return -1;
+
         return 0;
     }
 
