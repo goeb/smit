@@ -319,7 +319,7 @@ int cmdProject(int argc, char **argv)
             printf("%s\n", config.c_str());
         } else {
             // simply list projects
-            printf("%s: %d issues\n", p->getName().c_str(), p->getNumIssues());
+            printf("%s: %ld issues\n", p->getName().c_str(), L(p->getNumIssues()));
         }
         p = Database::Db.getNextProject(p);
     }
