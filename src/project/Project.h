@@ -115,6 +115,8 @@ public:
     int renameIssue(Issue &i, const std::string &newId);
     int storeEntry(const Entry *e);
 
+    std::string getTriggerCmdline() const;
+
     Project() : maxIssueId(0) {}
 
 private:

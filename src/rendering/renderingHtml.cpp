@@ -832,7 +832,8 @@ void RHtml::printProjects(const ContextParameters &ctx,
                     "<th>%s</th>"
                     "<th>%s</th>"
                     "<th>%s</th>"
-                    "<th>%s</th>", _("Projects"), _("# Issues"), _("Last Modified"), _("My Role"));
+                    "<th>%s</th>"
+                    "<th>%s</th>", _("Projects"), _("Trigger"), _("# Issues"), _("Last Modified"), _("My Role"));
     // put a column for each role
     std::list<Role> roleColumns;
     roleColumns.push_back(ROLE_ADMIN);
@@ -854,6 +855,14 @@ void RHtml::printProjects(const ContextParameters &ctx,
         ctx.req->printf("<a href=\"%s/%s/issues/?defaultView=1\">%s</a></td>\n",
                         ctx.req->getUrlRewritingRoot().c_str(),
                         Project::urlNameEncode(pname).c_str(), htmlEscape(pname).c_str());
+        // trigger
+        ctx.req->printf("<td>");
+        if (!p->triggerCmdline.empty()) {
+            ctx.req->printf("<span title=\"%s\">T</span>\n",
+                            htmlAttributeEscape(p->triggerCmdline).c_str());
+        }
+        ctx.req->printf("</td>\n");
+
 
         // # issues
         ctx.req->printf("<td>%d</td>\n", _(p->nIssues));

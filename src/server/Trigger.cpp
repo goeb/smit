@@ -29,6 +29,7 @@
 #include "utils/stringTools.h"
 #include "utils/parseConfig.h"
 #include "utils/logging.h"
+#include "utils/filesystem.h"
 #include "repository/db.h"
 #include "global.h"
 #include "user/session.h"
@@ -178,20 +179,17 @@ void Trigger::notifyEntry(const Project &project, const Entry *entry,
     if (!entry->issue) return;
 
     // load the 'trigger' file, in order to get the path of the external program
-    std::string programPath;
-    std::string trigger = project.getPath() + "/" + PATH_TRIGGER;
-    std::ifstream triggerFile(trigger.c_str());
-    std::getline(triggerFile, programPath);
+    std::string cmdline = project.getTriggerCmdline();
 
-    LOG_DEBUG("Trigger::notifyEntry: trigger=%s, programPath=%s", trigger.c_str(), programPath.c_str());
+    if (cmdline.empty()) return; // no notification
 
-    if (programPath.size()) {
-        // format the data that will be given to the external program on its stdin
-        std::map<std::string, Role> users = UserBase::getUsersRolesOfProject(project.getName());
-        std::string text = formatEntry(project, oldIssue, *entry, recipients);
+    LOG_DIAG("Trigger::notifyEntry: cmdline=%s", cmdline.c_str());
 
-        run(programPath, text);
-    }
+    // format the data that will be given to the external program on its stdin
+    std::map<std::string, Role> users = UserBase::getUsersRolesOfProject(project.getName());
+    std::string text = formatEntry(project, oldIssue, *entry, recipients);
+
+    run(cmdline, text);
 }
 
 void Trigger::run(const std::string &program, const std::string &toStdin)

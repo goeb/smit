@@ -1619,6 +1619,24 @@ int Project::amendEntry(const std::string &entryId, const std::string &msg,
     return 0;
 }
 
+/** Get the external program referenced by the trigger
+ *
+ * @return
+ *     The command line associated with the trigger.
+ *     Empty if no trigger configured
+ */
+std::string Project::getTriggerCmdline() const
+{
+    std::string trigger = getPath() + "/" + PATH_TRIGGER;
+    std::string cmdline;
+    int ret = loadFile(trigger, cmdline);
+    if (ret != 0) return "";
+
+    trim(cmdline);
+
+    return cmdline;
+}
+
 
 
 

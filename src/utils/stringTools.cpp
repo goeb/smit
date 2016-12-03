@@ -213,6 +213,17 @@ std::string htmlEscape(const std::string &value)
     return result;
 }
 
+/** Escape characters for HTML attributes
+ *
+ *  Suitable for using in <span title="...">
+ */
+std::string htmlAttributeEscape(const std::string &value)
+{
+    std::string result = replaceAll(value, '&', "&#38;");
+    result = replaceAll(result, '"', "&quot;");
+    return result;
+}
+
 std::string pop(std::list<std::string> & L)
 {
     std::string token = "";

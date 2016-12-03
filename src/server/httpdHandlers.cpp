@@ -936,6 +936,7 @@ void getProjects(const User &u, std::list<ProjectSummary> &pList)
         } else {
             ps.lastModified = p->getLastModified();
             ps.nIssues = p->getNumIssues();
+            ps.triggerCmdline = p->getTriggerCmdline();
         }
 
         pList.push_back(ps);

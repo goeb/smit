@@ -20,6 +20,7 @@
 class ProjectSummary {
 public:
     std::string name;
+    std::string triggerCmdline;
     std::string myRole;
     size_t nIssues;
     long lastModified;
