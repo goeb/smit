@@ -97,6 +97,7 @@ std::string Trigger::formatEntry(const Project &project, const IssueCopy &oldIss
     //
     // Typical output:
     // { "project": "...",
+    //   "issue_id": "...",
     //   "old_issue" : { "id": "...",
     //                  "properties": { ... },
     //                },
@@ -119,7 +120,10 @@ std::string Trigger::formatEntry(const Project &project, const IssueCopy &oldIss
     // - gpg_pub_key may be null
     //
     std::ostringstream s;
-    s << "{\n" << toJson("project") << ":" << toJson(project.getName()) << ",\n";
+    s << "{";
+
+    s << toJson("project") << ":" << toJson(project.getName()) << ",\n";
+    s << toJson("issue_id") << ":" << toJson(entry.issue->id) << ",\n";
 
     s << toJson("old_issue") << ":";
     if (oldIssue.id.empty()) s << "null"; // no old issue
