@@ -166,9 +166,14 @@ def getMailBody(jsonMsg):
         if p[0] == '+': continue # +message or +files
         label = getLabel(labels, p)
         oldValue = ', '.join(oldProperties[p])
+        indent = 4+25+2
+        oldValue = oldValue.replace('\n', '\n' + indent*' ') # add indentation
         if p in entry['properties']:
             newValue = ', '.join(entry['properties'][p])
-            body += '    %-25s: %s ---> %s' % (label, oldValue, newValue)
+            newValue = newValue.replace('\n', '\n' + indent*' ') # add indentation
+            body += '   -%-25s: %s' % (label, oldValue)
+            body += '\r\n'
+            body += '   +%-25s: %s' % (label, newValue)
         else:
             body += '    %-25s: %s' % (label, oldValue)
 
@@ -179,7 +184,8 @@ def getMailBody(jsonMsg):
         if p not in oldProperties:
             label = getLabel(labels, p)
             newValue = ', '.join(entry['properties'][p])
-            body += '    %-25s: (null) ---> %s' % (label, newValue)
+            newValue = newValue.replace('\n', '\n' + indent*' ') # add indentation
+            body += '   +%-25s: %s' % (label, newValue)
             body += '\r\n'
 
     # message
@@ -230,6 +236,9 @@ def getTestData():
                 "+message": [
                     "John, please analyse this issue. Sample code 't.c' supplied."
                 ],
+                "description": [
+                    "A segfault occurs when:\\n1. ...\\n2. ...\\n3. ...\\n4. four added"
+                ],
                 "+file": [
                     "2e344bf4afba3ce778448c0bca4b7037a9487c5a/t.c"
                 ]
@@ -243,6 +252,9 @@ def getTestData():
                 ],
                 "summary": [
                     "segfault at startup if no space left on device"
+                ],
+                "description": [
+                    "A segfault occurs when:\\n1. ...\\n2. ...\\n3. ..."
                 ],
                 "status": [
                     "open"
