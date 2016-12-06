@@ -161,21 +161,23 @@ def getMailBody(jsonMsg):
 
     body += 'Author: %s\r\n' % (author)
 
-    body += "---- properties -------------------------\r\n"
+    body += '-' * 80 + '\r\n'
+    body += 'Properties:\r\n'
+    PROP_FORMAT = '%s: %s'
     for p in oldProperties:
         if p[0] == '+': continue # +message or +files
         label = getLabel(labels, p)
         oldValue = ', '.join(oldProperties[p])
-        indent = 4+25+2
+        indent = 4+len(label)+2
         oldValue = oldValue.replace('\n', '\n' + indent*' ') # add indentation
         if p in entry['properties']:
             newValue = ', '.join(entry['properties'][p])
             newValue = newValue.replace('\n', '\n' + indent*' ') # add indentation
-            body += '   -%-25s: %s' % (label, oldValue)
+            body += '--- ' + PROP_FORMAT % (label, oldValue)
             body += '\r\n'
-            body += '   +%-25s: %s' % (label, newValue)
+            body += '+++ ' + PROP_FORMAT % (label, newValue)
         else:
-            body += '    %-25s: %s' % (label, oldValue)
+            body += '    ' + PROP_FORMAT % (label, oldValue)
 
         body += '\r\n'
 
@@ -185,7 +187,7 @@ def getMailBody(jsonMsg):
             label = getLabel(labels, p)
             newValue = ', '.join(entry['properties'][p])
             newValue = newValue.replace('\n', '\n' + indent*' ') # add indentation
-            body += '   +%-25s: %s' % (label, newValue)
+            body += '+++ ' + PROP_FORMAT % (label, newValue)
             body += '\r\n'
 
     # message
@@ -196,8 +198,8 @@ def getMailBody(jsonMsg):
     
     if len(msg) > 0:
         body += '\r\n'
-        #        -----------------------------------------
-        body += "---- message ----------------------------\r\n"
+        body += '-' * 80 + '\r\n'
+        body += 'Message:\r\n'
         body += msg
         body += '\r\n'
 
@@ -209,8 +211,8 @@ def getMailBody(jsonMsg):
 
     if len(files) > 0:
         body += '\r\n'
-        #        -----------------------------------------
-        body += "---- attached files ---------------------\r\n"
+        body += '-' * 80 + '\r\n'
+        body += "Attached files:\r\n"
         for f in files:
             body += "    %s\r\n" % (f)
 
