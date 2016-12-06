@@ -60,6 +60,8 @@ How to install this trigger:
 import json
 import sys
 import smtplib
+import tempfile
+import shutil
 import time
 import os
 from email.mime.text import MIMEText
@@ -74,12 +76,11 @@ Verbose = False
 # GNUPGHOME initialized in gnupg.d
 # export GNUPGHOME=gnupg.d
 # gpg --import <file>
-def gpgExec(args, stdinText):
+def gpgExec(gnupgHome, args, stdinText):
     "Execute a GNUPG command"
 
     # set the GNUPGHOME environment variable
-    basedir = os.path.dirname(__file__)
-    cmd = 'GNUPGHOME='+basedir+'/gnupg.d gpg ' + args
+    cmd = 'gpg --homedir ' + gnupgHome + ' ' + args
 
     if stdinText is not None :
         stdinOpt = subprocess.PIPE
@@ -98,35 +99,48 @@ def gpgExec(args, stdinText):
 
     return exitCode, stdout, stderr
 
-def gpgEncrypt(clearText, addressees):
-    '''Encrypt text, if at least one GPG key is configured'''
+def gpgEncrypt(clearText, gpgPublicKeys):
+    '''Encrypt text with the GPG keys'''
 
-    gpgKeys = set()
-    addresseesWithCiphering = set()
-
-    # check if at least one addressee has a GPG key
-    for a in addressees:
-	k = getGpgKey(a)
-	if k is None:
-            print('Missing GPG key for \'%s\'' % (a))
-	else:
-            addresseesWithCiphering.add(a)
-            gpgKeys.add(k)
-
-    if len(gpgKeys) == 0:
+    if len(gpgPublicKeys) == 0:
         if Verbose: print "No GPG key available"
-        return '', addresseesWithCiphering
+        return ''
 
-    # build the gpg command line
+    # build a temporary GNUPG home directory, and populate
+    tmpdir = tempfile.mkdtemp()
+    ids = set()
+    for k in gpgPublicKeys:
+        exitCode, _, stderr = gpgExec(tmpdir, '--import', k)
+        if exitCode != 0:
+            print 'gpg error: ', stderr
+            continue
+        # parse stdout to get the key id
+        for line in stderr.splitlines():
+            # looking for line:
+            # gpg: key BD542930: "Alice <alice@example.com>" imported
+            try:
+                toks = line.split(':')
+                if toks[0] == 'gpg':
+                    keyToks = toks[1].split()
+                    if keyToks[0] == 'key':
+                        ids.add(keyToks[1])
+                        break # got the line, exit the line loop
+            except:
+                continue
+
+    if Verbose: print 'key id: %s' % (ids)
+
+    # cipher
     gpgArgs = '-e --trust-model always --armor'
-    for k in gpgKeys:
-        gpgArgs += ' -r ' + k
+    for i in ids:
+        gpgArgs += ' -r ' + i
 
-    exitCode, cipheredText, stderr = gpgExec(gpgArgs, clearText)
+    exitCode, cipheredText, stderr = gpgExec(tmpdir, gpgArgs, clearText)
     if exitCode != 0:
         print "gpgExec error: ", stderr
 
-    return cipheredText, addresseesWithCiphering
+    shutil.rmtree(tmpdir)
+    return cipheredText
 
 def urlEscapeProjectName(pname):
     'escape characters for passing the project name in an URL'
@@ -378,7 +392,7 @@ def main():
     subject = getMailSubject(jsonMsg)
     body = getMailBody(jsonMsg)
 
-    doCipher = True
+    doCipher = True # true if all recipients have a GPG key
     for r in recipients:
         if r.gpgPublicKey is None:
             doCipher = False
@@ -386,13 +400,17 @@ def main():
             
     emails = [r.email for r in recipients]
 
-    if doCipher and False: # TODO
-        cipheredBody = gpgEncrypt(body, recipients)
+    if doCipher or args.force_ciphering:
+        gpgPublicKeys = set()
+        for r in recipients:
+            if r.gpgPublicKey is not None: gpgPublicKeys.add(r.gpgPublicKey)
 
-        # Send ciphered email
-        sendEmail(emails, subject, cipheredBody)
+        if len(gpgPublicKeys):
+            cipheredBody = gpgEncrypt(body, gpgPublicKeys)
+            # Send ciphered email
+            sendEmail(emails, subject, cipheredBody)
 
-    elif not args.force_ciphering:
+    else:
         # send in clear text
         sendEmail(emails, subject, body)
 
