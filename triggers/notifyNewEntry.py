@@ -299,14 +299,14 @@ def parseCommandLine():
 
     return args
 	
-def sendEmail(recipients, subject, body):
-    if Verbose: print('sendEmail to: %s' % addressees)
+def sendEmail(emails, subject, body):
+    if Verbose: print('sendEmail to: %s' % emails)
     msg = MIMEText(body, 'plain', 'utf-8')
     msg['Subject'] = Header(subject, 'utf-8')
     msg['From'] = MailConfig.EMAIL_FROM
-    msg['To'] = ";".join(recipients)
+    msg['To'] = ";".join(emails)
     s = smtplib.SMTP(MailConfig.SMTP_HOST)
-    s.sendmail(MailConfig.EMAIL_FROM, recipients, msg.as_string())
+    s.sendmail(MailConfig.EMAIL_FROM, emails, msg.as_string())
     s.quit()
 
 class Recipient:
@@ -319,6 +319,9 @@ class Recipient:
         if self.gpgPublicKey: s += 'GPG'
         else: s += 'no-gpg'
         return s
+
+    def __repr__(self):
+        return self.__str__()
 
 def getRecipients(jsonMsg):
     try:
@@ -336,6 +339,7 @@ def getRecipients(jsonMsg):
 
         try:
             r.gpgPublicKey = jsr['gpg_pub_key']
+            if r.gpgPublicKey.strip() == '': r.gpgPublicKey = None
         except:
             pass # because gpgPublicKey is optional
 
@@ -386,7 +390,7 @@ def main():
         print('no recipient, mail not sent')
         sys.exit(0)
 
-    if Verbose: print("recipients: ", recipients)
+    if Verbose: print("recipients: %s" % recipients)
 
     # set contents of the email
     subject = getMailSubject(jsonMsg)
@@ -399,10 +403,13 @@ def main():
             break
             
     emails = [r.email for r in recipients]
+    if Verbose: print('doCipher=%s, emails=%s' % (doCipher, emails))
 
     if doCipher or args.force_ciphering:
         gpgPublicKeys = set()
         for r in recipients:
+            if r.gpgPublicKey is not None:
+                if Verbose: print 'add gpgPublicKey for', r.email
             if r.gpgPublicKey is not None: gpgPublicKeys.add(r.gpgPublicKey)
 
         if len(gpgPublicKeys):
