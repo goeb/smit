@@ -936,7 +936,7 @@ void RHtml::printUsers(const RequestContext *req, const std::list<User> &usersLi
 
         // notification
         req->printf("<td class=\"sm_users\">\n");
-        req->printf("%s\n", u->notification.email.c_str());
+        req->printf("%s", u->notification.toString().c_str());
         req->printf("</tr>\n");
 
     }

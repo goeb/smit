@@ -493,7 +493,9 @@ static std::string pkvGetValue(const PairKeyValueList &params, const std::string
     FOREACH(param, params) {
         if (param->key == key) {
             LOG_DIAG("pkvGetValue(%s) -> %s", key.c_str(), param->value.c_str());
-            return param->value;
+            std::string value = param->value;
+            trim(value); // consider only-blanks as empty
+            return value;
         }
     }
     LOG_DIAG("pkvGetValue(%s) -> (null)", key.c_str());

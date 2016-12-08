@@ -126,3 +126,14 @@ int Notification::store(const std::string &path) const
     int r = writeToFile(path, serialized.str());
     return r;
 }
+
+std::string Notification::toString() const
+{
+    if (email.empty()) return "";
+
+    std::string result = email;
+    if (!gpgPublicKey.empty()) result += ", GPG";
+    result += ", " + notificationPolicy;
+    return result;
+}
+
