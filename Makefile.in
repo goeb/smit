@@ -146,8 +146,8 @@ am__smit_SOURCES_DIST = src/repository/db.cpp src/project/Entry.cpp \
 	src/rendering/ContextParameters.cpp \
 	src/rendering/renderingHtmlIssue.cpp \
 	src/rendering/renderingHtmlUtil.cpp src/user/session.cpp \
-	src/user/AuthSha1.cpp src/local/console.cpp \
-	src/local/localClient.cpp src/Args.cpp \
+	src/user/AuthSha1.cpp src/user/notification.cpp \
+	src/local/console.cpp src/local/localClient.cpp src/Args.cpp \
 	src/third-party/mongoose.c src/third-party/fnmatch.c \
 	src/local/clone.cpp src/local/httpClient.cpp \
 	src/user/AuthKrb5.cpp src/user/AuthLdap.cpp
@@ -186,6 +186,7 @@ am_smit_OBJECTS = src/repository/smit-db.$(OBJEXT) \
 	src/rendering/smit-renderingHtmlUtil.$(OBJEXT) \
 	src/user/smit-session.$(OBJEXT) \
 	src/user/smit-AuthSha1.$(OBJEXT) \
+	src/user/smit-notification.$(OBJEXT) \
 	src/local/smit-console.$(OBJEXT) \
 	src/local/smit-localClient.$(OBJEXT) src/smit-Args.$(OBJEXT) \
 	src/third-party/smit-mongoose.$(OBJEXT) \
@@ -505,8 +506,8 @@ smit_SOURCES = src/repository/db.cpp src/project/Entry.cpp \
 	src/rendering/ContextParameters.cpp \
 	src/rendering/renderingHtmlIssue.cpp \
 	src/rendering/renderingHtmlUtil.cpp src/user/session.cpp \
-	src/user/AuthSha1.cpp src/local/console.cpp \
-	src/local/localClient.cpp src/Args.cpp \
+	src/user/AuthSha1.cpp src/user/notification.cpp \
+	src/local/console.cpp src/local/localClient.cpp src/Args.cpp \
 	src/third-party/mongoose.c src/third-party/fnmatch.c \
 	$(am__append_10) $(am__append_11) $(am__append_12)
 nodist_smit_SOURCES = embedcpio.c embedcpio.h 
@@ -740,6 +741,8 @@ src/user/smit-session.$(OBJEXT): src/user/$(am__dirstamp) \
 	src/user/$(DEPDIR)/$(am__dirstamp)
 src/user/smit-AuthSha1.$(OBJEXT): src/user/$(am__dirstamp) \
 	src/user/$(DEPDIR)/$(am__dirstamp)
+src/user/smit-notification.$(OBJEXT): src/user/$(am__dirstamp) \
+	src/user/$(DEPDIR)/$(am__dirstamp)
 src/local/$(am__dirstamp):
 	@$(MKDIR_P) src/local
 	@: > src/local/$(am__dirstamp)
@@ -833,6 +836,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/user/$(DEPDIR)/smit-AuthKrb5.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/user/$(DEPDIR)/smit-AuthLdap.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/user/$(DEPDIR)/smit-AuthSha1.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/user/$(DEPDIR)/smit-notification.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/user/$(DEPDIR)/smit-session.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/utils/$(DEPDIR)/smit-cpio.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/utils/$(DEPDIR)/smit-dateTools.Po@am__quote@
@@ -1354,6 +1358,20 @@ src/user/smit-AuthSha1.obj: src/user/AuthSha1.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/user/AuthSha1.cpp' object='src/user/smit-AuthSha1.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/user/smit-AuthSha1.obj `if test -f 'src/user/AuthSha1.cpp'; then $(CYGPATH_W) 'src/user/AuthSha1.cpp'; else $(CYGPATH_W) '$(srcdir)/src/user/AuthSha1.cpp'; fi`
+
+src/user/smit-notification.o: src/user/notification.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/user/smit-notification.o -MD -MP -MF src/user/$(DEPDIR)/smit-notification.Tpo -c -o src/user/smit-notification.o `test -f 'src/user/notification.cpp' || echo '$(srcdir)/'`src/user/notification.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/user/$(DEPDIR)/smit-notification.Tpo src/user/$(DEPDIR)/smit-notification.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/user/notification.cpp' object='src/user/smit-notification.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/user/smit-notification.o `test -f 'src/user/notification.cpp' || echo '$(srcdir)/'`src/user/notification.cpp
+
+src/user/smit-notification.obj: src/user/notification.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/user/smit-notification.obj -MD -MP -MF src/user/$(DEPDIR)/smit-notification.Tpo -c -o src/user/smit-notification.obj `if test -f 'src/user/notification.cpp'; then $(CYGPATH_W) 'src/user/notification.cpp'; else $(CYGPATH_W) '$(srcdir)/src/user/notification.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/user/$(DEPDIR)/smit-notification.Tpo src/user/$(DEPDIR)/smit-notification.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/user/notification.cpp' object='src/user/smit-notification.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/user/smit-notification.obj `if test -f 'src/user/notification.cpp'; then $(CYGPATH_W) 'src/user/notification.cpp'; else $(CYGPATH_W) '$(srcdir)/src/user/notification.cpp'; fi`
 
 src/local/smit-console.o: src/local/console.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/local/smit-console.o -MD -MP -MF src/local/$(DEPDIR)/smit-console.Tpo -c -o src/local/smit-console.o `test -f 'src/local/console.cpp' || echo '$(srcdir)/'`src/local/console.cpp

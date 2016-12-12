@@ -8,6 +8,9 @@
 
 #include "utils/mutexTools.h"
 #include "Auth.h"
+#include "AuthSha1.h"
+#include "notification.h"
+#include "Recipient.h"
 
 #define SESSION_DURATION (60*60*36) // 1.5 day
 #define COOKIE_VIEW_DURATION (60*60*24) // 1 day
@@ -39,6 +42,7 @@ public:
     std::map<std::string, enum Role> rolesOnProjects;
     bool superadmin;
     std::map<std::string, Role> permissions; // map of projectWildcard => role
+    Notification notification;
 
     User();
     User(const User &other);
@@ -53,6 +57,7 @@ public:
     void setPasswd(const std::string &passwd);
     int authenticate(char *passwd);
     void consolidateRoles();
+    bool shouldBeNotified(const Entry *entry, const IssueCopy &oldIssue);
 };
 
 class UserBase {
@@ -60,6 +65,7 @@ public:
     static int init(const char *repository);
     static int loadPermissions(const std::string &path, std::map<std::string, User*> &users);
     static int load(const std::string &repository, std::map<std::string, User*> &users);
+    static void loadNotifications(const std::string &pathRepo, std::map<std::string, User*> &users);
     static void setLocalInterfaceUser(const std::string &username);
     static int store(const std::string &repository);
     static int initUsersFile(const char *repository);
@@ -73,10 +79,12 @@ public:
     static std::map<std::string, Role> getUsersRolesOfProject(const std::string &project);
     static std::map<Role, std::set<std::string> > getUsersByRole(const std::string &project);
     static int updateUser(const std::string &username, User newConfig);
-    static int updatePassword(const std::string &username, const std::string &password);
+    static int updatePassword(const std::string &username, const AuthSha1 *authSha1);
     static std::list<User> getAllUsers();
     static inline bool isLocalUserInterface() {return !localInterfaceUsername.empty(); }
     static const std::string getLocalInterfaceUser() { return localInterfaceUsername; }
+    static std::list<Recipient> getRecipients(const std::string &projectName,
+                                              const Entry *entry, const IssueCopy &oldIssue);
 
 private:
     static UserBase UserDb;
@@ -87,6 +95,9 @@ private:
 
     // Local Interface refers to "smit ui command": browsing a local clone of a smit repository
     static std::string localInterfaceUsername;
+
+    static std::string getPathNotification(const std::string &topdir, const std::string &username);
+
 };
 
 struct Session {

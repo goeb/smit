@@ -38,7 +38,7 @@ std::string AuthSha1::serialize()
     return result;
 }
 
-Auth *AuthSha1::createCopy()
+Auth *AuthSha1::createCopy() const
 {
     AuthSha1 *ah = new AuthSha1(*this);
     return ah;

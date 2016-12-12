@@ -3,16 +3,19 @@
 #define _trigger_h
 
 #include "user/session.h"
+#include "user/Recipient.h"
 #include "project/Project.h"
 
 class Trigger {
 public:
-    static void notifyEntry(const Project &project, const Entry *entry);
-    static std::string formatEntry(const Project &project, const Issue &issue, const Entry &entry,
-                                   const std::map<std::string, Role> &users);
+    static void notifyEntry(const Project &project, const Entry *entry,
+                            const IssueCopy &oldIssue, const std::list<Recipient> &recipients);
+
+private:
+    static std::string formatEntry(const Project &project, const IssueCopy &oldIssue, const Entry &entry,
+                                   const std::list<Recipient> &recipients);
     static void run(const std::string &program, const std::string &toStdin);
 
 };
-
 
 #endif

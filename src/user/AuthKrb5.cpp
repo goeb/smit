@@ -94,7 +94,7 @@ std::string AuthKrb5::serialize()
     return result;
 }
 
-Auth *AuthKrb5::createCopy()
+Auth *AuthKrb5::createCopy() const
 {
     AuthKrb5 *ah = new AuthKrb5(*this);
     return ah;

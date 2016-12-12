@@ -43,6 +43,15 @@
 #include "rendering/renderingCsv.h"
 #include "rendering/renderingJson.h"
 #include "user/session.h"
+#include "user/Recipient.h"
+#include "user/AuthSha1.h"
+#ifdef KERBEROS_ENABLED
+  #include "user/AuthKrb5.h"
+#endif
+#ifdef LDAP_ENABLED
+  #include "user/AuthLdap.h"
+#endif
+#include "user/notification.h"
 #include "global.h"
 #include "mg_win32.h"
 #include "server/Trigger.h"
@@ -443,44 +452,12 @@ void httpDeleteUser(const RequestContext *request, User signedInUser, const std:
 }
 
 /** Hot reload of users (if hotreload=1)
-  */
-void httpPostUserEmpty(const RequestContext *req, const User &signedInUser)
+ *
+ * Verification that the signed-in user is a superadmin
+ * must have been done before calling this function.
+ */
+void httpUserHotReload(const RequestContext *req)
 {
-    if (!signedInUser.superadmin) {
-        sendHttpHeader403(req);
-        return;
-    }
-
-    // get the posted parameters
-
-    ContentType ct = getContentType(req);
-    if (ct != CT_WWW_FORM_URLENCODED) {
-        LOG_INFO("httpPostUserEmpty: contentType '%s' rejected", getContentTypeString(req));
-        sendHttpHeader403(req);
-        return;
-    }
-
-    // application/x-www-form-urlencoded
-    // post_data is "var1=val1&var2=val2...".
-
-    std::string postData;
-    int rc = readMgreq(req, postData, 4096);
-    if (rc < 0) {
-        sendHttpHeader413(req, "You tried to upload too much data. Max is 4096 bytes.");
-        return;
-    }
-
-    std::string tokenPair = popToken(postData, '&');
-    std::string key = popToken(tokenPair, '=');
-    std::string value = urlDecode(tokenPair);
-
-    // check if a hot reload is requested
-
-    if (key != "hotreload" || value != "1") {
-        sendHttpHeader403(req);
-        return;
-    }
-
     // execute the hot reload
     int r = UserBase::hotReload();
     if (r != 0) {
@@ -492,176 +469,397 @@ void httpPostUserEmpty(const RequestContext *req, const User &signedInUser)
     sendHttpRedirect(req, "/users", 0);
 }
 
-/** Post configuration of a new or existing user
-  *
-  * Non-superadmin users may only post their password.
-  */
-void httpPostUser(const RequestContext *request, User signedInUser, const std::string &username)
+struct PairKeyValue {
+    std::string key;
+    std::string value;
+};
+typedef std::list<PairKeyValue> PairKeyValueList;
+typedef std::list<PairKeyValue>::const_iterator PairKeyValueListIt;
+
+static bool pkvHasKey(const PairKeyValueList &params, const std::string &key)
 {
-    if (!signedInUser.superadmin && username != signedInUser.username) {
-        sendHttpHeader403(request);
-        return;
+    PairKeyValueListIt param;
+    FOREACH(param, params) {
+        if (param->key == key) return true;
     }
+    return false;
+}
 
-    if (username.empty()) return httpPostUserEmpty(request, signedInUser);
+/** Get the first value of the list
+ */
+static std::string pkvGetValue(const PairKeyValueList &params, const std::string &key)
+{
+    PairKeyValueListIt param;
+    FOREACH(param, params) {
+        if (param->key == key) {
+            LOG_DIAG("pkvGetValue(%s) -> %s", key.c_str(), param->value.c_str());
+            std::string value = param->value;
+            trim(value); // consider only-blanks as empty
+            return value;
+        }
+    }
+    LOG_DIAG("pkvGetValue(%s) -> (null)", key.c_str());
+    return "";
+}
+static std::string pkvGetNext(const PairKeyValueList &params, PairKeyValueListIt &it, const std::string &key)
+{
+    if (it == params.end()) it = params.begin();
+    else it++;
 
-    // get the posted parameters
-    ContentType ct = getContentType(request);
+    while (it != params.end()) {
+        if (it->key == key) return it->value;
+        it++;
+    }
+    return "";
+}
+
+/** Parse the data received wihtin the request
+ *
+ * The expected input format is "application/x-www-form-urlencoded".
+ *
+ * @param[out] params
+ *   A key-value map, where the value is a list of the values encountered for the key.
+ *   Most of the time the value will contain a single item.
+ *
+ * @return
+ *    0 : success
+ *   -1 : error
+ */
+int parseFormUrlEncoded(const RequestContext *req, PairKeyValueList &params)
+{
+    ContentType ct = getContentType(req);
 
     if (ct != CT_WWW_FORM_URLENCODED) {
-        LOG_ERROR("Bad contentType: %s", getContentTypeString(request));
+        LOG_ERROR("parseFormUrlEncoded: bad content type: %s", getContentTypeString(req));
+        return -1;
+    }
+
+    // Receive the whole data
+    std::string data;
+    int rc = readMgreq(req, data, 4096*10); // allow size of one GPG key
+    if (rc < 0) {
+        LOG_ERROR("parseFormUrlEncoded: too much data uploaded");
+        return -1;
+    }
+
+    // Parse the data (expected in format application/x-www-form-urlencoded)
+    // Format is : var1=val1&var2=val2...
+
+    while (data.size() > 0) {
+        std::string tokenPair = popToken(data, '&');
+
+        PairKeyValue pkv;
+        pkv.key = popToken(tokenPair, '=');
+        pkv.key = urlDecode(pkv.key);
+        pkv.value = urlDecode(tokenPair);
+        params.push_back(pkv);
+    }
+    return 0;
+}
+
+/** Process a user notification config POST request
+ *
+ *  @param postedParams
+ *      The parameters of the POST request
+ *
+ *  @param[out] newUserConfig
+ *      The object where the configuration is stored
+ */
+static void processNofiticationConfig(const PairKeyValueList &postedParams, User &newUserConfig)
+{
+    const PairKeyValueList &params = postedParams;
+
+    // Process notifications
+    if (pkvHasKey(params, "sm_email")) newUserConfig.notification.email = pkvGetValue(params, "sm_email");
+
+    if (pkvHasKey(params, "sm_gpg_key")) newUserConfig.notification.gpgPublicKey = pkvGetValue(params, "sm_gpg_key");
+
+    if (pkvHasKey(params, "sm_notif_policy")) {
+        newUserConfig.notification.notificationPolicy = pkvGetValue(params, "sm_notif_policy");
+
+        // NOTIFY_POLICY_CUSTOM not supported at the moment.
+
+        if (newUserConfig.notification.notificationPolicy == NOTIFY_POLICY_ALL) {
+            // ok, nothing to do
+        } else if (newUserConfig.notification.notificationPolicy == NOTIFY_POLICY_NONE) {
+            // ok, nothing to do
+        } else if (newUserConfig.notification.notificationPolicy == NOTIFY_POLICY_ME) {
+            // ok, nothing to do
+        } else {
+            LOG_ERROR("Invalid notification policy: %s", newUserConfig.notification.notificationPolicy.c_str());
+            newUserConfig.notification.notificationPolicy = NOTIFY_POLICY_NONE;
+        }
+    }
+}
+
+/** Process POST request on /users
+ *
+ * Verification that the signed-in user is a superadmin
+ * must have been done before calling this function.
+ */
+void httpPostUserAsSuperadmin(const RequestContext *req, const std::string &username, const std::string &superadminName)
+{
+    PairKeyValueList params;
+    int r = parseFormUrlEncoded(req, params);
+    if (r < 0) {
+        sendHttpHeader400(req, "Invalid submitted data");
         return;
     }
 
-    // application/x-www-form-urlencoded
-    // post_data is "var1=val1&var2=val2...".
+    // Check if hot reload request
+    if (username.empty() && pkvGetValue(params, "hotreload") == "1") {
+        return httpUserHotReload(req);
+    }
 
-    std::string postData;
-    int rc = readMgreq(request, postData, 4096);
-    if (rc < 0) {
-        sendHttpHeader413(request, "You tried to upload too much data. Max is 4096 bytes.");
+    User newUserConfig;
+    if (!username.empty() && username != "_") {
+        // Copy existing config into newUserConfig
+        User *existingUser = UserBase::getUser(username);
+        if (!existingUser) {
+            sendHttpHeader400(req, "No such user");
+            return;
+        }
+        newUserConfig = *existingUser; // copy
+    }
+
+    // Process 'sm_username'
+    const char *key = "sm_username";
+    if (pkvHasKey(params, key)) {
+
+        newUserConfig.username = pkvGetValue(params, key);
+
+        // Check that the username given in the form is not empty.
+        if (newUserConfig.username.empty() || newUserConfig.username == "_") {
+            LOG_INFO("Ignore user parameters as username is empty or '_'");
+            sendHttpHeader400(req, "Invalid user name");
+            return;
+        }
+
+        LOG_DIAG("Username changing?: '%s' -> '%s'", username.c_str(), newUserConfig.username.c_str());
+    }
+
+    // Process 'superadmin'
+    key = "sm_superadmin";
+    if (pkvHasKey(params, key)) {
+        if (pkvGetValue(params, key) == "on") newUserConfig.superadmin = true;
+        else newUserConfig.superadmin = false;
+
+    } else {
+        // Some browsers do not post checkboxes 'off', so deactivate 'superadmin' if not present
+        newUserConfig.superadmin = false;
+    }
+    LOG_INFO("Superadmin=%d for user '%s'", newUserConfig.superadmin, username.c_str());
+
+
+    // Process authentication parameters
+
+    std::string authType = pkvGetValue(params, "sm_auth_type");
+    std::string passwd1 = pkvGetValue(params, "sm_passwd1");
+    if (!passwd1.empty()) {
+        // This forces authentication scheme SHA1
+        if (pkvGetValue(params, "sm_passwd2") != passwd1) {
+            const char *msg = "passwords 1 and 2 do not match";
+            LOG_ERROR("PhttpPostUser: %s", msg);
+            sendHttpHeader400(req, msg);
+            return;
+        }
+        LOG_DIAG("Password changing for user '%s'", username.c_str());
+        newUserConfig.setPasswd(passwd1);
+
+    } else if (authType != AUTH_SHA1 && ! authType.empty()) {
+
+        if (authType == AUTH_NONE) {
+               // Remove authentication: the user will not be able to sign in
+               LOG_INFO("Remove authentication from user: %s", username.c_str());
+               if (newUserConfig.authHandler) delete newUserConfig.authHandler;
+               newUserConfig.authHandler = NULL;
+        }
+
+#ifdef KERBEROS_ENABLED
+        else if (authType == AUTH_KRB5) {
+
+            AuthKrb5 authKrb5(newUserConfig.username,
+                              pkvGetValue(params, "sm_krb5_primary"),
+                              pkvGetValue(params, "sm_krb5_realm"));
+            newUserConfig.authHandler = authKrb5.createCopy();
+        }
+#endif
+
+#ifdef LDAP_ENABLED
+        else if (authType == AUTH_LDAP) {
+
+            AuthLdap authLdap(newUserConfig.username,
+                              pkvGetValue(params, "sm_ldap_uri"),
+                              pkvGetValue(params, "sm_ldap_dname"));
+
+            newUserConfig.authHandler = authLdap.createCopy();
+        }
+#endif
+        else {
+            std::string msg = "Unsupported authentication scheme: ";
+            msg += authType;
+            LOG_ERROR("User Config: %s", msg.c_str());
+            sendHttpHeader400(req, msg.c_str());
+            return;
+        }
+    }
+
+    // Process permissions parameters
+    PairKeyValueListIt pit = params.end();
+    pkvGetNext(params, pit, "project_wildcard");
+    if (pit != params.end()) {
+
+        // The parameters require a configuration for permissions/roles
+
+        newUserConfig.permissions.clear(); // the new config will replace the old one
+
+        while (pit != params.end()) {
+            std::string wildcard = pit->value;
+            pit++;
+            if (pit == params.end() || pit->key != "role") {
+                LOG_ERROR("User Config: Missing role");
+            } else {
+                std::string role = pit->value;
+                Role r = stringToRole(role);
+                if (r != ROLE_NONE) newUserConfig.permissions[wildcard] = r;
+            }
+            pkvGetNext(params, pit, "project_wildcard");
+        }
+    }
+
+    // Notifications
+    processNofiticationConfig(params, newUserConfig);
+
+    // If no error, then take into account the new configuration
+    std::string error;
+    if (username == "_") {
+        r = UserBase::addUser(newUserConfig);
+        if (r == -1) error = "Cannot create user with empty name";
+        else if (r == -2) error = "Cannot create new user as name already exists";
+
+    } else {
+        r = UserBase::updateUser(username, newUserConfig);
+        if (r == -1) error = "Cannot create user with empty name";
+        else if (r == -2) error = "Cannot change name as new name already exists";
+        else if (r < 0) error = "Cannot update non existing user";
+
+    }
+
+    if (r != 0) LOG_ERROR("Cannot update user '%s': %s", username.c_str(), error.c_str());
+    else if (newUserConfig.username != username) {
+        LOG_INFO("User '%s' renamed '%s'", username.c_str(), newUserConfig.username.c_str());
+    } else LOG_INFO("Parameters of user '%s' updated by '%s'", username.c_str(), superadminName.c_str());
+
+    if (r != 0) {
+        sendHttpHeader500(req, error.c_str());
+        return;
+    }
+
+    // the request has been accepted and processed ok
+    enum RenderingFormat format = getFormat(req);
+
+    if (format == RENDERING_TEXT) {
+        // No redirection
+        sendHttpHeader204(req, 0);
+
+    } else {
+        // Redirect
+        std::string redirectUrl = "/users/" + urlEncode(newUserConfig.username);
+        sendHttpRedirect(req, redirectUrl.c_str(), 0);
+    }
+}
+
+/** Process POST request on /users/<self>
+ *
+ * This considers the case of a regular user requesting to modify
+ * his/her own profile.
+ *
+ * Permission given to the signed-in user
+ * must have been verified before calling this function.
+ */
+void httpPostUserSelf(const RequestContext *req, const std::string &username)
+{
+    PairKeyValueList params;
+    int r = parseFormUrlEncoded(req, params);
+    if (r < 0) {
+        sendHttpHeader400(req, "Invalid submitted data");
         return;
     }
 
     User newUserConfig;
-    std::string passwd1, passwd2;
-    std::string projectWildcard, role;
-    std::string authType = "sha1"; // default value
-    std::string ldapUri, ldapDname;
-    std::string krb5Primary, krb5Realm;
 
-    while (postData.size() > 0) {
-        std::string tokenPair = popToken(postData, '&');
-        std::string key = popToken(tokenPair, '=');
-        std::string value = urlDecode(tokenPair);
-
-        if (key == "name") newUserConfig.username = value;
-        else if (key == "sm_superadmin" && value == "on") newUserConfig.superadmin = true;
-        else if (key == "sm_auth_type") authType = value;
-        else if (key == "sm_passwd1") passwd1 = value;
-        else if (key == "sm_passwd2") passwd2 = value;
-        else if (key == "sm_ldap_uri") ldapUri = value;
-        else if (key == "sm_ldap_dname") ldapDname = value;
-        else if (key == "sm_krb5_primary") krb5Primary = value;
-        else if (key == "sm_krb5_realm") krb5Realm = value;
-        else if (key == "project_wildcard") projectWildcard = value;
-        else if (key == "role") role = value;
-        else {
-            LOG_ERROR("httpPostUsers: unexpected parameter '%s'", key.c_str());
-        }
-
-        // look if the pair project/role is complete
-        if (!projectWildcard.empty() && !role.empty()) {
-            Role r = stringToRole(role);
-            if (r != ROLE_NONE) newUserConfig.permissions[projectWildcard] = r;
-            projectWildcard.clear();
-            role.clear();
-        }
+    User *existingUser = UserBase::getUser(username);
+    if (!existingUser) {
+        sendHttpHeader400(req, "No such user");
+        return;
     }
+    newUserConfig = *existingUser; // Copy existing config into newUserConfig
 
-    // Check that the username given in the form is not empty.
-    // Only superadmin has priviledge for modifying this.
-    // For other users, the disabled field makes the username empty.
-    if (signedInUser.superadmin) {
-        if (newUserConfig.username.empty() || newUserConfig.username == "_") {
-            LOG_INFO("Ignore user parameters as username is empty or '_'");
-            sendHttpHeader400(request, "Invalid user name");
+    // Process password
+
+    std::string passwd1 = pkvGetValue(params, "sm_passwd1");
+    if (!passwd1.empty()) {
+        // A password is submitted
+
+        if (pkvGetValue(params, "sm_passwd2") != passwd1) {
+            const char *msg = "passwords 1 and 2 do not match";
+            LOG_ERROR("PhttpPostUser: %s", msg);
+            sendHttpHeader400(req, msg);
             return;
         }
-    }
+        LOG_DIAG("Password changing for user '%s'", username.c_str());
+        newUserConfig.setPasswd(passwd1);
 
-    int r = 0;
+    } // else, do not modify the password, nor any other authentication parameter
+
+    // Notifications
+    processNofiticationConfig(params, newUserConfig);
+
     std::string error;
+    r = UserBase::updateUser(username, newUserConfig);
+    if (r == -1) error = "Cannot create user with empty name";
+    else if (r == -2) error = "Cannot change name as new name already exists";
+    else if (r < 0) error = "Cannot update non existing user";
 
-    // check the parameters
-    if (passwd1 != passwd2) {
-        LOG_INFO("passwd1 (%s) != passwd2 (%s)", passwd1.c_str(), passwd2.c_str());
-        sendHttpHeader400(request, "passwords 1 and 2 do not match");
+    if (r != 0) {
+        LOG_ERROR("Cannot update user '%s': %s", username.c_str(), error.c_str());
+        sendHttpHeader500(req, error.c_str());
         return;
     }
 
+    LOG_INFO("Parameters of user '%s' updated by self", username.c_str());
 
-    LOG_INFO("authType=%s", authType.c_str()); // TODO remove this debug
+    // the request has been accepted and processed ok
+    enum RenderingFormat format = getFormat(req);
 
-    if (!signedInUser.superadmin) {
-        // if signedInUser is not superadmin, only password is updated
-        newUserConfig.username = username; // used below for redirection
-
-        if (!passwd1.empty()) {
-            r = UserBase::updatePassword(username, passwd1);
-            if (r != 0) {
-                LOG_ERROR("Cannot update password of user '%s'", username.c_str());
-                error = "Cannot update password";
-            } else LOG_INFO("Password of user '%s' updated by '%s'", username.c_str(),
-                            signedInUser.username.c_str());
-        } else {
-            LOG_DEBUG("Password not changed (empty)");
-        }
+    if (format == RENDERING_TEXT) {
+        // No redirection
+        sendHttpHeader204(req, 0);
 
     } else {
-        // superadmin: update all parameters of the user's configuration
-        if (authType == "sha1") {
-            if (!passwd1.empty()) newUserConfig.setPasswd(passwd1);
+        // Redirect
+        std::string redirectUrl = "/users/" + urlEncode(username);
+        sendHttpRedirect(req, redirectUrl.c_str(), 0);
+    }
+}
 
-#ifdef LDAP_ENABLED
-        } else if (authType == "ldap") {
-            if (ldapUri.empty() || ldapDname.empty()) {
-                sendHttpHeader400(request, "Missing parameter. Check the LDAP URI and Distinguished Name.");
-                return;
-            }
-            newUserConfig.authHandler = new AuthLdap(newUserConfig.username, ldapUri, ldapDname);
-#endif
-#ifdef KERBEROS_ENABLED
-        } else if (authType == "krb5") {
-            if (krb5Realm.empty()) {
-                sendHttpHeader400(request, "Empty parameter: Kerberos Realm.");
-                return;
-            }
-            newUserConfig.authHandler = new AuthKrb5(newUserConfig.username, krb5Realm, krb5Primary);
-#endif
-        } else {
-            // unsupported authentication type
-            std::string msg = "Unsupported authentication type: " + authType;
-            sendHttpHeader400(request, msg.c_str());
-            return;
-        }
+/** Post configuration of a new or existing user
+  *
+  * Non-superadmin users may only post:
+  * - their new password
+  * - their notification configuration
+  */
+void httpPostUser(const RequestContext *req, User signedInUser, const std::string &username)
+{
+    // Only superadmin has permission to configure other users
+    if (signedInUser.superadmin) return httpPostUserAsSuperadmin(req, username, signedInUser.username);
 
-        if (username == "_") {
-            r = UserBase::addUser(newUserConfig);
-            if (r == -1) error = "Cannot create user with empty name";
-            else if (r == -2) error = "Cannot create new user as name already exists";
-
-        } else {
-            r = UserBase::updateUser(username, newUserConfig);
-            if (r == -1) error = "Cannot create user with empty name";
-            else if (r == -2) error = "Cannot change name as new name already exists";
-            else if (r < 0) error = "Cannot update non existing user";
-
-        }
-
-        if (r != 0) LOG_ERROR("Cannot update user '%s': %s", username.c_str(), error.c_str());
-        else if (newUserConfig.username != username) {
-            LOG_INFO("User '%s' renamed '%s'", username.c_str(), newUserConfig.username.c_str());
-        } else LOG_INFO("Parameters of user '%s' updated by '%s'", username.c_str(), signedInUser.username.c_str());
+    if (username != signedInUser.username) {
+        sendHttpHeader403(req);
+        return;
     }
 
-    if (r != 0) {
-        sendHttpHeader400(request, error.c_str());
-
-    } else {
-        // POST accepted and processed ok
-        enum RenderingFormat format = getFormat(request);
-
-        if (format == RENDERING_TEXT) {
-            // No redirection
-            sendHttpHeader204(request, 0);
-
-        } else {
-            // ok, redirect
-            std::string redirectUrl = "/users/" + urlEncode(newUserConfig.username);
-            sendHttpRedirect(request, redirectUrl.c_str(), 0);
-        }
-    }
+    return httpPostUserSelf(req, username);
 }
 
 int handleUnauthorizedAccess(const RequestContext *req, bool signedIn)
@@ -740,6 +938,7 @@ void getProjects(const User &u, std::list<ProjectSummary> &pList)
         } else {
             ps.lastModified = p->getLastModified();
             ps.nIssues = p->getNumIssues();
+            ps.triggerCmdline = p->getTriggerCmdline();
         }
 
         pList.push_back(ps);
@@ -2030,7 +2229,8 @@ void cleanMultiselectProperties(const ProjectConfig &config, std::map<std::strin
   */
 void httpPostEntry(const RequestContext *req, Project &pro, const std::string & issueId, User u)
 {
-    enum Role role = u.getRole(pro.getName());
+    std::string projectName = pro.getName();
+    enum Role role = u.getRole(projectName);
     if (role != ROLE_RW && role != ROLE_ADMIN) {
         sendHttpHeader403(req);
         return;
@@ -2067,11 +2267,14 @@ void httpPostEntry(const RequestContext *req, Project &pro, const std::string & 
     Entry *entry = 0;
 
     std::string amendedEntry = getProperty(vars, K_AMEND);
+
     int r = 0;
+    IssueCopy oldIssue;
+
     if (!amendedEntry.empty()) {
         // this post is an amendment to an existing entry
         std::string newMessage = getProperty(vars, K_MESSAGE);
-        r = pro.amendEntry(amendedEntry, newMessage, entry, u.username);
+        r = pro.amendEntry(amendedEntry, newMessage, entry, u.username, oldIssue);
         if (r < 0) {
             // failure
             LOG_ERROR("amendEntry returned %d", r);
@@ -2085,7 +2288,7 @@ void httpPostEntry(const RequestContext *req, Project &pro, const std::string & 
         if (id == "new") {
             id = "";
         }
-        r = pro.addEntry(vars, id, entry, u.username);
+        r = pro.addEntry(vars, id, entry, u.username, oldIssue);
         if (r < 0) {
             // error
             sendHttpHeader500(req, "Cannot add entry");
@@ -2094,10 +2297,9 @@ void httpPostEntry(const RequestContext *req, Project &pro, const std::string & 
 
 #if !defined(_WIN32)
     if (entry) {
-        // TODO: At the moment the notification is not thread-safe, as the message of the entry
-        // may be modified by an amendment in the meanwhile, and in that case the notification will
-        // contain the latest message instead of the former one.
-        if (! UserBase::isLocalUserInterface()) Trigger::notifyEntry(pro, entry);
+        std::list<Recipient> recipients; // TODO populate this
+        recipients = UserBase::getRecipients(projectName, entry, oldIssue);
+        if (! UserBase::isLocalUserInterface()) Trigger::notifyEntry(pro, entry, oldIssue, recipients);
     }
 #endif
 

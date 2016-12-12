@@ -24,7 +24,6 @@
 #include "utils/parseConfig.h"
 #include "global.h"
 #include "repository/db.h"
-#include "AuthSha1.h"
 #include "fnmatch.h"
 
 #ifdef KERBEROS_ENABLED
@@ -34,6 +33,8 @@
 #ifdef LDAP_ENABLED
   #include "AuthLdap.h"
 #endif
+
+#define DIR_NOTIFICATIONS  "users/notifications"
 
 
 // static members
@@ -47,7 +48,7 @@ const char *FILE_USERS = "users";
 User::User()
 {
     superadmin = false;
-    authHandler = 0;
+    authHandler = NULL;
 }
 
 User::User(const User &other)
@@ -58,16 +59,17 @@ User& User::operator=(const User &rhs)
 {
     username = rhs.username;
     if (rhs.authHandler) authHandler = rhs.authHandler->createCopy();
-    else authHandler = 0;
+    else authHandler = NULL;
     rolesOnProjects = rhs.rolesOnProjects;
     superadmin = rhs.superadmin;
     permissions = rhs.permissions;
+    notification = rhs.notification;
     return *this;
 }
 User::~User()
 {
     if (authHandler) delete authHandler;
-    authHandler = 0;
+    authHandler = NULL;
 }
 
 
@@ -213,6 +215,8 @@ int User::authenticate(char *passwd)
   */
 void User::consolidateRoles()
 {
+    rolesOnProjects.clear();
+
     //std::list<Permission> permissions;
     Project *p = Database::Db.getNextProject(0);
     while (p) {
@@ -236,6 +240,23 @@ void User::consolidateRoles()
         p = Database::Db.getNextProject(p);
     }
 }
+
+bool User::shouldBeNotified(const Entry *entry, const IssueCopy &oldIssue)
+{
+    if (notification.notificationPolicy.empty()) return false;
+    if (notification.notificationPolicy == NOTIFY_POLICY_NONE) return false;
+    if (notification.notificationPolicy == NOTIFY_POLICY_ALL) return true;
+
+    if (notification.notificationPolicy == NOTIFY_POLICY_ME) {
+        // if any property of the entry or oldIssue is the user name,
+        // then return that the user should be notified
+        if (hasPropertyValue(entry->properties, username)) return true;
+        if (hasPropertyValue(oldIssue.properties, username)) return true;
+    }
+
+    return false;
+}
+
 
 RoleId roleToString(Role r)
 {
@@ -320,6 +341,18 @@ int UserBase::loadPermissions(const std::string &path, std::map<std::string, Use
     return 0;
 }
 
+static int initNotificationDir(const std::string &pathRepo)
+{
+    std::string path = std::string(pathRepo) + "/" PATH_REPO "/" + DIR_NOTIFICATIONS;
+    if (isDir(path)) return 0;
+
+    int ret = mkdir(path.c_str());
+    if (ret != 0) {
+        LOG_ERROR("Cannot init directory '%s': %s", path.c_str(), strerror(errno));
+    }
+    return ret;
+}
+
 /** Load user authentication parameters and permissions
   *
   * @param[out] users
@@ -361,7 +394,32 @@ int UserBase::load(const std::string &path, std::map<std::string, User*> &users)
         }
     }
 
-    return loadPermissions(path, users);
+    int rc = loadPermissions(path, users);
+    if (rc < 0) return rc;
+
+    // init dir for notification configs
+    int ret = initNotificationDir(path);
+    if (ret != 0) return -1;
+
+    loadNotifications(path, users);
+
+    return rc;
+}
+
+std::string UserBase::getPathNotification(const std::string &pathRepo, const std::string &username)
+{
+    std::string mangled = urlEncode(username);
+    std::string file = std::string(pathRepo) + "/" PATH_REPO "/" + DIR_NOTIFICATIONS + "/" + mangled;
+    return file;
+}
+
+void UserBase::loadNotifications(const std::string &pathRepo, std::map<std::string, User*> &users)
+{
+    std::map<std::string, User*>::iterator user;
+    FOREACH(user, users) {
+        std::string file = getPathNotification(pathRepo, user->first);
+        Notification::load(file, user->second->notification);
+    }
 }
 
 /** Load the users of a repository
@@ -425,6 +483,8 @@ int UserBase::store(const std::string &repository)
 
     std::string pathAuth = repository + "/" PATH_REPO "/" PATH_AUTH;
     r = writeToFile(pathAuth, auth);
+    if (r < 0) return r;
+
     return r;
 }
 
@@ -472,6 +532,12 @@ int UserBase::addUser(User newUser)
     if (r < 0) return r;
 
     u->consolidateRoles();
+
+    // store notification (dedicated file)
+    std::string pathNotification = getPathNotification(Repository, newUser.username);
+    r = newUser.notification.store(pathNotification);
+    if (r < 0) return r;
+
     return 0;
 }
 
@@ -495,6 +561,9 @@ int UserBase::deleteUser(const std::string &username)
     if (r < 0) {
         LOG_ERROR("Cannot store deletion of user '%s'", username.c_str());
     }
+
+    std::string pathNotification = getPathNotification(Repository, username);
+    Notification::deleteStorageFile(pathNotification);
 
     return r;
 
@@ -630,18 +699,11 @@ int UserBase::updateUser(const std::string &username, User newConfig)
     existingUser = UserDb.configuredUsers.find(username);
     if (existingUser == UserDb.configuredUsers.end()) return -3;
 
-    if (!newConfig.authHandler) {
-        // keep same authentication parameters as before
-        newConfig.authHandler = existingUser->second->authHandler;
-    } else if (existingUser->second->authHandler) {
-        // delete old authentication parameters, that will be replaced by the new ones
-        delete existingUser->second->authHandler;
-        existingUser->second->authHandler = 0;
-    }
     *(existingUser->second) = newConfig;
 
     // change the key in the map if name of user was modified
     if (username != newConfig.username) {
+        LOG_INFO("User renamed: %s -> %s", username.c_str(), newConfig.username.c_str());
         UserDb.configuredUsers[newConfig.username] = existingUser->second;
         UserDb.configuredUsers.erase(username);
     }
@@ -650,17 +712,23 @@ int UserBase::updateUser(const std::string &username, User newConfig)
     if (r < 0) return r;
 
     existingUser->second->consolidateRoles();
+
+    // store notification (dedicated file)
+    std::string pathNotification = getPathNotification(Repository, newConfig.username);
+    r = newConfig.notification.store(pathNotification);
+    if (r < 0) return r;
+
     return 0;
 }
 
-int UserBase::updatePassword(const std::string &username, const std::string &password)
+int UserBase::updatePassword(const std::string &username, const AuthSha1 *authSha1)
 {
     ScopeLocker scopeLocker(UserDb.locker, LOCK_READ_WRITE);
     std::map<std::string, User*>::iterator u = UserDb.configuredUsers.find(username);
     if (u == UserDb.configuredUsers.end()) return -1;
 
     LOG_DIAG("updatePassword for %s", username.c_str());
-    u->second->setPasswd(password);
+    u->second->authHandler = authSha1->createCopy();
     return store(Repository);
 }
 
@@ -675,6 +743,36 @@ std::list<User> UserBase::getAllUsers()
     }
     return result;
 }
+
+std::list<Recipient> UserBase::getRecipients(const std::string &projectName,
+                                             const Entry *entry,
+                                             const IssueCopy &oldIssue)
+{
+    ScopeLocker scopeLocker(UserDb.locker, LOCK_READ_ONLY);
+
+    std::list<Recipient> recipients;
+
+    std::map<std::string, User*>::const_iterator uit;
+    FOREACH(uit, UserDb.configuredUsers) {
+        User *u = uit->second;
+        if (u->shouldBeNotified(entry, oldIssue)) {
+            // Ok, this user should be notified.
+
+            // Double check if user has read-access on project...
+            if (u->getRole(projectName) <= ROLE_RO) {
+                Recipient recipient;
+                recipient.email = u->notification.email;
+                recipient.gpgPubKey = u->notification.gpgPublicKey;
+                recipients.push_back(recipient);
+            } else {
+                // internal error, as we should not get here
+                LOG_ERROR("Notification attempt to unauthorized user");
+            }
+        }
+    }
+    return recipients;
+}
+
 
 
 static UserBase UserDb;

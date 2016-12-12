@@ -445,6 +445,11 @@ void RHtml::printPageUser(const ContextParameters &ctx, const User *u)
         }
     }
 
+    if (u) {
+        vn.script += "setFormValue('sm_email', '" + enquoteJs(u->notification.email) + "');\n";
+        vn.script += "setFormValue('sm_gpg_key', '" + enquoteJs(u->notification.gpgPublicKey) + "');\n";
+        vn.script += "setFormValue('sm_notif_policy', '" + enquoteJs(u->notification.notificationPolicy) + "');\n";
+    }
     vn.printPage();
 
 }
@@ -827,7 +832,7 @@ void RHtml::printProjects(const ContextParameters &ctx,
                     "<th>%s</th>"
                     "<th>%s</th>"
                     "<th>%s</th>"
-                    "<th>%s</th>", _("Projects"), _("# Issues"), _("Last Modified"), _("My Role"));
+                    "<th>%s</th>", _("Projects"), _("Trigger"), _("# Issues"), _("Last Modified"));
     // put a column for each role
     std::list<Role> roleColumns;
     roleColumns.push_back(ROLE_ADMIN);
@@ -849,6 +854,14 @@ void RHtml::printProjects(const ContextParameters &ctx,
         ctx.req->printf("<a href=\"%s/%s/issues/?defaultView=1\">%s</a></td>\n",
                         ctx.req->getUrlRewritingRoot().c_str(),
                         Project::urlNameEncode(pname).c_str(), htmlEscape(pname).c_str());
+        // trigger
+        ctx.req->printf("<td>");
+        if (!p->triggerCmdline.empty()) {
+            ctx.req->printf("<span title=\"%s\">T</span>\n",
+                            htmlAttributeEscape(p->triggerCmdline).c_str());
+        }
+        ctx.req->printf("</td>\n");
+
 
         // # issues
         ctx.req->printf("<td>%d</td>\n", _(p->nIssues));
@@ -858,9 +871,6 @@ void RHtml::printProjects(const ContextParameters &ctx,
         if (p->lastModified < 0) ctx.req->printf("-");
         else ctx.req->printf("%s", htmlEscape(epochToStringDelta(p->lastModified)).c_str());
         ctx.req->printf("</td>\n");
-
-        // my role
-        ctx.req->printf("<td>%s</td>\n", htmlEscape(_(p->myRole)).c_str());
 
         std::map<std::string, std::map<Role, std::set<std::string> > >::const_iterator urit;
         urit = userRolesByProject.find(pname);
@@ -875,7 +885,11 @@ void RHtml::printProjects(const ContextParameters &ctx,
                     std::set<std::string>::iterator user;
                     FOREACH(user, urole->second) {
                         if (user != urole->second.begin()) ctx.req->printf(", ");
-                        ctx.req->printf("<span class=\"sm_projects_stakeholder\">%s</span>", htmlEscape(*user).c_str());
+                        const char *extra = "";
+                        if ( (*user) == ctx.user.username) extra = "sm_projects_stakeholder_me";
+
+                        ctx.req->printf("<span class=\"sm_projects_stakeholder %s\">%s</span>",
+                                        extra, htmlEscape(*user).c_str());
                     }
                     ctx.req->printf("</td>");
                 }
@@ -897,6 +911,7 @@ void RHtml::printUsers(const RequestContext *req, const std::list<User> &usersLi
     req->printf("<th class=\"sm_users\">%s</th>\n", _("Users"));
     req->printf("<th class=\"sm_users\">%s</th>\n", _("Capabilities"));
     req->printf("<th class=\"sm_users\">%s</th>\n", _("Authentication"));
+    req->printf("<th class=\"sm_users\">%s</th>\n", _("Notification"));
     req->printf("</tr>");
 
     FOREACH(u, usersList) {
@@ -919,6 +934,9 @@ void RHtml::printUsers(const RequestContext *req, const std::list<User> &usersLi
         }
         req->printf("</td>\n");
 
+        // notification
+        req->printf("<td class=\"sm_users\">\n");
+        req->printf("%s", u->notification.toString().c_str());
         req->printf("</tr>\n");
 
     }

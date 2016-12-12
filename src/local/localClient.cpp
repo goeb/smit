@@ -306,8 +306,9 @@ int cmdIssue(int argc, char * const *argv)
         std::string username = loadUsername(repo);
 
         Entry *entry = 0;
+        IssueCopy oldIssue;
         if (issueId == "-") issueId = "";
-        int r = p->addEntry(properties, issueId, entry, username);
+        int r = p->addEntry(properties, issueId, entry, username, oldIssue);
         if (r >= 0) {
             if (entry) {
                 printf("%s/%s\n", entry->issue->id.c_str(), entry->id.c_str());

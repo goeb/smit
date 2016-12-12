@@ -213,6 +213,17 @@ std::string htmlEscape(const std::string &value)
     return result;
 }
 
+/** Escape characters for HTML attributes
+ *
+ *  Suitable for using in <span title="...">
+ */
+std::string htmlAttributeEscape(const std::string &value)
+{
+    std::string result = replaceAll(value, '&', "&#38;");
+    result = replaceAll(result, '"', "&quot;");
+    return result;
+}
+
 std::string pop(std::list<std::string> & L)
 {
     std::string token = "";
@@ -231,6 +242,18 @@ std::string getProperty(const PropertiesMap &properties, const std::string &name
 
     return propertyValue;
 }
+
+/** Look if any value of the property map has the given value
+ */
+bool hasPropertyValue(const PropertiesMap &properties, const std::string &value)
+{
+    PropertiesIt pit;
+    FOREACH(pit, properties) {
+        if (inList(pit->second, value)) return true;
+    }
+    return false;
+}
+
 
 /** Replace all occurrences of the given character by a string
   *
@@ -445,10 +468,14 @@ int compareProperties(const std::map<std::string, std::list<std::string> > &plis
     return 0; // not reached normally
 }
 
+/** Look if a value is in a list
+ */
 bool inList(const std::list<std::string> &listOfValues, const std::string &value)
 {
     std::list<std::string>::const_iterator v;
-    for (v=listOfValues.begin(); v!=listOfValues.end(); v++) if (*v == value) return true;
+    for (v=listOfValues.begin(); v!=listOfValues.end(); v++) {
+        if (*v == value) return true;
+    }
 
     return false;
 }

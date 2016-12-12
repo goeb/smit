@@ -1,3 +1,7 @@
+v3.4.0
+	- add email & gpg key in page user
+	- you must update script (notifyNewEntry.py)
+
 v3.3.0, 20 Jun 2016
     - pre-filled template for textarea2 properties
     - HTML templates: server side includes (SM_INCLUDE)
