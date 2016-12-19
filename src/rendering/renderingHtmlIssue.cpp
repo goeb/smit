@@ -447,21 +447,15 @@ void RHtmlIssue::printEntry(const ContextParameters &ctx, const IssueCopy &issue
          (ctx.userRole == ROLE_ADMIN || ctx.userRole == ROLE_RW) &&
          !ee.isAmending()) {
         // entry was created less than 10 minutes ago, and by same user, and is latest in the issue
-        // TODO ? use relative path to /issues/ (as for files below)
-        ctx.req->printf("<a href=\"%s/%s/issues/%s?amend=%s\" class=\"sm_entry_edit\" "
+        ctx.req->printf("<a href=\"?amend=%s\" class=\"sm_entry_edit\" "
                         "title=\"Edit this message (at most %d minutes after posting)\">",
-                        ctx.req->getUrlRewritingRoot().c_str(),
-                        ctx.getProjectUrlName().c_str(), enquoteJs(issue.id).c_str(),
                         enquoteJs(ee.id).c_str(), (DELETE_DELAY_S/60));
         ctx.req->printf("&#9998; %s", _("edit"));
         ctx.req->printf("</a>\n");
     }
 
     // link to raw entry
-    // TODO ? use relative path to RESOURCE_FILES (as for files below)
-    ctx.req->printf("(<a href=\"%s/%s/" RESOURCE_FILES "/%s\" class=\"sm_entry_raw\">%s</a>",
-                    ctx.req->getUrlRewritingRoot().c_str(),
-                    ctx.getProjectUrlName().c_str(),
+    ctx.req->printf("(<a href=\"../" RESOURCE_FILES "/%s\" class=\"sm_entry_raw\">%s</a>",
                     urlEncode(ee.id).c_str(), _("raw"));
     // link to possible amendments
     int i = 1;
@@ -469,10 +463,7 @@ void RHtmlIssue::printEntry(const ContextParameters &ctx, const IssueCopy &issue
     if (as != issue.amendments.end()) {
         std::list<std::string>::const_iterator a;
         FOREACH(a, as->second) {
-            // TODO ? use relative path to RESOURCE_FILES (as for files below)
-            ctx.req->printf(", <a href=\"%s/%s/" RESOURCE_FILES "/%s\" class=\"sm_entry_raw\">%s%d</a>",
-                            ctx.req->getUrlRewritingRoot().c_str(),
-                            ctx.getProjectUrlName().c_str(),
+            ctx.req->printf(", <a href=\"../" RESOURCE_FILES "/%s\" class=\"sm_entry_raw\">%s%d</a>",
                             urlEncode(*a).c_str(), _("amend"), i);
             i++;
         }
