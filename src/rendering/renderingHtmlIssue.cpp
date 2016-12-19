@@ -388,6 +388,17 @@ void RHtmlIssue::printTags(const ContextParameters &ctx, const IssueCopy &issue)
         ctx.req->printf("</div>\n");
     }
 }
+static void xprintEntry()
+{
+    // setup styles of the entry
+    // print <div>
+    // print entry header (with edit button, links, tags)
+    // print message
+    // print attached files
+    // print other properties
+    // print </div>
+}
+
 void RHtmlIssue::printEntry(const ContextParameters &ctx, const IssueCopy &issue, const Entry &ee, bool beingAmended)
 {
     const ProjectConfig &pconfig = ctx.projectConfig;
@@ -429,8 +440,6 @@ void RHtmlIssue::printEntry(const ContextParameters &ctx, const IssueCopy &issue
     ctx.req->printf("<div class=\"sm_entry_header\">\n");
     ctx.req->printf("<span class=\"sm_entry_author\">%s</span>", htmlEscape(ee.author).c_str());
     ctx.req->printf(", <span class=\"sm_entry_ctime\">%s</span>\n", epochToString(ee.ctime).c_str());
-    // conversion of date in javascript
-    // document.write(new Date(%d)).toString());
 
     // edit button
     time_t delta = time(0) - ee.ctime;
@@ -438,6 +447,7 @@ void RHtmlIssue::printEntry(const ContextParameters &ctx, const IssueCopy &issue
          (ctx.userRole == ROLE_ADMIN || ctx.userRole == ROLE_RW) &&
          !ee.isAmending()) {
         // entry was created less than 10 minutes ago, and by same user, and is latest in the issue
+        // TODO ? use relative path to /issues/ (as for files below)
         ctx.req->printf("<a href=\"%s/%s/issues/%s?amend=%s\" class=\"sm_entry_edit\" "
                         "title=\"Edit this message (at most %d minutes after posting)\">",
                         ctx.req->getUrlRewritingRoot().c_str(),
@@ -448,6 +458,7 @@ void RHtmlIssue::printEntry(const ContextParameters &ctx, const IssueCopy &issue
     }
 
     // link to raw entry
+    // TODO ? use relative path to RESOURCE_FILES (as for files below)
     ctx.req->printf("(<a href=\"%s/%s/" RESOURCE_FILES "/%s\" class=\"sm_entry_raw\">%s</a>",
                     ctx.req->getUrlRewritingRoot().c_str(),
                     ctx.getProjectUrlName().c_str(),
@@ -458,6 +469,7 @@ void RHtmlIssue::printEntry(const ContextParameters &ctx, const IssueCopy &issue
     if (as != issue.amendments.end()) {
         std::list<std::string>::const_iterator a;
         FOREACH(a, as->second) {
+            // TODO ? use relative path to RESOURCE_FILES (as for files below)
             ctx.req->printf(", <a href=\"%s/%s/" RESOURCE_FILES "/%s\" class=\"sm_entry_raw\">%s%d</a>",
                             ctx.req->getUrlRewritingRoot().c_str(),
                             ctx.getProjectUrlName().c_str(),

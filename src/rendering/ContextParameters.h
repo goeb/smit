@@ -8,9 +8,9 @@
 
 class ContextParameters {
 public:
-    ContextParameters(const RequestContext *req, const User &u, const ProjectParameters &pp);
-    ContextParameters(const RequestContext *req, const User &u);
-    void init(const RequestContext *request, const User &u);
+    ContextParameters(const ResponseContext *req, const User &u, const ProjectParameters &pp);
+    ContextParameters(const ResponseContext *req, const User &u);
+    void init(const ResponseContext *request, const User &u);
 
     User user; // signed-in user
     enum Role userRole; // role of the signed-in user on the current project (if there is a current project)
@@ -27,7 +27,7 @@ public:
 
     std::set<std::string> usersOfProject;
     std::list<std::pair<std::string, uint8_t> > htmlFieldDisplay;
-    const RequestContext *req;
+    const ResponseContext *req;
     const char *originView; // query string format
 
     inline std::string getProjectUrlName() const { return Project::urlNameEncode(projectName); }

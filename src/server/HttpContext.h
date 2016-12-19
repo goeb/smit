@@ -45,24 +45,35 @@ private:
     std::string listeningPort;
 };
 
+class ResponseContext {
+public:
+    virtual int printf(const char *fmt, ...) const = 0;
+    virtual int write(const void *buf, size_t len) const = 0;
+    inline virtual const char *getQueryString() const { return "";}
+    inline virtual std::string getUrlRewritingRoot() const { return ""; }
+};
+
 /** class that handles the context of a request
   *
   * It can be later replaced by a class dedicated to fast cgi, for instance.
   */
-class MongooseRequestContext {
+class MongooseRequestContext : public ResponseContext {
 public:
     MongooseRequestContext(struct mg_connection *conn);
-    int printf(const char *fmt, ...) const;
-    int write(const void *buf, size_t len) const;
-    int read(void *buf, size_t len) const;
 
-    inline const char *getUri() const { return mg_get_request_info(conn)->uri; }
+    virtual int printf(const char *fmt, ...) const;
+    virtual int write(const void *buf, size_t len) const;
+
+    const char *getQueryString() const;
+    inline std::string getUrlRewritingRoot() const { return serverContext->getUrlRewritingRoot(); }
+
+    // Methods for the base request handler (ie: not the rendering parts)
+    int read(void *buf, size_t len) const;
+    void sendObject(const std::string &basemane, const std::string &realpath) const;
     inline const char *getMethod() const { return mg_get_request_info(conn)->request_method; }
+    inline const char *getUri() const { return mg_get_request_info(conn)->uri; }
     inline const char *getHeader(const char *h) const { return mg_get_header(conn, h); }
     inline int isSSL() const { return mg_get_request_info(conn)->is_ssl; }
-    const char *getQueryString() const;
-    void sendObject(const std::string &basemane, const std::string &realpath) const;
-    inline std::string getUrlRewritingRoot() const { return serverContext->getUrlRewritingRoot(); }
     inline std::string getListeningPort() const { return serverContext->getListeningPort(); }
     inline void setServerContext(MongooseServerContext *sc) { serverContext = sc; }
 private:
