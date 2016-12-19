@@ -399,23 +399,22 @@ static void xprintEntry()
     // print </div>
 }
 
-void RHtmlIssue::printEntry(const ContextParameters &ctx, const IssueCopy &issue, const Entry &ee, bool beingAmended)
+std::string RHtmlIssue::getEntryExtraStyles(const ProjectConfig &pconfig, const IssueCopy &issue,
+                                            const Entry &ee, bool beingAmended)
 {
-    const ProjectConfig &pconfig = ctx.projectConfig;
-    const char *styleBeingAmended = "";
+    std::string extraStyles = "";
     if (beingAmended) {
         // the page will display a form for editing this entry.
         // we want here a special display to help the user understand the link
-        styleBeingAmended = "sm_entry_being_amended";
+        extraStyles += " sm_entry_being_amended";
     }
 
     // look if class sm_no_contents is applicable
     // an entry has no contents if no message and no file
-    const char* classNoContents = "";
     if (ee.getMessage().empty() || ee.isAmending()) {
         std::map<std::string, std::list<std::string> >::const_iterator files = ee.properties.find(K_FILE);
         if (files == ee.properties.end() || files->second.empty()) {
-            classNoContents = "sm_entry_no_contents";
+            extraStyles += " sm_entry_no_contents";
         }
     }
 
@@ -433,9 +432,18 @@ void RHtmlIssue::printEntry(const ContextParameters &ctx, const IssueCopy &issue
             }
         }
     }
+    extraStyles += " " + urlEncode(classTagged); // should rather use htmlAttributeEscape() ?
 
-    ctx.req->printf("<div class=\"sm_entry %s %s %s\" id=\"%s\">\n", classNoContents,
-                    urlEncode(classTagged).c_str(), styleBeingAmended, urlEncode(ee.id).c_str());
+    return extraStyles;
+}
+
+void RHtmlIssue::printEntry(const ContextParameters &ctx, const IssueCopy &issue, const Entry &ee, bool beingAmended)
+{
+    const ProjectConfig &pconfig = ctx.projectConfig;
+
+    std::string extraStyles = getEntryExtraStyles(pconfig, issue, ee, beingAmended);
+    ctx.req->printf("<div class=\"sm_entry %s\" id=\"%s\">\n", extraStyles.c_str(),
+                    urlEncode(ee.id).c_str());
 
     ctx.req->printf("<div class=\"sm_entry_header\">\n");
     ctx.req->printf("<span class=\"sm_entry_author\">%s</span>", htmlEscape(ee.author).c_str());

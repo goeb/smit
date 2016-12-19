@@ -36,6 +36,9 @@ public:
     static void printIssuesAccrossProjects(const ContextParameters &ctx,
                                            const std::vector<IssueCopy> &issues,
                                            const std::list<std::string> &colspec);
+    static std::string getEntryExtraStyles(const ProjectConfig &pconfig, const IssueCopy &issue,
+                                           const Entry &ee, bool beingAmended);
+
 };
 
 
