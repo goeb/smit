@@ -139,7 +139,7 @@ ContentType getContentType(const RequestContext *req, std::string &boundary)
 void sendHttpHeader200(const RequestContext *request)
 {
     LOG_FUNC();
-    request->printf("HTTP/1.0 200 OK\r\n");
+    request->printf("HTTP/1.1 200 OK\r\n");
     addHttpStat(H_2XX);
 }
 
@@ -315,6 +315,7 @@ enum RenderingFormat getFormat(const RequestContext *request)
     else if (format == "csv") return RENDERING_CSV;
     else if (format == "text") return RENDERING_TEXT;
     else if (format == "json") return RENDERING_JSON;
+    else if (format == "zip") return RENDERING_ZIP;
     else {
         // look at the Accept header
         const char *contentType = request->getHeader("Accept");

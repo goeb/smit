@@ -38,6 +38,7 @@
 #include "utils/filesystem.h"
 #include "rendering/renderingText.h"
 #include "rendering/renderingHtml.h"
+#include "rendering/renderingZip.h"
 #include "rendering/renderingHtmlIssue.h"
 #include "rendering/ContextParameters.h"
 #include "rendering/renderingCsv.h"
@@ -2051,10 +2052,16 @@ int httpGetIssue(const RequestContext *req, Project &p, const std::string &issue
         sendHttpHeader200(req);
 
         if (format == RENDERING_TEXT) RText::printIssue(req, issue);
-        else if (format == RENDERING_CSV) {
+
+        else if (format == RENDERING_ZIP) {
+            ContextParameters ctx = ContextParameters(req, u, p.getProjectParameters());
+            RZip::printIssue(ctx, issue);
+
+        } else if (format == RENDERING_CSV) {
             ProjectConfig pconfig = p.getConfig();
             RCsv::printIssue(req, issue, pconfig);
-        }else {
+
+        } else {
 
             std::string q = req->getQueryString();
             std::string amend = getFirstParamFromQueryString(q, "amend");

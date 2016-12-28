@@ -145,7 +145,8 @@ am__smit_SOURCES_DIST = src/repository/db.cpp src/project/Entry.cpp \
 	src/rendering/renderingHtml.cpp \
 	src/rendering/ContextParameters.cpp \
 	src/rendering/renderingHtmlIssue.cpp \
-	src/rendering/renderingHtmlUtil.cpp src/user/session.cpp \
+	src/rendering/renderingHtmlUtil.cpp \
+	src/rendering/renderingZip.cpp src/user/session.cpp \
 	src/user/AuthSha1.cpp src/user/notification.cpp \
 	src/local/console.cpp src/local/localClient.cpp src/Args.cpp \
 	src/third-party/mongoose.c src/third-party/fnmatch.c \
@@ -184,6 +185,7 @@ am_smit_OBJECTS = src/repository/smit-db.$(OBJEXT) \
 	src/rendering/smit-ContextParameters.$(OBJEXT) \
 	src/rendering/smit-renderingHtmlIssue.$(OBJEXT) \
 	src/rendering/smit-renderingHtmlUtil.$(OBJEXT) \
+	src/rendering/smit-renderingZip.$(OBJEXT) \
 	src/user/smit-session.$(OBJEXT) \
 	src/user/smit-AuthSha1.$(OBJEXT) \
 	src/user/smit-notification.$(OBJEXT) \
@@ -403,6 +405,8 @@ KRB5_LIBS = @KRB5_LIBS@
 LDAP_CFLAGS = @LDAP_CFLAGS@
 LDAP_LIBS = @LDAP_LIBS@
 LDFLAGS = @LDFLAGS@
+LIBARCHIVE_CFLAGS = @LIBARCHIVE_CFLAGS@
+LIBARCHIVE_LIBS = @LIBARCHIVE_LIBS@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
 LTLIBOBJS = @LTLIBOBJS@
@@ -505,7 +509,8 @@ smit_SOURCES = src/repository/db.cpp src/project/Entry.cpp \
 	src/rendering/renderingHtml.cpp \
 	src/rendering/ContextParameters.cpp \
 	src/rendering/renderingHtmlIssue.cpp \
-	src/rendering/renderingHtmlUtil.cpp src/user/session.cpp \
+	src/rendering/renderingHtmlUtil.cpp \
+	src/rendering/renderingZip.cpp src/user/session.cpp \
 	src/user/AuthSha1.cpp src/user/notification.cpp \
 	src/local/console.cpp src/local/localClient.cpp src/Args.cpp \
 	src/third-party/mongoose.c src/third-party/fnmatch.c \
@@ -516,11 +521,11 @@ CLEANFILES = embedcpio.c embedcpio.h convertToC
 X = embedded_data
 SM_VERSION = $(X)/sm/version
 smit_CPPFLAGS = -I @srcdir@/src -I @srcdir@/src/third-party \
-	@OPENSSL_CFLAGS@ @CURL_CFLAGS@ $(am__append_14) \
-	$(am__append_16) $(am__append_18)
-smit_LDADD = @OPENSSL_LIBS@ @CURL_LIBS@ $(am__append_13) \
-	$(am__append_15) $(am__append_17) $(am__append_19) \
-	$(am__append_20)
+	@OPENSSL_CFLAGS@ @CURL_CFLAGS@ @LIBARCHIVE_CFLAGS@ \
+	$(am__append_14) $(am__append_16) $(am__append_18)
+smit_LDADD = @OPENSSL_LIBS@ @CURL_LIBS@ @LIBARCHIVE_LIBS@ \
+	$(am__append_13) $(am__append_15) $(am__append_17) \
+	$(am__append_19) $(am__append_20)
 smparser_SOURCES = \
 				   src/utils/parseConfig.cpp \
 				   src/utils/filesystem.cpp \
@@ -731,6 +736,9 @@ src/rendering/smit-renderingHtmlIssue.$(OBJEXT):  \
 src/rendering/smit-renderingHtmlUtil.$(OBJEXT):  \
 	src/rendering/$(am__dirstamp) \
 	src/rendering/$(DEPDIR)/$(am__dirstamp)
+src/rendering/smit-renderingZip.$(OBJEXT):  \
+	src/rendering/$(am__dirstamp) \
+	src/rendering/$(DEPDIR)/$(am__dirstamp)
 src/user/$(am__dirstamp):
 	@$(MKDIR_P) src/user
 	@: > src/user/$(am__dirstamp)
@@ -826,6 +834,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/rendering/$(DEPDIR)/smit-renderingHtmlUtil.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/rendering/$(DEPDIR)/smit-renderingJson.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/rendering/$(DEPDIR)/smit-renderingText.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/rendering/$(DEPDIR)/smit-renderingZip.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/repository/$(DEPDIR)/smit-db.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/server/$(DEPDIR)/smit-HttpContext.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/server/$(DEPDIR)/smit-Trigger.Po@am__quote@
@@ -1330,6 +1339,20 @@ src/rendering/smit-renderingHtmlUtil.obj: src/rendering/renderingHtmlUtil.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/rendering/renderingHtmlUtil.cpp' object='src/rendering/smit-renderingHtmlUtil.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/rendering/smit-renderingHtmlUtil.obj `if test -f 'src/rendering/renderingHtmlUtil.cpp'; then $(CYGPATH_W) 'src/rendering/renderingHtmlUtil.cpp'; else $(CYGPATH_W) '$(srcdir)/src/rendering/renderingHtmlUtil.cpp'; fi`
+
+src/rendering/smit-renderingZip.o: src/rendering/renderingZip.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/rendering/smit-renderingZip.o -MD -MP -MF src/rendering/$(DEPDIR)/smit-renderingZip.Tpo -c -o src/rendering/smit-renderingZip.o `test -f 'src/rendering/renderingZip.cpp' || echo '$(srcdir)/'`src/rendering/renderingZip.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/rendering/$(DEPDIR)/smit-renderingZip.Tpo src/rendering/$(DEPDIR)/smit-renderingZip.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/rendering/renderingZip.cpp' object='src/rendering/smit-renderingZip.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/rendering/smit-renderingZip.o `test -f 'src/rendering/renderingZip.cpp' || echo '$(srcdir)/'`src/rendering/renderingZip.cpp
+
+src/rendering/smit-renderingZip.obj: src/rendering/renderingZip.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/rendering/smit-renderingZip.obj -MD -MP -MF src/rendering/$(DEPDIR)/smit-renderingZip.Tpo -c -o src/rendering/smit-renderingZip.obj `if test -f 'src/rendering/renderingZip.cpp'; then $(CYGPATH_W) 'src/rendering/renderingZip.cpp'; else $(CYGPATH_W) '$(srcdir)/src/rendering/renderingZip.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/rendering/$(DEPDIR)/smit-renderingZip.Tpo src/rendering/$(DEPDIR)/smit-renderingZip.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/rendering/renderingZip.cpp' object='src/rendering/smit-renderingZip.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/rendering/smit-renderingZip.obj `if test -f 'src/rendering/renderingZip.cpp'; then $(CYGPATH_W) 'src/rendering/renderingZip.cpp'; else $(CYGPATH_W) '$(srcdir)/src/rendering/renderingZip.cpp'; fi`
 
 src/user/smit-session.o: src/user/session.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/user/smit-session.o -MD -MP -MF src/user/$(DEPDIR)/smit-session.Tpo -c -o src/user/smit-session.o `test -f 'src/user/session.cpp' || echo '$(srcdir)/'`src/user/session.cpp

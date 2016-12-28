@@ -59,6 +59,7 @@ smit_SOURCES = \
 			   src/rendering/ContextParameters.cpp \
 			   src/rendering/renderingHtmlIssue.cpp \
 			   src/rendering/renderingHtmlUtil.cpp \
+			   src/rendering/renderingZip.cpp \
 			   src/user/session.cpp \
 			   src/user/AuthSha1.cpp \
 			   src/user/notification.cpp \
@@ -107,8 +108,14 @@ embedcpio.c embedcpio.h: @srcdir@/tools/convertToC.cpp @srcdir@/data/sm/smit.js
 clean-local-embedded-data:
 	rm -rf $(X)
 
-smit_CPPFLAGS = -I @srcdir@/src -I @srcdir@/src/third-party @OPENSSL_CFLAGS@ @CURL_CFLAGS@
-smit_LDADD = @OPENSSL_LIBS@ @CURL_LIBS@
+smit_CPPFLAGS = -I @srcdir@/src -I @srcdir@/src/third-party \
+					@OPENSSL_CFLAGS@ \
+					@CURL_CFLAGS@ \
+					@LIBARCHIVE_CFLAGS@
+
+smit_LDADD = @OPENSSL_LIBS@ \
+			 @CURL_LIBS@ \
+			 @LIBARCHIVE_LIBS@
 
 if CURL_ENABLED
 smit_LDADD += @CURL_LIBS@

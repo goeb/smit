@@ -16,7 +16,12 @@ enum { REQUEST_NOT_PROCESSED = 0, // let the httpd engine handle the request
        REQUEST_COMPLETED = 1      // do not let the httpd engine handle the request
      };
 
-enum RenderingFormat { RENDERING_HTML, RENDERING_TEXT, RENDERING_CSV, RENDERING_JSON, X_SMIT };
+enum RenderingFormat { RENDERING_HTML,
+                       RENDERING_TEXT,
+                       RENDERING_CSV,
+                       RENDERING_JSON,
+                       RENDERING_ZIP,
+                       X_SMIT };
 
 enum HttpEvent {
     H_GET,
