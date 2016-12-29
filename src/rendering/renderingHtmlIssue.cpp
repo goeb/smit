@@ -42,11 +42,8 @@ void RHtmlIssue::printIssueListFullContents(const ContextParameters &ctx, const 
     std::vector<IssueCopy>::const_iterator i;
     FOREACH (i, issueList) {
         const IssueCopy &issue = *i;
-        // deactivate user role, as no edit form is to be displayed
-        ContextParameters ctxCopy = ctx;
-        ctxCopy.userRole = ROLE_RO;
-        printIssueSummary(ctxCopy, issue);
-        printIssue(ctxCopy, issue, "");
+        printIssueSummary(ctx, issue);
+        printIssue(ctx, issue, "");
     }
     ctx.req->printf("</div>\n");
 
@@ -209,7 +206,7 @@ void RHtmlIssue::printIssueSummary(const ContextParameters &ctx, const IssueCopy
 
 }
 
-/** Print associatied issues
+/** Print associated issues
   *
   * A <tr> must have been opened by the caller,
   * and must be closed by the caller.
