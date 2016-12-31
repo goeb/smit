@@ -114,27 +114,31 @@ static std::string buildHtml(const ContextParameters &ctx, const IssueCopy &issu
 
     oss.printf("<h1>Smit project: %s</h1>", htmlEscape(ctx.projectName).c_str());
 
-    std::string summary = RHtmlIssue::printIssueSummary(ctx, issue);
-    oss.printf("%s", summary.c_str());
+    // summary
+    oss.printf("<div class=\"sm_issue_header\">\n");
+    oss.printf("<span class=\"sm_issue_id\">%s</span>\n", htmlEscape(issue.id).c_str(),
+               htmlEscape(issue.id).c_str());
+    oss.printf("<span class=\"sm_issue_summary\">%s</span>\n", htmlEscape(issue.getSummary()).c_str());
+    oss.printf("</div>\n");
 
+    // properties
     oss << "<div class=\"sm_issue\">";
-    std::string pt = RHtmlIssue::printPropertiesTable(ctx, issue);
+    std::string pt = RHtmlIssue::renderPropertiesTable(ctx, issue);
     oss << pt;
 
-    std::string tags = RHtmlIssue::printTags(ctx, issue);
+    // tags
+    std::string tags = RHtmlIssue::renderTags(ctx, issue);
     oss << tags;
 
     // entries
-    // -------------------------------------------------
     Entry *e = issue.first;
     while (e) {
-        std::string entry = RHtmlIssue::printEntry(ctx, issue, *e, false);
+        std::string entry = RHtmlIssue::renderEntry(ctx, issue, *e, false);
         oss << entry;
         e = e->getNext();
     } // end of entries
 
     oss << "</div>\n";
-
 
     oss << HTML_FOOTER;
     return oss.str();

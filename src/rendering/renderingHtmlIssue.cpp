@@ -30,6 +30,20 @@
 #include "global.h"
 #include "restApi.h"
 
+/** print id and summary of an issue
+  *
+  */
+static std::string renderIssueSummary(const ContextParameters &ctx, const IssueCopy &issue)
+{
+    StringStream ss;
+    ss.printf("<div class=\"sm_issue_header\">\n");
+    ss.printf("<a href=\"%s\" class=\"sm_issue_id\">%s</a>\n", htmlEscape(issue.id).c_str(),
+              htmlEscape(issue.id).c_str());
+    ss.printf("<span class=\"sm_issue_summary\">%s</span>\n", htmlEscape(issue.getSummary()).c_str());
+    ss.printf("</div>\n");
+    return ss.str();
+}
+
 void RHtmlIssue::printIssueListFullContents(const ContextParameters &ctx, const std::vector<IssueCopy> &issueList)
 {
     ctx.req->printf("<div class=\"sm_issues\">\n");
@@ -42,7 +56,7 @@ void RHtmlIssue::printIssueListFullContents(const ContextParameters &ctx, const 
     std::vector<IssueCopy>::const_iterator i;
     FOREACH (i, issueList) {
         const IssueCopy &issue = *i;
-        std::string summary = printIssueSummary(ctx, issue);
+        std::string summary = renderIssueSummary(ctx, issue);
         ctx.req->printf("%s", summary.c_str());
         printIssue(ctx, issue, "");
     }
@@ -194,26 +208,12 @@ std::string RHtmlIssue::convertToRichText(const std::string &raw)
 
 }
 
-/** print id and summary of an issue
-  *
-  */
-std::string RHtmlIssue::printIssueSummary(const ContextParameters &ctx, const IssueCopy &issue)
-{
-    StringStream ss;
-    ss.printf("<div class=\"sm_issue_header\">\n");
-    ss.printf("<a href=\"%s\" class=\"sm_issue_id\">%s</a>\n", htmlEscape(issue.id).c_str(),
-              htmlEscape(issue.id).c_str());
-    ss.printf("<span class=\"sm_issue_summary\">%s</span>\n", htmlEscape(issue.getSummary()).c_str());
-    ss.printf("</div>\n");
-    return ss.str();
-}
-
 /** Print associated issues
   *
   * A <tr> must have been opened by the caller,
   * and must be closed by the caller.
   */
-static std::string printAssociations(const ContextParameters &ctx, const std::string &associationId, const IssueCopy &i, bool reverse)
+static std::string renderAssociations(const ContextParameters &ctx, const std::string &associationId, const IssueCopy &i, bool reverse)
 {
     std::string label;
     StringStream ss;
@@ -252,7 +252,7 @@ static std::string printAssociations(const ContextParameters &ctx, const std::st
     return ss.str();
 }
 
-std::string RHtmlIssue::printPropertiesTable(const ContextParameters &ctx, const IssueCopy &issue)
+std::string RHtmlIssue::renderPropertiesTable(const ContextParameters &ctx, const IssueCopy &issue)
 {
     StringStream ss;
     // issue properties in a two-column table
@@ -317,7 +317,7 @@ std::string RHtmlIssue::printPropertiesTable(const ContextParameters &ctx, const
             std::list<std::string> associatedIssues;
             if (p != issue.properties.end()) associatedIssues = p->second;
 
-            ss << printAssociations(ctx, pname, issue, false);
+            ss << renderAssociations(ctx, pname, issue, false);
 
         } else {
             // print label and value of property (other than an association)
@@ -358,7 +358,7 @@ std::string RHtmlIssue::printPropertiesTable(const ContextParameters &ctx, const
             if (!ctx.projectConfig.isValidPropertyName(ra->first)) continue;
 
             ss.printf("<tr class=\"sm_issue_asso\">");
-            printAssociations(ctx, ra->first, issue, true);
+            renderAssociations(ctx, ra->first, issue, true);
             ss.printf("</tr>");
         }
     }
@@ -367,7 +367,7 @@ std::string RHtmlIssue::printPropertiesTable(const ContextParameters &ctx, const
     return ss.str();
 }
 
-std::string RHtmlIssue::printTags(const ContextParameters &ctx, const IssueCopy &issue)
+std::string RHtmlIssue::renderTags(const ContextParameters &ctx, const IssueCopy &issue)
 {
     const ProjectConfig &pconfig = ctx.projectConfig;
     StringStream ss;
@@ -393,16 +393,6 @@ std::string RHtmlIssue::printTags(const ContextParameters &ctx, const IssueCopy 
         ss.printf("</div>\n");
     }
     return ss.str();
-}
-static void xprintEntry()
-{
-    // setup styles of the entry
-    // print <div>
-    // print entry header (with edit button, links, tags)
-    // print message
-    // print attached files
-    // print other properties
-    // print </div>
 }
 
 /** Get a list of CSS styles, separated by spaces
@@ -450,7 +440,7 @@ std::string RHtmlIssue::getEntryExtraStyles(const ProjectConfig &pconfig, const 
     return extraStyles;
 }
 
-std::string RHtmlIssue::printEntry(const ContextParameters &ctx, const IssueCopy &issue, const Entry &ee, bool beingAmended)
+std::string RHtmlIssue::renderEntry(const ContextParameters &ctx, const IssueCopy &issue, const Entry &ee, bool beingAmended)
 {
     const ProjectConfig &pconfig = ctx.projectConfig;
     StringStream ss;
@@ -581,10 +571,10 @@ void RHtmlIssue::printIssue(const ContextParameters &ctx, const IssueCopy &issue
 {
     ctx.req->printf("<div class=\"sm_issue\">");
 
-    std::string pt = printPropertiesTable(ctx, issue);
+    std::string pt = renderPropertiesTable(ctx, issue);
     ctx.req->printf("%s", pt.c_str());
 
-    std::string tags = printTags(ctx, issue);
+    std::string tags = renderTags(ctx, issue);
     ctx.req->printf("%s", tags.c_str());
 
     // entries
@@ -594,7 +584,7 @@ void RHtmlIssue::printIssue(const ContextParameters &ctx, const IssueCopy &issue
         Entry ee = *e;
 
         bool beingAmended = (ee.id == entryToBeAmended);
-        std::string entry = printEntry(ctx, issue, ee, beingAmended);
+        std::string entry = renderEntry(ctx, issue, ee, beingAmended);
         ctx.req->printf("%s", entry.c_str());
 
         e = e->getNext();
