@@ -25,7 +25,7 @@ public:
                                  const Entry &eToBeAmended);
     static void printIssueForm(const ContextParameters &ctx, const IssueCopy *issue, bool autofocus);
     static std::string convertToRichText(const std::string &raw);
-    static void printIssueSummary(const ContextParameters &ctx, const IssueCopy &issue);
+    static std::string printIssueSummary(const ContextParameters &ctx, const IssueCopy &issue);
     static std::string printPropertiesTable(const ContextParameters &ctx, const IssueCopy &issue);
     static std::string printTags(const ContextParameters &ctx, const IssueCopy &issue);
     static std::string printEntry(const ContextParameters &ctx, const IssueCopy &issue, const Entry &ee, bool beingAmended);

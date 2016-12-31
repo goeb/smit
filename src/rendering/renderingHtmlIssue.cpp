@@ -42,7 +42,8 @@ void RHtmlIssue::printIssueListFullContents(const ContextParameters &ctx, const 
     std::vector<IssueCopy>::const_iterator i;
     FOREACH (i, issueList) {
         const IssueCopy &issue = *i;
-        printIssueSummary(ctx, issue);
+        std::string summary = printIssueSummary(ctx, issue);
+        ctx.req->printf("%s", summary.c_str());
         printIssue(ctx, issue, "");
     }
     ctx.req->printf("</div>\n");
@@ -196,14 +197,15 @@ std::string RHtmlIssue::convertToRichText(const std::string &raw)
 /** print id and summary of an issue
   *
   */
-void RHtmlIssue::printIssueSummary(const ContextParameters &ctx, const IssueCopy &issue)
+std::string RHtmlIssue::printIssueSummary(const ContextParameters &ctx, const IssueCopy &issue)
 {
-    ctx.req->printf("<div class=\"sm_issue_header\">\n");
-    ctx.req->printf("<a href=\"%s\" class=\"sm_issue_id\">%s</a>\n", htmlEscape(issue.id).c_str(),
-            htmlEscape(issue.id).c_str());
-    ctx.req->printf("<span class=\"sm_issue_summary\">%s</span>\n", htmlEscape(issue.getSummary()).c_str());
-    ctx.req->printf("</div>\n");
-
+    StringStream ss;
+    ss.printf("<div class=\"sm_issue_header\">\n");
+    ss.printf("<a href=\"%s\" class=\"sm_issue_id\">%s</a>\n", htmlEscape(issue.id).c_str(),
+              htmlEscape(issue.id).c_str());
+    ss.printf("<span class=\"sm_issue_summary\">%s</span>\n", htmlEscape(issue.getSummary()).c_str());
+    ss.printf("</div>\n");
+    return ss.str();
 }
 
 /** Print associated issues

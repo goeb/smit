@@ -27,15 +27,15 @@
 #include "project/Object.h"
 #include "restApi.h"
 
-const std::string HTML_HEADER = "<!DOCTYPE HTML>"
-        "<html>"
-            "<head>"
-                "<title>Issue xxx</title>"
-                "<meta http-equiv=\"Content-Type\" content=\"text/html;charset=UTF-8\">"
-                "<link rel=\"stylesheet\" type=\"text/css\" href=\"style.css\">"
-            "</head>"
-            "<body>";
-const std::string HTML_FOOTER = "</body></html>";
+#define HTML_HEADER "<!DOCTYPE HTML>" \
+    "<html>" \
+    "<head>" \
+    "<title>Issue %s</title>" \
+    "<meta http-equiv=\"Content-Type\" content=\"text/html;charset=UTF-8\">" \
+    "<link rel=\"stylesheet\" type=\"text/css\" href=\"style.css\">" \
+    "</head>" \
+    "<body>"
+#define HTML_FOOTER "</body></html>"
 
 static int sendZippedFile(const ContextParameters &ctx, struct archive *a, const std::string &filename, const std::string &data)
 {
@@ -109,12 +109,15 @@ static int attachFiles(const ContextParameters &ctx, struct archive *a, const st
 
 static std::string buildHtml(const ContextParameters &ctx, const IssueCopy &issue)
 {
-    std::ostringstream oss;
-    oss << HTML_HEADER;
+    StringStream oss;
+    oss.printf(HTML_HEADER, issue.id.c_str());
+
+    oss.printf("<h1>Smit project: %s</h1>", htmlEscape(ctx.projectName).c_str());
+
+    std::string summary = RHtmlIssue::printIssueSummary(ctx, issue);
+    oss.printf("%s", summary.c_str());
 
     oss << "<div class=\"sm_issue\">";
-
-
     std::string pt = RHtmlIssue::printPropertiesTable(ctx, issue);
     oss << pt;
 
@@ -168,6 +171,7 @@ int RZip::printIssue(const ContextParameters &ctx, const IssueCopy &issue)
 {
     LOG_DEBUG("RZip::printIssue...");
     ctx.req->printf("Content-Type: application/zip\r\n");
+    ctx.req->printf("Content-Disposition: attachment; filename=\"%s.zip\"\r\n", issue.id.c_str());
 
     std::string indexHtml = buildHtml(ctx, issue);
 
