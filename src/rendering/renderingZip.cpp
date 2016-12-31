@@ -143,8 +143,6 @@ static std::string buildHtml(const ContextParameters &ctx, const IssueCopy &issu
 static int startChunkedTransfer(struct archive *a, void *ctxData)
 {
     LOG_DIAG("startChunkedTransfer");
-    const ContextParameters *ctx = (ContextParameters *)ctxData;
-    ctx->req->printf("Transfer-Encoding: chunked\r\n");
     return ARCHIVE_OK;
 }
 
@@ -172,6 +170,8 @@ int RZip::printIssue(const ContextParameters &ctx, const IssueCopy &issue)
     LOG_DEBUG("RZip::printIssue...");
     ctx.req->printf("Content-Type: application/zip\r\n");
     ctx.req->printf("Content-Disposition: attachment; filename=\"%s.zip\"\r\n", issue.id.c_str());
+    ctx.req->printf("Transfer-Encoding: chunked\r\n");
+    ctx.req->printf("\r\n"); // end of HTTP headers
 
     std::string indexHtml = buildHtml(ctx, issue);
 

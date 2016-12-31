@@ -526,11 +526,8 @@ std::string RHtmlIssue::printEntry(const ContextParameters &ctx, const IssueCopy
                     ss.printf("[%s]", htmlEscape(tag.label).c_str());
                     ss.printf("</span>\n");
                 }
-
             }
-
         }
-
     }
 
     ss.printf("</div>\n"); // end header
