@@ -441,11 +441,11 @@ std::string RHtmlIssue::getEntryExtraStyles(const ProjectConfig &pconfig, const 
         FOREACH(tag, tit->second) {
             // check that this tag is declared in project config
             if (pconfig.tags.find(*tag) != pconfig.tags.end()) {
-                classTagged += "sm_entry_tag_" + *tag + " ";
+                classTagged += " sm_entry_tag_" + *tag;
             }
         }
     }
-    extraStyles += " " + urlEncode(classTagged); // should rather use htmlAttributeEscape() ?
+    extraStyles += " " + htmlAttributeEscape(classTagged);
 
     return extraStyles;
 }
