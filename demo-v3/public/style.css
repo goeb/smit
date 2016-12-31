@@ -173,7 +173,7 @@ span.sm_entry_notag {
     font-size: small;
     text-align: right;
 }
-.sm_issue_pvalue_ta {
+.sm_issue_pvalue_ta, .sm_issue_pvalue_ta2 {
     white-space: pre-wrap;
 }
 .sm_issue_pvalue {
