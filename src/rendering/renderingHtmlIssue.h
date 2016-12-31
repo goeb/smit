@@ -14,6 +14,9 @@
 std::string getQsRemoveColumn(std::string qs, const std::string &property, const std::list<std::string> &defaultCols);
 std::string getQsSubSorting(std::string qs, const std::string &property, bool exclusive);
 
+#define FLAG_ENTRY_NOMINAL       0
+#define FLAG_ENTRY_BEING_AMENDED (1 << 0) // The displayed entry is currently being amended
+#define FLAG_ENTRY_OFFLINE       (1 << 1) // The displayed entry is intended for offline reading
 
 class RHtmlIssue {
 public:
@@ -25,9 +28,9 @@ public:
                                  const Entry &eToBeAmended);
     static void printIssueForm(const ContextParameters &ctx, const IssueCopy *issue, bool autofocus);
     static std::string convertToRichText(const std::string &raw);
-    static std::string renderPropertiesTable(const ContextParameters &ctx, const IssueCopy &issue);
+    static std::string renderPropertiesTable(const ContextParameters &ctx, const IssueCopy &issue, bool offline);
     static std::string renderTags(const ContextParameters &ctx, const IssueCopy &issue);
-    static std::string renderEntry(const ContextParameters &ctx, const IssueCopy &issue, const Entry &ee, bool beingAmended);
+    static std::string renderEntry(const ContextParameters &ctx, const IssueCopy &issue, const Entry &ee, int flags);
     static void printIssue(const ContextParameters &ctx, const IssueCopy &issue, const std::string &entryToBeAmended);
     static void printIssueListFullContents(const ContextParameters &ctx, const std::vector<IssueCopy> &issueList);
     static void printIssueList(const ContextParameters &ctx, const std::vector<IssueCopy> &issueList,

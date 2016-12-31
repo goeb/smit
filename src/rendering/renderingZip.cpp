@@ -123,7 +123,7 @@ static std::string buildHtml(const ContextParameters &ctx, const IssueCopy &issu
 
     // properties
     oss << "<div class=\"sm_issue\">";
-    std::string pt = RHtmlIssue::renderPropertiesTable(ctx, issue);
+    std::string pt = RHtmlIssue::renderPropertiesTable(ctx, issue, true);
     oss << pt;
 
     // tags
@@ -133,7 +133,7 @@ static std::string buildHtml(const ContextParameters &ctx, const IssueCopy &issu
     // entries
     Entry *e = issue.first;
     while (e) {
-        std::string entry = RHtmlIssue::renderEntry(ctx, issue, *e, false);
+        std::string entry = RHtmlIssue::renderEntry(ctx, issue, *e, FLAG_ENTRY_OFFLINE);
         oss << entry;
         e = e->getNext();
     } // end of entries

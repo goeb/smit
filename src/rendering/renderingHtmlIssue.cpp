@@ -30,6 +30,10 @@
 #include "global.h"
 #include "restApi.h"
 
+#define FLAG_ASSOCIATION_NOMINAL 0
+#define FLAG_ASSOCIATION_REVERSE (1 << 0)
+#define FLAG_ASSOCIATION_OFFLINE (1 << 1)
+
 /** print id and summary of an issue
   *
   */
@@ -213,10 +217,13 @@ std::string RHtmlIssue::convertToRichText(const std::string &raw)
   * A <tr> must have been opened by the caller,
   * and must be closed by the caller.
   */
-static std::string renderAssociations(const ContextParameters &ctx, const std::string &associationId, const IssueCopy &i, bool reverse)
+static std::string renderAssociations(const ContextParameters &ctx, const std::string &associationId,
+                                      const IssueCopy &i, int flags)
 {
     std::string label;
     StringStream ss;
+    bool reverse = flags & FLAG_ASSOCIATION_REVERSE;
+    bool offline = flags & FLAG_ASSOCIATION_OFFLINE;
 
     if (reverse) {
         label = ctx.projectConfig.getReverseLabelOfProperty(associationId);
@@ -240,19 +247,22 @@ static std::string renderAssociations(const ContextParameters &ctx, const std::s
         FOREACH(is, issuesSummaries) {
             // separate by a line feed (LF)
             if (is != issuesSummaries.begin()) ss.printf("<br>\n");
-            ss.printf("<a href=\"%s\"><span class=\"sm_issue_asso_id\">%s</span>"
-                            " <span class=\"sm_issue_asso_summary\">%s</span></a>",
-                            urlEncode(is->id).c_str(),
-                            htmlEscape(is->id).c_str(),
-                            htmlEscape(is->summary).c_str());
-        }
 
+            if (!offline) ss.printf("<a href=\"%s\">", urlEncode(is->id).c_str());
+
+            ss.printf("<span class=\"sm_issue_asso_id\">%s</span>"
+                      " <span class=\"sm_issue_asso_summary\">%s</span>",
+                      htmlEscape(is->id).c_str(),
+                      htmlEscape(is->summary).c_str());
+
+            if (!offline) ss.printf("</a>");
+        }
     }
     ss.printf("</td>");
     return ss.str();
 }
 
-std::string RHtmlIssue::renderPropertiesTable(const ContextParameters &ctx, const IssueCopy &issue)
+std::string RHtmlIssue::renderPropertiesTable(const ContextParameters &ctx, const IssueCopy &issue, bool offline)
 {
     StringStream ss;
     // issue properties in a two-column table
@@ -317,7 +327,9 @@ std::string RHtmlIssue::renderPropertiesTable(const ContextParameters &ctx, cons
             std::list<std::string> associatedIssues;
             if (p != issue.properties.end()) associatedIssues = p->second;
 
-            ss << renderAssociations(ctx, pname, issue, false);
+            int flags = FLAG_ASSOCIATION_NOMINAL;
+            if (offline) flags |= FLAG_ASSOCIATION_OFFLINE;
+            ss << renderAssociations(ctx, pname, issue, flags);
 
         } else {
             // print label and value of property (other than an association)
@@ -358,7 +370,10 @@ std::string RHtmlIssue::renderPropertiesTable(const ContextParameters &ctx, cons
             if (!ctx.projectConfig.isValidPropertyName(ra->first)) continue;
 
             ss.printf("<tr class=\"sm_issue_asso\">");
-            renderAssociations(ctx, ra->first, issue, true);
+
+            int flags = FLAG_ASSOCIATION_REVERSE;
+            if (offline) flags |= FLAG_ASSOCIATION_OFFLINE;
+            renderAssociations(ctx, ra->first, issue, flags);
             ss.printf("</tr>");
         }
     }
@@ -440,10 +455,13 @@ std::string RHtmlIssue::getEntryExtraStyles(const ProjectConfig &pconfig, const 
     return extraStyles;
 }
 
-std::string RHtmlIssue::renderEntry(const ContextParameters &ctx, const IssueCopy &issue, const Entry &ee, bool beingAmended)
+std::string RHtmlIssue::renderEntry(const ContextParameters &ctx, const IssueCopy &issue, const Entry &ee, int flags)
 {
     const ProjectConfig &pconfig = ctx.projectConfig;
     StringStream ss;
+
+    bool beingAmended = flags & FLAG_ENTRY_BEING_AMENDED;
+    bool offline = flags & FLAG_ENTRY_OFFLINE;
 
     std::string extraStyles = getEntryExtraStyles(pconfig, issue, ee, beingAmended);
     ss.printf("<div class=\"sm_entry %s\" id=\"%s\">\n", extraStyles.c_str(),
@@ -457,7 +475,8 @@ std::string RHtmlIssue::renderEntry(const ContextParameters &ctx, const IssueCop
     time_t delta = time(0) - ee.ctime;
     if ( (delta < DELETE_DELAY_S) && (ee.author == ctx.user.username) &&
          (ctx.userRole == ROLE_ADMIN || ctx.userRole == ROLE_RW) &&
-         !ee.isAmending()) {
+         !ee.isAmending() &&
+         !offline) {
         // entry was created less than 10 minutes ago, and by same user, and is latest in the issue
         ss.printf("<a href=\"?amend=%s\" class=\"sm_entry_edit\" "
                         "title=\"Edit this message (at most %d minutes after posting)\">",
@@ -466,21 +485,23 @@ std::string RHtmlIssue::renderEntry(const ContextParameters &ctx, const IssueCop
         ss.printf("</a>\n");
     }
 
-    // link to raw entry
-    ss.printf("(<a href=\"../" RESOURCE_FILES "/%s\" class=\"sm_entry_raw\">%s</a>",
-                    urlEncode(ee.id).c_str(), _("raw"));
-    // link to possible amendments
-    int i = 1;
-    std::map<std::string, std::list<std::string> >::const_iterator as = issue.amendments.find(ee.id);
-    if (as != issue.amendments.end()) {
-        std::list<std::string>::const_iterator a;
-        FOREACH(a, as->second) {
-            ss.printf(", <a href=\"../" RESOURCE_FILES "/%s\" class=\"sm_entry_raw\">%s%d</a>",
-                            urlEncode(*a).c_str(), _("amend"), i);
-            i++;
+    if (!offline) {
+        // link to raw entry
+        ss.printf("(<a href=\"../" RESOURCE_FILES "/%s\" class=\"sm_entry_raw\">%s</a>",
+                  urlEncode(ee.id).c_str(), _("raw"));
+        // link to possible amendments
+        int i = 1;
+        std::map<std::string, std::list<std::string> >::const_iterator as = issue.amendments.find(ee.id);
+        if (as != issue.amendments.end()) {
+            std::list<std::string>::const_iterator a;
+            FOREACH(a, as->second) {
+                ss.printf(", <a href=\"../" RESOURCE_FILES "/%s\" class=\"sm_entry_raw\">%s%d</a>",
+                          urlEncode(*a).c_str(), _("amend"), i);
+                i++;
+            }
         }
+        ss.printf(")");
     }
-    ss.printf(")");
 
     // display the tags of the entry
     if (!pconfig.tags.empty()) {
@@ -492,7 +513,7 @@ std::string RHtmlIssue::renderEntry(const ContextParameters &ctx, const IssueCop
             bool tagged = issue.hasTag(ee.id, tag.id);
             if (tagged) tagStyle = "sm_entry_tagged " + urlEncode("sm_entry_tag_" + tag.id);
 
-            if (ctx.userRole == ROLE_ADMIN || ctx.userRole == ROLE_RW) {
+            if (!offline && ctx.userRole == ROLE_ADMIN || ctx.userRole == ROLE_RW) {
                 const char *tagTitle = _("Click to tag/untag");
 
                 ss.printf("<a href=\"#\" onclick=\"tagEntry('/%s/tags', '%s', '%s');return false;\""
@@ -571,7 +592,7 @@ void RHtmlIssue::printIssue(const ContextParameters &ctx, const IssueCopy &issue
 {
     ctx.req->printf("<div class=\"sm_issue\">");
 
-    std::string pt = renderPropertiesTable(ctx, issue);
+    std::string pt = renderPropertiesTable(ctx, issue, false);
     ctx.req->printf("%s", pt.c_str());
 
     std::string tags = renderTags(ctx, issue);
@@ -583,8 +604,9 @@ void RHtmlIssue::printIssue(const ContextParameters &ctx, const IssueCopy &issue
     while (e) {
         Entry ee = *e;
 
-        bool beingAmended = (ee.id == entryToBeAmended);
-        std::string entry = renderEntry(ctx, issue, ee, beingAmended);
+        int flag = FLAG_ENTRY_NOMINAL;
+        if (ee.id == entryToBeAmended) flag = FLAG_ENTRY_BEING_AMENDED;
+        std::string entry = renderEntry(ctx, issue, ee, flag);
         ctx.req->printf("%s", entry.c_str());
 
         e = e->getNext();
