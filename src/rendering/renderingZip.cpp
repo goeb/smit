@@ -25,7 +25,17 @@
 #include "global.h"
 #include "repository/db.h"
 #include "project/Object.h"
+#include "restApi.h"
 
+const std::string HTML_HEADER = "<!DOCTYPE HTML>"
+        "<html>"
+            "<head>"
+                "<title>Issue xxx</title>"
+                "<meta http-equiv=\"Content-Type\" content=\"text/html;charset=UTF-8\">"
+                "<link rel=\"stylesheet\" type=\"text/css\" href=\"style.css\">"
+            "</head>"
+            "<body>";
+const std::string HTML_FOOTER = "</body></html>";
 
 static int sendZippedFile(const ContextParameters &ctx, struct archive *a, const std::string &filename, const std::string &data)
 {
@@ -76,7 +86,7 @@ static int attachFiles(const ContextParameters &ctx, struct archive *a, const st
                 }
 
                 // prefix with the issue id
-                std::string fpath = issue.id + "/" + (*f);
+                std::string fpath = issue.id + "/" RESOURCE_FILES  "/" + (*f);
 
                 // check if same file was already added to the archive
                 if (sentFiles.count(fpath) > 0) {
@@ -99,7 +109,32 @@ static int attachFiles(const ContextParameters &ctx, struct archive *a, const st
 
 static std::string buildHtml(const ContextParameters &ctx, const IssueCopy &issue)
 {
-    return "hello"; // TODO
+    std::ostringstream oss;
+    oss << HTML_HEADER;
+
+    oss << "<div class=\"sm_issue\">";
+
+
+    std::string pt = RHtmlIssue::printPropertiesTable(ctx, issue);
+    oss << pt;
+
+    std::string tags = RHtmlIssue::printTags(ctx, issue);
+    oss << tags;
+
+    // entries
+    // -------------------------------------------------
+    Entry *e = issue.first;
+    while (e) {
+        std::string entry = RHtmlIssue::printEntry(ctx, issue, *e, false);
+        oss << entry;
+        e = e->getNext();
+    } // end of entries
+
+    oss << "</div>\n";
+
+
+    oss << HTML_FOOTER;
+    return oss.str();
 }
 
 static int startChunkedTransfer(struct archive *a, void *ctxData)
@@ -144,7 +179,7 @@ int RZip::printIssue(const ContextParameters &ctx, const IssueCopy &issue)
         ctx.req->printf("\r\n\r\nError in archive_write_open error: %s", archive_error_string(a));
     }
 
-    std::string index = issue.id + "/index.html";
+    std::string index = issue.id + "/index/index.html";
     sendZippedFile(ctx, a, index, indexHtml);    // TODO handle errors
 
     attachFiles(ctx, a, ctx.projectPath, issue);    // TODO handle errors

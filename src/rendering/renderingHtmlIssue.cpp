@@ -211,17 +211,19 @@ void RHtmlIssue::printIssueSummary(const ContextParameters &ctx, const IssueCopy
   * A <tr> must have been opened by the caller,
   * and must be closed by the caller.
   */
-static void printAssociations(const ContextParameters &ctx, const std::string &associationId, const IssueCopy &i, bool reverse)
+static std::string printAssociations(const ContextParameters &ctx, const std::string &associationId, const IssueCopy &i, bool reverse)
 {
     std::string label;
+    StringStream ss;
+
     if (reverse) {
         label = ctx.projectConfig.getReverseLabelOfProperty(associationId);
     } else {
         label = ctx.projectConfig.getLabelOfProperty(associationId);
     }
 
-    ctx.req->printf("<td class=\"sm_issue_plabel\">%s: </td>", htmlEscape(label).c_str());
-    ctx.req->printf("<td colspan=\"3\" class=\"sm_issue_asso\">");
+    ss.printf("<td class=\"sm_issue_plabel\">%s: </td>", htmlEscape(label).c_str());
+    ss.printf("<td colspan=\"3\" class=\"sm_issue_asso\">");
 
     std::map<AssociationId, std::set<IssueSummary> >::const_iterator ait;
     const std::map<AssociationId, std::set<IssueSummary> > *atable;
@@ -235,8 +237,8 @@ static void printAssociations(const ContextParameters &ctx, const std::string &a
         const std::set<IssueSummary> &issuesSummaries = ait->second;
         FOREACH(is, issuesSummaries) {
             // separate by a line feed (LF)
-            if (is != issuesSummaries.begin()) ctx.req->printf("<br>\n");
-            ctx.req->printf("<a href=\"%s\"><span class=\"sm_issue_asso_id\">%s</span>"
+            if (is != issuesSummaries.begin()) ss.printf("<br>\n");
+            ss.printf("<a href=\"%s\"><span class=\"sm_issue_asso_id\">%s</span>"
                             " <span class=\"sm_issue_asso_summary\">%s</span></a>",
                             urlEncode(is->id).c_str(),
                             htmlEscape(is->id).c_str(),
@@ -244,14 +246,16 @@ static void printAssociations(const ContextParameters &ctx, const std::string &a
         }
 
     }
-    ctx.req->printf("</td>");
+    ss.printf("</td>");
+    return ss.str();
 }
 
-void RHtmlIssue::printPropertiesTable(const ContextParameters &ctx, const IssueCopy &issue)
+std::string RHtmlIssue::printPropertiesTable(const ContextParameters &ctx, const IssueCopy &issue)
 {
+    StringStream ss;
     // issue properties in a two-column table
     // -------------------------------------------------
-    ctx.req->printf("<table class=\"sm_issue_properties\">");
+    ss.printf("<table class=\"sm_issue_properties\">");
     int workingColumn = 1;
     const uint8_t MAX_COLUMNS = 2;
 
@@ -287,7 +291,7 @@ void RHtmlIssue::printPropertiesTable(const ContextParameters &ctx, const IssueC
         if (type == F_ASSOCIATION) trStyle = "class=\"sm_issue_asso\"";
 
         if (workingColumn == 1) {
-            ctx.req->printf("<tr %s>\n", trStyle);
+            ss.printf("<tr %s>\n", trStyle);
         }
 
         // manage the start of the row
@@ -298,7 +302,7 @@ void RHtmlIssue::printPropertiesTable(const ContextParameters &ctx, const IssueC
             } else {
                 // add a placeholder in order to align the property with next row
                 // close current row and start a new row
-                ctx.req->printf("<td></td><td></td></tr><tr %s>\n", trStyle);
+                ss.printf("<td></td><td></td></tr><tr %s>\n", trStyle);
             }
             colspan = "colspan=\"3\"";
             workingColumn = 1;
@@ -311,14 +315,14 @@ void RHtmlIssue::printPropertiesTable(const ContextParameters &ctx, const IssueC
             std::list<std::string> associatedIssues;
             if (p != issue.properties.end()) associatedIssues = p->second;
 
-            printAssociations(ctx, pname, issue, false);
+            ss << printAssociations(ctx, pname, issue, false);
 
         } else {
             // print label and value of property (other than an association)
 
             // label
-            ctx.req->printf("<td class=\"sm_issue_plabel sm_issue_plabel_%s\">%s: </td>\n",
-                            urlEncode(pname).c_str(), htmlEscape(label).c_str());
+            ss.printf("<td class=\"sm_issue_plabel sm_issue_plabel_%s\">%s: </td>\n",
+                      urlEncode(pname).c_str(), htmlEscape(label).c_str());
 
             // value
             std::string value;
@@ -329,8 +333,8 @@ void RHtmlIssue::printPropertiesTable(const ContextParameters &ctx, const IssueC
             else value = htmlEscape(value);
 
 
-            ctx.req->printf("<td %s class=\"%s sm_issue_pvalue_%s\">%s</td>\n",
-                            colspan, pvalueStyle, urlEncode(pname).c_str(), value.c_str());
+            ss.printf("<td %s class=\"%s sm_issue_pvalue_%s\">%s</td>\n",
+                      colspan, pvalueStyle, urlEncode(pname).c_str(), value.c_str());
             workingColumn += workingColumnIncrement;
         }
 
@@ -340,9 +344,9 @@ void RHtmlIssue::printPropertiesTable(const ContextParameters &ctx, const IssueC
     }
 
     // align wrt missing cells (ie: fulfill missnig columns and close current row)
-    if (workingColumn != 1) ctx.req->printf("<td></td><td></td>\n");
+    if (workingColumn != 1) ss.printf("<td></td><td></td>\n");
 
-    ctx.req->printf("</tr>\n");
+    ss.printf("</tr>\n");
 
     // reverse associated issues, if any
     if (!issue.reverseAssociations.empty()) {
@@ -351,22 +355,24 @@ void RHtmlIssue::printPropertiesTable(const ContextParameters &ctx, const IssueC
             if (ra->second.empty()) continue;
             if (!ctx.projectConfig.isValidPropertyName(ra->first)) continue;
 
-            ctx.req->printf("<tr class=\"sm_issue_asso\">");
+            ss.printf("<tr class=\"sm_issue_asso\">");
             printAssociations(ctx, ra->first, issue, true);
-            ctx.req->printf("</tr>");
+            ss.printf("</tr>");
         }
     }
 
-    ctx.req->printf("</table>\n");
+    ss.printf("</table>\n");
+    return ss.str();
 }
 
-void RHtmlIssue::printTags(const ContextParameters &ctx, const IssueCopy &issue)
+std::string RHtmlIssue::printTags(const ContextParameters &ctx, const IssueCopy &issue)
 {
     const ProjectConfig &pconfig = ctx.projectConfig;
+    StringStream ss;
 
     // tags of the entries of the issue
     if (!pconfig.tags.empty()) {
-        ctx.req->printf("<div class=\"sm_issue_tags\">\n");
+        ss.printf("<div class=\"sm_issue_tags\">\n");
         std::map<std::string, TagSpec>::const_iterator tspec;
         FOREACH(tspec, pconfig.tags) {
             if (tspec->second.display) {
@@ -376,14 +382,15 @@ void RHtmlIssue::printTags(const ContextParameters &ctx, const IssueCopy &issue)
                     // issue has at least one such tagged entry
                     style = "sm_issue_tagged " + urlEncode("sm_issue_tag_" + tspec->second.id);
                 }
-                ctx.req->printf("<span id=\"sm_issue_tag_%s\" class=\"%s\" data-n=\"%d\">%s</span>\n",
+                ss.printf("<span id=\"sm_issue_tag_%s\" class=\"%s\" data-n=\"%d\">%s</span>\n",
                                 urlEncode(tspec->second.id).c_str(), style.c_str(), n, htmlEscape(tspec->second.label).c_str());
 
             }
         }
 
-        ctx.req->printf("</div>\n");
+        ss.printf("</div>\n");
     }
+    return ss.str();
 }
 static void xprintEntry()
 {
@@ -396,6 +403,13 @@ static void xprintEntry()
     // print </div>
 }
 
+/** Get a list of CSS styles, separated by spaces
+ *
+ * The extra styles depend on:
+ * - is the entry being amended?
+ * - has the entry specific tags?
+ *
+ */
 std::string RHtmlIssue::getEntryExtraStyles(const ProjectConfig &pconfig, const IssueCopy &issue,
                                             const Entry &ee, bool beingAmended)
 {
@@ -434,17 +448,18 @@ std::string RHtmlIssue::getEntryExtraStyles(const ProjectConfig &pconfig, const 
     return extraStyles;
 }
 
-void RHtmlIssue::printEntry(const ContextParameters &ctx, const IssueCopy &issue, const Entry &ee, bool beingAmended)
+std::string RHtmlIssue::printEntry(const ContextParameters &ctx, const IssueCopy &issue, const Entry &ee, bool beingAmended)
 {
     const ProjectConfig &pconfig = ctx.projectConfig;
+    StringStream ss;
 
     std::string extraStyles = getEntryExtraStyles(pconfig, issue, ee, beingAmended);
-    ctx.req->printf("<div class=\"sm_entry %s\" id=\"%s\">\n", extraStyles.c_str(),
+    ss.printf("<div class=\"sm_entry %s\" id=\"%s\">\n", extraStyles.c_str(),
                     urlEncode(ee.id).c_str());
 
-    ctx.req->printf("<div class=\"sm_entry_header\">\n");
-    ctx.req->printf("<span class=\"sm_entry_author\">%s</span>", htmlEscape(ee.author).c_str());
-    ctx.req->printf(", <span class=\"sm_entry_ctime\">%s</span>\n", epochToString(ee.ctime).c_str());
+    ss.printf("<div class=\"sm_entry_header\">\n");
+    ss.printf("<span class=\"sm_entry_author\">%s</span>", htmlEscape(ee.author).c_str());
+    ss.printf(", <span class=\"sm_entry_ctime\">%s</span>\n", epochToString(ee.ctime).c_str());
 
     // edit button
     time_t delta = time(0) - ee.ctime;
@@ -452,15 +467,15 @@ void RHtmlIssue::printEntry(const ContextParameters &ctx, const IssueCopy &issue
          (ctx.userRole == ROLE_ADMIN || ctx.userRole == ROLE_RW) &&
          !ee.isAmending()) {
         // entry was created less than 10 minutes ago, and by same user, and is latest in the issue
-        ctx.req->printf("<a href=\"?amend=%s\" class=\"sm_entry_edit\" "
+        ss.printf("<a href=\"?amend=%s\" class=\"sm_entry_edit\" "
                         "title=\"Edit this message (at most %d minutes after posting)\">",
                         enquoteJs(ee.id).c_str(), (DELETE_DELAY_S/60));
-        ctx.req->printf("&#9998; %s", _("edit"));
-        ctx.req->printf("</a>\n");
+        ss.printf("&#9998; %s", _("edit"));
+        ss.printf("</a>\n");
     }
 
     // link to raw entry
-    ctx.req->printf("(<a href=\"../" RESOURCE_FILES "/%s\" class=\"sm_entry_raw\">%s</a>",
+    ss.printf("(<a href=\"../" RESOURCE_FILES "/%s\" class=\"sm_entry_raw\">%s</a>",
                     urlEncode(ee.id).c_str(), _("raw"));
     // link to possible amendments
     int i = 1;
@@ -468,12 +483,12 @@ void RHtmlIssue::printEntry(const ContextParameters &ctx, const IssueCopy &issue
     if (as != issue.amendments.end()) {
         std::list<std::string>::const_iterator a;
         FOREACH(a, as->second) {
-            ctx.req->printf(", <a href=\"../" RESOURCE_FILES "/%s\" class=\"sm_entry_raw\">%s%d</a>",
+            ss.printf(", <a href=\"../" RESOURCE_FILES "/%s\" class=\"sm_entry_raw\">%s%d</a>",
                             urlEncode(*a).c_str(), _("amend"), i);
             i++;
         }
     }
-    ctx.req->printf(")");
+    ss.printf(")");
 
     // display the tags of the entry
     if (!pconfig.tags.empty()) {
@@ -488,26 +503,26 @@ void RHtmlIssue::printEntry(const ContextParameters &ctx, const IssueCopy &issue
             if (ctx.userRole == ROLE_ADMIN || ctx.userRole == ROLE_RW) {
                 const char *tagTitle = _("Click to tag/untag");
 
-                ctx.req->printf("<a href=\"#\" onclick=\"tagEntry('/%s/tags', '%s', '%s');return false;\""
+                ss.printf("<a href=\"#\" onclick=\"tagEntry('/%s/tags', '%s', '%s');return false;\""
                                 " title=\"%s\" class=\"sm_entry_tag\">",
                                 ctx.getProjectUrlName().c_str(), enquoteJs(ee.id).c_str(),
                                 enquoteJs(tag.id).c_str(), tagTitle);
 
                 // the tag itself
-                ctx.req->printf("<span class=\"%s\" id=\"sm_tag_%s_%s\">",
+                ss.printf("<span class=\"%s\" id=\"sm_tag_%s_%s\">",
                                 tagStyle.c_str(), urlEncode(ee.id).c_str(), urlEncode(tag.id).c_str());
-                ctx.req->printf("[%s]", htmlEscape(tag.label).c_str());
-                ctx.req->printf("</span>\n");
+                ss.printf("[%s]", htmlEscape(tag.label).c_str());
+                ss.printf("</span>\n");
 
-                ctx.req->printf("</a>\n");
+                ss.printf("</a>\n");
 
             } else {
                 // read-only
                 // if tag is not active, do not display
                 if (tagged) {
-                    ctx.req->printf("<span class=\"%s\">", tagStyle.c_str());
-                    ctx.req->printf("[%s]", htmlEscape(tag.label).c_str());
-                    ctx.req->printf("</span>\n");
+                    ss.printf("<span class=\"%s\">", tagStyle.c_str());
+                    ss.printf("[%s]", htmlEscape(tag.label).c_str());
+                    ss.printf("</span>\n");
                 }
 
             }
@@ -516,20 +531,20 @@ void RHtmlIssue::printEntry(const ContextParameters &ctx, const IssueCopy &issue
 
     }
 
-    ctx.req->printf("</div>\n"); // end header
+    ss.printf("</div>\n"); // end header
 
     std::string m = ee.getMessage();
     if (! m.empty() && !ee.isAmending()) {
-        ctx.req->printf("<div class=\"sm_entry_message\">");
-        ctx.req->printf("%s\n", convertToRichText(htmlEscape(m)).c_str());
-        ctx.req->printf("</div>\n"); // end message
+        ss.printf("<div class=\"sm_entry_message\">");
+        ss.printf("%s\n", convertToRichText(htmlEscape(m)).c_str());
+        ss.printf("</div>\n"); // end message
     } // else, do not display
 
 
     // uploaded / attached files
     std::map<std::string, std::list<std::string> >::const_iterator files = ee.properties.find(K_FILE);
     if (files != ee.properties.end() && files->second.size() > 0) {
-        ctx.req->printf("<div class=\"sm_entry_files\">\n");
+        ss.printf("<div class=\"sm_entry_files\">\n");
         std::list<std::string>::const_iterator itf;
         FOREACH(itf, files->second) {
             std::string f = *itf;
@@ -537,38 +552,41 @@ void RHtmlIssue::printEntry(const ContextParameters &ctx, const IssueCopy &issue
             std::string basename = f;
 
             std::string href = RESOURCE_FILES "/" + urlEncode(objectId) + "/" + urlEncode(basename);
-            ctx.req->printf("<div class=\"sm_entry_file\">\n");
-            ctx.req->printf("<a href=\"../%s\" class=\"sm_entry_file\">", href.c_str());
+            ss.printf("<div class=\"sm_entry_file\">\n");
+            ss.printf("<a href=\"../%s\" class=\"sm_entry_file\">", href.c_str());
             if (isImage(f)) {
                 // do not escape slashes
-                ctx.req->printf("<img src=\"../%s\" class=\"sm_entry_file\"><br>", href.c_str());
+                ss.printf("<img src=\"../%s\" class=\"sm_entry_file\"><br>", href.c_str());
             }
-            ctx.req->printf("%s", htmlEscape(basename).c_str());
+            ss.printf("%s", htmlEscape(basename).c_str());
             // size of the file
             std::string path = Project::getObjectPath(ctx.projectPath, objectId);
             std::string size = getFileSize(path);
-            ctx.req->printf("<span> (%s)</span>", size.c_str());
-            ctx.req->printf("</a>");
-            ctx.req->printf("</div>\n"); // end file
+            ss.printf("<span> (%s)</span>", size.c_str());
+            ss.printf("</a>");
+            ss.printf("</div>\n"); // end file
         }
-        ctx.req->printf("</div>\n"); // end files
+        ss.printf("</div>\n"); // end files
     }
 
 
     // -------------------------------------------------
     // print other modified properties
-    printOtherProperties(ctx, ee, false, "sm_entry_other_properties");
+    ss << printOtherProperties(ctx, ee, false, "sm_entry_other_properties");
 
-    ctx.req->printf("</div>\n"); // end entry
+    ss.printf("</div>\n"); // end entry
+    return ss.str();
 }
 
 void RHtmlIssue::printIssue(const ContextParameters &ctx, const IssueCopy &issue, const std::string &entryToBeAmended)
 {
     ctx.req->printf("<div class=\"sm_issue\">");
 
-    printPropertiesTable(ctx, issue);
+    std::string pt = printPropertiesTable(ctx, issue);
+    ctx.req->printf("%s", pt.c_str());
 
-    printTags(ctx, issue);
+    std::string tags = printTags(ctx, issue);
+    ctx.req->printf("%s", tags.c_str());
 
     // entries
     // -------------------------------------------------
@@ -577,7 +595,8 @@ void RHtmlIssue::printIssue(const ContextParameters &ctx, const IssueCopy &issue
         Entry ee = *e;
 
         bool beingAmended = (ee.id == entryToBeAmended);
-        printEntry(ctx, issue, ee, beingAmended);
+        std::string entry = printEntry(ctx, issue, ee, beingAmended);
+        ctx.req->printf("%s", entry.c_str());
 
         e = e->getNext();
     } // end of entries
@@ -585,10 +604,11 @@ void RHtmlIssue::printIssue(const ContextParameters &ctx, const IssueCopy &issue
     ctx.req->printf("</div>\n");
 }
 
-void RHtmlIssue::printOtherProperties(const ContextParameters &ctx, const Entry &ee, bool printMessageHeading,
-                                      const char *divStyle)
+std::string RHtmlIssue::printOtherProperties(const ContextParameters &ctx, const Entry &ee, bool printMessageHeading,
+                                             const char *divStyle)
 {
     std::ostringstream otherProperties;
+    StringStream ss;
 
     // process summary first as it is not part of orderedFields
     PropertiesIt p;
@@ -629,12 +649,13 @@ void RHtmlIssue::printOtherProperties(const ContextParameters &ctx, const Entry 
     }
 
     if (otherProperties.str().size() > 0) {
-        ctx.req->printf("<div");
-        if (divStyle) ctx.req->printf(" class=\"%s\"", divStyle);
-        ctx.req->printf(">\n");
-        ctx.req->printf("%s", otherProperties.str().c_str());
-        ctx.req->printf("</div>\n");
+        ss.printf("<div");
+        if (divStyle) ss.printf(" class=\"%s\"", divStyle);
+        ss.printf(">\n");
+        ss.printf("%s", otherProperties.str().c_str());
+        ss.printf("</div>\n");
     }
+    return ss.str();
 }
 
 

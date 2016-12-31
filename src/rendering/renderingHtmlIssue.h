@@ -18,7 +18,7 @@ std::string getQsSubSorting(std::string qs, const std::string &property, bool ex
 class RHtmlIssue {
 public:
 
-    static void printOtherProperties(const ContextParameters &ctx, const Entry &ee, bool printMessageHeading,
+    static std::string printOtherProperties(const ContextParameters &ctx, const Entry &ee, bool printMessageHeading,
                                      const char *divStyle);
     static void printFormMessage(const ContextParameters &ctx, const std::string &contents);
     static void printEditMessage(const ContextParameters &ctx, const IssueCopy *issue,
@@ -26,9 +26,9 @@ public:
     static void printIssueForm(const ContextParameters &ctx, const IssueCopy *issue, bool autofocus);
     static std::string convertToRichText(const std::string &raw);
     static void printIssueSummary(const ContextParameters &ctx, const IssueCopy &issue);
-    static void printPropertiesTable(const ContextParameters &ctx, const IssueCopy &issue);
-    static void printTags(const ContextParameters &ctx, const IssueCopy &issue);
-    static void printEntry(const ContextParameters &ctx, const IssueCopy &issue, const Entry &ee, bool beingAmended);
+    static std::string printPropertiesTable(const ContextParameters &ctx, const IssueCopy &issue);
+    static std::string printTags(const ContextParameters &ctx, const IssueCopy &issue);
+    static std::string printEntry(const ContextParameters &ctx, const IssueCopy &issue, const Entry &ee, bool beingAmended);
     static void printIssue(const ContextParameters &ctx, const IssueCopy &issue, const std::string &entryToBeAmended);
     static void printIssueListFullContents(const ContextParameters &ctx, const std::vector<IssueCopy> &issueList);
     static void printIssueList(const ContextParameters &ctx, const std::vector<IssueCopy> &issueList,
