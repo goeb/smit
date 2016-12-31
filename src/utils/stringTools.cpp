@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <libgen.h>
+#include <stdarg.h>
 
 #include "stringTools.h"
 #include "global.h"
@@ -480,3 +481,16 @@ bool inList(const std::list<std::string> &listOfValues, const std::string &value
     return false;
 }
 
+int StringStream::printf(const char *format, ...)
+{
+    va_list list;
+    va_start(list, format);
+    char *strp = NULL;
+    int n = vasprintf(&strp, format, list);
+    va_end(list);
+
+    if (n >= 0) {
+        (*this) << strp;
+    }
+    return n;
+}

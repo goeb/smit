@@ -6,6 +6,7 @@
 #include <map>
 #include <vector>
 #include <stdio.h>
+#include <sstream>
 #include "ustring.h"
 
 typedef std::map<std::string, std::list<std::string> > PropertiesMap;
@@ -52,5 +53,11 @@ int compareProperties(const std::map<std::string, std::list<std::string> > &plis
                       const std::string &name);
 
 bool inList(const std::list<std::string> &listOfValues, const std::string &value);
+
+
+class StringStream: public std::ostringstream {
+public:
+    int printf(const char *format, ...);
+};
 
 #endif
