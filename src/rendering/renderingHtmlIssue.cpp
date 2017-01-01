@@ -513,7 +513,7 @@ std::string RHtmlIssue::renderEntry(const ContextParameters &ctx, const IssueCop
             bool tagged = issue.hasTag(ee.id, tag.id);
             if (tagged) tagStyle = "sm_entry_tagged " + urlEncode("sm_entry_tag_" + tag.id);
 
-            if (!offline && ctx.userRole == ROLE_ADMIN || ctx.userRole == ROLE_RW) {
+            if (!offline && ( ctx.userRole == ROLE_ADMIN || ctx.userRole == ROLE_RW) ) {
                 const char *tagTitle = _("Click to tag/untag");
 
                 ss.printf("<a href=\"#\" onclick=\"tagEntry('/%s/tags', '%s', '%s');return false;\""
