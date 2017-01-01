@@ -18,6 +18,7 @@
 #include <set>
 
 #include "renderingZip.h"
+#include "renderingZipHtml.h"
 #include "renderingHtmlIssue.h"
 #include "utils/logging.h"
 #include "utils/stringTools.h"
@@ -26,16 +27,6 @@
 #include "repository/db.h"
 #include "project/Object.h"
 #include "restApi.h"
-
-#define HTML_HEADER "<!DOCTYPE HTML>" \
-    "<html>" \
-    "<head>" \
-    "<title>Issue %s</title>" \
-    "<meta http-equiv=\"Content-Type\" content=\"text/html;charset=UTF-8\">" \
-    "<link rel=\"stylesheet\" type=\"text/css\" href=\"style.css\">" \
-    "</head>" \
-    "<body>"
-#define HTML_FOOTER "</body></html>"
 
 static int sendZippedFile(const ContextParameters &ctx, struct archive *a, const std::string &filename, const std::string &data)
 {
@@ -187,10 +178,13 @@ int RZip::printIssue(const ContextParameters &ctx, const IssueCopy &issue)
         ctx.req->printf("\r\n\r\nError in archive_write_open error: %s", archive_error_string(a));
     }
 
-    std::string index = issue.id + "/index/index.html";
+    std::string index = issue.id + "/issues/" + issue.id + ".html";
     sendZippedFile(ctx, a, index, indexHtml);    // TODO handle errors
 
     attachFiles(ctx, a, ctx.projectPath, issue);    // TODO handle errors
+
+    std::string styleCss = issue.id + "/style.css";
+    sendZippedFile(ctx, a, styleCss, HTML_STYLES);
 
     ctx.req->printf("\r\n");
 
