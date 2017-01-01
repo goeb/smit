@@ -23,6 +23,11 @@
 #include "stringTools.h"
 #include "global.h"
 
+#if defined(_WIN32)
+  // use mingw vasprintf
+  #define vasprintf __mingw_vasprintf
+#endif
+
 std::string bin2hex(const ustring & in)
 {
     return bin2hex(in.data(), in.size());
