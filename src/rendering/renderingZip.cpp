@@ -37,21 +37,27 @@ static int sendZippedFile(const ContextParameters &ctx, struct archive *a, const
     archive_entry_set_size(entry, data.size());
     archive_entry_set_filetype(entry, AE_IFREG);
     archive_entry_set_perm(entry, 0644);
+
     int ret = archive_write_header(a, entry);
+
+    archive_entry_free(entry);
+
     if (ret != ARCHIVE_OK) {
-        LOG_ERROR("archive_write_header error: %s", archive_error_string(a));
+        LOG_ERROR("archive_write_header error: %s (%s, %ld)",
+                  archive_error_string(a), filename.c_str(), L(data.size()));
         return -1;
     }
     la_ssize_t n = archive_write_data(a, data.data(), data.size());
     if (n < 0) {
-        LOG_ERROR("archive_write_data error: n=%d, %s", n, archive_error_string(a));
+        LOG_ERROR("archive_write_data error: n=%d, %s (%s, %ld)",
+                  n, archive_error_string(a), filename.c_str(), L(data.size()));
         return -2;
     }
     if ((size_t)n != data.size()) {
-        LOG_ERROR("archive_write_data error (incomplete write): n=%d, %s", n, archive_error_string(a));
+        LOG_ERROR("archive_write_data error (incomplete write): n=%d, %s (%s, %ld)",
+                  n, archive_error_string(a), filename.c_str(), L(data.size()));
         return -3;
     }
-    archive_entry_free(entry);
     return 0;
 }
 
@@ -154,10 +160,13 @@ static la_ssize_t sendChunk(struct archive *a, void *ctxData, const void *buffer
 static int closeChunkedTransfer(struct archive *a, void *ctxData)
 {
     LOG_DIAG("closeChunkedTransfer");
-    const ContextParameters *ctx = (ContextParameters *)ctxData;
-    ctx->req->printf("0\r\n\r\n");
-
     return ARCHIVE_OK;
+}
+
+static void finalizeChunkedTransfer(const ContextParameters &ctx)
+{
+    LOG_DIAG("finalizeChunkedTransfer");
+    ctx.req->printf("0\r\n\r\n");
 }
 
 int RZip::printIssue(const ContextParameters &ctx, const IssueCopy &issue)
@@ -171,27 +180,65 @@ int RZip::printIssue(const ContextParameters &ctx, const IssueCopy &issue)
     std::string indexHtml = buildHtml(ctx, issue);
 
     struct archive *a = archive_write_new();
-    archive_write_set_format_zip(a);
-    int ret = archive_write_open(a, (void*)&ctx, startChunkedTransfer, sendChunk, closeChunkedTransfer);
-    if (ret !=ARCHIVE_OK) {
+
+    if (!a) {
+        LOG_ERROR("archive_write_set_format_zip error: %s", archive_error_string(a));
+        finalizeChunkedTransfer(ctx);
+        return -1;
+    }
+
+    int ret = archive_write_set_format_zip(a);
+
+    if (ret != ARCHIVE_OK) {
+        LOG_ERROR("archive_write_set_format_zip error: %s", archive_error_string(a));
+        archive_write_free(a);
+        finalizeChunkedTransfer(ctx);
+        return -1;
+    }
+
+    ret = archive_write_open(a, (void*)&ctx, startChunkedTransfer, sendChunk, closeChunkedTransfer);
+
+    if (ret != ARCHIVE_OK) {
         LOG_ERROR("archive_write_open error: %s", archive_error_string(a));
-        ctx.req->printf("\r\n\r\nError in archive_write_open error: %s", archive_error_string(a));
+        archive_write_free(a);
+        finalizeChunkedTransfer(ctx);
+        return -1;
     }
 
     std::string index = issue.id + "/issues/" + issue.id + ".html";
-    sendZippedFile(ctx, a, index, indexHtml);    // TODO handle errors
+    ret = sendZippedFile(ctx, a, index, indexHtml);
 
-    attachFiles(ctx, a, ctx.projectPath, issue);    // TODO handle errors
+    if (ret != 0) {
+        archive_write_free(a);
+        finalizeChunkedTransfer(ctx);
+        return -1;
+    }
+
+    ret = attachFiles(ctx, a, ctx.projectPath, issue);    // TODO handle errors
+
+    if (ret != 0) {
+        archive_write_free(a);
+        finalizeChunkedTransfer(ctx);
+        return -1;
+    }
 
     std::string styleCss = issue.id + "/style.css";
-    sendZippedFile(ctx, a, styleCss, HTML_STYLES);
+    ret = sendZippedFile(ctx, a, styleCss, HTML_STYLES);
 
-    ctx.req->printf("\r\n");
+    if (ret != 0) {
+        archive_write_free(a);
+        finalizeChunkedTransfer(ctx);
+        return -1;
+    }
 
     ret = archive_write_free(a);
+
     if (ret != ARCHIVE_OK) {
         LOG_ERROR("archive_write_free error: %s", archive_error_string(a));
     }
+
+    finalizeChunkedTransfer(ctx);
+
     return 0;
 }
 
