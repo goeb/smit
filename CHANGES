@@ -1,6 +1,10 @@
 v3.4.0
 	- add email & gpg key in page user
-	- you must update script (notifyNewEntry.py)
+	- the trigger interface has changed and the trigger script
+	  (notifyNewEntry.py) must be updated
+	- add zip download of an issue
+
+
 
 v3.3.0, 20 Jun 2016
     - pre-filled template for textarea2 properties
