@@ -1423,7 +1423,7 @@ void httpIssuesAccrossProjects(const RequestContext *req, const User &u, const s
   * - users/permissions (only the permissions of the signe-in user)
   *
   */
-int httpGetSmitRepo(const RequestContext *req, User u, std::string uri)
+int httpGetSmitRepo(const RequestContext *req, const User &u, std::string uri)
 {
     if (u.superadmin) return httpGetFile(req); // Superadmin gets all
 
