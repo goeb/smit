@@ -38,7 +38,6 @@ public:
     bool notifyOnNewMessageOrFile; // notify
 
     // Methods
-    int match(IssueCopy oldi, IssueCopy newi);
     NotificationPolicyCustom(): notifyOnNewMessageOrFile(false) {}
 
 };

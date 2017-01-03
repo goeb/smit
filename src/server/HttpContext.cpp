@@ -87,6 +87,7 @@ int MongooseServerContext::logMessage(const struct mg_connection *, const char *
 MongooseRequestContext::MongooseRequestContext(struct mg_connection *c)
 {
     conn = c;
+    serverContext = NULL;
 }
 
 /** Print text to the HTTP client

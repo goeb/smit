@@ -499,7 +499,7 @@ User* UserBase::getUser(const std::string &username)
 
 /** Add a new user in database
   */
-User *UserBase::addUserInArray(User newUser)
+User *UserBase::addUserInArray(const User &newUser)
 {
     User *u = new User;
     *u = newUser;
@@ -514,7 +514,7 @@ User *UserBase::addUserInArray(User newUser)
 
 /** Add a new user in database and store it.
   */
-int UserBase::addUser(User newUser)
+int UserBase::addUser(const User &newUser)
 {
     if (newUser.username.empty()) return -1;
 
@@ -680,7 +680,7 @@ std::map<Role, std::set<std::string> > UserBase::getUsersByRole(const std::strin
   * In case of renaming, username is the old name, and
   * newConfig.name is the new name.
   */
-int UserBase::updateUser(const std::string &username, User newConfig)
+int UserBase::updateUser(const std::string &username, const User &newConfig)
 {
     if (username.empty() || newConfig.username.empty()) return -1;
 

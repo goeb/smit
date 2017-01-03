@@ -72,7 +72,7 @@
 #define MAX_SIZE_UPLOAD (10*1024*1024)
 #define COOKIE_ORIGIN_VIEW "view-"
 
-void httpPostRoot(const RequestContext *req, User u)
+void httpPostRoot(const RequestContext *req, const User &u)
 {
 }
 
@@ -432,7 +432,7 @@ void httpGetUser(const RequestContext *request, const User &signedInUser, const 
 
 /** Delete a user
   */
-void httpDeleteUser(const RequestContext *request, User signedInUser, const std::string &username)
+void httpDeleteUser(const RequestContext *request, const User &signedInUser, const std::string &username)
 {
     if (!signedInUser.superadmin) {
         sendHttpHeader403(request);
@@ -850,7 +850,7 @@ void httpPostUserSelf(const RequestContext *req, const std::string &username)
   * - their new password
   * - their notification configuration
   */
-void httpPostUser(const RequestContext *req, User signedInUser, const std::string &username)
+void httpPostUser(const RequestContext *req, const User &signedInUser, const std::string &username)
 {
     // Only superadmin has permission to configure other users
     if (signedInUser.superadmin) return httpPostUserAsSuperadmin(req, username, signedInUser.username);
@@ -946,7 +946,7 @@ void getProjects(const User &u, std::list<ProjectSummary> &pList)
     }
 }
 
-void httpGetProjects(const RequestContext *req, User u)
+void httpGetProjects(const RequestContext *req, const User &u)
 {
     sendHttpHeader200(req);
     // print list of available projects
@@ -981,7 +981,7 @@ void httpGetProjects(const RequestContext *req, User u)
     }
 }
 
-void httpGetNewProject(const RequestContext *req, User u)
+void httpGetNewProject(const RequestContext *req, const User &u)
 {
     if (! u.superadmin) return sendHttpHeader403(req);
 
@@ -1021,7 +1021,7 @@ void httpGetNewProject(const RequestContext *req, User u)
     RHtml::printProjectConfig(ctx, pList);
 }
 
-void httpGetProjectConfig(const RequestContext *req, Project p, User u)
+void httpGetProjectConfig(const RequestContext *req, const Project &p, const User &u)
 {
     if (u.getRole(p.getName()) != ROLE_ADMIN && ! u.superadmin) return sendHttpHeader403(req);
 
@@ -1203,7 +1203,7 @@ void parsePostedProjectConfig(std::string &postData, std::list<std::list<std::st
     }
 }
 
-void httpPostProjectConfig(const RequestContext *req, Project &p, User u)
+void httpPostProjectConfig(const RequestContext *req, Project &p, const User &u)
 {
     enum Role role = u.getRole(p.getName());
     if (role != ROLE_ADMIN && ! u.superadmin) {
@@ -1283,7 +1283,7 @@ void httpPostProjectConfig(const RequestContext *req, Project &p, User u)
     }
 }
 
-void httpPostNewProject(const RequestContext *req, User u)
+void httpPostNewProject(const RequestContext *req, const User &u)
 {
     if (! u.superadmin) return sendHttpHeader403(req);
 
@@ -1355,7 +1355,7 @@ std::string getRedirectionToIssue(const Project &p, std::vector<IssueCopy> &issu
     }
     return redirectUrl;
 }
-void httpIssuesAccrossProjects(const RequestContext *req, User u, const std::string &uri, const std::list<Project *> &projects)
+void httpIssuesAccrossProjects(const RequestContext *req, const User &u, const std::string &uri, const std::list<Project *> &projects)
 {
     if (uri != "issues") return sendHttpHeader404(req);
 
@@ -1525,7 +1525,7 @@ void httpSendIssueList(const RequestContext *req, const Project &p,
   *
   * Query-String: ?sort=-ctime&limit=20
   */
-void httpGetListOfEntries(const RequestContext *req, const Project &p, User u)
+void httpGetListOfEntries(const RequestContext *req, const Project &p, const User &u)
 {
     std::string q = req->getQueryString();
     PredefinedView v = PredefinedView::loadFromQueryString(q); // unamed view, used as handler on the viewing parameters
@@ -1557,7 +1557,7 @@ void httpGetListOfEntries(const RequestContext *req, const Project &p, User u)
   *   - search
   *   - sort
   */
-void httpGetListOfIssues(const RequestContext *req, const Project &p, User u, const std::string &snapshot)
+void httpGetListOfIssues(const RequestContext *req, const Project &p, const User &u, const std::string &snapshot)
 {
     std::vector<IssueCopy> issueList;
     std::map<std::string, std::list<std::string> > emptyFilter;
@@ -1585,7 +1585,7 @@ void httpGetListOfIssues(const RequestContext *req, const Project &p, User u, co
 
 }
 
-void httpGetListOfIssues(const RequestContext *req, const Project &p, User u)
+void httpGetListOfIssues(const RequestContext *req, const Project &p, const User &u)
 {
     if (getFormat(req) == X_SMIT) return httpCloneIssues(req, p); // used for cloning
 
@@ -1645,7 +1645,7 @@ void httpGetListOfIssues(const RequestContext *req, const Project &p, User u)
     httpSendIssueList(req, p, u, issueList);
 }
 
-void httpGetProject(const RequestContext *req, const Project &p, User u)
+void httpGetProject(const RequestContext *req, const Project &p, const User &u)
 {
 
     if (getFormat(req) == X_SMIT) { // used for cloning
@@ -1669,7 +1669,7 @@ void httpGetProject(const RequestContext *req, const Project &p, User u)
 }
 
 
-void httpGetNewIssueForm(const RequestContext *req, Project &p, User u)
+void httpGetNewIssueForm(const RequestContext *req, Project &p, const User &u)
 {
     enum Role role = u.getRole(p.getName());
     if (role != ROLE_RW && role != ROLE_ADMIN) {
@@ -1685,7 +1685,7 @@ void httpGetNewIssueForm(const RequestContext *req, Project &p, User u)
     RHtml::printPageNewIssue(ctx);
 }
 
-void httpGetView(const RequestContext *req, Project &p, const std::string &view, User u)
+void httpGetView(const RequestContext *req, Project &p, const std::string &view, const User &u)
 {
     LOG_FUNC();
     sendHttpHeader200(req);
@@ -1782,7 +1782,7 @@ void httpGetStat(const RequestContext *req, Project &p, const User &u)
   *
   * If the file already exists, then do not overwrite it.
   */
-void httpPushAttachedFile(const RequestContext *req, Project &p, const std::string &filename, User u)
+void httpPushAttachedFile(const RequestContext *req, Project &p, const std::string &filename, const User &u)
 {
     enum Role role = u.getRole(p.getName());
     if (role != ROLE_ADMIN && role != ROLE_RW) {
@@ -1837,7 +1837,7 @@ void httpPushAttachedFile(const RequestContext *req, Project &p, const std::stri
   * All users can post these as an advanced search (with no name).
   * But only admin users can post predefined views (with a name).
   */
-void httpPostView(const RequestContext *req, Project &p, const std::string &name, User u)
+void httpPostView(const RequestContext *req, Project &p, const std::string &name, const User &u)
 {
     LOG_FUNC();
 
@@ -1969,7 +1969,7 @@ void httpPostView(const RequestContext *req, Project &p, const std::string &name
   *     The reference of the message: <issue>/<entry>/<tagid>
   *
   */
-void httpPostTag(const RequestContext *req, Project &p, std::string &ref, User u)
+void httpPostTag(const RequestContext *req, Project &p, std::string &ref, const User &u)
 {
     enum Role role = u.getRole(p.getName());
     if (role != ROLE_RW && role != ROLE_ADMIN) {
@@ -1993,7 +1993,7 @@ void httpPostTag(const RequestContext *req, Project &p, std::string &ref, User u
   *
   * This encompasses the configuration and the entries.
   */
-void httpReloadProject(const RequestContext *req, Project &p, User u)
+void httpReloadProject(const RequestContext *req, Project &p, const User &u)
 {
     if (!u.superadmin) {
         sendHttpHeader403(req);
@@ -2015,7 +2015,7 @@ void httpReloadProject(const RequestContext *req, Project &p, User u)
     }
 }
 
-int httpGetIssue(const RequestContext *req, Project &p, const std::string &issueId, User u)
+int httpGetIssue(const RequestContext *req, Project &p, const std::string &issueId, const User &u)
 {
     LOG_DEBUG("httpGetIssue: project=%s, issue=%s", p.getName().c_str(), issueId.c_str());
     enum RenderingFormat format = getFormat(req);
@@ -2140,7 +2140,7 @@ void parseMultipartAndStoreUploadedFiles(const std::string &part, std::string bo
 
 
 void httpPushEntry(const RequestContext *req, Project &p, const std::string &issueId,
-                   const std::string &entryId, User u)
+                   const std::string &entryId, const User &u)
 {
     LOG_DEBUG("httpPushEntry: %s/%s", issueId.c_str(), entryId.c_str());
 
@@ -2234,7 +2234,7 @@ void cleanMultiselectProperties(const ProjectConfig &config, std::map<std::strin
 /** Handle the posting of an entry
   * If issueId is empty, then a new issue is created.
   */
-void httpPostEntry(const RequestContext *req, Project &pro, const std::string & issueId, User u)
+void httpPostEntry(const RequestContext *req, Project &pro, const std::string & issueId, const User &u)
 {
     std::string projectName = pro.getName();
     enum Role role = u.getRole(projectName);

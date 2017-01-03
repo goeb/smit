@@ -1390,7 +1390,10 @@ int Project::addEntry(PropertiesMap properties, std::string &issueId,
 
     // add the entry to the project
     int r = addNewEntry(e);
-    if (r < 0) return r; // already exists
+    if (r < 0) {
+        delete e;
+        return r; // already exists
+    }
 
     // add the entry to the issue
     i->addEntry(e);

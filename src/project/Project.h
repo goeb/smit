@@ -81,7 +81,7 @@ public:
     ProjectConfig getConfig() const;
     ProjectParameters getProjectParameters() const;
 
-    inline void setConfig(ProjectConfig pconfig) { config = pconfig; }
+    inline void setConfig(const ProjectConfig &pconfig) { config = pconfig; }
     int modifyConfig(std::list<std::list<std::string> > &tokens, const std::string &author);
     int modifyConfig(ProjectConfig newConfig, const std::string &author);
     static int createProjectFiles(const std::string &repositoryPath, const std::string &projectName,

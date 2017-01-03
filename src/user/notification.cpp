@@ -7,11 +7,6 @@
 #include "utils/logging.h"
 #include "global.h"
 
-int NotificationPolicyCustom::match(IssueCopy oldi, IssueCopy newi)
-{
-    return -1;
-}
-
 #define K_EMAIL                       "email"
 #define K_GPG_KEY                     "gpgPublicKey"
 #define K_NOTIFY_POLICY               "notifyPolicy"

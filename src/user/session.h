@@ -70,7 +70,7 @@ public:
     static int store(const std::string &repository);
     static int initUsersFile(const char *repository);
     static User* getUser(const std::string &username);
-    static int addUser(User u);
+    static int addUser(const User &u);
     static int deleteUser(const std::string &username);
     static int hotReload();
     static void computePermissions();
@@ -78,7 +78,7 @@ public:
     static std::set<std::string> getUsersOfProject(const std::string &project);
     static std::map<std::string, Role> getUsersRolesOfProject(const std::string &project);
     static std::map<Role, std::set<std::string> > getUsersByRole(const std::string &project);
-    static int updateUser(const std::string &username, User newConfig);
+    static int updateUser(const std::string &username, const User &newConfig);
     static int updatePassword(const std::string &username, const AuthSha1 *authSha1);
     static std::list<User> getAllUsers();
     static inline bool isLocalUserInterface() {return !localInterfaceUsername.empty(); }
@@ -91,7 +91,7 @@ private:
     std::map<std::string, User*> configuredUsers;
     Locker locker; // mutex for configuredUsers
     static std::string Repository;
-    static User *addUserInArray(User u);
+    static User *addUserInArray(const User &u);
 
     // Local Interface refers to "smit ui command": browsing a local clone of a smit repository
     static std::string localInterfaceUsername;
