@@ -43,6 +43,7 @@ Some of the main features of Smit are:
 - Exporting contents to HTML, CSV, PDF (via the browser's capability)
     * Full-contents view of the issues
     * Print preview (hyper-text links become hidden)
+    * Download a zip of an issue as HTML with attached files
 - Cloning, local web GUI, pulling, pushing
 - Trigger of external program on new entry
     * for email notification (PGP-encryption possible)

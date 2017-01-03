@@ -1,5 +1,14 @@
 # News
 
+## 3 Jan 2017
+
+Smit version 3.4.0 is released.
+
+This version brings a new trigger interface (used typically for email notifications).
+Upgrade your triggers. The script triggers/notifyNewEntry.py of this released should be copied to your Smit repository.
+
+It is now also possible to download a zip of an issue, containing the HTML page and attached files.
+
 ## 20 June 2016
 
 Smit v3.3.0 is released.
