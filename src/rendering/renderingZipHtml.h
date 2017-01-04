@@ -155,7 +155,26 @@
     "    font-size: 80%;" \
     "    font-weight: bold;" \
     "    margin-bottom: 10px;" \
-    "}"
+    "}" \
+    ".sm_entry_pname {" \
+    "}" \
+    ".sm_entry_pvalue {" \
+    "    font-weight: bold;" \
+    "}" \
+    ".sm_underline { text-decoration: underline; }" \
+    ".sm_double_quote {" \
+    "    color: blue;" \
+    "}" \
+    ".sm_quote { color: green; }" \
+    ".sm_block { color: blue; }" \
+    ".sm_hyperlink { }" \
+    "strong { font-weight: bold; }" \
+    "em {" \
+    "    background-color: yellow;" \
+    "    font-style:normal;" \
+    "}" \
+    ""
+
 
 #define HTML_HEADER \
     "<!DOCTYPE HTML>" \
