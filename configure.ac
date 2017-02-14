@@ -80,7 +80,7 @@ if test x$WINDOWS = xyes; then
     PKG_CONFIG="$PKG_CONFIG --static"
 fi
 PKG_CHECK_MODULES(OPENSSL, openssl)
-PKG_CHECK_MODULES(LIBARCHIVE, libarchive >= 3.1.900a )
+PKG_CHECK_MODULES(LIBARCHIVE, libarchive)
 
 
 AC_ARG_ENABLE([gcov],

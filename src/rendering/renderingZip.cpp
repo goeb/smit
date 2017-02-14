@@ -47,7 +47,7 @@ static int sendZippedFile(const ContextParameters &ctx, struct archive *a, const
                   archive_error_string(a), filename.c_str(), L(data.size()));
         return -1;
     }
-    la_ssize_t n = archive_write_data(a, data.data(), data.size());
+    ssize_t n = archive_write_data(a, data.data(), data.size());
     if (n < 0) {
         LOG_ERROR("archive_write_data error: n=%d, %s (%s, %ld)",
                   n, archive_error_string(a), filename.c_str(), L(data.size()));
@@ -147,7 +147,7 @@ static int startChunkedTransfer(struct archive *a, void *ctxData)
     return ARCHIVE_OK;
 }
 
-static la_ssize_t sendChunk(struct archive *a, void *ctxData, const void *buffer, size_t length)
+static ssize_t sendChunk(struct archive *a, void *ctxData, const void *buffer, size_t length)
 {
     LOG_DIAG("sendChunk: length=%lu", L(length));
     const ContextParameters *ctx = (ContextParameters *)ctxData;
