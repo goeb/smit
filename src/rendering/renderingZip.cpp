@@ -49,13 +49,13 @@ static int sendZippedFile(const ContextParameters &ctx, struct archive *a, const
     }
     ssize_t n = archive_write_data(a, data.data(), data.size());
     if (n < 0) {
-        LOG_ERROR("archive_write_data error: n=%d, %s (%s, %ld)",
-                  n, archive_error_string(a), filename.c_str(), L(data.size()));
+        LOG_ERROR("archive_write_data error: n=%ld, %s (%s, %ld)",
+                  L(n), archive_error_string(a), filename.c_str(), L(data.size()));
         return -2;
     }
     if ((size_t)n != data.size()) {
-        LOG_ERROR("archive_write_data error (incomplete write): n=%d, %s (%s, %ld)",
-                  n, archive_error_string(a), filename.c_str(), L(data.size()));
+        LOG_ERROR("archive_write_data error (incomplete write): n=%ld, %s (%s, %ld)",
+                  L(n), archive_error_string(a), filename.c_str(), L(data.size()));
         return -3;
     }
     return 0;
