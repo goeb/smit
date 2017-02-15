@@ -3,8 +3,8 @@
 #include <string.h>
 
 #include "AuthLdap.h"
-#include "logging.h"
-#include "parseConfig.h"
+#include "utils/logging.h"
+#include "utils/parseConfig.h"
 
 /** Authenticate against a LDAP server
   *

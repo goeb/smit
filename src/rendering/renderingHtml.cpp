@@ -34,11 +34,11 @@
 #include "utils/jTools.h"
 
 #ifdef KERBEROS_ENABLED
-  #include "AuthKrb5.h"
+  #include "user/AuthKrb5.h"
 #endif
 
 #ifdef LDAP_ENABLED
-  #include "AuthLdap.h"
+  #include "user/AuthLdap.h"
 #endif
 
 
