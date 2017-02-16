@@ -59,14 +59,6 @@
 #include "restApi.h"
 #include "embedcpio.h" // generated
 
-#ifdef KERBEROS_ENABLED
-  #include "AuthKrb5.h"
-#endif
-
-#ifdef LDAP_ENABLED
-  #include "AuthLdap.h"
-#endif
-
 
 #define K_ME "me"
 #define MAX_SIZE_UPLOAD (10*1024*1024)
