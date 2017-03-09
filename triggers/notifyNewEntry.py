@@ -199,6 +199,7 @@ def getMailBody(jsonMsg):
         if p[0] == '+': continue # +message or +files
         if p not in oldProperties:
             label = getLabel(labels, p)
+            indent = 4+len(label)+2
             newValue = ', '.join(entry['properties'][p])
             newValue = newValue.replace('\n', '\n' + indent*' ') # add indentation
             body += '+++ ' + PROP_FORMAT % (label, newValue)
@@ -410,7 +411,7 @@ def main():
         for r in recipients:
             if r.gpgPublicKey is not None:
                 if Verbose: print 'add gpgPublicKey for', r.email
-            if r.gpgPublicKey is not None: gpgPublicKeys.add(r.gpgPublicKey)
+                gpgPublicKeys.add(r.gpgPublicKey)
 
         if len(gpgPublicKeys):
             cipheredBody = gpgEncrypt(body, gpgPublicKeys)
