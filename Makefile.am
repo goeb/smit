@@ -22,9 +22,9 @@ AM_CFLAGS += -Dopenssl_EXPORTS
 
 AM_CXXFLAGS += -static -static-libgcc
 AM_CXXFLAGS += -Dopenssl_EXPORTS
-else
-AM_LDFLAGS += -pthread
 endif
+
+AM_LDFLAGS += -pthread
 
 
 # Main program

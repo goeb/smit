@@ -11,19 +11,6 @@
   #include <windows.h>
   #include <time.h>
 
-extern "C" {
-
-  typedef HANDLE pthread_mutex_t;
-  int pthread_mutex_init(pthread_mutex_t *mutex, void *unused);
-  int pthread_mutex_destroy(pthread_mutex_t *mutex);
-  int pthread_mutex_lock(pthread_mutex_t *mutex);
-  int pthread_mutex_unlock(pthread_mutex_t *mutex);
-
-  #define sleep(x) Sleep((x) * 1000)
-
-}
-
-
 
   inline long gettid()
   {
@@ -31,6 +18,7 @@ extern "C" {
     return tid;
   }
 
+  #define sleep(x) Sleep((x) * 1000)
   #define msleep(x) Sleep(x)
 
   // end #if _WIN32

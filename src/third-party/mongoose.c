@@ -67,6 +67,7 @@
 #include <limits.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <pthread.h>
 
 #if defined(_WIN32) && !defined(__SYMBIAN32__) // Windows specific
 #undef _WIN32_WINNT
@@ -157,13 +158,8 @@ typedef long off_t;
 #define fileno(x) _fileno(x)
 #endif // !fileno MINGW #defines fileno
 
-typedef HANDLE pthread_mutex_t;
-typedef struct {HANDLE signal, broadcast;} pthread_cond_t;
-typedef DWORD pthread_t;
 #define pid_t HANDLE // MINGW typedefs pid_t to int. Using #define here.
 
-int pthread_mutex_lock(pthread_mutex_t *);
-int pthread_mutex_unlock(pthread_mutex_t *);
 static void to_unicode(const char *path, wchar_t *wbuf, size_t wbuf_len);
 struct file;
 static char *mg_fgets(char *buf, size_t size, struct file *filep, char **p);
@@ -260,9 +256,6 @@ typedef int SOCKET;
 
 #ifdef _WIN32
 static CRITICAL_SECTION global_log_file_lock;
-static pthread_t pthread_self(void) {
-  return GetCurrentThreadId();
-}
 #endif // _WIN32
 
 #ifdef DEBUG_TRACE
@@ -970,51 +963,6 @@ static void send_http_error(struct mg_connection *conn, int status,
 }
 
 #if defined(_WIN32) && !defined(__SYMBIAN32__)
-int pthread_mutex_init(pthread_mutex_t *mutex, void *unused) {
-  (void) unused;
-  *mutex = CreateMutex(NULL, FALSE, NULL);
-  return *mutex == NULL ? -1 : 0;
-}
-
-int pthread_mutex_destroy(pthread_mutex_t *mutex) {
-  return CloseHandle(*mutex) == 0 ? -1 : 0;
-}
-
-int pthread_mutex_lock(pthread_mutex_t *mutex) {
-  return WaitForSingleObject(*mutex, INFINITE) == WAIT_OBJECT_0? 0 : -1;
-}
-
-int pthread_mutex_unlock(pthread_mutex_t *mutex) {
-    return ReleaseMutex(*mutex) == 0 ? GetLastError() : 0;
-}
-
-static int pthread_cond_init(pthread_cond_t *cv, const void *unused) {
-  (void) unused;
-  cv->signal = CreateEvent(NULL, FALSE, FALSE, NULL);
-  cv->broadcast = CreateEvent(NULL, TRUE, FALSE, NULL);
-  return cv->signal != NULL && cv->broadcast != NULL ? 0 : -1;
-}
-
-static int pthread_cond_wait(pthread_cond_t *cv, pthread_mutex_t *mutex) {
-  HANDLE handles[] = {cv->signal, cv->broadcast};
-  ReleaseMutex(*mutex);
-  WaitForMultipleObjects(2, handles, FALSE, INFINITE);
-  return WaitForSingleObject(*mutex, INFINITE) == WAIT_OBJECT_0? 0 : -1;
-}
-
-static int pthread_cond_signal(pthread_cond_t *cv) {
-  return SetEvent(cv->signal) == 0 ? -1 : 0;
-}
-
-static int pthread_cond_broadcast(pthread_cond_t *cv) {
-  // Implementation with PulseEvent() has race condition, see
-  // http://www.cs.wustl.edu/~schmidt/win32-cv-1.html
-  return PulseEvent(cv->broadcast) == 0 ? -1 : 0;
-}
-
-static int pthread_cond_destroy(pthread_cond_t *cv) {
-  return CloseHandle(cv->signal) && CloseHandle(cv->broadcast) ? 0 : -1;
-}
 
 // For Windows, change all slashes to backslashes in path names.
 static void change_slashes_to_backslashes(char *path) {

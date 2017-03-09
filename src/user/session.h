@@ -6,6 +6,7 @@
 #include <list>
 #include <set>
 
+#include "mg_win32.h"
 #include "utils/mutexTools.h"
 #include "Auth.h"
 #include "AuthSha1.h"

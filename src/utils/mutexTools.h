@@ -1,26 +1,18 @@
 #ifndef _mutexTools_h
 #define _mutexTools_h
 
-#if defined(_WIN32)
-  #include "mg_win32.h"
-#else
-  #include <pthread.h>
-#endif
-
+#include <pthread.h>
 
 class Locker {
 public:
     Locker();
     ~Locker();
     void lockForWriting();
-    void unlockForWriting();
     void lockForReading();
-    void unlockForReading();
+    void unlock();
 
 private:
-    pthread_mutex_t readOnlyMutex;
-    pthread_mutex_t readWriteMutex;
-    int nReaders; // number of concurrent readers
+    pthread_rwlock_t rwMutex;
 };
 
 // helpers
@@ -36,8 +28,7 @@ public:
         else locker.lockForWriting();
     }
     inline ~ScopeLocker() {
-        if (mode == LOCK_READ_ONLY) locker.unlockForReading();
-        else locker.unlockForWriting();
+        locker.unlock();
     }
 
 private:
