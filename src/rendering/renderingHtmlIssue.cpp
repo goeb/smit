@@ -615,8 +615,8 @@ void RHtmlIssue::printIssue(const ContextParameters &ctx, const IssueCopy &issue
     ctx.req->printf("</div>\n");
 }
 
-std::string RHtmlIssue::printOtherProperties(const ContextParameters &ctx, const Entry &ee, bool printMessageHeading,
-                                             const char *divStyle)
+std::string RHtmlIssue::printOtherProperties(const ContextParameters &ctx, const Entry &ee,
+                                             bool printMessageHeading, const char *divStyle)
 {
     std::ostringstream otherProperties;
     StringStream ss;
