@@ -454,6 +454,26 @@ void RHtml::printPageUser(const ContextParameters &ctx, const User *u)
 
 }
 
+/** Return the Javascript definition of the properties
+ *
+ * Eg: { p1 : label1, p2 : label2, ... }
+ */
+static std::string getJsPropertiesDef(const ProjectConfig &pconfig)
+{
+    std::string result = "{";
+    std::list<std::string> properties = pconfig.getPropertiesNames();
+    std::list<std::string>::iterator p;
+    FOREACH(p, properties) {
+        if (p != properties.begin()) result += ",";
+        std::string label = pconfig.getLabelOfProperty(*p);
+        result += "\"" + enquoteJs(*p) + "\"";
+        result += ":";
+        result += "\"" + enquoteJs(label) + "\"";
+    }
+    result += "}";
+    return result;
+}
+
 void RHtml::printPageView(const ContextParameters &ctx, const PredefinedView &pv)
 {
     VariableNavigator vn("view.html", ctx);
@@ -467,8 +487,8 @@ void RHtml::printPageView(const ContextParameters &ctx, const PredefinedView &pv
 
     if (pv.isDefault) vn.script += "setDefaultCheckbox();\n";
 
-    std::list<std::string> properties = ctx.projectConfig.getPropertiesNames();
-    vn.script += "Properties = " + toJavascriptArray(properties) + ";\n";
+
+    vn.script += "Properties = " + getJsPropertiesDef(ctx.projectConfig) + ";\n";
 
     // add datalists, for proposing the values in filterin/out
     // datalists are name 'datalist_' + <property-name>

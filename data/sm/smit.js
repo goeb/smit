@@ -168,21 +168,26 @@ function createDatalist(id, items) {
     }
     return datalist;
 }
-function createSelect(items, selected, allowVoid) {
+function createSelect(items, selected) {
+    // items: either [array] or {object}
     var select = document.createElement('select');
-    var items2 = items.slice(0); // copy the array
-    if (allowVoid) items2.push(''); // add an empty value
-    var length = items2.length;
-    for (var i = 0; i < length; i++) {
+
+    var i = 0;
+    var isArray = Array.isArray(items);
+    for (var k in items) {
+        var text = items[k];
+        if (isArray) key = text;
+        else key = k;
         var opt = document.createElement('option');
-        opt.innerHTML = items2[i];
-        opt.value = items2[i];
-        opt.text = items2[i];
-        if (selected == items2[i]) {
+        opt.value = key;
+        opt.innerHTML = text;
+        opt.text = text;
+        if (selected == key) {
             opt.selected = "selected";
             select.selectedIndex = i;
         }
         select.appendChild(opt);
+        i++;
     }
     return select;
 }
@@ -247,7 +252,7 @@ function addProperty(name, label, type, opts) {
         cell.appendChild(i);
     } else {
         var options = ['text', 'select', 'multiselect', 'selectUser', 'textarea', 'textarea2', 'association'];
-        i = createSelect(options, type, false);
+        i = createSelect(options, type);
         i.name = 'type';
         i.onchange = fupdateThis;
         cell.appendChild(i);
@@ -343,7 +348,7 @@ function addPermission(divname, selectedProject, selectedRole) {
     div.appendChild(input);
 
     // input for the role (ref, ro, rw,...)
-    var i = createSelect(Roles, selectedRole, true);
+    var i = createSelect(Roles.concat(['']), selectedRole);
     i.name = 'role';
     div.appendChild(i);
     div.appendChild(document.createElement('br'));
@@ -376,10 +381,16 @@ function updateFilterValue(divObject, value) {
     i.setAttribute('list', 'datalist_'+selectedKey.value);
     divObject.appendChild(i);
 }
-
+function addEmpty(object) {
+    // copy the object and add an empty value
+    var result = {};
+    for(var k in object) result[k] = object[k];
+    result[''] = '';
+    return result;
+}
 function addFilter(divname, selectedProperty, value) {
     var div = document.getElementById(divname);
-    var select = createSelect(Properties, selectedProperty, true);
+    var select = createSelect(addEmpty(Properties), selectedProperty);
     select.name = divname;
 
     var container = document.createElement('div');
@@ -393,17 +404,17 @@ function addFilter(divname, selectedProperty, value) {
 function addColspec(selected) {
     var divname = 'colspec';
     var div = document.getElementById(divname);
-    var select = createSelect(Properties, selected, true);
+    var select = createSelect(addEmpty(Properties), selected);
     select.name = 'colspec';
     div.appendChild(select);
 }
 function addSort(selectedDirection, selectedProperty) {
     var divname = 'sort';
     var div = document.getElementById(divname);
-    var select = createSelect(['Ascending', 'Descending'], selectedDirection, true);
+    var select = createSelect(['Ascending', 'Descending'], selectedDirection);
     select.name = 'sort_direction';
     div.appendChild(select);
-    select = createSelect(Properties, selectedProperty, true);
+    select = createSelect(addEmpty(Properties), selectedProperty);
     select.name = 'sort_property';
     div.appendChild(select);
     div.appendChild(document.createElement('br'));
@@ -598,22 +609,22 @@ function setUserCapabilityAndRole(cap, role) {
 
 function setFormValue(name, value) {
     var item = document.getElementsByName(name);
-	if (!item[0]) return;
-	
-	tagName = item[0].tagName.toUpperCase();
-	if (tagName == 'INPUT') {
-		type = item[0].type.toUpperCase();
-	   	if (type == 'TEXT') item[0].value = value;
-		else if (type == 'RADIO') {
-			for (var i=0; i<item.length; i++) {
-				if (item[i].value == value) {
-					item[i].checked = true;
-					return;
-				}
-			}
-		}
-	} else if (tagName == 'TEXTAREA') {
-		item[0].value = value;
-	}
+    if (!item[0]) return;
+    
+    tagName = item[0].tagName.toUpperCase();
+    if (tagName == 'INPUT') {
+        type = item[0].type.toUpperCase();
+        if (type == 'TEXT') item[0].value = value;
+        else if (type == 'RADIO') {
+            for (var i=0; i<item.length; i++) {
+                if (item[i].value == value) {
+                    item[i].checked = true;
+                    return;
+                }
+            }
+        }
+    } else if (tagName == 'TEXTAREA') {
+        item[0].value = value;
+    }
 
 }
