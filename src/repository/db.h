@@ -31,7 +31,10 @@ public:
 class Database {
 public:
     static Database Db;
-    Database() : maxIssueId(0) {}
+    Database() : maxIssueId(0),
+        editDelay(10*60), // default 10 minutes
+        sessionDuration(60*60*36) // default 1.5 days
+        {}
     static Project *lookupProject(std::string &resource);
     static void lookupProjectsWildcard(std::string &resource, const std::list<std::string> &projects,
                                 std::list<Project *> &result);
@@ -47,12 +50,17 @@ public:
     inline size_t getNumProjects() const { return projects.size(); }
     Project *getNextProject(const Project *p) const;
     static int loadProjects(const std::string &path, bool recurse);
+    int loadConfig(const std::string &path);
+    static inline int getEditDelay() { return Db.editDelay; }
+    static inline int getSessionDuration() { return Db.sessionDuration; }
 
 private:
     std::map<std::string, Project*> projects;
     Locker locker;
     uint32_t maxIssueId;
     std::map<std::string, uint32_t> allocatedIds;
+    int editDelay; //< delay after which a message cannot be amended (seconds)
+    int sessionDuration; //< duration of a user session (seconds)
 };
 
 

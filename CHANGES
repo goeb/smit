@@ -2,6 +2,7 @@ v3.4.1
 	- search form: show labels instead of logical names of properties
 	- page entries: fix contents of column "Modification"
 	- zip-download: add missing embedded CSS styles
+	- repository config: editDelay and sessionDuration
 
 v3.4.0, 3 Jan 2017
 	- add email & gpg key in page user

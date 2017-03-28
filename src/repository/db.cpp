@@ -29,6 +29,7 @@
 #include <unistd.h>
 
 #include "db.h"
+#include "utils/parseConfig.h"
 #include "utils/logging.h"
 #include "utils/identifiers.h"
 #include "utils/stringTools.h"
@@ -39,15 +40,56 @@
 #include "fnmatch.h"
 
 
+#define REPO_CONFIG "config"
+
 // global var Db
 Database Database::Db;
 
-int dbLoad(const char * path)
+int dbLoad(const char *path)
 {
     Database::Db.pathToRepository = path;
+    int ret = Database::Db.loadConfig(path);
     int n = Database::Db.loadProjects(path, true);
     return n;
 }
+
+/** Load configuration of a repository
+ *
+ */
+int Database::loadConfig(const std::string &path)
+{
+    int err = 0;
+    std::string buf;
+    std::string configPath = path + "/" PATH_REPO "/" REPO_CONFIG;
+    int n = loadFile(configPath.c_str(), buf);
+
+    if (n < 0) {
+        // error loading the file
+        LOG_INFO("Cannot load configuration of repository '%s': %s", configPath.c_str(), strerror(errno));
+        err = -1;
+
+    } else {
+        // file successfully loaded into 'buf'
+        std::list<std::list<std::string> > lines = parseConfigTokens(buf.c_str(), buf.size());
+
+        std::list<std::list<std::string> >::iterator line;
+        FOREACH (line, lines) {
+            // editDelay
+            // sessionDuration
+            if (line->size() != 2) continue;
+            std::string key = line->front();
+            std::string value = line->back();
+            if (key == "editDelay") editDelay = atoi(value.c_str());
+            else if (key == "sessionDuration") sessionDuration = atoi(value.c_str());
+            else {
+                LOG_ERROR("Invalid key in configuration of repository: %s", key.c_str());
+            }
+        }
+    }
+    LOG_INFO("Repository config: editDelay=%ds, sessionDuration=%ds", editDelay, sessionDuration);
+    return err;
+}
+
 
 /** Recursively load all projects under the given path
   *

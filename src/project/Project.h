@@ -26,8 +26,6 @@
 #define PATH_TAGS           PATH_REFS "/tags"
 #define PATH_TRIGGER        PATH_REFS "/trigger"
 
-#define DELETE_DELAY_S (10*60) // seconds
-
 /** Class for holding project config and some other info
   */
 struct ProjectParameters {

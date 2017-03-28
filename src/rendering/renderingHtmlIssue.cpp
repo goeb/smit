@@ -473,14 +473,14 @@ std::string RHtmlIssue::renderEntry(const ContextParameters &ctx, const IssueCop
 
     // edit button
     time_t delta = time(0) - ee.ctime;
-    if ( (delta < DELETE_DELAY_S) && (ee.author == ctx.user.username) &&
+    if ( (delta < Database::getEditDelay()) && (ee.author == ctx.user.username) &&
          (ctx.userRole == ROLE_ADMIN || ctx.userRole == ROLE_RW) &&
          !ee.isAmending() &&
          !offline) {
         // entry was created less than 10 minutes ago, and by same user, and is latest in the issue
         ss.printf("<a href=\"?amend=%s\" class=\"sm_entry_edit\" "
                         "title=\"Edit this message (at most %d minutes after posting)\">",
-                        enquoteJs(ee.id).c_str(), (DELETE_DELAY_S/60));
+                        enquoteJs(ee.id).c_str(), (Database::getEditDelay()/60));
         ss.printf("&#9998; %s", _("edit"));
         ss.printf("</a>\n");
     }

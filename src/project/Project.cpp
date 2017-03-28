@@ -1587,7 +1587,7 @@ int Project::amendEntry(const std::string &entryId, const std::string &msg,
     Entry *e = getEntry(entryId);
     if (!e) return -1;
 
-    if (time(0) - e->ctime > DELETE_DELAY_S) return -1; // too late!
+    if (time(0) - e->ctime > Database::getEditDelay()) return -1; // too late!
 
     if (e->author != username) return -1; // one cannot amend the message of somebody else
 

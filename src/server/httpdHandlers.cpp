@@ -137,7 +137,8 @@ int httpPostSignin(const RequestContext *req)
     enum RenderingFormat format = getFormat(req);
 
     if (format == X_SMIT || format == RENDERING_TEXT) {
-        std::string cookieSessid = getServerCookie(req, COOKIE_SESSID_PREFIX, sessionId, SESSION_DURATION);
+        std::string cookieSessid = getServerCookie(req, COOKIE_SESSID_PREFIX, sessionId,
+                                                   Database::getSessionDuration());
         sendHttpHeader204(req, cookieSessid.c_str());
     } else {
         // HTML rendering
@@ -153,7 +154,8 @@ int httpPostSignin(const RequestContext *req)
         redirect = buffer;
 
         if (redirect.empty()) redirect = "/";
-        std::string s = getServerCookie(req, COOKIE_SESSID_PREFIX, sessionId, SESSION_DURATION);
+        std::string s = getServerCookie(req, COOKIE_SESSID_PREFIX, sessionId,
+                                        Database::getSessionDuration());
         sendHttpRedirect(req, redirect, s.c_str());
     }
 

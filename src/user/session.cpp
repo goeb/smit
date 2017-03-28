@@ -934,7 +934,7 @@ std::string SessionBase::createSession(const std::string &username)
     s.id = getSha1(getRandom8bytes());
     LOG_DEBUG("session-id: %s", s.id.c_str());
     s.username = username;
-    s.duration = SESSION_DURATION;
+    s.duration = Database::Db.getSessionDuration();
     SessionDb.sessions[s.id] = s;
     return s.id;
 }
