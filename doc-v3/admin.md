@@ -77,6 +77,20 @@ Wildcards : Roles         Resulting Permissions
 ```
 
 
+## Repository Configuration
+
+The configuration file is: `$REPO/.smit/config`.
+
+It supports the following configuration parameters:
+
+- `editDelay`: delay (in seconds) while a message can be edited (default: 10 minutes)
+- `sessionDuration`: duration (in seconds) of the web session of a user (without having to sign-in again) (default: 1.5 day)
 
 
+Example:
+
+```
+editDelay 600
+sessionDuration 129600
+```
 

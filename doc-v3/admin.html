@@ -21,6 +21,7 @@
 <li><a href='#create-a-user'>Create a User</a></li>
 <li><a href='#create-a-project'>Create a Project</a></li>
 <li><a href='#set-permissions-up'>Set Permissions Up</a></li>
+<li><a href='#repository-configuration'>Repository Configuration</a></li>
 </ul>
 </li>
 <li><a href='experts.html'>Advanced Admin</a></li>
@@ -110,10 +111,20 @@ Cookies-B : ro            Cookies-B : ro
 * : rw                    Cookies-A : rw
                           Cookies-B : rw
                              Ribs-6 : rw</code></pre>
+<h2 id="repository-configuration">Repository Configuration</h2>
+<p>The configuration file is: <code>$REPO/.smit/config</code>.</p>
+<p>It supports the following configuration parameters:</p>
+<ul>
+<li><code>editDelay</code>: delay (in seconds) while a message can be edited (default: 10 minutes)</li>
+<li><code>sessionDuration</code>: duration (in seconds) of the web session of a user (without having to sign-in again) (default: 1.5 day)</li>
+</ul>
+<p>Example:</p>
+<pre><code>editDelay 600
+sessionDuration 129600</code></pre>
 </div>
         </div> <!-- div class page -->
         <div class="footer">
-            Page updated on 18 Sep 2015
+            Page updated on 28 Mar 2017
         </div>
     </body>
 </html>
