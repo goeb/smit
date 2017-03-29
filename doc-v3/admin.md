@@ -79,6 +79,8 @@ Wildcards : Roles         Resulting Permissions
 
 ## Repository Configuration
 
+(this paragraph applies to Smit versions >= 3.4.1)
+
 The configuration file is: `$REPO/.smit/config`.
 
 It supports the following configuration parameters:
