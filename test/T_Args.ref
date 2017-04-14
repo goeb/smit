@@ -1,0 +1,83 @@
+>>> ./T_Args test1 
+>>> ./T_Args test1 -v
+verbose: yes
+v: yes
+>>> ./T_Args test1 --verbose
+verbose: yes
+v: yes
+>>> ./T_Args test1 -v --one
+Missing arguments for option '--one'.
+
+usage: test1: usage string ...
+
+Options:
+  -v, --verbose
+      be verbose
+
+  --one ...
+      option 1
+
+  -2 ...
+      option 2
+
+>>> ./T_Args test1 -v --one aaa
+verbose: yes
+v: yes
+one: aaa
+>>> ./T_Args test1 -2 bbb --one aaa
+one: aaa
+2: bbb
+>>> ./T_Args test1 --wrong-one
+Invalid option '--wrong-one'.
+
+usage: test1: usage string ...
+
+Options:
+  -v, --verbose
+      be verbose
+
+  --one ...
+      option 1
+
+  -2 ...
+      option 2
+
+>>> ./T_Args test1 -x
+Invalid option '-x'.
+
+usage: test1: usage string ...
+
+Options:
+  -v, --verbose
+      be verbose
+
+  --one ...
+      option 1
+
+  -2 ...
+      option 2
+
+>>> ./T_Args test1 a1 a2 a3
+non-option ARGV: a1
+non-option ARGV: a2
+non-option ARGV: a3
+>>> ./T_Args test1 a1 a2 a3 --one aaa
+one: aaa
+non-option ARGV: a1
+non-option ARGV: a2
+non-option ARGV: a3
+>>> ./T_Args test1 a1 a2 a3 wrong4
+Too many arguments.
+
+usage: test1: usage string ...
+
+Options:
+  -v, --verbose
+      be verbose
+
+  --one ...
+      option 1
+
+  -2 ...
+      option 2
+

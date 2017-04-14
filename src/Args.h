@@ -10,7 +10,7 @@ struct ArgOptionSpec {
     const char *longname;
     char shortname;
     const char *help;
-    int argnum; // number of arguments
+    int argnum; // number of arguments (0 or 1)
 };
 
 /*

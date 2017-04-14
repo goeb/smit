@@ -67,14 +67,17 @@ const ArgOptionSpec *Args::getOptSpec(const char c)
   */
 const ArgOptionSpec *Args::getOptSpec(const char *s)
 {
+    if (!s || !s[0]) return 0;
+
     std::list<ArgOptionSpec>::const_iterator os;
     FOREACH(os, optionSpecs) {
-        if (0 == strcmp(os->longname, s)) return &(*os);
+        if (os->longname && 0 == strcmp(os->longname, s)) return &(*os);
+        if (os->shortname && strlen(s) == 1 && s[0] == os->shortname) return &(*os);
     }
     return 0;
 }
 
-std::string getKey(const ArgOptionSpec *aos)
+static std::string getKey(const ArgOptionSpec *aos)
 {
     std::string key = "-";
     if (aos->shortname) key += aos->shortname;
@@ -107,7 +110,7 @@ int Args::grabOption(int argc, char **argv, const ArgOptionSpec *aos, int pos, c
         std::string key = getKey(aos);
         optionValues[key] = "yes";
 
-    } else while (i < n) {
+    } else while (i < n) { // TODO if n > 1, not functional, and not needed...
         // generate a key, used for
         std::string key = getKey(aos);
         optionValues[key] = argv[pos+i];
@@ -206,5 +209,6 @@ const char *Args::pop()
     consumedNonOptionArgOffset++;
     return result;
 }
+
 
 
