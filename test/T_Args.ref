@@ -11,14 +11,14 @@ Missing arguments for option '--one'.
 usage: test1: usage string ...
 
 Options:
-  -v, --verbose
-      be verbose
-
   --one ...
       option 1
 
   -2 ...
       option 2
+
+  -v, --verbose
+      be verbose
 
 >>> ./T_Args test1 -v --one aaa
 verbose: yes
@@ -33,14 +33,14 @@ Invalid option '--wrong-one'.
 usage: test1: usage string ...
 
 Options:
-  -v, --verbose
-      be verbose
-
   --one ...
       option 1
 
   -2 ...
       option 2
+
+  -v, --verbose
+      be verbose
 
 >>> ./T_Args test1 -x
 Invalid option '-x'.
@@ -48,14 +48,14 @@ Invalid option '-x'.
 usage: test1: usage string ...
 
 Options:
-  -v, --verbose
-      be verbose
-
   --one ...
       option 1
 
   -2 ...
       option 2
+
+  -v, --verbose
+      be verbose
 
 >>> ./T_Args test1 a1 a2 a3
 non-option ARGV: a1
@@ -72,12 +72,12 @@ Too many arguments.
 usage: test1: usage string ...
 
 Options:
-  -v, --verbose
-      be verbose
-
   --one ...
       option 1
 
   -2 ...
       option 2
+
+  -v, --verbose
+      be verbose
 
