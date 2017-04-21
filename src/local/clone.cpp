@@ -83,6 +83,8 @@ struct PullContext {
     std::string localRepo; // path to local repository
     HttpClientContext httpCtx; // session identifier
     MergeStrategy mergeStrategy; // for pulling only, not cloning
+
+    inline std::string getTmpDir() const { return localRepo + "/.tmp"; }
 };
 
 
@@ -175,29 +177,35 @@ int pullObjects(const PullContext &ctx, const Project &p)
 
 /** Recursively clone files and directories
   *
-  * Files that already exist locally are not pulled.
+  * Files that already exist locally are by default not pulled.
+  *
+  * @param ctx
+  * @param srcResource
+  * @param destLocal
+  * @param counter
+  * @param force
+  *     Download even if local file exists.
   *
   * @return
   *     0 success
   *    -1 an error occurred and the recursive pulling aborted
   */
 int cloneFiles(const PullContext &ctx, const std::string &srcResource,
-               const std::string &destLocal, int &counter)
+               const std::string &destLocal, int &counter, bool force)
 {
     // Download the resource locally in a temporary location
     // and determine if it is a directory or a regular file
 
     LOG_DIAG("cloneFiles %s", srcResource.c_str());
 
-    if (fileExists(destLocal) && !isDir(destLocal)) {
+    if (!force && fileExists(destLocal) && !isDir(destLocal)) {
         // File already there. Skip this download.
         LOG_DEBUG("File already there, skip this download");
         return 0;
     }
 
-    std::string localTmp = ctx.localRepo + "/.download";
+    std::string localTmp = ctx.getTmpDir() + "/.download";
     std::string url = ctx.rooturl + "/" + srcResource;
-
 
     int r = HttpRequest::downloadFile(ctx.httpCtx, url, localTmp);
 
@@ -238,7 +246,7 @@ int cloneFiles(const PullContext &ctx, const std::string &srcResource,
             std::string urlFilename = urlEncode(filename);
             std::string rsrc = srcResource + "/" + urlFilename;
             std::string dlocal = destLocal + "/" + filename;
-            r = cloneFiles(ctx, rsrc, dlocal, counter);
+            r = cloneFiles(ctx, rsrc, dlocal, counter, force);
             if (r != 0) {
                 LOG_ERROR("Abort pulling.");
                 return r;
@@ -272,7 +280,7 @@ int getProjects(const std::string &rooturl, const std::string &destdir, const Ht
     cloneCtx.mergeStrategy = MERGE_KEEP_LOCAL; // not used here (brut cloning)
     int counter = 0;
     LOG_CLI("Cloning All Projects...\n");
-    int r = cloneFiles(cloneCtx, "/", destdir, counter);
+    int r = cloneFiles(cloneCtx, "/", destdir, counter, false);
     LOG_CLI("\n");
 
     return r;
@@ -625,13 +633,13 @@ int pullIssue(const PullContext &pullCtx, Project &p, const std::string &remoteI
     return 0; // ok
 }
 
-int pullProjectViews(const PullContext &ctx, Project &p)
+static int pullProjectViews(const PullContext &ctx, Project &p)
 {
     // The object of the config itself is supposed already pulled.
     // Now pull the refs/views.
 
     // First, download the ref
-    std::string localTmp = p.getTmpDir() + "/.download";
+    std::string localTmp = ctx.getTmpDir() + "/.download";
     std::string url = ctx.rooturl + "/" + p.getUrlName() + "/" + RSRC_REF_VIEWS;
     int r = HttpRequest::downloadFile(ctx.httpCtx, url, localTmp);
     if (r != 0) {
@@ -646,6 +654,8 @@ int pullProjectViews(const PullContext &ctx, Project &p)
         LOG_ERROR("Cannot load downloaded views '%s': %s", localTmp.c_str(), strerror(errno));
         return -1;
     }
+
+    unlink(localTmp.c_str());
     trim(newid);
 
     // get the ref of the old 'views'
@@ -671,13 +681,46 @@ int pullProjectViews(const PullContext &ctx, Project &p)
     return r;
 }
 
+static int pullPublic(const PullContext &ctx)
+{
+    std::string resource = "/public";
+    std::string localPublicDir = ctx.localRepo + "/public";
+
+    int n = 0;
+    int r = cloneFiles(ctx, resource, localPublicDir, n, true); // overwrite local files
+    if (n > 0) LOG_CLI("\n");
+    return r;
+}
+
+static int pullTemplates(const PullContext &ctx, const std::string &resource, const std::string &destDir)
+{
+    LOG_DIAG("pullTemplates: %s", resource.c_str());
+
+    // check first if the remote resource exists and is a directory
+    std::string url = ctx.rooturl + "/" + resource;
+    std::string listing;
+    int r = HttpRequest::downloadInMemory(ctx.httpCtx, url, listing);
+
+    if (1 == r) {
+        // directory listing found
+        // we can clone the remote template dir
+
+        int n = 0;
+        int r = cloneFiles(ctx, resource, destDir, n, true); // overwrite local files
+        if (n > 0) LOG_CLI("\n");
+        return r;
+    }
+
+    return -1;
+}
+
 int pullProjectConfig(const PullContext &ctx, Project &p)
 {
     // The object of the config itself is supposed already pulled.
     // Now pull the refs/project.
 
     // First, download the ref
-    std::string localTmp = p.getTmpDir() + "/.download";
+    std::string localTmp = ctx.getTmpDir() + "/.download";
     std::string url = ctx.rooturl + "/" + p.getUrlName() + "/" + RSRC_PROJECT_CONFIG;
     int r = HttpRequest::downloadFile(ctx.httpCtx, url, localTmp);
     if (r != 0) {
@@ -692,6 +735,7 @@ int pullProjectConfig(const PullContext &ctx, Project &p)
         return -1;
     }
 
+    unlink(localTmp.c_str());
     trim(id);
 
     // Check if it is different from the present config
@@ -719,7 +763,7 @@ int pullProjectConfig(const PullContext &ctx, Project &p)
     return r;
 }
 
-int pullProject(const PullContext &pullCtx, Project &p)
+static int pullProject(const PullContext &pullCtx, Project &p, bool doPullTemplates)
 {
     LOG_CLI("Pulling project: %s\n", p.getName().c_str());
 
@@ -754,6 +798,13 @@ int pullProject(const PullContext &pullCtx, Project &p)
     // pull predefined views
     pullProjectViews(pullCtx, p);
 
+    if (doPullTemplates) {
+        // pull templates
+        std::string resource = "/" + p.getUrlName() + "/" RSRC_SMIP "/" P_TEMPLATES;
+        std::string localTemplatesDir = p.getPath() + "/" RSRC_SMIP "/" P_TEMPLATES;
+        pullTemplates(pullCtx, resource, localTemplatesDir);
+    }
+
     // pull tags
     //LOG_ERROR("Pull project tags not implemented yet");
 
@@ -765,9 +816,10 @@ int pullProject(const PullContext &pullCtx, Project &p)
   * - pull entries
   * - pull files
   *
-  * Things not pulled: tags, files in html, public,...
+  * @param all
+  *     Also pull: tags, public, templates
   */
-int pullProjects(const PullContext &pullCtx)
+int pullProjects(const PullContext &pullCtx, bool all)
 {
     // Load all local projects
     int r = dbLoad(pullCtx.localRepo.c_str());
@@ -796,12 +848,25 @@ int pullProjects(const PullContext &pullCtx)
             std::string destLocal = pullCtx.localRepo + "/" + *projectName;
             LOG_CLI("Pulling new project: %s\n", projectName->c_str());
             int counter = 0;
-            int r = cloneFiles(pullCtx, resource, destLocal, counter);
+            int r = cloneFiles(pullCtx, resource, destLocal, counter, false);
             if (counter > 0) LOG_CLI("\n");
             if (r < 0) return r;
         } else {
-            pullProject(pullCtx, *p);
+            pullProject(pullCtx, *p, all);
         }
+    }
+    if (all) {
+
+        LOG_CLI("Pulling repo templates\n");
+        std::string resource = "/" PATH_REPO "/" P_TEMPLATES;
+        std::string localTemplatesDir = pullCtx.localRepo + "/" PATH_REPO "/" P_TEMPLATES;
+        r = pullTemplates(pullCtx, resource, localTemplatesDir);
+        if (r < 0) return r;
+
+
+        LOG_CLI("Pulling 'public'\n");
+        r = pullPublic(pullCtx);
+        if (r < 0) return r;
     }
     return 0; //ok
 }
@@ -929,6 +994,8 @@ int cmdClone(int argc, char * const *argv)
     HttpClientContext ctx;
 
     int c;
+    // TODO use Args instead of getopt
+
     int optionIndex = 0;
     struct option longOptions[] = {
         {"user", 1, 0, 0},
@@ -1028,6 +1095,72 @@ int cmdClone(int argc, char * const *argv)
     return 0;
 }
 
+/** Sign-in or reuse existing cookie
+  *
+  * @param username
+  *    Optional. If not given, try to use the cookie.
+  *
+  *
+  * @param ctx IN/OUT
+  */
+static int establishSession(const char *dir, const char *username, const char *password, PullContext &ctx)
+{
+    curl_global_init(CURL_GLOBAL_ALL);
+
+    // get the remote url from local configuration file
+    std::string url = loadUrl(dir);
+    if (url.empty()) {
+        LOG_CLI("Cannot get remote url.\n");
+        return -1;
+    }
+
+    ctx.rooturl = url;
+
+    bool redoSigin = false;
+
+    std::string user;
+    if (!username) {
+        // check if the sessid is valid
+        ctx.httpCtx.cookieSessid = loadSessid(dir);
+        int r = testSessid(url, ctx.httpCtx);
+
+        if (r < 0) {
+            // failed (session may have expired), then prompt for user name/password
+            LOG_CLI("Session not valid. You must sign-in again.\n");
+            user = getString("Username: ", false);
+
+            // and redo the signing-in
+            redoSigin = true;
+        }
+
+    } else {
+        // do the signing-in with the given username / password
+        redoSigin = true;
+        user = username;
+    }
+
+    if (redoSigin) {
+
+        std::string pass;
+        if (!password) pass = getString("Password: ", true);
+        else pass = password;
+
+        ctx.httpCtx.cookieSessid = signin(url, user, pass, ctx.httpCtx);
+        if (!ctx.httpCtx.cookieSessid.empty()) {
+            storeSessid(dir, ctx.httpCtx.cookieSessid);
+            storeUrl(dir, url);
+        }
+    }
+
+    LOG_DEBUG("cookieSessid: %s", ctx.httpCtx.cookieSessid.c_str());
+
+    if (ctx.httpCtx.cookieSessid.empty()) {
+        fprintf(stderr, "Authentication failed\n");
+        return -1; // authentication failed
+    }
+    return 0;
+}
+
 int helpGet()
 {
     LOG_CLI("Usage: smit get <root-url> <resource>\n"
@@ -1054,6 +1187,8 @@ int cmdGet(int argc, char * const *argv)
     HttpClientContext ctx;
 
     int c;
+    // TODO use Args instead of getopt
+
     int optionIndex = 0;
     struct option longOptions[] = {
         {"use-signin-cookie", 0, 0, 0},
@@ -1102,6 +1237,8 @@ int cmdGet(int argc, char * const *argv)
         LOG_CLI("Missing url.\n");
         return helpGet();
     }
+
+    // TODO use establishSession
 
     curl_global_init(CURL_GLOBAL_ALL);
     std::string password;
@@ -1166,6 +1303,7 @@ Args *setupPullOptions()
     args->setOpt("cacert", 0,
                  "specify the CA certificate, in PEM format, for authenticating the server\n"
                  "(HTTPS only)", 1);
+    args->setOpt("all", 'a', "also pull 'public' and templates", 0);
     args->setNonOptionLimit(1);
     return args;
 }
@@ -1182,11 +1320,10 @@ int cmdPull(int argc, char **argv)
     PullContext pullCtx;
     Args *args = setupPullOptions();
     args->parse(argc-1, argv+1);
-    std::string username;
-    const char *u = args->get("user");
-    if (u) username = u;
-    else username = "";
-    const char *passwd = args->get("passwd");
+    const char *username = args->get("user");
+    const char *password = args->get("passwd");
+    bool pullAll = false;
+    if (args->get("all")) pullAll = true;
     const char *resolve = args->get("resolve-conflict");
     if (!resolve) pullCtx.mergeStrategy = MERGE_INTERACTIVE;
     else if (0 == strcmp(resolve, "keep-local")) pullCtx.mergeStrategy = MERGE_KEEP_LOCAL;
@@ -1216,56 +1353,18 @@ int cmdPull(int argc, char **argv)
         exit(1);
     }
 
-    curl_global_init(CURL_GLOBAL_ALL);
-    std::string password;
-    bool redoSigin = false;
-
-    if (username.empty()) {
-        // check if the sessid is valid
-        pullCtx.httpCtx.cookieSessid = loadSessid(dir);
-        int r = testSessid(url, pullCtx.httpCtx);
-
-        if (r < 0) {
-            // failed (session may have expired), then prompt for user name/password
-            username = getString("Username: ", false);
-            password = getString("Password: ", true);
-
-            // and redo the signing-in
-            redoSigin = true;
-        }
-
-    } else {
-        // do the signing-in with the given username / password
-        password = passwd;
-        redoSigin = true;
-    }
-
-    if (redoSigin) {
-        pullCtx.httpCtx.cookieSessid = signin(url, username, password, pullCtx.httpCtx);
-        if (!pullCtx.httpCtx.cookieSessid.empty()) {
-            storeSessid(dir, pullCtx.httpCtx.cookieSessid);
-            storeUrl(dir, url);
-        }
-    }
-
-    LOG_DEBUG("cookieSessid: %s", pullCtx.httpCtx.cookieSessid.c_str());
-
-    if (pullCtx.httpCtx.cookieSessid.empty()) {
-        fprintf(stderr, "Authentication failed\n");
-        return 1; // authentication failed
-    }
+    int r = establishSession(dir, username, password, pullCtx);
+    if (r != 0) return 1;
 
     // pull new entries and new attached files of all projects
     pullCtx.rooturl = url;
     pullCtx.localRepo = dir;
-    int r = pullProjects(pullCtx);
+    r = pullProjects(pullCtx, pullAll);
 
     curl_global_cleanup();
 
     if (r < 0) return 1;
     else return 0;
-
-
 }
 
 int getHead(const PullContext &pushCtx, const std::string &url)
@@ -1548,70 +1647,6 @@ int pushProjects(const PullContext &pushCtx, bool dryRun)
     return 0;
 }
 
-
-/** Sign-in or reuse existing cookie
-  *
-  * @param username
-  *    Optional. If not given, try to use the cookie.
-  *
-  *
-  * @param ctx IN/OUT
-  */
-int establishSession(const char *dir, const char *username, const char *password, PullContext &ctx)
-{
-    curl_global_init(CURL_GLOBAL_ALL);
-
-    // get the remote url from local configuration file
-    std::string url = loadUrl(dir);
-    if (url.empty()) {
-        LOG_CLI("Cannot get remote url.\n");
-        return -1;
-    }
-
-    ctx.rooturl = url;
-
-    bool redoSigin = false;
-
-    std::string user;
-    std::string pass;
-    if (!username) {
-        // check if the sessid is valid
-        ctx.httpCtx.cookieSessid = loadSessid(dir);
-        int r = testSessid(url, ctx.httpCtx);
-
-        if (r < 0) {
-            // failed (session may have expired), then prompt for user name/password
-            LOG_CLI("Session not valid. You must sign-in again.\n");
-            user = getString("Username: ", false);
-
-            // and redo the signing-in
-            redoSigin = true;
-        }
-
-    } else {
-        // do the signing-in with the given username / password
-        redoSigin = true;
-        user = username;
-    }
-
-    if (redoSigin && !password) pass = getString("Password: ", true);
-
-    if (redoSigin) {
-        ctx.httpCtx.cookieSessid = signin(url, user, pass, ctx.httpCtx);
-        if (!ctx.httpCtx.cookieSessid.empty()) {
-            storeSessid(dir, ctx.httpCtx.cookieSessid);
-            storeUrl(dir, url);
-        }
-    }
-
-    LOG_DEBUG("cookieSessid: %s", ctx.httpCtx.cookieSessid.c_str());
-
-    if (ctx.httpCtx.cookieSessid.empty()) {
-        fprintf(stderr, "Authentication failed\n");
-        return -1; // authentication failed
-    }
-    return 0;
-}
 
 void terminateSession()
 {

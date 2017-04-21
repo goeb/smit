@@ -4,6 +4,7 @@ v3.4.1
 	- zip-download: add missing embedded CSS styles
 	- repository config: editDelay and sessionDuration
 	- smit-push: fix error 400 when versions of client and server differ
+	- smit-pull: option -a to pull also templates and 'public'
 
 v3.4.0, 3 Jan 2017
 	- add email & gpg key in page user
