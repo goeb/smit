@@ -1146,33 +1146,6 @@ int cmdGet(int argc, char * const *argv)
     return 0;
 }
 
-int helpPull_old()
-{
-    LOG_CLI("Usage: smit pull [<local-repository>]\n"
-           "\n"
-           "  Incorporates changes from a remote repository into the local copy.\n"
-           "\n"
-           "Options:\n"
-           "  --user <user> --passwd <password> \n"
-           "      Specify the user name and the password.\n"
-           "\n"
-           "  --resolve-conflict <policy>\n"
-           "      Resolve conflictual pulling automatically (no interactive choice).\n"
-           "      Possible values for <policy>:\n"
-           "        keep-local : local modifications shall be kept as-is\n"
-           "        drop-local : local modifications shall be deleted\n"
-           "\n"
-           "TLS Options:\n"
-           "  --cacert <CA-certificate>\n"
-           "      CA certificate, in PEM format, relevant only when the server runs TLS.\n"
-           "\n"
-           "  --insecure\n"
-           "      Do not verify the server certificate against the local CA certificates."
-           "\n"
-           );
-    return 1;
-}
-
 Args *setupPullOptions()
 {
     Args *args = new Args();
