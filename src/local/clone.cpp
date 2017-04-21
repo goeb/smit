@@ -984,11 +984,6 @@ int cmdClone(int argc, char * const *argv)
         LOG_CLI("Cannot clone: '%s' already exists\n", dir);
         return 1;
     }
-    int r = mkdir(dir);
-    if (r != 0) {
-        LOG_CLI("Cannot create directory '%s': %s\n", dir, strerror(errno));
-        return 1;
-    }
 
     if (username.empty()) username = getString("Username: ", false);
 
@@ -1009,6 +1004,12 @@ int cmdClone(int argc, char * const *argv)
         exit(1);
     }
     ctx.cookieSessid = cookieSessid;
+
+    int r = mkdir(dir);
+    if (r != 0) {
+        LOG_CLI("Cannot create directory '%s': %s\n", dir, strerror(errno));
+        return 1;
+    }
 
     // create persistent configuration of the local clone
     createSmitDir(dir);
