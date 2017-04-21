@@ -43,12 +43,10 @@ const std::string Entry::EMPTY_MESSAGE("");
 
 /** Load an entry from a file
   *
-  * By default the entry id is the basename of the file, but
-  * If id is given, then :
-  * - it specifies the id of the new entry (and the basename is not taken as id)
-  * - the sha1 of the file is checked
+  * @param id
+  *     id of the new Entry instance to be created
   */
-Entry *Entry::loadEntry(const std::string &path, const std::string &id, bool checkId)
+Entry *Entry::loadEntry(const std::string &path, const std::string &id)
 {
     // load a given entry
     std::string buf;
@@ -60,13 +58,10 @@ Entry *Entry::loadEntry(const std::string &path, const std::string &id, bool che
         return 0;
     }
 
-    // check the sha1, if id is given
-    if (checkId) {
-        std::string hash = getSha1(buf);
-        if (0 != hash.compare(id)) {
-            LOG_ERROR("Hash does not match: %s / %s", path.c_str(), id.c_str());
-            return 0;
-        }
+    // log if sha1 does not match
+    std::string hash = getSha1(buf);
+    if (0 != hash.compare(id)) {
+        LOG_ERROR("Hash does not match: path=%s, id=%s, sha1=%s", path.c_str(), id.c_str(), hash.c_str());
     }
 
     Entry *e = new Entry;
@@ -95,16 +90,6 @@ Entry *Entry::loadEntry(const std::string &path, const std::string &id, bool che
         else if (key == K_SMIT_VERSION) smitVersion = firstValue;
         else {
             e->properties[key] = *line;
-        }
-    }
-
-    if (checkId) {
-        // check again the sha1, against the result of serialize()
-        std::string hash = getSha1(e->serialize());
-        if (0 != hash.compare(id)) {
-            LOG_ERROR("Hash does not match: %s / %s", path.c_str(), id.c_str());
-            delete e;
-            return 0;
         }
     }
 

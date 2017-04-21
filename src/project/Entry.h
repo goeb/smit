@@ -80,7 +80,7 @@ public:
 
     // methods
     Entry() : ctime(0), issue(0), next(0), prev(0), message(&EMPTY_MESSAGE) {}
-    static Entry *loadEntry(const std::string &path, const std::string &id, bool checkId=false);
+    static Entry *loadEntry(const std::string &path, const std::string &id);
     void setId();
     void updateMessage();
     std::string serialize() const;

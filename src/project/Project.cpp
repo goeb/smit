@@ -1463,7 +1463,7 @@ int Project::pushEntry(std::string &issueId, const std::string &entryId,
               username.c_str(), tmpPath.c_str());
 
     // load the file as an entry
-    Entry *e = Entry::loadEntry(tmpPath, entryId, true); // check also that the sha1s match
+    Entry *e = Entry::loadEntry(tmpPath, entryId);
     if (!e) return -1;
 
     // check that the username is the same as the author of the entry

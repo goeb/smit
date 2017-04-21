@@ -110,7 +110,7 @@ Issue *Issue::load(const std::string &objectsDir, const std::string &latestEntry
     int error = 0;
     while (entryid.size() && entryid != K_PARENT_NULL) {
         std::string entryPath = objectsDir + '/' + Entry::getSubpath(entryid);
-        Entry *e = Entry::loadEntry(entryPath, entryid, false);
+        Entry *e = Entry::loadEntry(entryPath, entryid);
         if (!e) {
             LOG_ERROR("Cannot load entry '%s'", entryPath.c_str());
             error = 1;
