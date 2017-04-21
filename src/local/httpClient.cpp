@@ -73,7 +73,8 @@ int HttpRequest::downloadInMemory(const HttpClientContext &ctx,
 /** Download a file into local memory
   *
   * @return
-  *     0, success
+  *     0, regular file downloaded successfully
+  *     1, directory listing downloaded successfully
   *    -1, error
   */
 int HttpRequest::downloadInMemory(std::string &data)
@@ -84,7 +85,10 @@ int HttpRequest::downloadInMemory(std::string &data)
 
     performRequest();
 
-    if (httpStatusCode == 200) return 0;
+    if (httpStatusCode == 200) {
+        if (isDirectory) return 1;
+        else return 0;
+    }
 
     return -1;
 }
