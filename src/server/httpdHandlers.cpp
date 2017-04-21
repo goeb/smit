@@ -1419,6 +1419,8 @@ void httpIssuesAccrossProjects(const RequestContext *req, const User &u, const s
   */
 int httpGetSmitRepo(const RequestContext *req, const User &u, std::string uri)
 {
+    LOG_DIAG("httpGetSmitRepo: user=%s uri=%s", u.username.c_str(), uri.c_str());
+
     if (u.superadmin) return httpGetFile(req); // Superadmin gets all
 
     std::string subdir = popToken(uri, '/');
@@ -1445,13 +1447,13 @@ int httpGetSmitRepo(const RequestContext *req, const User &u, std::string uri)
         req->printf("%s\n", u.serializePermissions().c_str());
         return REQUEST_COMPLETED;
 
-    } else if (subdir != P_TEMPLATES) {
-        sendHttpHeader400(req, "");
-        return REQUEST_COMPLETED;
+    } else if (subdir == P_TEMPLATES) {
+        // serve the template file
+        return httpGetFile(req);
     }
 
-    // serve the template file
-    return httpGetFile(req);
+    sendHttpHeader403(req);
+    return REQUEST_COMPLETED;
 }
 
 
