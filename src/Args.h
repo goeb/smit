@@ -11,6 +11,10 @@ struct ArgOptionSpec {
     char shortname;
     const char *help;
     int argnum; // number of arguments (0 or 1)
+
+    bool operator<(const ArgOptionSpec &other) const;
+    std::string getKey() const;
+
 };
 
 /*
@@ -45,8 +49,8 @@ private:
     std::list<ArgOptionSpec> optionSpecs; // specification of options
     std::map<std::string, std::string> optionValues;
     int nonOptionLimit;
-    const ArgOptionSpec *getOptSpec(const char c);
-    const ArgOptionSpec *getOptSpec(const char *s);
+    const ArgOptionSpec *getOptSpec(const char c) const;
+    const ArgOptionSpec *getOptSpec(const char *s) const;
     int grabOption(int argc, char **argv, const ArgOptionSpec *aos, int pos, const char *optName);
     std::vector<std::string> nonOptionvalues;
     size_t consumedNonOptionArgOffset;

@@ -23,6 +23,19 @@
 #include "utils/stringTools.h"
 
 
+bool ArgOptionSpec::operator<(const ArgOptionSpec &other) const
+{
+    return getKey() < other.getKey();
+}
+
+std::string ArgOptionSpec::getKey() const
+{
+    std::string key = "-";
+    if (shortname) key += shortname;
+    key += "-";
+    if (longname) key += longname;
+    return key;
+}
 
 Args::Args()
 {
@@ -36,13 +49,16 @@ Args::Args()
   */
 void Args::setOpt(const char *longname, char shortname, const char *help, int argnum)
 {
+    if (!longname && !shortname) return;
+
     ArgOptionSpec as;
     as.longname = longname;
     as.shortname = shortname;
     as.help = help;
     as.argnum = argnum;
 
-    if (longname || shortname) optionSpecs.push_back(as);
+    optionSpecs.push_back(as);
+    optionSpecs.sort();
 }
 
 /** Specify how many arguments maximum (other that options)
@@ -54,7 +70,7 @@ void Args::setNonOptionLimit(int n)
 
 /** get specification of a short named option
   */
-const ArgOptionSpec *Args::getOptSpec(const char c)
+const ArgOptionSpec *Args::getOptSpec(const char c) const
 {
     std::list<ArgOptionSpec>::const_iterator os;
     FOREACH(os, optionSpecs) {
@@ -65,7 +81,7 @@ const ArgOptionSpec *Args::getOptSpec(const char c)
 
 /** get specification of a long named option
   */
-const ArgOptionSpec *Args::getOptSpec(const char *s)
+const ArgOptionSpec *Args::getOptSpec(const char *s) const
 {
     if (!s || !s[0]) return 0;
 
@@ -76,16 +92,6 @@ const ArgOptionSpec *Args::getOptSpec(const char *s)
     }
     return 0;
 }
-
-static std::string getKey(const ArgOptionSpec *aos)
-{
-    std::string key = "-";
-    if (aos->shortname) key += aos->shortname;
-    key += "-";
-    if (aos->longname) key += aos->longname;
-    return key;
-}
-
 
 /** Grab the options starting at position 'pos'
   *
@@ -107,12 +113,12 @@ int Args::grabOption(int argc, char **argv, const ArgOptionSpec *aos, int pos, c
 
     int i = 0; // number of arguments consumed
     if (n == 0) {
-        std::string key = getKey(aos);
+        std::string key = aos->getKey();
         optionValues[key] = "yes";
 
     } else while (i < n) { // TODO if n > 1, not functional, and not needed...
         // generate a key, used for
-        std::string key = getKey(aos);
+        std::string key = aos->getKey();
         optionValues[key] = argv[pos+i];
         i++;
     }
@@ -172,6 +178,7 @@ void Args::usage(bool withDescription) const
     }
     printf("\n");
     printf("Options:\n");
+
     std::list<ArgOptionSpec>::const_iterator os;
     FOREACH(os, optionSpecs) {
         if (!os->shortname) printf(INDENT "--%s", os->longname);
@@ -196,7 +203,7 @@ const char *Args::get(const char *optName)
 {
     const ArgOptionSpec *aos = getOptSpec(optName);
     if (!aos) return 0;
-    std::string key = getKey(aos);
+    std::string key = aos->getKey();
     std::map<std::string, std::string>::const_iterator i = optionValues.find(key);
     if (i == optionValues.end()) return 0;
     return i->second.c_str();
