@@ -1,0 +1,181 @@
+>>> ../smit get --user tuser1 --passwd tpasswd1 http://127.0.0.1:8099 /
+p1
+public
+.smit
+>>> ../smit get --user tuser1 --passwd tpasswd1 http://127.0.0.1:8099 /public
+style.css
+logo.png
+general.js
+print.css
+>>> ../smit get --user tuser1 --passwd tpasswd1 http://127.0.0.1:8099 /.smit
+templates
+users
+>>> ../smit get --user tuser1 --passwd tpasswd1 http://127.0.0.1:8099 /.smit/users
+permissions
+>>> ../smit get --user tuser1 --passwd tpasswd1 http://127.0.0.1:8099 /.smit/users/permissions
+setperm tuser1 rw p1
+
+>>> ../smit get --user tuser1 --passwd tpasswd1 http://127.0.0.1:8099 /.smit/users/auth
+403 Forbidden
+>>> ../smit get --user tuser1 --passwd tpasswd1 http://127.0.0.1:8099 /.smit/templates
+users.html
+header.html
+entries.html
+view.html
+header_fixed.html
+issuesAccross.html
+header_no_project_fixed.html
+header_no_project.html
+stat.html
+print_preview.js
+issues.html
+user.html
+views.html
+projects.html
+project.html
+newIssue.html
+header_global_menu.html
+signin.html
+issue.html
+>>> ../smit clone --user tuser1 --passwd tpasswd1 http://127.0.0.1:8099 clone_x
+clone_x
+clone_x/public
+clone_x/public/style.css
+clone_x/public/logo.png
+clone_x/public/general.js
+clone_x/public/print.css
+clone_x/.tmp
+clone_x/.smit
+clone_x/.smit/users
+clone_x/.smit/users/permissions
+clone_x/.smit/remote
+clone_x/.smit/username
+clone_x/.smit/templates
+clone_x/.smit/templates/users.html
+clone_x/.smit/templates/header.html
+clone_x/.smit/templates/entries.html
+clone_x/.smit/templates/view.html
+clone_x/.smit/templates/header_fixed.html
+clone_x/.smit/templates/issuesAccross.html
+clone_x/.smit/templates/header_no_project_fixed.html
+clone_x/.smit/templates/header_no_project.html
+clone_x/.smit/templates/stat.html
+clone_x/.smit/templates/print_preview.js
+clone_x/.smit/templates/issues.html
+clone_x/.smit/templates/user.html
+clone_x/.smit/templates/views.html
+clone_x/.smit/templates/projects.html
+clone_x/.smit/templates/project.html
+clone_x/.smit/templates/newIssue.html
+clone_x/.smit/templates/header_global_menu.html
+clone_x/.smit/templates/signin.html
+clone_x/.smit/templates/issue.html
+clone_x/.smit/sessid
+clone_x/p1
+clone_x/p1/.smip
+clone_x/p1/.smip/objects
+clone_x/p1/.smip/objects/...
+clone_x/p1/.smip/objects/...
+clone_x/p1/.smip/objects/...
+clone_x/p1/.smip/objects/...
+clone_x/p1/.smip/objects/...
+clone_x/p1/.smip/objects/...
+clone_x/p1/.smip/templates
+clone_x/p1/.smip/tmp
+clone_x/p1/.smip/refs
+clone_x/p1/.smip/refs/project
+clone_x/p1/.smip/refs/issues
+clone_x/p1/.smip/refs/views
+>>> ../smit get --user tuser_super --passwd tpasswd_super http://127.0.0.1:8099 /
+p1
+public
+.smit
+>>> ../smit get --user tuser_super --passwd tpasswd_super http://127.0.0.1:8099 /public
+style.css
+logo.png
+general.js
+print.css
+>>> ../smit get --user tuser_super --passwd tpasswd_super http://127.0.0.1:8099 /.smit
+users
+templates
+>>> ../smit get --user tuser_super --passwd tpasswd_super http://127.0.0.1:8099 /.smit/users
+notifications
+permissions
+auth
+>>> ../smit get --user tuser_super --passwd tpasswd_super http://127.0.0.1:8099 /.smit/users/permissions
+setperm tuser1 rw p1
+setperm tuser_super superadmin
+>>> ../smit get --user tuser_super --passwd tpasswd_super http://127.0.0.1:8099 /.smit/users/auth
+adduser tuser1 -type sha1 ...
+adduser tuser_super -type sha1 ...
+>>> ../smit get --user tuser_super --passwd tpasswd_super http://127.0.0.1:8099 /.smit/templates
+users.html
+header.html
+entries.html
+view.html
+header_fixed.html
+issuesAccross.html
+header_no_project_fixed.html
+header_no_project.html
+stat.html
+print_preview.js
+issues.html
+user.html
+views.html
+projects.html
+project.html
+newIssue.html
+header_global_menu.html
+signin.html
+issue.html
+>>> ../smit clone --user tuser_super --passwd tpasswd_super http://127.0.0.1:8099 clone_x
+clone_x
+clone_x/public
+clone_x/public/style.css
+clone_x/public/logo.png
+clone_x/public/general.js
+clone_x/public/print.css
+clone_x/.tmp
+clone_x/.smit
+clone_x/.smit/users
+clone_x/.smit/users/notifications
+clone_x/.smit/users/permissions
+clone_x/.smit/users/auth
+clone_x/.smit/remote
+clone_x/.smit/username
+clone_x/.smit/templates
+clone_x/.smit/templates/users.html
+clone_x/.smit/templates/header.html
+clone_x/.smit/templates/entries.html
+clone_x/.smit/templates/view.html
+clone_x/.smit/templates/header_fixed.html
+clone_x/.smit/templates/issuesAccross.html
+clone_x/.smit/templates/header_no_project_fixed.html
+clone_x/.smit/templates/header_no_project.html
+clone_x/.smit/templates/stat.html
+clone_x/.smit/templates/print_preview.js
+clone_x/.smit/templates/issues.html
+clone_x/.smit/templates/user.html
+clone_x/.smit/templates/views.html
+clone_x/.smit/templates/projects.html
+clone_x/.smit/templates/project.html
+clone_x/.smit/templates/newIssue.html
+clone_x/.smit/templates/header_global_menu.html
+clone_x/.smit/templates/signin.html
+clone_x/.smit/templates/issue.html
+clone_x/.smit/sessid
+clone_x/p1
+clone_x/p1/.smip
+clone_x/p1/.smip/objects
+clone_x/p1/.smip/objects/...
+clone_x/p1/.smip/objects/...
+clone_x/p1/.smip/objects/...
+clone_x/p1/.smip/objects/...
+clone_x/p1/.smip/objects/...
+clone_x/p1/.smip/objects/...
+clone_x/p1/.smip/templates
+clone_x/p1/.smip/tmp
+clone_x/p1/.smip/refs
+clone_x/p1/.smip/refs/project
+clone_x/p1/.smip/refs/issues
+clone_x/p1/.smip/refs/views

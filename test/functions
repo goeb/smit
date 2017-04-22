@@ -8,6 +8,10 @@ PROJECT1=p1
 USER1=tuser1
 PASSWD1=tpasswd1
 
+# superadmin
+USER_SUPER=tuser_super
+PASSWD_SUPER=tpasswd_super
+
 # project 2
 PROJECT2=p2
 USER2=tuser2
@@ -25,14 +29,18 @@ initTest() {
 }
 
 # create a smit repository with 1 project
-initRepo() {
+initEmptyRepo() {
     mkdir $REPO
     $SMIT init $REPO
     $SMIT project -c $REPO/$PROJECT1
     $SMIT project $REPO/$PROJECT1 addProperty "freeText text"
 
     $SMIT user $USER1 --passwd $PASSWD1 --project $PROJECT1:rw -d $REPO
+    $SMIT user $USER_SUPER --passwd $PASSWD_SUPER --superadmin -d $REPO
+}
 
+initRepo() {
+    initEmptyRepo
     # create some entries
     # create issue 1
     $SMIT issue $REPO/$PROJECT1 -a - "summary=first issue"
