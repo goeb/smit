@@ -1,4 +1,4 @@
-v3.4.1
+v3.4.1, 23 April 2017
 	- search form: show labels instead of logical names of properties
 	- page entries: fix contents of column "Modification"
 	- zip-download: add missing embedded CSS styles
