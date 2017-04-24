@@ -1538,6 +1538,7 @@ int Project::pushEntry(std::string &issueId, const std::string &entryId,
 
     // insert the new entry in the issue
     i->addEntry(e);
+    if (e->isAmending()) i->consolidateAmendment(e);
 
     // add the new entry in the project
     int r = addPushedEntry(e, data);
