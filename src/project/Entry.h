@@ -81,6 +81,8 @@ public:
     // methods
     Entry() : ctime(0), issue(0), next(0), prev(0), message(&EMPTY_MESSAGE) {}
     static Entry *loadEntry(const std::string &path, const std::string &id);
+    static Entry *loadEntryFromBuffer(const std::string &data, const std::string &id);
+
     void setId();
     void updateMessage();
     std::string serialize() const;

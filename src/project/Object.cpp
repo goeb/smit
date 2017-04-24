@@ -74,10 +74,15 @@ std::string Object::getNextObject(ObjectIteraror &objectIt)
     }
 }
 
-
-/** Write an object into a database
+/** Write an object into a database, with a given id
   *
-  * @param[out] id
+  * @param objectsDir
+  *     destination directory
+  *
+  * @param data, size
+  *     octet string to be written, and its size
+  *
+  * @param id
   *    identifier of the stored object
   *
   * @return
@@ -86,9 +91,8 @@ std::string Object::getNextObject(ObjectIteraror &objectIt)
   *   -1 error,
   *   -2 error, sha1 conflict
   */
-int Object::write(const std::string &objectsDir, const char *data, size_t size, std::string &id)
+int Object::writeToId(const std::string &objectsDir, const char *data, size_t size, const std::string &id)
 {
-    id = getSha1(data, size);
     std::string path = objectsDir + "/" + getSubpath(id);
 
     LOG_DIAG("Write object: %s", path.c_str());
@@ -111,6 +115,24 @@ int Object::write(const std::string &objectsDir, const char *data, size_t size, 
         return -1;
     }
     return 0;
+}
+
+/** Write an object into a database
+  *
+  * @param[out] id
+  *    identifier of the stored object
+  *
+  * @return
+  *    0 ok, new object created
+  *    1 ok, file already exists
+  *   -1 error,
+  *   -2 error, sha1 conflict
+  */
+int Object::write(const std::string &objectsDir, const char *data, size_t size, std::string &id)
+{
+    id = getSha1(data, size);
+
+    return writeToId(objectsDir, data, size, id);
 }
 
 int Object::write(const std::string &objectsDir, const std::string &data, std::string &id)

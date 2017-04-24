@@ -57,17 +57,26 @@ Entry *Entry::loadEntry(const std::string &path, const std::string &id)
         LOG_ERROR("Cannot load entry '%s': %s", path.c_str(), strerror(errno));
         return 0;
     }
+    return loadEntryFromBuffer(buf, id);
+}
 
+/** Load an entry from a buffer
+  *
+  * @param id
+  *     id of the new Entry instance to be created
+  */
+Entry *Entry::loadEntryFromBuffer(const std::string &data, const std::string &id)
+{
     // log if sha1 does not match
-    std::string hash = getSha1(buf);
+    std::string hash = getSha1(data);
     if (0 != hash.compare(id)) {
-        LOG_ERROR("Hash does not match: path=%s, id=%s, sha1=%s", path.c_str(), id.c_str(), hash.c_str());
+        LOG_ERROR("Hash does not match: entry=%s, sha1=%s", id.c_str(), hash.c_str());
     }
 
     Entry *e = new Entry;
     e->id = id;
 
-    std::list<std::list<std::string> > lines = parseConfigTokens(buf.c_str(), buf.size());
+    std::list<std::list<std::string> > lines = parseConfigTokens(data.c_str(), data.size());
 
     std::list<std::list<std::string> >::iterator line;
     int lineNum = 0;

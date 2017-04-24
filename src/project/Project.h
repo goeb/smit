@@ -59,7 +59,7 @@ public:
     int addEntry(PropertiesMap properties, std::string &iid,
                  Entry *&entry, std::string username, IssueCopy &oldIssue);
     int pushEntry(std::string &issueId, const std::string &entryId,
-                  const std::string &user, const std::string &tmpPath);
+                  const std::string &user, const std::string &data);
 
     int amendEntry(const std::string &entryId, const std::string &msg,
                    Entry *&entryOut, const std::string &username, IssueCopy &oldIssue);
@@ -151,6 +151,7 @@ private:
     std::string allocateNewIssueId();
     void updateMaxIssueId(uint32_t i);
     int addNewEntry(Entry *e);
+    int addPushedEntry(Entry *e, const std::string &data);
     int load(); // load a project: config, views, entries, tags
     int loadConfig();
     int loadIssues();

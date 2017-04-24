@@ -29,6 +29,7 @@ public:
     static std::string getSubdir(const std::string &id);
     static std::string getNextObject(ObjectIteraror &objectIt);
 
+    static int writeToId(const std::string &objectsDir, const char *data, size_t size, const std::string &id);
     static int write(const std::string &objectsDir, const char *data, size_t size, std::string &id);
     static int write(const std::string &objectsDir, const std::string &data, std::string &id);
     static int load(const std::string &objectsDir, std::string &id, std::string &data);

@@ -1435,6 +1435,24 @@ int Project::addNewEntry(Entry *e)
     return r;
 }
 
+int Project::addPushedEntry(Entry *e, const std::string &data)
+{
+    // store the data (unchanged)
+    int ret = Object::writeToId(getObjectsDir(), data.data(), data.size(), e->id);
+    if (ret < 0) {
+        // error.
+        LOG_ERROR("Could not write pushed entry to disk");
+        return -1;
+    }
+
+    // add this entry in internal in-memory tables
+    ret = insertEntryInTable(e);
+    if (ret != 0) return ret; // already exists
+
+    return ret;
+}
+
+
 
 /** Push an uploaded entry in the database
   *
@@ -1456,14 +1474,13 @@ int Project::addNewEntry(Entry *e)
   *    -3 conflict that could be resolved by a pull (map to HTTP 409 Conflict)
   */
 int Project::pushEntry(std::string &issueId, const std::string &entryId,
-                       const std::string &username, const std::string &tmpPath)
+                       const std::string &username, const std::string &data)
 {
     LOG_FUNC();
-    LOG_DEBUG("pushEntry(%s, %s, %s, %s)", issueId.c_str(), entryId.c_str(),
-              username.c_str(), tmpPath.c_str());
+    LOG_DEBUG("pushEntry(%s, %s, %s, ...)", issueId.c_str(), entryId.c_str(), username.c_str());
 
     // load the file as an entry
-    Entry *e = Entry::loadEntry(tmpPath, entryId);
+    Entry *e = Entry::loadEntryFromBuffer(data, entryId);
     if (!e) return -1;
 
     // check that the username is the same as the author of the entry
@@ -1523,7 +1540,7 @@ int Project::pushEntry(std::string &issueId, const std::string &entryId,
     i->addEntry(e);
 
     // add the new entry in the project
-    int r = addNewEntry(e);
+    int r = addPushedEntry(e, data);
     if (r != 0) return -2;
 
     // store the new ref of the issue

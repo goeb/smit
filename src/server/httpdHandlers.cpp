@@ -2162,27 +2162,18 @@ void httpPushEntry(const RequestContext *req, Project &p, const std::string &iss
 
     LOG_DEBUG("Got upload data: %ld bytes", L(postData.size()));
 
-    // store the entry in a temporary location
-    std::string tmpPath = p.getTmpDir() + "/" + entryId;
-    int r = writeToFile(tmpPath, postData);
-    if (r != 0) {
-        std::string msg = "Failed to store pushed entry: %s" + entryId;
-        sendHttpHeader500(req, msg.c_str());
-        return;
-    }
-
     // insert the entry into the database
     std::string id = issueId;
-    r = p.pushEntry(id, entryId, u.username, tmpPath);
-    if (r == -1) {
+    int ret = p.pushEntry(id, entryId, u.username, postData);
+    if (ret == -1) {
         std::string msg = "Cannot push the entry";
         sendHttpHeader400(req, msg.c_str());
 
-    } else if (r == -2) {
+    } else if (ret == -2) {
         // Internal Server Error
         std::string msg = "pushEntry error";
         sendHttpHeader500(req, msg.c_str());
-    } else if (r == -3) {
+    } else if (ret == -3) {
         // HTTP 409 Conflict
         sendHttpHeader409(req);
 
@@ -2193,8 +2184,6 @@ void httpPushEntry(const RequestContext *req, Project &p, const std::string &iss
         // the client that it has been renamed (renumbered)
         req->printf("issue: %s\r\n", id.c_str());
     }
-
-    unlink(tmpPath.c_str()); // clean-up the tmp file
 }
 
 /** Remove empty values for multiselect properties
