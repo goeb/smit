@@ -87,38 +87,6 @@ struct PullContext {
     inline std::string getTmpDir() const { return localRepo + "/.tmp"; }
 };
 
-
-
-int helpClone()
-{
-    LOG_CLI("Usage: smit clone [options] <url> <directory>\n"
-           "\n"
-           "  Clone a smit repository into a new directory.\n"
-           "\n"
-           "Options:\n"
-           "  <url>        The (possibly remote) repository to clone from.\n"
-           "  <directory>  The name of a new directory to clone into. Cloning into an\n"
-           "               existing directory is only allowed if the directory is empty.\n"
-           "\n"
-           "  --user <user> --passwd <password> \n"
-           "      Give the user name and the password.\n"
-           "\n"
-           "TLS Options:\n"
-           "  --cacert <CA-certificate>\n"
-           "      CA certificate, in PEM format, relevant only when the server runs TLS.\n"
-           "\n"
-           "  --insecure\n"
-           "      Do not verify the server certificate against the local CA certificates."
-           "\n"
-           "Example:\n"
-           "  smit clone http://example.com:8090 localDir\n"
-           "\n"
-           );
-    return 1;
-}
-
-
-
 int testSessid(const std::string url, const HttpClientContext &ctx)
 {
     LOG_DEBUG("testSessid(%s, %s)", url.c_str(), ctx.cookieSessid.c_str());
@@ -890,7 +858,6 @@ void createSmitDir(const std::string &dir)
         fprintf(stderr, "Abort.\n");
         exit(1);
     }
-
 }
 
 /** Sign-in and return the sessid cookie
@@ -985,106 +952,96 @@ std::string loadUrl(const std::string &dir)
     return url;
 }
 
-int cmdClone(int argc, char * const *argv)
+Args *setupCloneOptions()
 {
-    std::string username;
-    const char *passwd = 0;
-    const char *url = 0;
-    const char *dir = 0;
-    HttpClientContext ctx;
+    Args *args = new Args();
+    args->setDescription("Clones a repository into a newly created directory.\n"
+                         "\n"
+                         "Args:\n"
+                         "  <url>        The repository to clone from.\n"
+                         "  <directory>  The name of a new directory to clone into.\n"
+                         "\n"
+                         "Example:\n"
+                         "  smit clone http://example.com:8090 localDir\n"
+                         );
+    args->setUsage("smit clone [options] <url> <directory>");
+    args->setOpt("verbose", 'v', "be verbose", 0);
+    args->setOpt("user", 0, "specify user name", 1);
+    args->setOpt("passwd", 0, "specify password", 1);
+    args->setOpt("insecure", 0, "do not verify the server certificate", 0);
+    args->setOpt("cacert", 0,
+                 "specify the CA certificate, in PEM format, for authenticating the server\n"
+                 "(HTTPS only)", 1);
+    args->setNonOptionLimit(2);
+    return args;
+}
 
-    int c;
-    // TODO use Args instead of getopt
+int helpClone(const Args *args)
+{
+    if (!args) args = setupCloneOptions();
+    args->usage(true);
+    return 1;
+}
 
-    int optionIndex = 0;
-    struct option longOptions[] = {
-        {"user", 1, 0, 0},
-        {"passwd", 1, 0, 0},
-        {"insecure", 0, 0, 0},
-        {"cacert", 1, 0, 0},
-        {NULL, 0, NULL, 0}
-    };
-    while ((c = getopt_long(argc, argv, "v", longOptions, &optionIndex)) != -1) {
-        switch (c) {
-        case 0: // manage long options
-            if (0 == strcmp(longOptions[optionIndex].name, "user")) {
-                username = optarg;
-            } else if (0 == strcmp(longOptions[optionIndex].name, "passwd")) {
-                passwd = optarg;
-            } else if (0 == strcmp(longOptions[optionIndex].name, "insecure")) {
-                ctx.tlsInsecure = true;
-            } else if (0 == strcmp(longOptions[optionIndex].name, "cacert")) {
-                ctx.tlsCacert = optarg;
-            }
-            break;
-        case 'v':
-            setLoggingLevel(LL_DEBUG);
-            break;
-        case '?': // incorrect syntax, a message is printed by getopt_long
-            return helpClone();
-            break;
-        default:
-            LOG_CLI("?? getopt returned character code 0x%x ??\n", c);
-            return helpClone();
-        }
+
+int cmdClone(int argc, char **argv)
+{
+    HttpClientContext httpCtx;
+    Args *args = setupCloneOptions();
+    args->parse(argc-1, argv+1);
+    const char *pUsername = args->get("user");
+    const char *pPasswd = args->get("passwd");
+    if (args->get("insecure")) httpCtx.tlsInsecure = true;
+    httpCtx.tlsCacert = args->get("cacert");
+    if (args->get("verbose")) {
+        setLoggingLevel(LL_DEBUG);
+    } else {
+        setLoggingLevel(LL_ERROR);
     }
+
     // manage non-option ARGV elements
-    if (optind < argc) {
-        url = argv[optind];
-        optind++;
+    const char *url = args->pop();
+    const char *localdir = args->pop();
+    if (!url || !localdir) {
+        LOG_CLI("Missing argument.\n");
+        exit(1);
     }
-    if (optind < argc) {
-        dir = argv[optind];
-        optind++;
-    }
-    if (optind < argc) {
-        LOG_CLI("Too many arguments.\n\n");
-        return helpClone();
-    }
-
-    if (!url || !dir) {
-        LOG_CLI("You must specify a repository to clone and a directory.\n\n");
-        return helpClone();
-    }
-
-    if (fileExists(dir)) {
-        LOG_CLI("Cannot clone: '%s' already exists\n", dir);
-        return 1;
-    }
-
-    if (username.empty()) username = getString("Username: ", false);
-
-    std::string password;
-
-    if (passwd) password = passwd;
-    else password = getString("Password: ", true);
 
     setLoggingOption(LO_CLI);
 
+    if (fileExists(localdir)) {
+        LOG_CLI("Cannot clone: '%s' already exists\n", localdir);
+        exit(1);
+    }
+
+    std::string username;
+    std::string passwd;
+
+    if (!pUsername) username = getString("Username: ", false);
+    if (!pPasswd) passwd = getString("Password: ", true);
+
     curl_global_init(CURL_GLOBAL_ALL);
 
-    std::string cookieSessid = signin(url, username, password, ctx);
-    LOG_DEBUG("cookieSessid: %s", cookieSessid.c_str());
+    httpCtx.cookieSessid = signin(url, username, passwd, httpCtx);
 
-    if (cookieSessid.empty()) {
+    if (httpCtx.cookieSessid.empty()) {
         fprintf(stderr, "Authentication failed\n");
         exit(1);
     }
-    ctx.cookieSessid = cookieSessid;
 
-    int r = mkdir(dir);
+    int r = mkdir(localdir);
     if (r != 0) {
-        LOG_CLI("Cannot create directory '%s': %s\n", dir, strerror(errno));
-        return 1;
+        LOG_CLI("Cannot create directory '%s': %s\n", localdir, strerror(errno));
+        exit(1);
     }
 
     // create persistent configuration of the local clone
-    createSmitDir(dir);
-    storeSessid(dir, ctx.cookieSessid);
-    storeUsername(dir, username);
-    storeUrl(dir, url);
+    createSmitDir(localdir);
+    storeSessid(localdir, httpCtx.cookieSessid);
+    storeUsername(localdir, username);
+    storeUrl(localdir, url);
 
-    r = getProjects(url, dir, ctx);
+    r = getProjects(url, localdir, httpCtx);
     if (r < 0) {
         fprintf(stderr, "Clone failed. Abort.\n");
         exit(1);

@@ -4,8 +4,8 @@
 #include "Args.h"
 
 
-int cmdClone(int argc, char *const*argv);
-int helpClone();
+int cmdClone(int argc, char **argv);
+int helpClone(const Args *args);
 
 int cmdPull(int argc, char **argv);
 int helpPull(const Args *args);
