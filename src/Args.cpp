@@ -132,7 +132,7 @@ void Args::parse(int argc, char **argv)
     while (i < argc) {
         std::string arg = argv[i];
 
-        if (arg == "-h" || arg == "--help") usage();
+        if (arg == "-h" || arg == "--help") usage(true);
 
         if (!stopOpt && (arg == "--") ) stopOpt = true;
 
