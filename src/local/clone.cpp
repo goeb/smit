@@ -87,6 +87,11 @@ struct PullContext {
     inline std::string getTmpDir() const { return localRepo + "/.tmp"; }
 };
 
+static void terminateSession()
+{
+    curl_global_cleanup();
+}
+
 int testSessid(const std::string url, const HttpClientContext &ctx)
 {
     LOG_DEBUG("testSessid(%s, %s)", url.c_str(), ctx.cookieSessid.c_str());
@@ -1018,7 +1023,9 @@ int cmdClone(int argc, char **argv)
     std::string passwd;
 
     if (!pUsername) username = getString("Username: ", false);
+    else username = pUsername;
     if (!pPasswd) passwd = getString("Password: ", true);
+    else passwd = pPasswd;
 
     curl_global_init(CURL_GLOBAL_ALL);
 
@@ -1047,7 +1054,7 @@ int cmdClone(int argc, char **argv)
         exit(1);
     }
 
-    curl_global_cleanup();
+    terminateSession();
 
     return 0;
 }
@@ -1060,18 +1067,18 @@ int cmdClone(int argc, char **argv)
   *
   * @param ctx IN/OUT
   */
-static int establishSession(const char *dir, const char *username, const char *password, PullContext &ctx)
+static int establishSession(const char *dir, const char *username, const char *password, PullContext &ctx, bool store)
 {
     curl_global_init(CURL_GLOBAL_ALL);
 
-    // get the remote url from local configuration file
-    std::string url = loadUrl(dir);
-    if (url.empty()) {
-        LOG_CLI("Cannot get remote url.\n");
-        return -1;
+    if (ctx.rooturl.empty()) {
+        // get the remote root url from local configuration file
+        ctx.rooturl = loadUrl(dir);
+        if (ctx.rooturl.empty()) {
+            LOG_CLI("Cannot get remote url.\n");
+            return -1;
+        }
     }
-
-    ctx.rooturl = url;
 
     bool redoSigin = false;
 
@@ -1079,7 +1086,7 @@ static int establishSession(const char *dir, const char *username, const char *p
     if (!username) {
         // check if the sessid is valid
         ctx.httpCtx.cookieSessid = loadSessid(dir);
-        int r = testSessid(url, ctx.httpCtx);
+        int r = testSessid(ctx.rooturl, ctx.httpCtx);
 
         if (r < 0) {
             // failed (session may have expired), then prompt for user name/password
@@ -1102,10 +1109,10 @@ static int establishSession(const char *dir, const char *username, const char *p
         if (!password) pass = getString("Password: ", true);
         else pass = password;
 
-        ctx.httpCtx.cookieSessid = signin(url, user, pass, ctx.httpCtx);
-        if (!ctx.httpCtx.cookieSessid.empty()) {
+        ctx.httpCtx.cookieSessid = signin(ctx.rooturl, user, pass, ctx.httpCtx);
+        if (!ctx.httpCtx.cookieSessid.empty() && store) {
             storeSessid(dir, ctx.httpCtx.cookieSessid);
-            storeUrl(dir, url);
+            storeUrl(dir, ctx.rooturl);
         }
     }
 
@@ -1118,125 +1125,65 @@ static int establishSession(const char *dir, const char *username, const char *p
     return 0;
 }
 
-int helpGet()
+Args *setupGetOptions()
 {
-    LOG_CLI("Usage: smit get <root-url> <resource>\n"
-           "\n"
-           "  Get with format x-smit.\n"
-           "\n"
-           "Options:\n"
-           "  --user <user> --passwd <password> \n"
-           "               Give the user name and the password.\n"
-           "  --use-signin-cookie\n"
-           "               Use the cookie of the cloned repository for signin in.\n"
-           "\n"
-           );
+    Args *args = new Args();
+    args->setDescription("Get with format x-smit.\n");
+    args->setUsage("smit get [options] <root-url> <resource>");
+    args->setOpt("verbose", 'v', "be verbose", 0);
+    args->setOpt("user", 0, "specify user name", 1);
+    args->setOpt("passwd", 0, "specify password", 1);
+    args->setOpt("insecure", 0, "do not verify the server certificate", 0);
+    args->setOpt("cacert", 0,
+                 "specify the CA certificate, in PEM format, for authenticating the server\n"
+                 "(HTTPS only)", 1);
+    args->setOpt("use-signin-cookie", 0, "Use the cookie of the cloned repository for signin in", 0);
+    args->setNonOptionLimit(2);
+    return args;
+}
+
+int helpGet(const Args *args)
+{
+    if (!args) args = setupGetOptions();
+    args->usage(true);
     return 1;
 }
 
-int cmdGet(int argc, char * const *argv)
+int cmdGet(int argc, char **argv)
 {
-    std::string rooturl;
-    std::string resource;
-    std::string username;
-    const char *passwd = 0;
-    bool useSigninCookie = false;
-    HttpClientContext ctx;
-
-    int c;
-    // TODO use Args instead of getopt
-
-    int optionIndex = 0;
-    struct option longOptions[] = {
-        {"use-signin-cookie", 0, 0, 0},
-        {"user", 1, 0, 0},
-        {"passwd", 1, 0, 0},
-        {NULL, 0, NULL, 0}
-    };
-    while ((c = getopt_long(argc, argv, "v", longOptions, &optionIndex)) != -1) {
-        switch (c) {
-        case 0: // manage long options
-            if (0 == strcmp(longOptions[optionIndex].name, "user")) {
-                username = optarg;
-            } else if (0 == strcmp(longOptions[optionIndex].name, "passwd")) {
-                passwd = optarg;
-            } else if (0 == strcmp(longOptions[optionIndex].name, "use-signin-cookie")) {
-                useSigninCookie = true;
-            }
-            break;
-        case 'v':
-            setLoggingLevel(LL_DEBUG);
-            break;
-        case '?': // incorrect syntax, a message is printed by getopt_long
-            return helpGet();
-            break;
-        default:
-            LOG_CLI("?? getopt returned character code 0x%x ??\n", c);
-            return helpGet();
-        }
+    PullContext pullCtx;
+    Args *args = setupGetOptions();
+    args->parse(argc-1, argv+1);
+    const char *username = args->get("user");
+    const char *password = args->get("passwd");
+    if (args->get("insecure")) pullCtx.httpCtx.tlsInsecure = true;
+    pullCtx.httpCtx.tlsCacert = args->get("cacert");
+    if (args->get("verbose")) {
+        setLoggingLevel(LL_DEBUG);
+    } else {
+        setLoggingLevel(LL_ERROR);
     }
 
     // manage non-option ARGV elements
-    if (optind < argc) {
-        rooturl = argv[optind];
-        optind++;
-    }
-    if (optind < argc) {
-        resource = argv[optind];
-        optind++;
+    const char *rooturl = args->pop();
+    const char *resource = args->pop();
+    if (!rooturl || !resource) {
+        LOG_CLI("Missing argument.\n");
+        exit(1);
     }
 
-    if (optind < argc) {
-        LOG_CLI("Too many arguments.\n\n");
-        return helpGet();
-    }
-    if (rooturl.empty()) {
-        LOG_CLI("Missing url.\n");
-        return helpGet();
-    }
+    setLoggingOption(LO_CLI);
 
-    // TODO use establishSession
+    pullCtx.rooturl = rooturl;
+    int r = establishSession(".", username, password, pullCtx, false);
+    if (r != 0) return 1;
 
-    curl_global_init(CURL_GLOBAL_ALL);
-    std::string password;
-    bool redoSigin = false;
-
-    if (useSigninCookie) {
-        // check if the sessid is valid
-        ctx.cookieSessid = loadSessid(".");
-        int r = testSessid(rooturl, ctx);
-
-        if (r < 0) {
-            // failed (session may have expired), then prompt for user name/password
-            username = getString("Username: ", false);
-            password = getString("Password: ", true);
-
-            // and redo the signing-in
-            redoSigin = true;
-        }
-
-    } else if (username.size() && passwd){
-        // do the signing-in with the given username / password
-        password = passwd;
-        redoSigin = true;
-    }
-
-    if (redoSigin) {
-        ctx.cookieSessid = signin(rooturl, username, password, ctx);
-        if (ctx.cookieSessid.empty()) {
-            fprintf(stderr, "Authentication failed\n");
-            return 1; // authentication failed
-        }
-    }
-
-    LOG_DEBUG("cookieSessid: %s", ctx.cookieSessid.c_str());
-
-    // pull new entries and new attached files of all projects
-    HttpRequest hr(ctx);
-    hr.setUrl(rooturl + resource);
+    // do the GET
+    HttpRequest hr(pullCtx.httpCtx);
+    hr.setUrl(std::string(rooturl) + std::string(resource));
     hr.getFileStdout();
 
-    curl_global_cleanup();
+    terminateSession();
 
     return 0;
 }
@@ -1310,7 +1257,7 @@ int cmdPull(int argc, char **argv)
         exit(1);
     }
 
-    int r = establishSession(dir, username, password, pullCtx);
+    int r = establishSession(dir, username, password, pullCtx, true);
     if (r != 0) return 1;
 
     // pull new entries and new attached files of all projects
@@ -1318,7 +1265,7 @@ int cmdPull(int argc, char **argv)
     pullCtx.localRepo = dir;
     r = pullProjects(pullCtx, pullAll);
 
-    curl_global_cleanup();
+    terminateSession();
 
     if (r < 0) return 1;
     else return 0;
@@ -1604,12 +1551,6 @@ int pushProjects(const PullContext &pushCtx, bool dryRun)
     return 0;
 }
 
-
-void terminateSession()
-{
-    curl_global_cleanup();
-}
-
 Args *setupPushOptions()
 {
     Args *args = new Args();
@@ -1667,7 +1608,7 @@ int cmdPush(int argc, char **argv)
     setLoggingOption(LO_CLI);
     // set log level to hide INFO logs
 
-    int r = establishSession(dir, username, password, pushCtx);
+    int r = establishSession(dir, username, password, pushCtx, true);
     if (r != 0) return 1;
 
     // push new entries and new attached files of all projects

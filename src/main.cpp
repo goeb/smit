@@ -929,7 +929,7 @@ int main(int argc, char **argv)
                 else if (0 == strcmp(help, "clone")) return helpClone(0);
                 else if (0 == strcmp(help, "pull")) return helpPull(0);
                 else if (0 == strcmp(help, "push")) return helpPush(0);
-                else if (0 == strcmp(help, "get")) return helpGet();
+                else if (0 == strcmp(help, "get")) return helpGet(0);
 #endif
                 else {
                     printf("No help for '%s'\n", help);
