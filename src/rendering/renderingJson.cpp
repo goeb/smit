@@ -68,6 +68,17 @@ void RJson::printIssueList(const RequestContext *req, const std::vector<IssueCop
     req->printf("%s", issuesJson.c_str());
 }
 
+void RJson::printIssue(const RequestContext *req, const IssueCopy &issue)
+{
+    std::vector<Entry> entries;
+    Entry *e = issue.first;
+    while (e) {
+        entries.push_back(*e);
+        e = e->getNext();
+    }
+    printEntryList(req, entries);
+}
+
 void RJson::printEntryList(const RequestContext *req, const std::vector<Entry> &entries)
 {
     req->printf("Content-Type: " CONTENT_TYPE_JSON "\r\n\r\n");

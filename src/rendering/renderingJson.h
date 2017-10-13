@@ -11,6 +11,7 @@ class RJson {
 public:
     static void printIssueList(const RequestContext *req, const std::vector<IssueCopy> &issueList,
                                std::list<std::string> colspec);
+    static void printIssue(const RequestContext *req, const IssueCopy &issue);
     static void printEntryList(const RequestContext *req, const std::vector<Entry> &entries);
 };
 

@@ -2062,6 +2062,9 @@ int httpGetIssue(const RequestContext *req, Project &p, const std::string &issue
             ProjectConfig pconfig = p.getConfig();
             RCsv::printIssue(req, issue, pconfig);
 
+        } else if (format == RENDERING_JSON) {
+            RJson::printIssue(req, issue);
+
         } else {
 
             std::string q = req->getQueryString();
