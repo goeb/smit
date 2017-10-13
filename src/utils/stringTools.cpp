@@ -135,6 +135,13 @@ std::string toString(const std::list<std::string> &values, const char *sep)
     return text;
 }
 
+std::string toString(int n)
+{
+    char buffer[128];
+    sprintf(buffer, "%d", n);
+    return buffer;
+}
+
 /** Decode an URL
   *
   * Example: Hello+World%20And%2FMore
@@ -420,13 +427,6 @@ std::list<std::string> getParamListFromQueryString(const std::string & queryStri
     return result;
 }
 
-
-std::string toString(int n)
-{
-    char buffer[128];
-    sprintf(buffer, "%d", n);
-    return buffer;
-}
 
 /** Indent lines of a text
   */

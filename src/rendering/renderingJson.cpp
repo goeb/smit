@@ -59,8 +59,94 @@ void RJson::printIssueList(const RequestContext *req, const std::vector<IssueCop
         singleIssueJson += "]";
         if (i != issueList.begin()) issuesJson += ",\n";
         issuesJson += singleIssueJson;
+
+        // TODO do printf here, in order to prevent accumulating
+        // a huge list that is printed only at the end.
     }
     issuesJson += "]";
+
     req->printf("%s", issuesJson.c_str());
+}
+
+void RJson::printEntryList(const RequestContext *req, const std::vector<Entry> &entries)
+{
+    req->printf("Content-Type: " CONTENT_TYPE_JSON "\r\n\r\n");
+    // list of entries
+    req->printf("[");
+
+    std::vector<Entry>::const_iterator e;
+
+    for (e=entries.begin(); e!=entries.end(); e++) {
+
+        if (e!=entries.begin()) req->printf(",");
+
+        std::string entryJson = "{";
+
+        // entry_header
+        entryJson += toJsonString("entry_header");
+        entryJson += ":{" + toJsonString("id") + ":" + toJsonString(e->id);
+        entryJson += "," + toJsonString("author") + ":" + toJsonString(e->author);
+        entryJson += "," + toJsonString("ctime") + ":" + toString(e->ctime);
+        entryJson += "," + toJsonString("parent") + ":";
+        if (e->parent == K_PARENT_NULL) entryJson += J_NULL;
+        else entryJson += toJsonString(e->parent);
+        entryJson += "}";
+
+        entryJson += ",";
+
+        std::string message;
+        std::string amend;
+        std::list<std::string> files;
+
+        // properties
+        entryJson += toJsonString("properties") + ":{";
+        PropertiesIt p;
+        const std::map<std::string, std::list<std::string> > & properties = e->properties;
+        bool needsComma = false;
+        for (p=properties.begin(); p!=properties.end(); p++) {
+            std::string pname = p->first;
+            if (pname == K_MESSAGE && p->second.size()) message = p->second.front();
+            else if (pname == K_AMEND && p->second.size()) amend = p->second.front();
+            else if (pname == K_FILE) files = p->second;
+            else {
+                // regular properties
+                if (needsComma) entryJson += ",";
+                entryJson += toJsonString(pname) + ":";
+                if (p->second.size() == 1) {
+                    // string value
+                    entryJson += toJsonString(p->second.front());
+                } else {
+                    // make an array
+                    entryJson += toJsonArray(p->second);
+                }
+                needsComma = true;
+            }
+        }
+        entryJson += "}";
+
+        // message
+        if (message.size()) {
+            entryJson += "," + toJsonString("message") + ":";
+            entryJson += toJsonString(message);
+        }
+
+        // amend
+        if (amend.size()) {
+            entryJson += "," + toJsonString("amend") + ":";
+            entryJson += toJsonString(amend);
+        }
+
+        // files
+        if (files.size()) {
+            entryJson += "," + toJsonString("files") + ":";
+            entryJson += toJsonArray(files);
+        }
+
+        entryJson += "}";
+        req->printf("%s", entryJson.c_str());
+    }
+
+    req->printf("]");
+
 }
 

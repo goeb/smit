@@ -21,6 +21,7 @@ void trimRight(std::string &s, const char *c);
 void trim(std::string &s, const char *c = " \t\n\r");
 void trimBlanks(std::string &s);
 std::string toString(const std::list<std::string> &values, const char *sep = 0);
+std::string toString(int n);
 std::string urlDecode(const std::string &src, int is_form_url_encoded=true, char mark='%');
 std::string urlEncode(const std::string &src, char mark = '%', const char *dontEscape="._-$,;~()");
 std::string htmlEscape(const std::string &value);
@@ -37,7 +38,6 @@ std::string getBasename(const std::string &path);
 std::string getDirname(const std::string &path);
 std::string getFirstParamFromQueryString(const std::string & queryString, const char *param);
 std::list<std::string> getParamListFromQueryString(const std::string & queryString, const char *param);
-std::string toString(int n);
 
 /** Convert size_t and ssize_t types to unsigned long and long int
   * The purpose is to workaround the %zd and %zu formats that are not

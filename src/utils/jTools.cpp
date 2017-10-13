@@ -83,3 +83,16 @@ std::string toJsonString(const std::string &in)
     result += '"'; // closing double-quote
     return result;
 }
+/** Convert a list<string> to a JSON [ "..." ] array
+  */
+std::string toJsonArray(const std::list<std::string> &items)
+{
+    std::string jarray = "[";
+    std::list<std::string>::const_iterator v;
+    FOREACH(v, items) {
+        if (v != items.begin()) jarray += ",";
+        jarray += toJsonString(*v);
+    }
+    jarray += "]";
+    return jarray;
+}

@@ -1529,17 +1529,22 @@ void httpGetListOfEntries(const RequestContext *req, const Project &p, const Use
     std::vector<Entry> entries;
     p.searchEntries(v.sort.c_str(), entries, v.limit);
 
+    enum RenderingFormat format = getFormat(req);
+
     sendHttpHeader200(req);
 
-    // Only HTML supported at the moment
+    if (format == RENDERING_JSON) {
+        RJson::printEntryList(req, entries);
 
-    ContextParameters ctx = ContextParameters(req, u, p.getProjectParameters());
-    //ctx.filterin = v.filterin; not available for entries
-    //ctx.filterout = v.filterout; not available for entries
-    //ctx.search = v.search; not available for entries
-    ctx.sort = v.sort;
+    } else {
+        ContextParameters ctx = ContextParameters(req, u, p.getProjectParameters());
+        //ctx.filterin = v.filterin; not available for entries
+        //ctx.filterout = v.filterout; not available for entries
+        //ctx.search = v.search; not available for entries
+        ctx.sort = v.sort;
 
-    RHtml::printPageEntries(ctx, entries);
+        RHtml::printPageEntries(ctx, entries);
+    }
 }
 
 /** Get the list of issues at the moment indicated by the snapshot
