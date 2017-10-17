@@ -92,7 +92,8 @@ TESTS = T_parseConfig$(EXEEXT) T_stringTools$(EXEEXT) T_smparser \
 	T_Args.sh T_smp_encode_decode.sh T_functest.sh T_clone.sh \
 	T_pull.sh T_pull_2.sh T_pull_3.sh T_push.sh T_push2.sh \
 	T_push3.sh T_push_endurance.sh T_permissions_project.sh \
-	T_permissions_repo.sh T_project_config.sh T_user_config.sh
+	T_permissions_repo.sh T_project_config.sh T_user_config.sh \
+	T_get_json.sh
 check_PROGRAMS = T_parseConfig$(EXEEXT) T_stringTools$(EXEEXT) \
 	T_Args$(EXEEXT) get_random_value$(EXEEXT)
 subdir = test
@@ -964,6 +965,13 @@ T_project_config.sh.log: T_project_config.sh
 T_user_config.sh.log: T_user_config.sh
 	@p='T_user_config.sh'; \
 	b='T_user_config.sh'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+T_get_json.sh.log: T_get_json.sh
+	@p='T_get_json.sh'; \
+	b='T_get_json.sh'; \
 	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \

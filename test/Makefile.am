@@ -10,7 +10,8 @@ TESTS = T_parseConfig \
 		T_permissions_project.sh \
 		T_permissions_repo.sh \
 		T_project_config.sh \
-		T_user_config.sh
+		T_user_config.sh \
+		T_get_json.sh
 
 check_PROGRAMS = T_parseConfig T_stringTools T_Args get_random_value
 T_parseConfig_SOURCES = T_parseConfig.cpp ../src/utils/parseConfig.cpp ../src/utils/stringTools.cpp
