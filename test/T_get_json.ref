@@ -14,46 +14,58 @@
   ]
 ]
 >>> ../../test/../bin/smitc get http://127.0.0.1:8099/p1//issues/1?format=json
-[
-  {
-    "entry_header": {
-      "id": ...,
-      "author": "Anonymous",
-      "ctime": ...,
-      "parent": null
-    },
-    "properties": {
-      "summary": "first issue"
-    }
+{
+  "properties": {
+    "status": "open",
+    "summary": "first issue"
   },
-  {
-    "entry_header": {
-      "id": ...,
-      "author": "Anonymous",
-      "ctime": ...,
-      "parent": ...
+  "entries": [
+    {
+      "entry_header": {
+        "id": ...,
+        "author": "Anonymous",
+        "ctime": ...,
+        "parent": null
+      },
+      "properties": {
+        "summary": "first issue"
+      }
     },
-    "properties": {
-      "status": "open"
-    },
-    "message": "some message"
-  }
-]
->>> ../../test/../bin/smitc get http://127.0.0.1:8099/p1//issues/2?format=json
-[
-  {
-    "entry_header": {
-      "id": ...,
-      "author": "Anonymous",
-      "ctime": ...,
-      "parent": null
-    },
-    "properties": {
-      "status": "open",
-      "summary": "second issue"
+    {
+      "entry_header": {
+        "id": ...,
+        "author": "Anonymous",
+        "ctime": ...,
+        "parent": ...
+      },
+      "properties": {
+        "status": "open"
+      },
+      "message": "some message"
     }
-  }
-]
+  ]
+}
+>>> ../../test/../bin/smitc get http://127.0.0.1:8099/p1//issues/2?format=json
+{
+  "properties": {
+    "status": "open",
+    "summary": "second issue"
+  },
+  "entries": [
+    {
+      "entry_header": {
+        "id": ...,
+        "author": "Anonymous",
+        "ctime": ...,
+        "parent": null
+      },
+      "properties": {
+        "status": "open",
+        "summary": "second issue"
+      }
+    }
+  ]
+}
 >>> ../../test/../bin/smitc get http://127.0.0.1:8099/p1//entries/?format=json
 [
   {

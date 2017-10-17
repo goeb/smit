@@ -14,6 +14,7 @@
 
 #include <sstream>
 
+#include "global.h"
 #include "renderingJson.h"
 #include "utils/logging.h"
 #include "utils/jTools.h"
@@ -68,21 +69,31 @@ void RJson::printIssueList(const RequestContext *req, const std::vector<IssueCop
     req->printf("%s", issuesJson.c_str());
 }
 
-void RJson::printIssue(const RequestContext *req, const IssueCopy &issue)
+static std::string propertyToJson(PropertiesIt pit)
 {
-    std::vector<Entry> entries;
-    Entry *e = issue.first;
-    while (e) {
-        entries.push_back(*e);
-        e = e->getNext();
+    std::string result = toJsonString(pit->first) + ":";
+    if (pit->second.size() == 1) {
+        // string value
+        result += toJsonString(pit->second.front());
+    } else {
+        // make an array
+        result += toJsonArray(pit->second);
     }
-    printEntryList(req, entries);
+    return result;
 }
 
-void RJson::printEntryList(const RequestContext *req, const std::vector<Entry> &entries)
+/** Print a list of entries
+ *
+ *  [ { "entry_header": { ... },
+ *      "properties": { ... },
+ *      "message": "...",
+ *      ...
+ *    },
+ *    ...
+ *  ]
+ */
+static void printEntries(const RequestContext *req, const std::vector<Entry> &entries)
 {
-    req->printf("Content-Type: " CONTENT_TYPE_JSON "\r\n\r\n");
-    // list of entries
     req->printf("[");
 
     std::vector<Entry>::const_iterator e;
@@ -112,7 +123,7 @@ void RJson::printEntryList(const RequestContext *req, const std::vector<Entry> &
         // properties
         entryJson += toJsonString("properties") + ":{";
         PropertiesIt p;
-        const std::map<std::string, std::list<std::string> > & properties = e->properties;
+        const PropertiesMap & properties = e->properties;
         bool needsComma = false;
         for (p=properties.begin(); p!=properties.end(); p++) {
             std::string pname = p->first;
@@ -122,14 +133,7 @@ void RJson::printEntryList(const RequestContext *req, const std::vector<Entry> &
             else {
                 // regular properties
                 if (needsComma) entryJson += ",";
-                entryJson += toJsonString(pname) + ":";
-                if (p->second.size() == 1) {
-                    // string value
-                    entryJson += toJsonString(p->second.front());
-                } else {
-                    // make an array
-                    entryJson += toJsonArray(p->second);
-                }
+                entryJson += propertyToJson(p);
                 needsComma = true;
             }
         }
@@ -158,6 +162,45 @@ void RJson::printEntryList(const RequestContext *req, const std::vector<Entry> &
     }
 
     req->printf("]");
+}
 
+/** Print an issue
+ *
+ *  { "properties": { ... }
+ *    "entries": [ ... ]
+ *  }
+ */
+void RJson::printIssue(const RequestContext *req, const IssueCopy &issue)
+{
+    req->printf("Content-Type: " CONTENT_TYPE_JSON "\r\n\r\n");
+
+    req->printf("{\"properties\":");
+    std::string issueProperties = "{";
+    PropertiesIt pit;
+    FOREACH(pit, issue.properties) {
+        if (pit != issue.properties.begin()) issueProperties += ",";
+        issueProperties += propertyToJson(pit);
+
+    }
+    issueProperties += "}";
+    req->printf("%s", issueProperties.c_str());
+
+    req->printf(",\"entries\":");
+
+    std::vector<Entry> entries;
+    Entry *e = issue.first;
+    while (e) {
+        entries.push_back(*e);
+        e = e->getNext();
+    }
+    printEntries(req, entries);
+    req->printf("}");
+}
+
+void RJson::printEntryList(const RequestContext *req, const std::vector<Entry> &entries)
+{
+    req->printf("Content-Type: " CONTENT_TYPE_JSON "\r\n\r\n");
+    // list of entries
+    printEntries(req, entries);
 }
 
