@@ -1,0 +1,80 @@
+#!/bin/sh
+
+#set -x
+# Example:
+# git init --bare repo.bare
+# cd repo.bare
+# ../add_entry -p satus open
+# ../add_entry -p satus open
+# git branch
+#   issues/1
+#   issues/2
+# ../add_entry --issue 2 -p status open -p owner alice -p priority high
+#  echo property status closed | ../add_entry --issue 2
+usage() {
+	echo "$0 [-f <file>] [--amend <entry-id>] [-p <property-name> <value>]"
+	echo "   [--issue <id>]"
+	echo "If no '-p' is given, properties are read from stdin (may be empty)."
+	exit 1
+}
+
+PROPERTIES=""
+while [ "$1" != "" ]; do
+	arg="$1"
+	shift
+	case "$arg" in
+		-f) file="$1"; shift;;
+		--amend) amended_entry_id="$1"; shft;;
+		--issue) issue_id="$1"; shift;;
+		-p) PROPERTIES="$PROPERTIES\nproperty $1 $2"; shift 2;;
+		*) usage;;
+	esac
+done
+
+create_commit() {
+	branch=$1 # make an orphan branch is not existing
+	file=$2 # optional
+	# stdin: commit message
+
+	git read-tree --empty
+
+	if [ "$file" != "" ]; then
+		# add file in index
+		id=$(git hash-object -w "$file")
+		base_name=$(basename "$file")
+		git update-index --add --cacheinfo 100644 $id "$base_name"
+	fi
+
+	tree_id=$(git write-tree)
+
+	parent_id=$(cat refs/heads/$branch 2>/dev/null)
+	if [ "$parent_id" = "" ]; then
+		# this is the first commit in the orphan branch
+		# read from stdin
+		commit_id=$(git commit-tree $tree_id)
+	else
+		# read from stdin
+		commit_id=$(git commit-tree $tree_id -p $parent_id)
+	fi
+
+	# update the branch
+	git update-ref refs/heads/$branch $commit_id
+}
+
+# add a commit in bare git repository
+
+if [ "$issue_id" = "" ]; then
+	# create a new issue
+	latest=$(git branch --list "issues/*" | sed -e "s;.*/;;" | sort -n | tail -1)
+	new=$(($latest + 1))
+	issue_id=$new
+fi
+
+if [ "$PROPERTIES" = "" ]; then
+	cat
+else
+	echo "$PROPERTIES"
+fi | create_commit issues/$issue_id "$file"
+
+git log issues/$issue_id --format="format:commit %H%ntree %T%nauthor %an%nctime %at%n%B"
+
