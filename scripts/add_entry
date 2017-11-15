@@ -14,6 +14,8 @@
 usage() {
 	echo "$0 [-f <file>] [--amend <entry-id>] [-p <property-name> <value>]"
 	echo "   [--issue <id>]"
+	echo "   [--author <name>]"
+	echo "   [--ctime <unix-time>]"
 	echo "If no '-p' is given, properties are read from stdin (may be empty)."
 	exit 1
 }
@@ -26,10 +28,15 @@ while [ "$1" != "" ]; do
 		-f) file="$1"; shift;;
 		--amend) amended_entry_id="$1"; shft;;
 		--issue) issue_id="$1"; shift;;
+		--author) GIT_AUTHOR_NAME="$1"; shift;;
+		--ctime) GIT_AUTHOR_DATE="$1"; shift;;
 		-p) PROPERTIES="$PROPERTIES\nproperty $1 $2"; shift 2;;
 		*) usage;;
 	esac
 done
+
+export GIT_AUTHOR_NAME
+export GIT_AUTHOR_DATE
 
 create_commit() {
 	branch=$1 # make an orphan branch is not existing

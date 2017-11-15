@@ -1,0 +1,73 @@
+#!/bin/sh
+
+usage() {
+	echo "Usage: $0 <project-v2> <project-v3>"
+	exit 1
+}
+
+src_v2="$1"
+dst_v3="$2"
+
+if [ "$src_v2" = "" -o "$dst_v3" = "" ]; then
+	usage
+fi
+
+if [ ! -d "$src_v2/.smip" ]; then
+	echo "error: source directory '$src_v2' is not a smit project version 2."
+	exit 1
+fi
+
+if [ -e "$dst_v3" ]; then
+	echo "destination directory '$dst_v3' must not exist."
+	exit 1
+fi
+
+mkdir "$dst_v3" || exit 1
+
+
+# main
+# init new repo
+git init "$dst_v3"
+
+cat_file_v2() {
+	project_dir="$1"
+	object_id=$2
+	prefix=$(echo $object_id | sed -e "s/\(..\).*/\\1"/)
+	suffix=$(echo $object_id | sed -e "s/^..//")
+	cat "$project_dir/.smip/objects/$prefix/$suffix"
+}
+
+convert_v2_to_v3_master() {
+	# create files in branch 'master'
+	src_v2="$1"
+	dst_v3="$2"
+
+	# project config
+	# recall the history...
+	config_history=""
+	id=$(cat $src_v2/.smip/refs/project)
+	config_history="$id $config_history"
+	parent=$(cat_file_v2 "$src_v2" $id | grep ^+parent | sed -e "s/^+parent *//")
+	while [ "$parent" != null ]; do
+		config_history="$parent $config_history"
+		parent=$(cat_file_v2 "$src_v2" $parent | grep ^+parent | sed -e "s/^+parent *//")
+	done
+
+	# replay and commit
+	for i in $config_history; do
+		echo "config: commiting $i..."
+		author=$(cat_file_v2 "$src_v2" $i | grep +author | sed -e "s/.* //")
+		ctime=$(cat_file_v2 "$src_v2" $i | grep +ctime | sed -e "s/.* //")
+		cat_file_v2 "$src_v2" $i |
+			grep -v ^+ > "$dst_v3/config"
+		(cd "$dst_v3"; git add config; git commit -m "convert_v2_to_v3_master" --author "$author <>" --date=$ctime)
+	done
+	
+
+	# views config	
+}
+
+convert_v2_to_v3_master "$src_v2" "$dst_v3"
+
+
+
