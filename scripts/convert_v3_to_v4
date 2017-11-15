@@ -1,0 +1,86 @@
+#!/bin/sh
+
+usage() {
+	echo "Usage: $0 <project-v2> <project-v3>"
+	exit 1
+}
+
+src_v3="$1"
+dst_v4="$2"
+
+if [ "$src_v3" = "" -o "$dst_v4" = "" ]; then
+	usage
+fi
+
+if [ ! -d "$src_v3/.smip" ]; then
+	echo "error: source directory '$src_v3' is not a smit project version 2."
+	exit 1
+fi
+
+if [ -e "$dst_v4" ]; then
+	echo "destination directory '$dst_v4' must not exist."
+	exit 1
+fi
+
+mkdir "$dst_v4" || exit 1
+
+
+# main
+# init new repo
+git init "$dst_v4"
+
+cat_file_v3() {
+	project_dir="$1"
+	object_id=$2
+	prefix=$(echo $object_id | sed -e "s/\(..\).*/\\1"/)
+	suffix=$(echo $object_id | sed -e "s/^..//")
+	cat "$project_dir/.smip/objects/$prefix/$suffix"
+}
+
+convert_v3_to_v4_master_file() {
+	src_v3="$1"
+	dst_v4="$2"
+	filename="$3"
+	new_filename="$4"
+	if [ "$new_filename" = "" ]; then
+		new_filename=filename
+	fi
+
+	# recall the history...
+	history=""
+	id=$(cat $src_v3/.smip/refs/$filename)
+	history="$id $history"
+	parent=$(cat_file_v3 "$src_v3" $id | grep ^+parent | sed -e "s/^+parent *//")
+	while [ "$parent" != null ]; do
+		history="$parent $history"
+		parent=$(cat_file_v3 "$src_v3" $parent | grep ^+parent | sed -e "s/^+parent *//")
+	done
+
+	# replay and commit
+	for i in $history; do
+		author=$(cat_file_v3 "$src_v3" $i | grep +author | sed -e "s/.* //")
+		ctime=$(cat_file_v3 "$src_v3" $i | grep +ctime | sed -e "s/.* //")
+		cat_file_v3 "$src_v3" $i |
+			grep -v ^+ > "$dst_v4/$new_filename"
+		(cd "$dst_v4"; git add $new_filename; git commit -m "convert_v3_to_v4_master" --author "$author <>" --date=$ctime)
+	done
+}
+convert_v3_to_v4_master() {
+	# create files in branch 'master'
+	src_v3="$1"
+	dst_v4="$2"
+
+	# project configuration
+	convert_v3_to_v4_master_file "$src_v3" "$dst_v4" project config
+
+	# views
+	id=$(cat $src_v3/.smip/refs/views)
+	author=convert_v3_to_v4_master
+	cat_file_v3 "$src_v3" $id > "$dst_v4/views"
+	(cd "$dst_v4"; git add views; git commit -m "convert_v3_to_v4_master" --author "$author <>")
+}
+
+convert_v3_to_v4_master "$src_v3" "$dst_v4"
+
+
+
