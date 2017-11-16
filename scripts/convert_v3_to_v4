@@ -41,10 +41,7 @@ convert_v3_to_v4_master_file() {
 	src_v3="$1"
 	dst_v4="$2"
 	filename="$3"
-	new_filename="$4"
-	if [ "$new_filename" = "" ]; then
-		new_filename=filename
-	fi
+	new_location="$4" # within $dst_v4
 
 	# recall the history...
 	history=""
@@ -61,8 +58,8 @@ convert_v3_to_v4_master_file() {
 		author=$(cat_file_v3 "$src_v3" $i | grep +author | sed -e "s/.* //")
 		ctime=$(cat_file_v3 "$src_v3" $i | grep +ctime | sed -e "s/.* //")
 		cat_file_v3 "$src_v3" $i |
-			grep -v ^+ > "$dst_v4/$new_filename"
-		(cd "$dst_v4"; git add $new_filename; git commit -m "convert_v3_to_v4_master" --author "$author <>" --date=$ctime)
+			grep -v ^+ > "$dst_v4/$new_location"
+		(cd "$dst_v4"; git add $new_location; git commit -m "convert_v3_to_v4_master" --author "$author <>" --date=$ctime)
 	done
 }
 convert_v3_to_v4_master() {
@@ -70,14 +67,51 @@ convert_v3_to_v4_master() {
 	src_v3="$1"
 	dst_v4="$2"
 
+	author=convert_v3_to_v4_master
+
+	# Project configuration and templates
+	mkdir -p "$dst_v4/config.d/templates"
+
 	# project configuration
-	convert_v3_to_v4_master_file "$src_v3" "$dst_v4" project config
+	convert_v3_to_v4_master_file "$src_v3" "$dst_v4" project "config.d/config"
 
 	# views
 	id=$(cat $src_v3/.smip/refs/views)
-	author=convert_v3_to_v4_master
-	cat_file_v3 "$src_v3" $id > "$dst_v4/views"
-	(cd "$dst_v4"; git add views; git commit -m "convert_v3_to_v4_master" --author "$author <>")
+	cat_file_v3 "$src_v3" $id > "$dst_v4/config.d/views"
+	(cd "$dst_v4"; git add config.d/views)
+
+	# templates
+	if [ -d "$src_v3/.smip/templates" ]; then
+		(cd "$src_v3/.smip/templates"; find . ! -type d ! -name ".*" ) |
+		while [ 1 = 1 ]; do
+			read file
+			if [ "$file" = "" ]; then
+				break
+			fi
+			subdir=$(dirname "$file")
+			mkdir -p "$dst_v4/config.d/templates/$subdir"
+			cp "$src_v3/.smip/templates/$file" "$dst_v4/config.d/templates/$file"
+			(cd "$dst_v4"; git add "config.d/templates/$file")
+		done
+	fi
+
+	# other pages, files,...
+	(cd "$src_v3"; find . ! -type d ! -path "*/.smip/*" ! -name ".*" ) |
+	while [ 1 = 1 ]; do
+		read file
+		if [ "$file" = "" ]; then
+			break
+		fi
+		subdir=$(dirname "$file")
+		mkdir -p "$dst_v4/$subdir"
+		cp "$src_v3/$file" "$dst_v4/$subdir/."
+		(cd "$dst_v4"; git add "$file")
+	done
+	(cd "$dst_v4"; git commit -m "convert_v3_to_v4_master" --author "$author <>")
+
+	# tags 
+	echo "TODO tags"
+
 }
 
 convert_v3_to_v4_master "$src_v3" "$dst_v4"
