@@ -5,6 +5,15 @@ usage() {
 	exit 1
 }
 
+error() {
+	echo "error: $*"
+}
+
+die() {
+	error "$*"
+	exit 1
+}
+
 src_v3="$1"
 dst_v4="$2"
 
@@ -13,13 +22,11 @@ if [ "$src_v3" = "" -o "$dst_v4" = "" ]; then
 fi
 
 if [ ! -d "$src_v3/.smip" ]; then
-	echo "error: source directory '$src_v3' is not a smit project version 2."
-	exit 1
+	die "source directory '$src_v3' is not a smit project version 2."
 fi
 
 if [ -e "$dst_v4" ]; then
-	echo "destination directory '$dst_v4' must not exist."
-	exit 1
+	die "destination directory '$dst_v4' must not exist."
 fi
 
 mkdir "$dst_v4" || exit 1
@@ -48,6 +55,9 @@ convert_v3_to_v4_master_file() {
 	id=$(cat $src_v3/.smip/refs/$filename)
 	history="$id $history"
 	parent=$(cat_file_v3 "$src_v3" $id | grep ^+parent | sed -e "s/^+parent *//")
+	if [ "$parent" = "" ]; then
+		die "no parent (id=$id)"
+	fi
 	while [ "$parent" != null ]; do
 		history="$parent $history"
 		parent=$(cat_file_v3 "$src_v3" $parent | grep ^+parent | sed -e "s/^+parent *//")
