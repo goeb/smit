@@ -44,6 +44,16 @@ cat_file_v3() {
 	cat "$project_dir/.smip/objects/$prefix/$suffix"
 }
 
+get_v3_history() {
+	local src_v3="$1"
+	parent="$2"
+	history=""
+	while [ "$parent" != null ]; do
+		history="$parent $history"
+		parent=$(cat_file_v3 "$src_v3" $parent | grep ^+parent | sed -e "s/^+parent *//")
+	done
+	echo $history
+}
 convert_v3_to_v4_master_file() {
 	src_v3="$1"
 	dst_v4="$2"
@@ -51,17 +61,8 @@ convert_v3_to_v4_master_file() {
 	new_location="$4" # within $dst_v4
 
 	# recall the history...
-	history=""
 	id=$(cat $src_v3/.smip/refs/$filename)
-	history="$id $history"
-	parent=$(cat_file_v3 "$src_v3" $id | grep ^+parent | sed -e "s/^+parent *//")
-	if [ "$parent" = "" ]; then
-		die "no parent (id=$id)"
-	fi
-	while [ "$parent" != null ]; do
-		history="$parent $history"
-		parent=$(cat_file_v3 "$src_v3" $parent | grep ^+parent | sed -e "s/^+parent *//")
-	done
+	history=$(get_v3_history "$src_v3" "$id")
 
 	# replay and commit
 	for i in $history; do
@@ -72,23 +73,25 @@ convert_v3_to_v4_master_file() {
 		(cd "$dst_v4"; git add $new_location; git commit -m "convert_v3_to_v4_master" --author "$author <>" --date=$ctime)
 	done
 }
+
 convert_v3_to_v4_master() {
 	# create files in branch 'master'
-	src_v3="$1"
-	dst_v4="$2"
+	local src_v3="$1"
+	local dst_v4="$2"
 
 	author=convert_v3_to_v4_master
+	conf_v4=config.d
 
 	# Project configuration and templates
-	mkdir -p "$dst_v4/config.d/templates"
+	mkdir -p "$dst_v4/$conf_v4/templates"
 
 	# project configuration
-	convert_v3_to_v4_master_file "$src_v3" "$dst_v4" project "config.d/config"
+	convert_v3_to_v4_master_file "$src_v3" "$dst_v4" project "$conf_v4/config"
 
 	# views
 	id=$(cat $src_v3/.smip/refs/views)
-	cat_file_v3 "$src_v3" $id > "$dst_v4/config.d/views"
-	(cd "$dst_v4"; git add config.d/views)
+	cat_file_v3 "$src_v3" $id > "$dst_v4/$conf_v4/views"
+	(cd "$dst_v4"; git add $conf_v4/views)
 
 	# templates
 	if [ -d "$src_v3/.smip/templates" ]; then
@@ -99,10 +102,15 @@ convert_v3_to_v4_master() {
 				break
 			fi
 			subdir=$(dirname "$file")
-			mkdir -p "$dst_v4/config.d/templates/$subdir"
-			cp "$src_v3/.smip/templates/$file" "$dst_v4/config.d/templates/$file"
-			(cd "$dst_v4"; git add "config.d/templates/$file")
+			mkdir -p "$dst_v4/$conf_v4/templates/$subdir"
+			cp "$src_v3/.smip/templates/$file" "$dst_v4/$conf_v4/templates/$file"
+			(cd "$dst_v4"; git add "$conf_v4/templates/$file")
 		done
+	fi
+	# trigger
+	if [ -f "$src_v3/.smip/refs/trigger" ]; then
+		cp "$src_v3/.smip/refs/trigger" "$dst_v4/$conf_v4/trigger"
+		(cd "$dst_v4"; git add "$conf_v4/trigger")
 	fi
 
 	# other pages, files,...
@@ -113,18 +121,92 @@ convert_v3_to_v4_master() {
 			break
 		fi
 		subdir=$(dirname "$file")
-		mkdir -p "$dst_v4/$subdir"
-		cp "$src_v3/$file" "$dst_v4/$subdir/."
-		(cd "$dst_v4"; git add "$file")
+		mkdir -p "$dst_v4/data/$subdir"
+		cp "$src_v3/$file" "$dst_v4/data/$subdir/."
+		(cd "$dst_v4"; git add "data/$file")
 	done
 	(cd "$dst_v4"; git commit -m "convert_v3_to_v4_master" --author "$author <>")
 
-	# tags 
-	echo "TODO tags"
-
 }
 
+create_commit() {
+
+    branch=$1 # make an orphan branch if not existing
+    file=$2 # optional
+    # stdin: commit message
+
+    git read-tree --empty
+
+    if [ "$file" != "" ]; then
+        # add file in index
+        id=$(git hash-object -w "$file")
+        base_name=$(basename "$file")
+        git update-index --add --cacheinfo 100644 $id "$base_name"
+    fi
+
+    tree_id=$(git write-tree)
+
+    parent_id=$(cat refs/heads/$branch 2>/dev/null)
+	echo parent_id=$parent_id
+    if [ "$parent_id" = "" ]; then
+        # this is the first commit in the orphan branch
+        # read from stdin
+        commit_id=$(git commit-tree $tree_id)
+    else
+        # read from stdin
+        commit_id=$(git commit-tree $tree_id -p $parent_id)
+    fi
+
+    # update the branch
+    git update-ref refs/heads/$branch $commit_id
+}
+
+convert_v3_to_v4_issues() {
+	# convert issues
+	# in v4, each issue is a branch named issues/<id>
+	local src_v3="$1"
+	local dst_v4="$2"
+
+	for i in "$src_v3"/.smip/refs/issues/*; do
+		id=$(cat "$i")
+		branch="issues/$(basename $i)"
+
+		history=$(get_v3_history "$src_v3" "$id")
+
+		for entry in $history; do
+			# for each item of history
+			author=$(cat_file_v3 "$src_v3" $entry | grep +author | head -1 | sed -e "s/.* //")
+			ctime=$(cat_file_v3 "$src_v3" $entry | grep +ctime | head -1 | sed -e "s/.* //")
+			export GIT_AUTHOR_NAME="$author"
+			export GIT_AUTHOR_DATE="$ctime"
+
+			# TODO attached files
+
+			cat_file_v3 "$src_v3" "$entry" |
+			awk -v entry=$entry 'BEGIN { boundary=""; multiline_prefix=""; print "convert_v3_to_v4_issues\n"; }
+			boundary=="" && $2=="<" { boundary=$3;
+		                              if ($1=="+message") {
+			                              multiline_prefix="msg";
+			                          } else {
+			                              multiline_prefix="property " $1;
+			                          }
+									  print multiline_prefix, "<";
+			                          next; }
+	 		boundary=="" && $1 !~ /^+/ { print "property", $0; next; }
+	 		boundary=="" && $1 == "+amend" { print "amend", $2; next; }
+			boundary!="" && $1==boundary { boundary=""; next; }
+			boundary!="" { print multiline_prefix, $0; }
+			END { print "\nsmit-v3-id:", entry; }
+			' | (cd "$dst_v4/.git"; create_commit $branch)
+		done
+	done
+}
+convert_v3_to_v4_tags() {
+	echo TODO convert_v3_to_v4_tags
+}
 convert_v3_to_v4_master "$src_v3" "$dst_v4"
+convert_v3_to_v4_issues "$src_v3" "$dst_v4"
+convert_v3_to_v4_tags "$src_v3" "$dst_v4"
 
 
 
