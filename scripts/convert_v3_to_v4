@@ -54,6 +54,7 @@ get_v3_history() {
 	done
 	echo $history
 }
+
 convert_v3_to_v4_master_file() {
 	src_v3="$1"
 	dst_v4="$2"
@@ -129,20 +130,32 @@ convert_v3_to_v4_master() {
 
 }
 
+# $1 : src smit-v3 repository
+# $2 : dest smit-v4 repo (must be a bare repo)
+# $3 : branch name where to commit
+# other arguments : list of files
+#                   format: <sha1>/<basename> ...
 create_commit() {
 
-    branch=$1 # make an orphan branch if not existing
-    file=$2 # optional
+	echo create_commit $*
+
+	local src_v3=$(realpath "$1")
+	local dst_v4="$2"
+    local branch=$3 # make an orphan branch if not existing
     # stdin: commit message
+
+	cd "$dst_v4" # must be a bare git repository
 
     git read-tree --empty
 
-    if [ "$file" != "" ]; then
+    shift 3
+	for f in $*; do
         # add file in index
-        id=$(git hash-object -w "$file")
-        base_name=$(basename "$file")
+		hash=$(echo $f | sed -e "s;/.*;;")
+		base_name=$(echo $f | sed -e "s;.*/;;")
+		id=$(cat_file_v3 "$src_v3" $hash | git hash-object -w --stdin)
         git update-index --add --cacheinfo 100644 $id "$base_name"
-    fi
+	done
 
     tree_id=$(git write-tree)
 
@@ -159,6 +172,8 @@ create_commit() {
 
     # update the branch
     git update-ref refs/heads/$branch $commit_id
+
+	cd - > /dev/null # back to previous working directory
 }
 
 convert_v3_to_v4_issues() {
@@ -180,7 +195,9 @@ convert_v3_to_v4_issues() {
 			export GIT_AUTHOR_NAME="$author"
 			export GIT_AUTHOR_DATE="$ctime"
 
-			# TODO attached files
+			# attached files
+			files=$(cat_file_v3 "$src_v3" "$entry" | grep "^+file" | head -1)
+			files=$(echo $files | sed -e "s/^+file *//") # remove key
 
 			cat_file_v3 "$src_v3" "$entry" |
 			awk -v entry=$entry 'BEGIN { boundary=""; multiline_prefix=""; print "convert_v3_to_v4_issues\n"; }
@@ -197,7 +214,7 @@ convert_v3_to_v4_issues() {
 			boundary!="" && $1==boundary { boundary=""; next; }
 			boundary!="" { print multiline_prefix, $0; }
 			END { print "\nsmit-v3-id:", entry; }
-			' | (cd "$dst_v4/.git"; create_commit $branch)
+			' | create_commit "$src_v3" "$dst_v4/.git" $branch $files
 		done
 	done
 }
