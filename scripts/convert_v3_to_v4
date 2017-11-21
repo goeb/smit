@@ -124,6 +124,8 @@ convert_v3_to_v4_master() {
 	fi
 
 	# other pages, files,...
+	# a limitation here: pages of a nested projects will be included
+	# in the parent project.
 	(cd "$src_v3"; find . ! -type d ! -path "*/.smip/*" ! -name ".*" ) |
 	while [ 1 = 1 ]; do
 		read file
@@ -211,7 +213,9 @@ convert_v3_to_v4_issues() {
 			# for each item of history
 			author=$(cat_file_v3 "$src_v3" $entry | grep +author | head -1 | sed -e "s/.* //")
 			ctime=$(cat_file_v3 "$src_v3" $entry | grep +ctime | head -1 | sed -e "s/.* //")
+			# environment variables used by git commit-tree
 			export GIT_AUTHOR_NAME="$author"
+			export GIT_AUTHOR_EMAIL="<>"
 			export GIT_AUTHOR_DATE="$ctime"
 
 			cat_file_v3 "$src_v3" "$entry" |
