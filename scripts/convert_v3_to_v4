@@ -2,6 +2,8 @@
 
 usage() {
 	echo "Usage: $0 <project-v2> <project-v3>"
+	echo
+	echo "SMPARSER must point to the smparser tool."
 	exit 1
 }
 
@@ -13,6 +15,11 @@ die() {
 	error "$*"
 	exit 1
 }
+
+if [ ! -x "$SMPARSER" ]; then
+	die "SMPARSER does not point to an executable."
+fi
+SMPARSER=$(realpath "$SMPARSER")
 
 src_v3="$1"
 dst_v4="$2"
@@ -47,6 +54,8 @@ cat_file_v3() {
 get_v3_history() {
 	local src_v3="$1"
 	parent="$2"
+	if [ "$parent" = "" ]; then return; fi
+
 	history=""
 	while [ "$parent" != null ]; do
 		history="$parent $history"
@@ -133,8 +142,7 @@ convert_v3_to_v4_master() {
 # $1 : src smit-v3 repository
 # $2 : dest smit-v4 repo (must be a bare repo)
 # $3 : branch name where to commit
-# other arguments : list of files
-#                   format: <sha1>/<basename> ...
+# $4 : the original entry of the v3 repo
 create_commit() {
 
 	echo create_commit $*
@@ -142,6 +150,7 @@ create_commit() {
 	local src_v3=$(realpath "$1")
 	local dst_v4="$2"
     local branch=$3 # make an orphan branch if not existing
+	local entry=$4
     # stdin: commit message
 
 	cd "$dst_v4" # must be a bare git repository
@@ -149,8 +158,18 @@ create_commit() {
     git read-tree --empty
 
     shift 3
-	for f in $*; do
-        # add file in index
+
+	# attached files
+	# use smparser in order to manage spaces in file names
+	# manage at most 10 attached files in a single entry
+	files=""
+	for i in $(seq 1 10); do
+		f=$(cat_file_v3 "$src_v3" "$entry" | "$SMPARSER" - +file $i)
+		if [ "$f" = "" ]; then
+			# no more file
+			break
+		fi
+
 		hash=$(echo $f | sed -e "s;/.*;;")
 		base_name=$(echo $f | sed -e "s;.*/;;")
 		id=$(cat_file_v3 "$src_v3" $hash | git hash-object -w --stdin)
@@ -195,10 +214,6 @@ convert_v3_to_v4_issues() {
 			export GIT_AUTHOR_NAME="$author"
 			export GIT_AUTHOR_DATE="$ctime"
 
-			# attached files
-			files=$(cat_file_v3 "$src_v3" "$entry" | grep "^+file" | head -1)
-			files=$(echo $files | sed -e "s/^+file *//") # remove key
-
 			cat_file_v3 "$src_v3" "$entry" |
 			awk -v entry=$entry 'BEGIN { boundary=""; multiline_prefix=""; print "convert_v3_to_v4_issues\n"; }
 			boundary=="" && $2=="<" { boundary=$3;
@@ -214,16 +229,39 @@ convert_v3_to_v4_issues() {
 			boundary!="" && $1==boundary { boundary=""; next; }
 			boundary!="" { print multiline_prefix, $0; }
 			END { print "\nsmit-v3-id:", entry; }
-			' | create_commit "$src_v3" "$dst_v4/.git" $branch $files
+			' | create_commit "$src_v3" "$dst_v4/.git" $branch $entry
 		done
 	done
 }
+# convert smit tags to git notes
 convert_v3_to_v4_tags() {
+	local src_v3="$1"
+	local dst_v4="$2"
+
+	# recall the history...
+	id=$(cat $src_v3/.smip/refs/tags)
+	history=$(get_v3_history "$src_v3" "$id")
+
+	# replay and commit
+	for tag in $history; do
+		author=$(cat_file_v3 "$src_v3" $tag | grep "^+author" | sed -e "s/.* //")
+		ctime=$(cat_file_v3 "$src_v3" $tag | grep "^+ctime" | sed -e "s/.* //")
+		tag_name=$(cat_file_v3 "$src_v3" $tag | grep "^tag" | sed -e "s/^+tag *//" -e "s/ .*//")
+		tagged_entry=$(cat_file_v3 "$src_v3" $tag | grep "^tag" | sed -e "s/.* //")
+		# retrieve the v4 commit associated with this entry
+		# TODO
+		# git notes show $id
+
+		#(cd "$dst_v4"; git notes add "tags $new_tags" --author "$author <>" --date=$ctime)
+	done
 	echo TODO convert_v3_to_v4_tags
 }
 convert_v3_to_v4_master "$src_v3" "$dst_v4"
 convert_v3_to_v4_issues "$src_v3" "$dst_v4"
 convert_v3_to_v4_tags "$src_v3" "$dst_v4"
+
+# restore dst_v4 staging index
+(cd "$dst_v4" && git reset master)
 
 
 
