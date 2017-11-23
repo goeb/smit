@@ -145,6 +145,7 @@ convert_v3_to_v4_master() {
 # $2 : dest smit-v4 repo (must be a bare repo)
 # $3 : branch name where to commit
 # $4 : the original entry of the v3 repo
+# $5 : the file for mapping v3 and v4 entries identifiers
 create_commit() {
 
 	echo create_commit $*
@@ -153,6 +154,7 @@ create_commit() {
 	local dst_v4="$2"
     local branch=$3 # make an orphan branch if not existing
 	local entry=$4
+	local mapping_entries_v3_v4="$5"
     # stdin: commit message
 
 	cd "$dst_v4" # must be a bare git repository
@@ -194,6 +196,8 @@ create_commit() {
     # update the branch
     git update-ref refs/heads/$branch $commit_id
 
+	echo "$entry $commit_id" >> "$mapping_entries_v3_v4"
+
 	cd - > /dev/null # back to previous working directory
 }
 
@@ -202,6 +206,7 @@ convert_v3_to_v4_issues() {
 	# in v4, each issue is a branch named issues/<id>
 	local src_v3="$1"
 	local dst_v4="$2"
+	local mapping_entries_v3_v4="$3"
 
 	for i in "$src_v3"/.smip/refs/issues/*; do
 		id=$(cat "$i")
@@ -233,7 +238,7 @@ convert_v3_to_v4_issues() {
 			boundary!="" && $1==boundary { boundary=""; next; }
 			boundary!="" { print multiline_prefix, $0; }
 			END { print "\nsmit-v3-id:", entry; }
-			' | create_commit "$src_v3" "$dst_v4/.git" $branch $entry
+			' | create_commit "$src_v3" "$dst_v4/.git" $branch $entry "$mapping_entries_v3_v4"
 		done
 	done
 }
@@ -241,6 +246,7 @@ convert_v3_to_v4_issues() {
 convert_v3_to_v4_tags() {
 	local src_v3="$1"
 	local dst_v4="$2"
+	local mapping_entries_v3_v4="$3"
 
 	# recall the history...
 	id=$(cat $src_v3/.smip/refs/tags)
@@ -248,24 +254,41 @@ convert_v3_to_v4_tags() {
 
 	# replay and commit
 	for tag in $history; do
-		author=$(cat_file_v3 "$src_v3" $tag | grep "^+author" | sed -e "s/.* //")
+		echo tag=$tag
+		author=$(cat_file_v3 "$src_v3" $tag | grep "^+author" | sed -e "s/^+author *//")
 		ctime=$(cat_file_v3 "$src_v3" $tag | grep "^+ctime" | sed -e "s/.* //")
-		tag_name=$(cat_file_v3 "$src_v3" $tag | grep "^tag" | sed -e "s/^+tag *//" -e "s/ .*//")
-		tagged_entry=$(cat_file_v3 "$src_v3" $tag | grep "^tag" | sed -e "s/.* //")
+		tag_name=$(cat_file_v3 "$src_v3" $tag | grep "^+tag" | awk '{print $2;}')
+		tagged_entry=$(cat_file_v3 "$src_v3" $tag | grep "^+tag" | awk '{print $3;}')
 		# retrieve the v4 commit associated with this entry
-		# TODO
-		# git notes show $id
+		v4_entry=$(grep "^$tagged_entry " "$mapping_entries_v3_v4" | sed -e "s/.* //")
 
-		#(cd "$dst_v4"; git notes add "tags $new_tags" --author "$author <>" --date=$ctime)
+		# format is: 
+		# tag <tag-id>
+		# tag <tag-id>
+		# ...
+
+		# if the tag is already present, remove it.
+		# else: add it
+		# (and preserve other tags)
+
+		(cd "$dst_v4"; git notes show $v4_entry) | awk -v tag_name="$tag_name" '
+		BEGIN { was_present = 0; }
+		$1 == "tag" && $2 == tag_name { was_present = 1; next; }
+		{ print $0; }
+		END { if (!was_present) print "tag", tag_name; }
+		' | (cd "$dst_v4"; git notes add --force --file=- $v4_entry)
+
 	done
-	echo TODO convert_v3_to_v4_tags
 }
+
+MAPPING_ENTRIES_V3_V4=$(mktemp)
 convert_v3_to_v4_master "$src_v3" "$dst_v4"
-convert_v3_to_v4_issues "$src_v3" "$dst_v4"
-convert_v3_to_v4_tags "$src_v3" "$dst_v4"
+convert_v3_to_v4_issues "$src_v3" "$dst_v4" "$MAPPING_ENTRIES_V3_V4"
+convert_v3_to_v4_tags "$src_v3" "$dst_v4" "$MAPPING_ENTRIES_V3_V4"
 
 # restore dst_v4 staging index
 (cd "$dst_v4" && git reset master)
 
+rm "$MAPPING_ENTRIES_V3_V4"
 
 
