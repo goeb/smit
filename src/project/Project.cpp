@@ -198,20 +198,39 @@ void Project::computeAssociations()
 
 int Project::loadIssues()
 {
-    std::string pathToIssues = getIssuesDir();
     LOG_DEBUG("Loading issues: %s", pathToIssues.c_str());
-
-    DIR *issuesDirHandle;
-    if ((issuesDirHandle = openDir(pathToIssues.c_str())) == NULL) {
-        LOG_ERROR("Cannot open directory '%s'", pathToIssues.c_str());
+    FILE* iterator = gitdbIssuesOpen(path);
+    if (!iterator) {
+        LOG_ERROR("Cannot load project (%s)", path.c_str());
         return -1;
     }
+    while (1) {
+        std::string issueId = gitdbIssuesNext(iterator);
+        if (issueId.empty()) break;
+        int ret = loadIssue(issueId);
+    }
+    gitdbIssuesClose(iterator);
+}
 
-    // walk through all issues
-    std::string pathToObjects = path + '/' + PATH_OBJECTS;
-    std::string issueId;
-    int localMaxId = 0;
-    while ((issueId = getNextFile(issuesDirHandle)) != "") {
+int Project::loadIssue(const std::string &issueId)
+{
+    FILE* iterator = gitdbIssueOpen(path);
+    if (!iterator) {
+        LOG_ERROR("Cannot load issue %s (%s)", issueId.c_str(), path.c_str());
+        return -1;
+    }
+    while (1) {
+        std::string entryString = gitdbIssueNextEntry(iterator);
+        if (entry.empty()) break;
+        // TODO deserialize entry into object Entry
+        // TODO store into the issue and the volatile memory structure
+
+    }
+    gitdbIssueClose(iterator);
+
+
+xxxxxxxxxxxxxx
+
         std::string latestEntryOfIssue;
         std::string path = pathToIssues + '/' + issueId;
         int r = loadFile(path, latestEntryOfIssue);
@@ -252,8 +271,6 @@ int Project::loadIssues()
         issue->id = issueId;
         insertIssueInTable(issue);
     }
-
-    closeDir(issuesDirHandle);
 
     updateMaxIssueId(localMaxId);
 
