@@ -38,6 +38,7 @@
 #include "utils/stringTools.h"
 #include "global.h"
 #include "mg_win32.h"
+#include "gitdb.h"
 #include "Tag.h"
 
 const char *Project::reservedNames[] = {
@@ -198,49 +199,29 @@ void Project::computeAssociations()
 
 int Project::loadIssues()
 {
-    LOG_DEBUG("Loading issues: %s", pathToIssues.c_str());
-    FILE* iterator = gitdbIssuesOpen(path);
-    if (!iterator) {
-        LOG_ERROR("Cannot load project (%s)", path.c_str());
+    LOG_DEBUG("Loading issues (%s)", path.c_str());
+    GitIssueList ilist;
+    int ret = ilist.open(path);
+    if (ret) {
+        LOG_ERROR("Cannot load issues of project (%s)", path.c_str());
         return -1;
     }
+
+    int localMaxId = 0;
+
     while (1) {
-        std::string issueId = gitdbIssuesNext(iterator);
-        if (issueId.empty()) break;
-        int ret = loadIssue(issueId);
-    }
-    gitdbIssuesClose(iterator);
-}
+        std::string issueId = ilist.getNext();
+        if (issueId.empty()) break; // reached the end
 
-int Project::loadIssue(const std::string &issueId)
-{
-    FILE* iterator = gitdbIssueOpen(path);
-    if (!iterator) {
-        LOG_ERROR("Cannot load issue %s (%s)", issueId.c_str(), path.c_str());
-        return -1;
-    }
-    while (1) {
-        std::string entryString = gitdbIssueNextEntry(iterator);
-        if (entry.empty()) break;
-        // TODO deserialize entry into object Entry
-        // TODO store into the issue and the volatile memory structure
-
-    }
-    gitdbIssueClose(iterator);
-
-
-xxxxxxxxxxxxxx
-
-        std::string latestEntryOfIssue;
-        std::string path = pathToIssues + '/' + issueId;
-        int r = loadFile(path, latestEntryOfIssue);
-        if (r != 0) {
-            LOG_ERROR("Cannot read file '%s': %s", path.c_str(), strerror(errno));
-            continue; // go to next issue
+        GitIssue elist;
+        int ret = elist.open(path, issueId);
+        if (ret) {
+            LOG_ERROR("Cannot load issue %s (%s)", issueId.c_str(), path.c_str());
+            return -1;
         }
-        trim(latestEntryOfIssue);
 
-        Issue *issue = Issue::load(pathToObjects, latestEntryOfIssue);
+        Issue *issue = Issue::load(elist);
+        elist.close();
         if (!issue) {
             LOG_ERROR("Cannot load issue %s", issueId.c_str());
             continue;
@@ -271,6 +252,8 @@ xxxxxxxxxxxxxx
         issue->id = issueId;
         insertIssueInTable(issue);
     }
+
+    ilist.close();
 
     updateMaxIssueId(localMaxId);
 
@@ -1497,7 +1480,7 @@ int Project::pushEntry(std::string &issueId, const std::string &entryId,
     LOG_DEBUG("pushEntry(%s, %s, %s, ...)", issueId.c_str(), entryId.c_str(), username.c_str());
 
     // load the file as an entry
-    Entry *e = Entry::loadEntryFromBuffer(data, entryId);
+    Entry *e = Entry::loadEntry(data);
     if (!e) return -1;
 
     // check that the username is the same as the author of the entry

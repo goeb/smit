@@ -47,6 +47,7 @@ smit_SOURCES = \
 			   src/utils/dateTools.cpp \
 			   src/utils/logging.cpp \
 			   src/utils/filesystem.cpp \
+			   src/utils/pipe.cpp \
 			   src/main.cpp \
 			   src/server/httpdHandlers.cpp \
 			   src/server/httpdUtils.cpp \
@@ -66,6 +67,7 @@ smit_SOURCES = \
 			   src/local/console.cpp \
 			   src/local/localClient.cpp \
 			   src/Args.cpp \
+			   src/gitdb.cpp \
 			   src/third-party/mongoose.c \
 			   src/third-party/fnmatch.c
 

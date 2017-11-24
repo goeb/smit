@@ -136,7 +136,7 @@ am__smit_SOURCES_DIST = src/repository/db.cpp src/project/Entry.cpp \
 	src/utils/cpio.cpp src/utils/stringTools.cpp \
 	src/utils/jTools.cpp src/utils/mutexTools.cpp \
 	src/utils/dateTools.cpp src/utils/logging.cpp \
-	src/utils/filesystem.cpp src/main.cpp \
+	src/utils/filesystem.cpp src/utils/pipe.cpp src/main.cpp \
 	src/server/httpdHandlers.cpp src/server/httpdUtils.cpp \
 	src/server/Trigger.cpp src/server/HttpContext.cpp \
 	src/rendering/renderingText.cpp \
@@ -148,9 +148,10 @@ am__smit_SOURCES_DIST = src/repository/db.cpp src/project/Entry.cpp \
 	src/rendering/renderingZip.cpp src/user/session.cpp \
 	src/user/AuthSha1.cpp src/user/notification.cpp \
 	src/local/console.cpp src/local/localClient.cpp src/Args.cpp \
-	src/third-party/mongoose.c src/third-party/fnmatch.c \
-	src/local/clone.cpp src/local/httpClient.cpp \
-	src/user/AuthKrb5.cpp src/user/AuthLdap.cpp
+	src/gitdb.cpp src/third-party/mongoose.c \
+	src/third-party/fnmatch.c src/local/clone.cpp \
+	src/local/httpClient.cpp src/user/AuthKrb5.cpp \
+	src/user/AuthLdap.cpp
 am__dirstamp = $(am__leading_dot)dirstamp
 @CURL_ENABLED_TRUE@am__objects_1 = src/local/smit-clone.$(OBJEXT) \
 @CURL_ENABLED_TRUE@	src/local/smit-httpClient.$(OBJEXT)
@@ -172,7 +173,8 @@ am_smit_OBJECTS = src/repository/smit-db.$(OBJEXT) \
 	src/utils/smit-mutexTools.$(OBJEXT) \
 	src/utils/smit-dateTools.$(OBJEXT) \
 	src/utils/smit-logging.$(OBJEXT) \
-	src/utils/smit-filesystem.$(OBJEXT) src/smit-main.$(OBJEXT) \
+	src/utils/smit-filesystem.$(OBJEXT) \
+	src/utils/smit-pipe.$(OBJEXT) src/smit-main.$(OBJEXT) \
 	src/server/smit-httpdHandlers.$(OBJEXT) \
 	src/server/smit-httpdUtils.$(OBJEXT) \
 	src/server/smit-Trigger.$(OBJEXT) \
@@ -190,6 +192,7 @@ am_smit_OBJECTS = src/repository/smit-db.$(OBJEXT) \
 	src/user/smit-notification.$(OBJEXT) \
 	src/local/smit-console.$(OBJEXT) \
 	src/local/smit-localClient.$(OBJEXT) src/smit-Args.$(OBJEXT) \
+	src/smit-gitdb.$(OBJEXT) \
 	src/third-party/smit-mongoose.$(OBJEXT) \
 	src/third-party/smit-fnmatch.$(OBJEXT) $(am__objects_1) \
 	$(am__objects_2) $(am__objects_3)
@@ -500,7 +503,7 @@ smit_SOURCES = src/repository/db.cpp src/project/Entry.cpp \
 	src/utils/cpio.cpp src/utils/stringTools.cpp \
 	src/utils/jTools.cpp src/utils/mutexTools.cpp \
 	src/utils/dateTools.cpp src/utils/logging.cpp \
-	src/utils/filesystem.cpp src/main.cpp \
+	src/utils/filesystem.cpp src/utils/pipe.cpp src/main.cpp \
 	src/server/httpdHandlers.cpp src/server/httpdUtils.cpp \
 	src/server/Trigger.cpp src/server/HttpContext.cpp \
 	src/rendering/renderingText.cpp \
@@ -512,8 +515,9 @@ smit_SOURCES = src/repository/db.cpp src/project/Entry.cpp \
 	src/rendering/renderingZip.cpp src/user/session.cpp \
 	src/user/AuthSha1.cpp src/user/notification.cpp \
 	src/local/console.cpp src/local/localClient.cpp src/Args.cpp \
-	src/third-party/mongoose.c src/third-party/fnmatch.c \
-	$(am__append_9) $(am__append_10) $(am__append_11)
+	src/gitdb.cpp src/third-party/mongoose.c \
+	src/third-party/fnmatch.c $(am__append_9) $(am__append_10) \
+	$(am__append_11)
 nodist_smit_SOURCES = embedcpio.c embedcpio.h 
 BUILT_SOURCES = embedcpio.c embedcpio.h
 CLEANFILES = embedcpio.c embedcpio.h convertToC
@@ -686,6 +690,8 @@ src/utils/smit-logging.$(OBJEXT): src/utils/$(am__dirstamp) \
 	src/utils/$(DEPDIR)/$(am__dirstamp)
 src/utils/smit-filesystem.$(OBJEXT): src/utils/$(am__dirstamp) \
 	src/utils/$(DEPDIR)/$(am__dirstamp)
+src/utils/smit-pipe.$(OBJEXT): src/utils/$(am__dirstamp) \
+	src/utils/$(DEPDIR)/$(am__dirstamp)
 src/$(am__dirstamp):
 	@$(MKDIR_P) src
 	@: > src/$(am__dirstamp)
@@ -762,6 +768,8 @@ src/local/smit-localClient.$(OBJEXT): src/local/$(am__dirstamp) \
 	src/local/$(DEPDIR)/$(am__dirstamp)
 src/smit-Args.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
+src/smit-gitdb.$(OBJEXT): src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
 src/third-party/$(am__dirstamp):
 	@$(MKDIR_P) src/third-party
 	@: > src/third-party/$(am__dirstamp)
@@ -814,6 +822,7 @@ distclean-compile:
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/smit-embedcpio.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-Args.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-gitdb.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/smit-main.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/local/$(DEPDIR)/smit-clone.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/local/$(DEPDIR)/smit-console.Po@am__quote@
@@ -854,6 +863,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/utils/$(DEPDIR)/smit-logging.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/utils/$(DEPDIR)/smit-mutexTools.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/utils/$(DEPDIR)/smit-parseConfig.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/utils/$(DEPDIR)/smit-pipe.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/utils/$(DEPDIR)/smit-stringTools.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/utils/$(DEPDIR)/smparser-filesystem.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/utils/$(DEPDIR)/smparser-parseConfig.Po@am__quote@
@@ -1171,6 +1181,20 @@ src/utils/smit-filesystem.obj: src/utils/filesystem.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/utils/smit-filesystem.obj `if test -f 'src/utils/filesystem.cpp'; then $(CYGPATH_W) 'src/utils/filesystem.cpp'; else $(CYGPATH_W) '$(srcdir)/src/utils/filesystem.cpp'; fi`
 
+src/utils/smit-pipe.o: src/utils/pipe.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/utils/smit-pipe.o -MD -MP -MF src/utils/$(DEPDIR)/smit-pipe.Tpo -c -o src/utils/smit-pipe.o `test -f 'src/utils/pipe.cpp' || echo '$(srcdir)/'`src/utils/pipe.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/utils/$(DEPDIR)/smit-pipe.Tpo src/utils/$(DEPDIR)/smit-pipe.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/utils/pipe.cpp' object='src/utils/smit-pipe.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/utils/smit-pipe.o `test -f 'src/utils/pipe.cpp' || echo '$(srcdir)/'`src/utils/pipe.cpp
+
+src/utils/smit-pipe.obj: src/utils/pipe.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/utils/smit-pipe.obj -MD -MP -MF src/utils/$(DEPDIR)/smit-pipe.Tpo -c -o src/utils/smit-pipe.obj `if test -f 'src/utils/pipe.cpp'; then $(CYGPATH_W) 'src/utils/pipe.cpp'; else $(CYGPATH_W) '$(srcdir)/src/utils/pipe.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/utils/$(DEPDIR)/smit-pipe.Tpo src/utils/$(DEPDIR)/smit-pipe.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/utils/pipe.cpp' object='src/utils/smit-pipe.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/utils/smit-pipe.obj `if test -f 'src/utils/pipe.cpp'; then $(CYGPATH_W) 'src/utils/pipe.cpp'; else $(CYGPATH_W) '$(srcdir)/src/utils/pipe.cpp'; fi`
+
 src/smit-main.o: src/main.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/smit-main.o -MD -MP -MF src/$(DEPDIR)/smit-main.Tpo -c -o src/smit-main.o `test -f 'src/main.cpp' || echo '$(srcdir)/'`src/main.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/smit-main.Tpo src/$(DEPDIR)/smit-main.Po
@@ -1436,6 +1460,20 @@ src/smit-Args.obj: src/Args.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/Args.cpp' object='src/smit-Args.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/smit-Args.obj `if test -f 'src/Args.cpp'; then $(CYGPATH_W) 'src/Args.cpp'; else $(CYGPATH_W) '$(srcdir)/src/Args.cpp'; fi`
+
+src/smit-gitdb.o: src/gitdb.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/smit-gitdb.o -MD -MP -MF src/$(DEPDIR)/smit-gitdb.Tpo -c -o src/smit-gitdb.o `test -f 'src/gitdb.cpp' || echo '$(srcdir)/'`src/gitdb.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/smit-gitdb.Tpo src/$(DEPDIR)/smit-gitdb.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/gitdb.cpp' object='src/smit-gitdb.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/smit-gitdb.o `test -f 'src/gitdb.cpp' || echo '$(srcdir)/'`src/gitdb.cpp
+
+src/smit-gitdb.obj: src/gitdb.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/smit-gitdb.obj -MD -MP -MF src/$(DEPDIR)/smit-gitdb.Tpo -c -o src/smit-gitdb.obj `if test -f 'src/gitdb.cpp'; then $(CYGPATH_W) 'src/gitdb.cpp'; else $(CYGPATH_W) '$(srcdir)/src/gitdb.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/$(DEPDIR)/smit-gitdb.Tpo src/$(DEPDIR)/smit-gitdb.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/gitdb.cpp' object='src/smit-gitdb.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/smit-gitdb.obj `if test -f 'src/gitdb.cpp'; then $(CYGPATH_W) 'src/gitdb.cpp'; else $(CYGPATH_W) '$(srcdir)/src/gitdb.cpp'; fi`
 
 src/local/smit-clone.o: src/local/clone.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/local/smit-clone.o -MD -MP -MF src/local/$(DEPDIR)/smit-clone.Tpo -c -o src/local/smit-clone.o `test -f 'src/local/clone.cpp' || echo '$(srcdir)/'`src/local/clone.cpp

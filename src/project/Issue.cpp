@@ -38,6 +38,7 @@
 #include "global.h"
 #include "mg_win32.h"
 #include "fnmatch.h"
+#include "gitdb.h"
 
 #define K_MERGE_PENDING ".merge-pending";
 #define K_ISSUE_ID "id"
@@ -102,24 +103,23 @@ void Issue::insertEntry(Entry* e)
     e->issue = this;
 }
 
-Issue *Issue::load(const std::string &objectsDir, const std::string &latestEntryOfIssue)
+Issue *Issue::load(GitIssue &elist)
 {
     Issue *issue = new Issue();
-
-    std::string entryid = latestEntryOfIssue;
     int error = 0;
-    while (entryid.size() && entryid != K_PARENT_NULL) {
-        std::string entryPath = objectsDir + '/' + Entry::getSubpath(entryid);
-        Entry *e = Entry::loadEntry(entryPath, entryid);
+
+    while (1) {
+        std::string entryString = elist.getNextEntry();
+        if (entryString.empty()) break; // reached the end
+
+        Entry *e = Entry::loadEntry(entryString);
         if (!e) {
-            LOG_ERROR("Cannot load entry '%s'", entryPath.c_str());
+            LOG_ERROR("Cannot load entry '%s'", entryString.c_str());
             error = 1;
             break; // abort the loading of this issue
         }
 
         issue->insertEntry(e); // store the entry in the chain list
-
-        entryid = e->parent; // go to parent entry
     }
 
     if (error) {

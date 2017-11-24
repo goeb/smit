@@ -14,7 +14,7 @@ int GitIssueList::open(const std::string &gitRepoPath)
     p = Pipe::open(cmd, "re"); // with FD_CLOEXEC
 
     if (p) return 0;
-    LOG_ERROR("Cannot get issue list (%s)", path.c_str());
+    LOG_ERROR("Cannot get issue list (%s)", gitRepoPath.c_str());
     return -1;
 }
 
@@ -55,7 +55,7 @@ int GitIssue::open(const std::string &gitRepoPath, const std::string &issueId)
     p = Pipe::open(cmd, "re"); // with FD_CLOEXEC
 
     if (p) return 0;
-    LOG_ERROR("Cannot open log of issue %s (%s)", issueId.c_str(), path.c_str());
+    LOG_ERROR("Cannot open log of issue %s (%s)", issueId.c_str(), gitRepoPath.c_str());
     return -1;
 }
 

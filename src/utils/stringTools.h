@@ -15,7 +15,7 @@ typedef std::map<std::string, std::list<std::string> >::const_iterator Propertie
 std::string bin2hex(const uint8_t *buffer, size_t len);
 std::string bin2hex(const ustring & in);
 
-std::string popToken(std::string & uri, char separator);
+std::string popToken(std::string & uri, char separator, bool trimNext=true);
 void trimLeft(std::string & s, const char *c);
 void trimRight(std::string &s, const char *c);
 void trim(std::string &s, const char *c = " \t\n\r");

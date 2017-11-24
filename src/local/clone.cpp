@@ -463,7 +463,10 @@ Issue *loadRemoteIssue(const PullContext &pullCtx, Project &p, const std::string
 {
     LOG_DEBUG("loadRemoteIssue of %s: %s", p.getName().c_str(), issueId.c_str());
 
-    Issue *remoteIssue = Issue::load(p.getObjectsDir(), latestEntry);
+    LOG_ERROR("loadRemoteIssue not implemented");
+    exit(1);
+
+    Issue *remoteIssue = 0; //Issue::load(p.getObjectsDir(), latestEntry);
     if (!remoteIssue) {
         fprintf(stderr, "Cannot load remote issue from latest %s\n", latestEntry.c_str());
         exit(1);

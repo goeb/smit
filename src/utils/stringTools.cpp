@@ -59,8 +59,11 @@ std::string bin2hex(const uint8_t *buffer, size_t len)
   *     popToken("/a/b/c", '/') -> return "a" and set uri to "b/c"
   *     popToken("a/b/c", '/') -> return "a" and set uri to "b/c"
   *     popToken("x=1&y=2", '&') -> return "x=1" and set uri to "y=2"
+  *
+  *  @param trimNext
+  *      If true, then the remaining text immediately after the token is trimmed.
   */
-std::string popToken(std::string & uri, char separator)
+std::string popToken(std::string & uri, char separator, bool trimNext)
 {
     if (uri.empty()) return "";
 
@@ -79,7 +82,7 @@ std::string popToken(std::string & uri, char separator)
     if (pos == std::string::npos) uri = "";
     else {
         uri = uri.substr(pos);
-        trimLeft(uri, sepStr); // Several consecutive separators are taken as a single one
+        if (trimNext) trimLeft(uri, sepStr); // Several consecutive separators are taken as a single one
     }
 
     return firstToken;

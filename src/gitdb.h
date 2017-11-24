@@ -3,7 +3,7 @@
 
 #include <string>
 
-#include "pipe.h"
+#include "utils/pipe.h"
 
 class GitIssueList {
 

@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "pipe.h"
+#include "utils/logging.h"
 
 #define BUF_SIZ 4096
 

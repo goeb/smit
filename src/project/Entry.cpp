@@ -41,65 +41,142 @@
 const std::string Entry::EMPTY_MESSAGE("");
 
 
-/** Load an entry from a file
+/** Load an entry from a string
   *
-  * @param id
-  *     id of the new Entry instance to be created
-  */
-Entry *Entry::loadEntry(const std::string &path, const std::string &id)
-{
-    // load a given entry
-    std::string buf;
-    int n = loadFile(path.c_str(), buf);
-
-    if (n < 0) {
-        // error loading the file
-        LOG_ERROR("Cannot load entry '%s': %s", path.c_str(), strerror(errno));
-        return 0;
-    }
-    return loadEntryFromBuffer(buf, id);
-}
-
-/** Load an entry from a buffer
+  * @param data
   *
-  * @param id
-  *     id of the new Entry instance to be created
+  * Example of data:
+  * commit cb64638ed0b606095fd78f50c03b0e28c7827a11
+  * tree 6f3b1c4bdbf1a2eef2d752dda971ef51bdd2f631
+  * author homer <> 1386451794 +0100
+  * committer homer <> 1511301253 +0100
+  *
+  *     convert_v3_to_v4_issues
+  *
+  *     msg <
+  *     msg uerbaque, **nec placidam membris** dat cura quietem.
+  *     msg Postera Phoebea lustrabat lampade terras,
+  *     msg umentemque Aurora polo dimouerat umbram,
+  *     msg cum sic unanimam adloquitur male sana sororem:
+  *     msg "Anna soror, quae me suspensam insomnia terrent!
+  *     property due_date "next week"
+  *     property in_charge homer
+  *     property status open
+  *     property summary "At regina graui"
+  *
+  *     smit-v3-id: zQp6nXdMe4EbIlG9wFuUqwtSZG4
   */
-Entry *Entry::loadEntryFromBuffer(const std::string &data, const std::string &id)
+Entry *Entry::loadEntry(std::string data)
 {
-    // log if sha1 does not match
-    std::string hash = getSha1(data);
-    if (0 != hash.compare(id)) {
-        LOG_ERROR("Hash does not match: entry=%s, sha1=%s", id.c_str(), hash.c_str());
-    }
-
     Entry *e = new Entry;
-    e->id = id;
 
-    std::list<std::list<std::string> > lines = parseConfigTokens(data.c_str(), data.size());
+    // extract the entry id (ie: commit id)
+    popToken(data, ' '); // should be "commit", not verified...
+    e->id = popToken(data, '\n');
 
-    std::list<std::list<std::string> >::iterator line;
-    int lineNum = 0;
-    std::string smitVersion = "1.0"; // default value if version is not present
-    for (line=lines.begin(); line != lines.end(); line++) {
-        lineNum++;
-        // each line should be a key / value pair
-        if (line->empty()) continue; // ignore this line
+    std::string key;
+    std::string tree;
+    bool inNotesPart = false;
+    std::string msg; // at most one message is supported in an entry
+    std::string multilineValue; // at most one at a time (not interleaved)
+    std::string multilineProperty;
 
-        std::string key = line->front();
-        line->pop_front(); // remove key from tokens
-        std::string firstValue;
-        // it is allowed for multiselects and associations to have no value
-        if (line->size() >= 1) firstValue = line->front();
+    while (!data.empty()) {
 
-        if (0 == key.compare(K_CTIME)) {
-            e->ctime = atoi((char*)firstValue.c_str());
-        } else if (0 == key.compare(K_PARENT)) e->parent = firstValue;
-        else if (0 == key.compare(K_AUTHOR)) e->author = firstValue;
-        else if (key == K_SMIT_VERSION) smitVersion = firstValue;
-        else {
-            e->properties[key] = *line;
+        std::string line = popToken(data, '\n');
+        if (line.empty()) continue;
+
+        if (line[0] != ' ') {
+            key = popToken(line, ' ');
+            if (key == "tree") tree = line;
+            else if (key == "parent") e->parent = line;
+            else if (key == "Notes:") inNotesPart = true;
+            else if (key == "author") {
+                // take the author name until the first '<'
+                e->author = popToken(line, '<');
+                trim(e->author);
+                popToken(line, '>'); // remove the email
+                std::string ctimeStr = popToken(line, ' ');
+                e->ctime = atoi(ctimeStr.c_str());
+            }
+
+        } else if (inNotesPart) {
+            // in notes part
+            key = popToken(line, ' ');
+            if (key == "tag") {
+                // TODO xxxxxxxxxxxxxxxxxxxxxxxxxx
+            }
+        } else {
+            // in the body part
+
+            // do not trim now the rest of the line, as multilines
+            // need their spaces (indentation, etc.)
+            key = popToken(line, ' ', false);
+            if (key == "amend") {
+                trim(line);
+                e->properties[K_AMEND].push_back(line);
+
+            } else if (key == "msg") {
+                // remove one space -- the space that separates the "msg" keyword
+                // from the rest iof the line.
+                // concatenate with previous msg lines
+                if (!msg.empty()) msg += '\n';
+                if (!line.empty()) msg += line.substr(1);
+
+            } else if (key == "property") {
+                // do not trim now the rest of the line, as multilines
+                // need their spaces (indentation, etc.)
+                std::string propertyId = popToken(line, ' ', false);
+
+                if (propertyId.empty()) continue;
+
+                if (!multilineProperty.empty()) {
+                    // manage a pending multiline property
+
+                    if (propertyId == multilineProperty) {
+                        // remove one space -- the space that separates the "msg" keyword
+                        // from the rest iof the line.
+
+                        // concatenate with previous
+                        if (!multilineValue.empty()) multilineValue += '\n';
+                        if (!line.empty()) multilineValue += line.substr(1);
+                        continue;
+                    }
+
+                    // reached the end of the multilineProperty.
+                    // record it.
+                    e->properties[multilineProperty].push_back(multilineValue);
+                    multilineProperty = "";
+                    multilineValue = "";
+                }
+
+                if (line == " <") {
+                    // start a new multiline property
+                    multilineProperty = propertyId;
+                    continue;
+                }
+
+                // regular property (on a single line)
+                std::list<std::list<std::string> > subLines = parseConfigTokens(line.c_str(), line.size());
+                std::list<std::string> subLine;
+                if (subLines.empty()) {
+                    // ok, no value here
+                } else if (subLines.size() == 1) {
+                    subLine = subLines.front();
+                } else {
+                    LOG_ERROR("loadEntry: invalid line for entry %s: %s",
+                              e->id.c_str(), line.c_str());
+                    continue;
+                }
+                e->properties[propertyId] = subLine;
+                LOG_DEBUG("e->properties[%s]=%s", propertyId.c_str(), toString(subLine).c_str());
+            }
         }
+    }
+
+    if (!msg.empty()) {
+        LOG_DEBUG("e->properties[K_MESSAGE]=%s", msg.c_str());
+        e->properties[K_MESSAGE].push_back(msg);
     }
 
     e->updateMessage();
