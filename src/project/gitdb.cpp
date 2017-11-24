@@ -1,103 +1,121 @@
 #include <string>
-#include <stdio.h>
-#include <stdint.h>
 #include <string.h>
 
-//#include "gitdb.h"
-//#include "utils/logging.h"
+#include "gitdb.h"
+#include "utils/logging.h"
+#include "utils/stringTools.h"
 
-#define LOG_ERROR(...)
-#define LOG_DEBUG(format,...) printf("debug: " format, __VA_ARGS__);
-
-
-#define BUF_SIZ 4096
 #define BRANCH_PREFIX_ISSUES "issues/"
 
-struct PopenIterator {
-    FILE *fp;
-    std::string buffer; // data read but not yet consumed
-};
-
-PopenIterator* gitdbIssuesOpen(const std::string &path)
+int GitIssueList::open(const std::string &gitRepoPath)
 {
-    FILE *fp;
-    std::string cmd = "git -C \"" + path + "\" branch --list \"" BRANCH_PREFIX_ISSUES "*\"";
-    fp = popen(cmd.c_str(), "r");
-    if (!fp) return 0;
+    // git branch --list issues/*
+    std::string cmd = "git -C \"" + gitRepoPath + "\" branch --list \"" BRANCH_PREFIX_ISSUES "*\"";
+    p = Pipe::open(cmd, "re"); // with FD_CLOEXEC
 
-    PopenIterator *result = new PopenIterator;
-    result->fp = fp;
-    return result;
+    if (p) return 0;
+    LOG_ERROR("Cannot get issue list (%s)", path.c_str());
+    return -1;
 }
 
-static std::string pipeReadLine(PopenIterator *iterator)
-    {
-    std::string result;
-
-    while (1) {
-        // look if a whole line is available in the buffer
-        size_t pos = iterator->buffer.find_first_of('\n');
-        if (pos != std::string::npos) {
-
-            result = iterator->buffer.substr(0, pos);
-
-            // pop the line from the buffer
-            iterator->buffer = iterator->buffer.substr(pos+1);
-            break;
-        }
-
-        // so far no whole line has been received
-
-        // check end of file
-        if (feof(iterator->fp) || ferror(iterator->fp)) {
-            result = iterator->buffer;
-            iterator->buffer = ""; // clear the buffer
-            break;
-        }
-
-        // read from the pipe
-        uint8_t buffer[BUF_SIZ];
-        size_t n = fread(buffer, 1, BUF_SIZ, iterator->fp);
-
-        if (ferror(iterator->fp)) {
-            LOG_ERROR("Error in fread: %s", STRERROR(errno));
-            // error is not raised immediately. First process
-            // data previously received in the buffer
-        }
-
-        // concatenate in the buffer
-        iterator->buffer.append((char*)buffer, n);
-    }
-
-    return result;
-}
-
-std::string gitdbIssuesNext(PopenIterator *iterator)
+/** Read the next line
+ *
+ *  Expected line read from the pipe: "    issues/<id>\n"
+ */
+std::string GitIssueList::getNext()
 {
-    std::string line = pipeReadLine(iterator);
+    std::string line = p->getline();
+    if (line.empty()) return line;
 
     // trim the "  issues/" prefix
     if (line.size() > strlen(BRANCH_PREFIX_ISSUES)+2) {
         line = line.substr(strlen(BRANCH_PREFIX_ISSUES)+2);
+        trimRight(line, "\n"); // remove possible trailing LF
+
+    } else {
+        // error, should not happen
+        LOG_ERROR("GitIssueList::getNext recv invalid line: %s", line.c_str());
+        line = "";
     }
     return line;
 }
 
-void gitdbIssuesClose(PopenIterator *iterator)
+void GitIssueList::close()
 {
-    pclose(iterator->fp);
-
+    Pipe::close(p);
 }
 
 
-int main()
+int GitIssue::open(const std::string &gitRepoPath, const std::string &issueId)
 {
-    PopenIterator *iterator = gitdbIssuesOpen(".");
+    // git log --format=raw --notes issues/<id>"
+    std::string cmd = "git -C \"" + gitRepoPath + "\"";
+    cmd += " log --format=raw --notes";
+    cmd += " " BRANCH_PREFIX_ISSUES + issueId;
+    p = Pipe::open(cmd, "re"); // with FD_CLOEXEC
 
-    while (1) {
-        std::string issueId = gitdbIssuesNext(iterator);
-        if (issueId.empty()) break;
-        LOG_DEBUG("issueId=%s\n", issueId.c_str());
+    if (p) return 0;
+    LOG_ERROR("Cannot open log of issue %s (%s)", issueId.c_str(), path.c_str());
+    return -1;
+}
+
+static bool isCommitLine(const std::string &line)
+{
+    if (line.size() < 7) return false;
+    if (0 != strncmp("commit ", line.c_str(), 7)) return false;
+    return true;
+}
+
+/** Read the next entry in the log.
+ *
+ *  An entry starts by a line "commit ...."
+ *  The body is indented by 4 spaces.
+ *
+ *  Example:
+ *  commit 746b18c8251b331f9819d066ff5bf05d67dcae4e
+ *  tree 9dcca633b452ff20364918a1eb920d06ef73ea6e
+ *  parent 13ad980a4627c811406611efe4ed28c81a7da8d4
+ *  author homer <> 1511476601 +0100
+ *  committer homer <> 1511476601 +0100
+ *
+ *      property status open
+ *      ....
+ *
+ *  Notes:
+ *      tag toto
+ *      tag tutu
+ *
+ */
+std::string GitIssue::getNextEntry()
+{
+    std::string entry;
+    if (previousCommitLine.empty()) {
+        std::string commitLine = p->getline();
+        if (commitLine.empty()) return ""; // the end
+
+        if (!isCommitLine(commitLine)) {
+            LOG_ERROR("GitIssue::getNextEntry: missing 'commit' line: %s", commitLine.c_str());
+            return "";
+        }
+        entry = commitLine;
+    } else {
+        entry = previousCommitLine;
+        previousCommitLine = "";
     }
-    gitdbIssuesClose(iterator);
+
+    // read until next cmomit line or end of stream
+    while (1) {
+        std::string line = p->getline();
+        if (line.empty()) return entry; // end of stream
+        if (isCommitLine(line)) {
+            previousCommitLine = line; // store for next iteration
+            return entry; // done
+        }
+        entry += line;
+    }
+}
+
+void GitIssue::close()
+{
+    Pipe::close(p);
 }

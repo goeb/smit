@@ -95,7 +95,8 @@ TESTS = T_parseConfig$(EXEEXT) T_stringTools$(EXEEXT) T_smparser \
 	T_permissions_repo.sh T_project_config.sh T_user_config.sh \
 	T_get_json.sh
 check_PROGRAMS = T_parseConfig$(EXEEXT) T_stringTools$(EXEEXT) \
-	T_Args$(EXEEXT) get_random_value$(EXEEXT) T_pipe$(EXEEXT)
+	T_Args$(EXEEXT) get_random_value$(EXEEXT) T_pipe$(EXEEXT) \
+	T_gitdb$(EXEEXT)
 subdir = test
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/configure.ac
@@ -111,6 +112,11 @@ am_T_Args_OBJECTS = T_Args.$(OBJEXT) ../src/Args.$(OBJEXT) \
 	../src/utils/stringTools.$(OBJEXT)
 T_Args_OBJECTS = $(am_T_Args_OBJECTS)
 T_Args_LDADD = $(LDADD)
+am_T_gitdb_OBJECTS = T_gitdb.$(OBJEXT) ../src/utils/pipe.$(OBJEXT) \
+	../src/project/gitdb.$(OBJEXT) \
+	../src/utils/stringTools.$(OBJEXT)
+T_gitdb_OBJECTS = $(am_T_gitdb_OBJECTS)
+T_gitdb_LDADD = $(LDADD)
 am_T_parseConfig_OBJECTS = T_parseConfig.$(OBJEXT) \
 	../src/utils/parseConfig.$(OBJEXT) \
 	../src/utils/stringTools.$(OBJEXT)
@@ -167,11 +173,12 @@ AM_V_CXXLD = $(am__v_CXXLD_@AM_V@)
 am__v_CXXLD_ = $(am__v_CXXLD_@AM_DEFAULT_V@)
 am__v_CXXLD_0 = @echo "  CXXLD   " $@;
 am__v_CXXLD_1 = 
-SOURCES = $(T_Args_SOURCES) $(T_parseConfig_SOURCES) $(T_pipe_SOURCES) \
+SOURCES = $(T_Args_SOURCES) $(T_gitdb_SOURCES) \
+	$(T_parseConfig_SOURCES) $(T_pipe_SOURCES) \
 	$(T_stringTools_SOURCES) $(get_random_value_SOURCES)
-DIST_SOURCES = $(T_Args_SOURCES) $(T_parseConfig_SOURCES) \
-	$(T_pipe_SOURCES) $(T_stringTools_SOURCES) \
-	$(get_random_value_SOURCES)
+DIST_SOURCES = $(T_Args_SOURCES) $(T_gitdb_SOURCES) \
+	$(T_parseConfig_SOURCES) $(T_pipe_SOURCES) \
+	$(T_stringTools_SOURCES) $(get_random_value_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -528,7 +535,12 @@ T_stringTools_SOURCES = T_stringTools.cpp ../src/utils/stringTools.cpp
 T_Args_SOURCES = T_Args.cpp ../src/Args.cpp ../src/utils/stringTools.cpp
 get_random_value_SOURCES = get_random_value.c
 T_pipe_SOURCES = T_pipe.cpp ../src/utils/pipe.cpp
-AM_CPPFLAGS = -I$(top_srcdir)/src -I$(top_srcdir)/src/utils -include logging.h
+T_gitdb_SOURCES = T_gitdb.cpp ../src/utils/pipe.cpp ../src/project/gitdb.cpp ../src/utils/stringTools.cpp
+AM_CPPFLAGS = -I$(top_srcdir)/src \
+			  -I$(top_srcdir)/src/utils \
+			  -I$(top_srcdir)/src/project \
+			  -include logging.h
+
 
 # include the tests on the distribution
 EXTRA_DIST = .
@@ -592,14 +604,26 @@ clean-checkPROGRAMS:
 T_Args$(EXEEXT): $(T_Args_OBJECTS) $(T_Args_DEPENDENCIES) $(EXTRA_T_Args_DEPENDENCIES) 
 	@rm -f T_Args$(EXEEXT)
 	$(AM_V_CXXLD)$(CXXLINK) $(T_Args_OBJECTS) $(T_Args_LDADD) $(LIBS)
+../src/utils/pipe.$(OBJEXT): ../src/utils/$(am__dirstamp) \
+	../src/utils/$(DEPDIR)/$(am__dirstamp)
+../src/project/$(am__dirstamp):
+	@$(MKDIR_P) ../src/project
+	@: > ../src/project/$(am__dirstamp)
+../src/project/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) ../src/project/$(DEPDIR)
+	@: > ../src/project/$(DEPDIR)/$(am__dirstamp)
+../src/project/gitdb.$(OBJEXT): ../src/project/$(am__dirstamp) \
+	../src/project/$(DEPDIR)/$(am__dirstamp)
+
+T_gitdb$(EXEEXT): $(T_gitdb_OBJECTS) $(T_gitdb_DEPENDENCIES) $(EXTRA_T_gitdb_DEPENDENCIES) 
+	@rm -f T_gitdb$(EXEEXT)
+	$(AM_V_CXXLD)$(CXXLINK) $(T_gitdb_OBJECTS) $(T_gitdb_LDADD) $(LIBS)
 ../src/utils/parseConfig.$(OBJEXT): ../src/utils/$(am__dirstamp) \
 	../src/utils/$(DEPDIR)/$(am__dirstamp)
 
 T_parseConfig$(EXEEXT): $(T_parseConfig_OBJECTS) $(T_parseConfig_DEPENDENCIES) $(EXTRA_T_parseConfig_DEPENDENCIES) 
 	@rm -f T_parseConfig$(EXEEXT)
 	$(AM_V_CXXLD)$(CXXLINK) $(T_parseConfig_OBJECTS) $(T_parseConfig_LDADD) $(LIBS)
-../src/utils/pipe.$(OBJEXT): ../src/utils/$(am__dirstamp) \
-	../src/utils/$(DEPDIR)/$(am__dirstamp)
 
 T_pipe$(EXEEXT): $(T_pipe_OBJECTS) $(T_pipe_DEPENDENCIES) $(EXTRA_T_pipe_DEPENDENCIES) 
 	@rm -f T_pipe$(EXEEXT)
@@ -616,16 +640,19 @@ get_random_value$(EXEEXT): $(get_random_value_OBJECTS) $(get_random_value_DEPEND
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
 	-rm -f ../src/*.$(OBJEXT)
+	-rm -f ../src/project/*.$(OBJEXT)
 	-rm -f ../src/utils/*.$(OBJEXT)
 
 distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@../src/$(DEPDIR)/Args.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@../src/project/$(DEPDIR)/gitdb.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@../src/utils/$(DEPDIR)/parseConfig.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@../src/utils/$(DEPDIR)/pipe.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@../src/utils/$(DEPDIR)/stringTools.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/T_Args.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/T_gitdb.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/T_parseConfig.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/T_pipe.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/T_stringTools.Po@am__quote@
@@ -1074,6 +1101,8 @@ distclean-generic:
 	-test . = "$(srcdir)" || test -z "$(CONFIG_CLEAN_VPATH_FILES)" || rm -f $(CONFIG_CLEAN_VPATH_FILES)
 	-rm -f ../src/$(DEPDIR)/$(am__dirstamp)
 	-rm -f ../src/$(am__dirstamp)
+	-rm -f ../src/project/$(DEPDIR)/$(am__dirstamp)
+	-rm -f ../src/project/$(am__dirstamp)
 	-rm -f ../src/utils/$(DEPDIR)/$(am__dirstamp)
 	-rm -f ../src/utils/$(am__dirstamp)
 
@@ -1085,7 +1114,7 @@ clean: clean-am
 clean-am: clean-checkPROGRAMS clean-generic clean-local mostlyclean-am
 
 distclean: distclean-am
-	-rm -rf ../src/$(DEPDIR) ../src/utils/$(DEPDIR) ./$(DEPDIR)
+	-rm -rf ../src/$(DEPDIR) ../src/project/$(DEPDIR) ../src/utils/$(DEPDIR) ./$(DEPDIR)
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-tags
@@ -1131,7 +1160,7 @@ install-ps-am:
 installcheck-am:
 
 maintainer-clean: maintainer-clean-am
-	-rm -rf ../src/$(DEPDIR) ../src/utils/$(DEPDIR) ./$(DEPDIR)
+	-rm -rf ../src/$(DEPDIR) ../src/project/$(DEPDIR) ../src/utils/$(DEPDIR) ./$(DEPDIR)
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 

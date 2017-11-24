@@ -13,15 +13,25 @@ TESTS = T_parseConfig \
 		T_user_config.sh \
 		T_get_json.sh
 
-check_PROGRAMS = T_parseConfig T_stringTools T_Args get_random_value T_pipe
+check_PROGRAMS = T_parseConfig \
+				 T_stringTools \
+				 T_Args \
+				 get_random_value \
+				 T_pipe \
+				 T_gitdb
+
 T_parseConfig_SOURCES = T_parseConfig.cpp ../src/utils/parseConfig.cpp ../src/utils/stringTools.cpp
 T_stringTools_SOURCES = T_stringTools.cpp ../src/utils/stringTools.cpp
 T_Args_SOURCES = T_Args.cpp ../src/Args.cpp ../src/utils/stringTools.cpp
 get_random_value_SOURCES = get_random_value.c
 
 T_pipe_SOURCES = T_pipe.cpp ../src/utils/pipe.cpp
+T_gitdb_SOURCES = T_gitdb.cpp ../src/utils/pipe.cpp ../src/project/gitdb.cpp ../src/utils/stringTools.cpp
 
-AM_CPPFLAGS = -I$(top_srcdir)/src -I$(top_srcdir)/src/utils -include logging.h
+AM_CPPFLAGS = -I$(top_srcdir)/src \
+			  -I$(top_srcdir)/src/utils \
+			  -I$(top_srcdir)/src/project \
+			  -include logging.h
 
 
 # include the tests on the distribution
