@@ -45,6 +45,8 @@ const std::string Entry::EMPTY_MESSAGE("");
   *
   * @param data
   *
+  * The format of data is the one returned by:
+  *      git log --format=raw --notes
   * Example of data:
   * commit cb64638ed0b606095fd78f50c03b0e28c7827a11
   * tree 6f3b1c4bdbf1a2eef2d752dda971ef51bdd2f631
@@ -95,7 +97,7 @@ Entry *Entry::loadEntry(std::string data)
                 // take the author name until the first '<'
                 e->author = popToken(line, '<');
                 trim(e->author);
-                popToken(line, '>'); // remove the email
+                popToken(line, ' '); // remove the email
                 std::string ctimeStr = popToken(line, ' ');
                 e->ctime = atoi(ctimeStr.c_str());
             }
