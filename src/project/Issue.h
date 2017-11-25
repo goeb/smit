@@ -12,7 +12,6 @@
 #include "utils/mutexTools.h"
 #include "utils/stringTools.h"
 #include "Entry.h"
-#include "gitdb.h"
 
 #define DIR_DELETED_OLD "_del"
 
@@ -68,7 +67,7 @@ struct Issue {
 
     void addEntryInTable(Entry *e);
     void addEntry(Entry *e);
-    static Issue *load(GitIssue &elist);
+    static void destroy(Issue *i);
     void insertEntry(Entry *e);
     Entry *amendEntry(const std::string &entryId, const std::string &newMsg, const std::string &username);
 

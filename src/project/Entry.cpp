@@ -73,8 +73,14 @@ Entry *Entry::loadEntry(std::string data)
     Entry *e = new Entry;
 
     // extract the entry id (ie: commit id)
-    popToken(data, ' '); // should be "commit", not verified...
+    std::string commitKey = popToken(data, ' '); // should be "commit", not verified...
     e->id = popToken(data, '\n');
+
+    if (commitKey != "commit" || e->id.size() != 40) {
+        LOG_ERROR("Invalid entry: %s", data.c_str());
+        delete e;
+        return 0;
+    }
 
     std::string key;
     std::string tree;

@@ -197,6 +197,47 @@ void Project::computeAssociations()
     }
 }
 
+/** Load a single issue
+ */
+Issue *Project::loadIssue(const std::string &issueId)
+{
+    GitIssue elist;
+    int ret = elist.open(path, issueId);
+    if (ret) {
+        LOG_ERROR("Cannot load issue %s (%s)", issueId.c_str(), path.c_str());
+        return 0;
+    }
+
+    Issue *issue = new Issue();
+    int error = 0;
+
+    while (1) {
+        std::string entryString = elist.getNextEntry();
+        if (entryString.empty()) break; // reached the end
+
+        Entry *e = Entry::loadEntry(entryString);
+        if (!e) {
+            LOG_ERROR("Cannot load entry '%s'", entryString.c_str());
+            error = 1;
+            break; // abort the loading of this issue
+        }
+
+        issue->insertEntry(e); // store the entry in the chain list
+    }
+
+    elist.close();
+
+    if (error) {
+        Issue::destroy(issue);
+        issue = 0;
+
+    } else {
+        issue->consolidate();
+    }
+
+    return issue;
+}
+
 int Project::loadIssues()
 {
     LOG_DEBUG("Loading issues (%s)", path.c_str());
@@ -213,19 +254,13 @@ int Project::loadIssues()
         std::string issueId = ilist.getNext();
         if (issueId.empty()) break; // reached the end
 
-        GitIssue elist;
-        int ret = elist.open(path, issueId);
-        if (ret) {
-            LOG_ERROR("Cannot load issue %s (%s)", issueId.c_str(), path.c_str());
-            return -1;
-        }
+        Issue *issue = loadIssue(issueId);
 
-        Issue *issue = Issue::load(elist);
-        elist.close();
         if (!issue) {
             LOG_ERROR("Cannot load issue %s", issueId.c_str());
             continue;
         }
+
         issue->project = getName();
 
         Entry *e = issue->latest; // take the latest entry

@@ -154,6 +154,7 @@ private:
     int addPushedEntry(Entry *e, const std::string &data);
     int load(); // load a project: config, views, entries, tags
     int loadConfig();
+    Issue *loadIssue(const std::string &issueId);
     int loadIssues();
     void loadPredefinedViews();
     void loadTags();

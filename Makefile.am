@@ -38,6 +38,7 @@ smit_SOURCES = \
 			   src/project/Tag.cpp  \
 			   src/project/ProjectConfig.cpp \
 			   src/project/Object.cpp \
+			   src/project/gitdb.cpp \
 			   src/utils/parseConfig.cpp \
 			   src/utils/identifiers.cpp \
 			   src/utils/cpio.cpp \
@@ -67,7 +68,6 @@ smit_SOURCES = \
 			   src/local/console.cpp \
 			   src/local/localClient.cpp \
 			   src/Args.cpp \
-			   src/gitdb.cpp \
 			   src/third-party/mongoose.c \
 			   src/third-party/fnmatch.c
 

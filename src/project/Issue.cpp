@@ -38,7 +38,6 @@
 #include "global.h"
 #include "mg_win32.h"
 #include "fnmatch.h"
-#include "gitdb.h"
 
 #define K_MERGE_PENDING ".merge-pending";
 #define K_ISSUE_ID "id"
@@ -103,40 +102,16 @@ void Issue::insertEntry(Entry* e)
     e->issue = this;
 }
 
-Issue *Issue::load(GitIssue &elist)
+void Issue::destroy(Issue *i)
 {
-    Issue *issue = new Issue();
-    int error = 0;
-
-    while (1) {
-        std::string entryString = elist.getNextEntry();
-        if (entryString.empty()) break; // reached the end
-
-        Entry *e = Entry::loadEntry(entryString);
-        if (!e) {
-            LOG_ERROR("Cannot load entry '%s'", entryString.c_str());
-            error = 1;
-            break; // abort the loading of this issue
-        }
-
-        issue->insertEntry(e); // store the entry in the chain list
+    // delete all entries and the issue
+    Entry *e = i->first;
+    while (e) {
+        Entry *tobeDeleted = e;
+        e = e->getNext();
+        delete tobeDeleted;
     }
-
-    if (error) {
-        // delete all entries and the issue
-        Entry *e = issue->first;
-        while (e) {
-            Entry *tobeDeleted = e;
-            e = e->getNext();
-            delete tobeDeleted;
-        }
-        delete issue;
-        return 0;
-
-    }
-
-    issue->consolidate();
-    return issue;
+    delete i;
 }
 
 /** Amend the given Entry with a new message
