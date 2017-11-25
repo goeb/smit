@@ -216,25 +216,32 @@ convert_v3_to_v4_issues() {
 
 		for entry in $history; do
 			# for each item of history
-			author=$(cat_file_v3 "$src_v3" $entry | grep +author | head -1 | sed -e "s/.* //")
-			ctime=$(cat_file_v3 "$src_v3" $entry | grep +ctime | head -1 | sed -e "s/.* //")
+			author=$(cat_file_v3 "$src_v3" $entry | grep ^+author | head -1 | sed -e "s/.* //")
+			ctime=$(cat_file_v3 "$src_v3" $entry | grep ^+ctime | head -1 | sed -e "s/.* //")
+			amended=$(cat_file_v3 "$src_v3" $entry | grep ^+amend | head -1 | sed -e "s/.* //")
+
+			if [ "$amended" != "" ]; then
+				# retrieve the v4 commit associated with the amended entry
+				amended=$(grep "^$amended " "$mapping_entries_v3_v4" | sed -e "s/.* //")
+			fi
+
 			# environment variables used by git commit-tree
 			export GIT_AUTHOR_NAME="$author"
 			export GIT_AUTHOR_EMAIL="<>"
 			export GIT_AUTHOR_DATE="$ctime"
 
 			cat_file_v3 "$src_v3" "$entry" |
-			awk -v entry=$entry 'BEGIN { boundary=""; multiline_prefix=""; print "convert_v3_to_v4_issues\n"; }
+			awk -v entry=$entry -v amended="$amended" 'BEGIN { boundary=""; multiline_prefix=""; print "convert_v3_to_v4_issues\n"; }
 			boundary=="" && $2=="<" { boundary=$3;
 		                              if ($1=="+message") {
 			                              multiline_prefix="msg";
 			                          } else {
 			                              multiline_prefix="property " $1;
+			                              print multiline_prefix, "<";
 			                          }
-									  print multiline_prefix, "<";
 			                          next; }
 	 		boundary=="" && $1 !~ /^+/ { print "property", $0; next; }
-	 		boundary=="" && $1 == "+amend" { print "amend", $2; next; }
+	 		boundary=="" && $1 == "+amend" { print "amend", amended; next; }
 			boundary!="" && $1==boundary { boundary=""; next; }
 			boundary!="" { print multiline_prefix, $0; }
 			END { print "\nsmit-v3-id:", entry; }
