@@ -29,42 +29,72 @@ int Subprocess::initPipes()
         LOG_ERROR("Cannot initialize pipe Stderr: %s\n", STRERROR(errno));
         return -1;
     }
+
     return 0;
 }
 
+#define ENSURE_NOT_012(_pipe_fd) \
+    while (_pipe_fd <= 2) { \
+        _pipe_fd = dup(_pipe_fd); \
+    }
+
+#define CLOSE_PIPE(_pipe_fd) do { close(_pipe_fd); _pipe_fd = -1; } while (0)
+
 void Subprocess::setupChildPipes()
 {
+    // As dup2 closes the new file descriptor if previously open
+    // we need to ensure that:
+    // - a needed file descriptor is not closed,
+    // - a file descriptor is not closed twice
+
+    // first close the unneeded pipes
+    CLOSE_PIPE(pipes[SUBP_STDIN][SUBP_WRITE]);
+    CLOSE_PIPE(pipes[SUBP_STDOUT][SUBP_READ]);
+    CLOSE_PIPE(pipes[SUBP_STDERR][SUBP_READ]);
+
+    // if one of them is in 0..2, then duplicate and used another number
+    ENSURE_NOT_012(pipes[SUBP_STDIN][SUBP_READ]);
+    ENSURE_NOT_012(pipes[SUBP_STDOUT][SUBP_WRITE]);
+    ENSURE_NOT_012(pipes[SUBP_STDERR][SUBP_WRITE]);
+
     dup2(pipes[SUBP_STDIN][SUBP_READ], STDIN_FILENO);
-    close(pipes[SUBP_STDIN][SUBP_READ]);
-    close(pipes[SUBP_STDIN][SUBP_WRITE]);
-
     dup2(pipes[SUBP_STDOUT][SUBP_WRITE], STDOUT_FILENO);
-    close(pipes[SUBP_STDOUT][SUBP_READ]);
-    close(pipes[SUBP_STDOUT][SUBP_WRITE]);
-
     dup2(pipes[SUBP_STDERR][SUBP_WRITE], STDERR_FILENO);
-    close(pipes[SUBP_STDERR][SUBP_READ]);
-    close(pipes[SUBP_STDERR][SUBP_WRITE]);
 
-    // close all open file descriptors other than stdin, stdout, stderr
-    //for (int fd=3; fd < sysconf(_SC_OPEN_MAX); fd++) {
-    //    close(fd);
-    //}
+    // close the remaining unused pipes
+    CLOSE_PIPE(pipes[SUBP_STDIN][SUBP_READ]);
+    CLOSE_PIPE(pipes[SUBP_STDOUT][SUBP_WRITE]);
+    CLOSE_PIPE(pipes[SUBP_STDERR][SUBP_WRITE]);
 }
 
 void Subprocess::setupParentPipes()
 {
-    close(pipes[SUBP_STDIN][SUBP_READ]);
-    close(pipes[SUBP_STDOUT][SUBP_WRITE]);
-    close(pipes[SUBP_STDERR][SUBP_WRITE]);
+    CLOSE_PIPE(pipes[SUBP_STDIN][SUBP_READ]);
+    CLOSE_PIPE(pipes[SUBP_STDOUT][SUBP_WRITE]);
+    CLOSE_PIPE(pipes[SUBP_STDERR][SUBP_WRITE]);
 }
 
 /** Close a pipe of the parent side
  */
-void Subprocess::closeFd(StandardFd fd)
+void Subprocess::closeStdin()
 {
-    if (fd == SUBP_STDIN) close(pipes[fd][SUBP_WRITE]);
-    else close(pipes[fd][SUBP_READ]);
+    close(pipes[SUBP_STDIN][SUBP_WRITE]);
+    pipes[SUBP_STDIN][SUBP_WRITE] = -1;
+}
+
+Subprocess::Subprocess()
+{
+    int i, j;
+    for (i=0; i<3; i++) for (j=0; j<2; j++) pipes[i][j] = -1;
+}
+
+Subprocess::~Subprocess()
+{
+    int i, j;
+    for (i=0; i<3; i++) for (j=0; j<2; j++) {
+        if (pipes[i][j] != -1) close(pipes[i][j]);
+        pipes[i][j] = -1;
+    }
 }
 
 /** Launch a subprocess

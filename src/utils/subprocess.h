@@ -18,10 +18,14 @@ class Subprocess {
 
 public:
     static Subprocess *launch(char *const argv[], char * const envp[], const char *dir);
+    Subprocess();
+    ~Subprocess();
     int wait();
     int write(const std::string &data);
     int read(std::string &data, StandardFd fd=SUBP_STDOUT);
-    void closeFd(StandardFd fd);
+    void closeStdin();
+    std::string getStdout();
+    std::string getStderr();
 
 private:
     pid_t pid;
