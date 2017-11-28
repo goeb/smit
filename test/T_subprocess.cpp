@@ -8,9 +8,10 @@
 
 void usage()
 {
-	printf("Usage: 1. T_subprocess --args\n"
+	printf("Usage: 1. T_subprocess --args ...\n"
 	       "       3. T_subprocess --basic\n"
 	       "       3. T_subprocess --close-std-fd\n"
+	       "       4. T_subprocess --chdir <directory>\n"
 		   "\n"
 		   "Example:\n"
 		   "  T_subprocess --args sh -c \"sed -e 's/^/xxx: /'\"\n"
@@ -101,6 +102,18 @@ int test_basic(bool close_std_fd)
 	return 0;
 }
 
+int test_chdir(int argc, char **argv)
+{
+	if (argc != 1) usage();
+
+	char *const arguments[] = { "pwd", 0 };
+
+	Subprocess *subp = Subprocess::launch(arguments, 0, argv[0]);
+	std::string data = subp->getline();
+	printf("pwd: %s\n", data.c_str());
+	return 0;
+}
+
 int main(int argc, char **argv)
 {
 	if (argc < 2) usage();
@@ -108,6 +121,7 @@ int main(int argc, char **argv)
 	if (0 == strcmp(argv[1], "--args")) return test_args(argc-2, argv+2);
 	if (0 == strcmp(argv[1], "--basic")) return test_basic(false);
 	if (0 == strcmp(argv[1], "--close-std-fd")) return test_basic(true);
+	if (0 == strcmp(argv[1], "--chdir")) return test_chdir(argc-2, argv+2);
 
 	usage();
 }
