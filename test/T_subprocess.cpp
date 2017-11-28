@@ -11,6 +11,9 @@ void usage()
 	printf("Usage: 1. T_subprocess --args\n"
 	       "       3. T_subprocess --basic\n"
 	       "       3. T_subprocess --close-std-fd\n"
+		   "\n"
+		   "Example:\n"
+		   "  T_subprocess --args sh -c \"sed -e 's/^/xxx: /'\"\n"
 	      );
 	exit(1);
 }
@@ -27,9 +30,12 @@ int test_args(int argc, char **argv)
 	}
 	subp->closeStdin();
 
-	int err = subp->read(data);
-	printf("stdout: err=%d, data=\n%s\n", err, data.c_str());
-	err = subp->read(data, SUBP_STDERR);
+	while (1) {
+		data = subp->getline();
+		if (data.empty()) break;
+		printf("stdout: line=%s\n", data.c_str());
+	}
+	int err = subp->read(data, SUBP_STDERR);
 	printf("stderr: err=%d, data=\n%s\n", err, data.c_str());
 
 	int ret = subp->wait();
@@ -40,11 +46,20 @@ int test_args(int argc, char **argv)
 	return 0;
 }
 
+// Use a write to file descriptor 41 to workaround the case
+// where file descriptor 1 is closed.
 #define PRINTF_41(...) do { \
 	char buffer[1024]; \
 	sprintf(buffer, __VA_ARGS__); \
 	write(41, buffer, strlen(buffer)); } while (0)
 
+int errCount = 0;
+#define ASSERT(_condition, ...) do { \
+	if (_condition) { \
+		errCount++; \
+		PRINTF_41(__VA_ARGS__); \
+	} } while (0)
+		
 int test_basic(bool close_std_fd)
 {
 	char *const argv[] = { "sh", "-c", "sed -e 's/^/line: /'", 0 };
@@ -67,22 +82,21 @@ int test_basic(bool close_std_fd)
 
 	subp->closeStdin();
 
-	int err;
 	std::string data;
-	err = subp->read(data);
-	if (err) PRINTF_41("error in Subprocess::read\n");
-	if (data != "hello\n") PRINTF_41("error in Subprocess::read: bad value %s\n", data.c_str());
-	err = subp->read(data);
-	if (err) PRINTF_41("error in Subprocess::read\n");
-	if (data != "world\n") PRINTF_41("error in Subprocess::read: bad value %s\n", data.c_str());
-	err = subp->read(data);
-	if (err) PRINTF_41("error in Subprocess::read\n");
-	if (data != "goodbye.") PRINTF_41("error in Subprocess::read: bad value %s\n", data.c_str());
+	data = subp->getline();
+	ASSERT(data != "line: hello\n", "error in Subprocess::read: bad value %s\n", data.c_str());
+	data = subp->getline();
+	ASSERT(data != "line: world\n", "error in Subprocess::read: bad value %s\n", data.c_str());
+	data = subp->getline();
+	ASSERT(data != "line: goodbye.", "error in Subprocess::read: bad value %s\n", data.c_str());
 
 	int ret = subp->wait();
-	PRINTF_41("ret=%d\n", ret);
+	ASSERT(ret != 0, "bad value ret=%d\n", ret);
 
 	delete subp;
+
+	if (errCount) PRINTF_41("%d errors\n", errCount);
+	else PRINTF_41("no error\n");
 
 	return 0;
 }

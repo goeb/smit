@@ -202,3 +202,54 @@ int Subprocess::read(std::string &data, StandardFd fd)
     return 0;
 }
 
+/** Get the next line from the child stdout
+ *
+ *  (including the LF if not at end of file)
+ *  Return an empty string if end of file is reached or an error occurred.
+ */
+std::string Subprocess::getline()
+{
+    std::string result;
+    int err = 0; // flag for error or end of file
+
+    while (1) {
+        // look if a whole line is available in the buffer
+        size_t pos = getlineBuffer.find_first_of('\n');
+        if (pos != std::string::npos) {
+
+            result = getlineBuffer.substr(0, pos+1);
+
+            // pop the line from the buffer
+            getlineBuffer = getlineBuffer.substr(pos+1);
+            break;
+        }
+
+        // so far no whole line has been received
+
+        // check end of file or error
+        if (err) {
+            result = getlineBuffer;
+            getlineBuffer = ""; // clear the buffer
+            break;
+        }
+
+        // read from the pipe
+        uint8_t localbuf[BUF_SIZ];
+        ssize_t n = ::read(pipes[SUBP_STDOUT][SUBP_READ], localbuf, BUF_SIZ);
+
+        if (n < 0) {
+            LOG_ERROR("Subprocess::getline() error: %s", STRERROR(errno));
+            err = 1;
+            // error is not raised immediately. First process
+            // data previously received in the buffer.
+        }
+
+        if (n == 0) err = 1;
+
+        // concatenate in the buffer
+        getlineBuffer.append((char*)localbuf, n);
+    }
+
+    return result;
+}
+

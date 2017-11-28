@@ -23,6 +23,7 @@ public:
     int wait();
     int write(const std::string &data);
     int read(std::string &data, StandardFd fd=SUBP_STDOUT);
+    std::string getline();
     void closeStdin();
     std::string getStdout();
     std::string getStderr();
@@ -33,6 +34,8 @@ private:
     int initPipes();
     void setupChildPipes();
     void setupParentPipes();
+    std::string getlineBuffer; // data read but not yet consumed
+
 };
 
 #endif // _subprocess_h
