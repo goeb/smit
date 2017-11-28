@@ -49,6 +49,7 @@ smit_SOURCES = \
 			   src/utils/logging.cpp \
 			   src/utils/filesystem.cpp \
 			   src/utils/pipe.cpp \
+			   src/utils/subprocess.cpp \
 			   src/main.cpp \
 			   src/server/httpdHandlers.cpp \
 			   src/server/httpdUtils.cpp \

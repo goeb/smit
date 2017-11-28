@@ -114,7 +114,8 @@ T_Args_OBJECTS = $(am_T_Args_OBJECTS)
 T_Args_LDADD = $(LDADD)
 am_T_gitdb_OBJECTS = T_gitdb.$(OBJEXT) ../src/utils/pipe.$(OBJEXT) \
 	../src/project/gitdb.$(OBJEXT) \
-	../src/utils/stringTools.$(OBJEXT)
+	../src/utils/stringTools.$(OBJEXT) \
+	../src/utils/subprocess.$(OBJEXT)
 T_gitdb_OBJECTS = $(am_T_gitdb_OBJECTS)
 T_gitdb_LDADD = $(LDADD)
 am_T_parseConfig_OBJECTS = T_parseConfig.$(OBJEXT) \
@@ -541,7 +542,7 @@ T_stringTools_SOURCES = T_stringTools.cpp ../src/utils/stringTools.cpp
 T_Args_SOURCES = T_Args.cpp ../src/Args.cpp ../src/utils/stringTools.cpp
 get_random_value_SOURCES = get_random_value.c
 T_pipe_SOURCES = T_pipe.cpp ../src/utils/pipe.cpp
-T_gitdb_SOURCES = T_gitdb.cpp ../src/utils/pipe.cpp ../src/project/gitdb.cpp ../src/utils/stringTools.cpp
+T_gitdb_SOURCES = T_gitdb.cpp ../src/utils/pipe.cpp ../src/project/gitdb.cpp ../src/utils/stringTools.cpp ../src/utils/subprocess.cpp
 T_subprocess_SOURCES = T_subprocess.cpp ../src/utils/subprocess.cpp
 AM_CPPFLAGS = -I$(top_srcdir)/src \
 			  -I$(top_srcdir)/src/utils \
@@ -621,6 +622,8 @@ T_Args$(EXEEXT): $(T_Args_OBJECTS) $(T_Args_DEPENDENCIES) $(EXTRA_T_Args_DEPENDE
 	@: > ../src/project/$(DEPDIR)/$(am__dirstamp)
 ../src/project/gitdb.$(OBJEXT): ../src/project/$(am__dirstamp) \
 	../src/project/$(DEPDIR)/$(am__dirstamp)
+../src/utils/subprocess.$(OBJEXT): ../src/utils/$(am__dirstamp) \
+	../src/utils/$(DEPDIR)/$(am__dirstamp)
 
 T_gitdb$(EXEEXT): $(T_gitdb_OBJECTS) $(T_gitdb_DEPENDENCIES) $(EXTRA_T_gitdb_DEPENDENCIES) 
 	@rm -f T_gitdb$(EXEEXT)
@@ -639,8 +642,6 @@ T_pipe$(EXEEXT): $(T_pipe_OBJECTS) $(T_pipe_DEPENDENCIES) $(EXTRA_T_pipe_DEPENDE
 T_stringTools$(EXEEXT): $(T_stringTools_OBJECTS) $(T_stringTools_DEPENDENCIES) $(EXTRA_T_stringTools_DEPENDENCIES) 
 	@rm -f T_stringTools$(EXEEXT)
 	$(AM_V_CXXLD)$(CXXLINK) $(T_stringTools_OBJECTS) $(T_stringTools_LDADD) $(LIBS)
-../src/utils/subprocess.$(OBJEXT): ../src/utils/$(am__dirstamp) \
-	../src/utils/$(DEPDIR)/$(am__dirstamp)
 
 T_subprocess$(EXEEXT): $(T_subprocess_OBJECTS) $(T_subprocess_DEPENDENCIES) $(EXTRA_T_subprocess_DEPENDENCIES) 
 	@rm -f T_subprocess$(EXEEXT)

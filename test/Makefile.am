@@ -27,7 +27,7 @@ T_Args_SOURCES = T_Args.cpp ../src/Args.cpp ../src/utils/stringTools.cpp
 get_random_value_SOURCES = get_random_value.c
 
 T_pipe_SOURCES = T_pipe.cpp ../src/utils/pipe.cpp
-T_gitdb_SOURCES = T_gitdb.cpp ../src/utils/pipe.cpp ../src/project/gitdb.cpp ../src/utils/stringTools.cpp
+T_gitdb_SOURCES = T_gitdb.cpp ../src/utils/pipe.cpp ../src/project/gitdb.cpp ../src/utils/stringTools.cpp ../src/utils/subprocess.cpp
 T_subprocess_SOURCES = T_subprocess.cpp ../src/utils/subprocess.cpp
 
 AM_CPPFLAGS = -I$(top_srcdir)/src \

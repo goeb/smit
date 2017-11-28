@@ -92,8 +92,7 @@ Subprocess::~Subprocess()
 {
     int i, j;
     for (i=0; i<3; i++) for (j=0; j<2; j++) {
-        if (pipes[i][j] != -1) close(pipes[i][j]);
-        pipes[i][j] = -1;
+        if (pipes[i][j] != -1) CLOSE_PIPE(pipes[i][j]);
     }
 }
 
@@ -105,8 +104,6 @@ Subprocess::~Subprocess()
  */
 Subprocess *Subprocess::launch(char *const argv[], char *const envp[], const char *dir)
 {
-// TODO catch SIGPIPE ?
-
     Subprocess *handler = new Subprocess();
 
     int err = handler->initPipes();
@@ -252,4 +249,19 @@ std::string Subprocess::getline()
 
     return result;
 }
+
+std::string Subprocess::getStdout()
+{
+    std::string data;
+    read(data, SUBP_STDOUT);
+    return data;
+}
+
+std::string Subprocess::getStderr()
+{
+    std::string data;
+    read(data, SUBP_STDERR);
+    return data;
+}
+
 

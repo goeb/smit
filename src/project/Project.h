@@ -150,7 +150,7 @@ private:
     Issue *createNewIssue();
     std::string allocateNewIssueId();
     void updateMaxIssueId(uint32_t i);
-    int addNewEntry(Entry *e);
+    int addNewEntry(const std::string &issueId, Entry *e);
     int addPushedEntry(Entry *e, const std::string &data);
     int load(); // load a project: config, views, entries, tags
     int loadConfig();

@@ -1,11 +1,15 @@
 #include <string>
 #include <string.h>
+#include <stdlib.h>
+#include <stdarg.h>
 
 #include "gitdb.h"
 #include "utils/logging.h"
 #include "utils/stringTools.h"
+#include "utils/subprocess.h"
 
 #define BRANCH_PREFIX_ISSUES "issues/"
+#define SIZE_COMMIT_ID 40
 
 int GitIssueList::open(const std::string &gitRepoPath)
 {
@@ -119,3 +123,148 @@ void GitIssue::close()
 {
     Pipe::close(p);
 }
+
+class Argv {
+public:
+    void set(const char *first, ...) {
+        argv.clear();
+        argv.push_back(first);
+        char *p;
+        va_list ap;
+        va_start(ap, first);
+        while((p = va_arg(ap, char *))) {
+            argv.push_back(p);
+        }
+
+        va_end(ap);
+        argv.push_back(0);
+    }
+    char *const* getVector() { return (char *const*) &argv[0]; }
+
+private:
+    std::vector<const char*> argv;
+};
+
+/**
+ * @brief add an entry (ie: a commit) in the branch of the issue
+ * @param gitRepoPath
+ * @param issueId
+ * @param author
+ * @param body
+ * @param files
+ * @return
+ *
+ * The atomicity and thread safety is not garanteed at this level.
+ * The caller must manage his own mutex.
+ */
+std::string GitIssue::addCommit(const std::string &gitRepoPath, const std::string &issueId,
+                                const std::string &author, long ctime, const std::string &body, const std::list<std::string> &files)
+{
+    // git commit in a branch issues/<id> without checking out the branch
+    // The git commands must be run in a bare git repo (the ".git/").
+
+    // git read-tree --empty
+    // attached files
+    //     git hash-object -w
+    //     git update-index --add --cacheinfo 100644 ...
+    // git write-tree
+    // git show-ref issues/<id>
+    // git commit-tree
+    // git update-ref refs/heads/issues/<id>
+
+    std::string bareGitRepo = gitRepoPath + "/.git";
+    Argv argv;
+    Subprocess *subp = 0;
+
+    argv.set("git", "read-tree", "--empty");
+    subp = Subprocess::launch(argv.getVector(), 0, bareGitRepo.c_str());
+    if (!subp) return "";
+    std::string stderrString = subp->getStderr(); // must be called before wait()
+    int err = subp->wait();
+    delete subp;
+    if (err) {
+        LOG_ERROR("addCommit read-tree error %d: %s", err, stderrString.c_str());
+        return "";
+    }
+
+    // attached files
+    // TODO
+    //     git hash-object -w
+    //     git update-index --add --cacheinfo 100644 ...
+    LOG_ERROR("addCommit attached files not implemented");
+
+    argv.set("git", "write-tree");
+    subp = Subprocess::launch(argv.getVector(), 0, bareGitRepo.c_str());
+    if (!subp) return "";
+    std::string treeId = subp->getline();
+    stderrString = subp->getStderr(); // must be called before wait()
+    err = subp->wait();
+    delete subp;
+    if (err) {
+        LOG_ERROR("addCommit write-tree error %d: %s", err, stderrString.c_str());
+        return "";
+    }
+
+    trim(treeId);
+    if (treeId.size() != SIZE_COMMIT_ID) {
+        LOG_ERROR("addCommit write-tree error: treeId=%s", treeId.c_str());
+        return "";
+    }
+
+    // git show-ref issues/<id>
+    std::string branchName = "issues/" + issueId;
+    argv.set("git", "show-ref", branchName.c_str());
+    subp = Subprocess::launch(argv.getVector(), 0, bareGitRepo.c_str());
+    if (!subp) return "";
+    std::string branchRef = subp->getline();
+    stderrString = subp->getStderr(); // must be called before wait()
+    err = subp->wait();
+    delete subp;
+    if (err) {
+        LOG_ERROR("addCommit show-ref error %d: %s", err, stderrString.c_str());
+        return "";
+    }
+
+    trim(branchRef);
+    if (branchRef.size() != SIZE_COMMIT_ID) {
+        LOG_ERROR("addCommit show-ref error: branchRef=%s", branchRef.c_str());
+        return "";
+    }
+
+    // git commit-tree
+
+    argv.set("git", "commit-tree", treeId.c_str());
+    std::string gitAuthorEnv = "GIT_AUTHOR_NAME=" + author;
+    std::string gitCommiterEnv = "GIT_COMMITTER_NAME=" + author;
+    std::stringstream gitAuthorDate;
+    gitAuthorDate << "GIT_AUTHOR_DATE=" << ctime;
+    std::stringstream gitCommiterDate;
+    gitCommiterDate << "GIT_COMMITTER_DATE=" << ctime;
+
+    Argv envp;
+    envp.set(gitAuthorEnv.c_str(),
+            "GIT_AUTHOR_EMAIL=<>",
+            gitAuthorDate.str().c_str(),
+            gitCommiterEnv.c_str(),
+            "GIT_COMMITTER_EMAIL=<>",
+            gitCommiterDate.str().c_str());
+
+    subp = Subprocess::launch(argv.getVector(), envp.getVector(), bareGitRepo.c_str());
+    if (!subp) return "";
+
+    subp->write(body);
+    subp->closeStdin();
+    std::string commitId = subp->getline();
+    stderrString = subp->getStderr(); // must be called before wait()
+    err = subp->wait();
+    delete subp;
+    if (err) {
+        LOG_ERROR("addCommit commit-tree error %d: %s", err, stderrString.c_str());
+        return "";
+    }
+
+    LOG_DIAG("addCommit: %s", commitId.c_str());
+
+    return commitId;
+}
+

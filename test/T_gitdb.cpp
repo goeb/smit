@@ -7,7 +7,8 @@
 
 void usage()
 {
-	printf("usage: T_gitdb issue [<id>]\n");
+	printf("usage: 1. T_gitdb issue [<id>]\n");
+	printf("       2. T_gitdb commit\n");
 	exit(1);
 }
 
@@ -44,6 +45,13 @@ void listEntries(const std::string &issueId)
 	elist.close();
 }
 
+void test_commit()
+{
+	std::list<std::string> files;
+	std::string eid = GitIssue::addCommit(".", "1", "toto", 1234, "hello world\ngoodbye.", files);
+	printf("eid=%s\n", eid);
+}
+
 int main(int argc, char **argv)
 {
 	if (argc < 2) usage();
@@ -51,6 +59,8 @@ int main(int argc, char **argv)
 	if (0 == strcmp("issue", argv[1])) {
 		if (argc == 3) listEntries(argv[2]);
 		else listIssues();
-	}
+	} else if (0 == strcmp("commit", argv[1])) test_commit();
+	else usage();
+
 	return 0;
 }

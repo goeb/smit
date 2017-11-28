@@ -1090,6 +1090,8 @@ void Project::updateLastModified(Entry *e)
     if (lastModified < e->ctime) lastModified = e->ctime;
 }
 
+/** TODO Obsolete, to be removed
+ */
 int Project::storeRefIssue(const std::string &issueId, const std::string &entryId)
 {
     LOG_DIAG("storeRefIssue: %s -> %s", issueId.c_str(), entryId.c_str());
@@ -1409,8 +1411,6 @@ int Project::addEntry(PropertiesMap properties, std::string &issueId,
         LOG_DEBUG("properties: %s => %s", p->first.c_str(), join(p->second, ", ").c_str());
     }
 
-    // write the entry to disk
-
     // if issueId is empty, create a new issue
     bool newIssueCreated = false;
     if (!i) {
@@ -1423,8 +1423,8 @@ int Project::addEntry(PropertiesMap properties, std::string &issueId,
     // create the new entry object
     Entry *e = Entry::createNewEntry(properties, username, i->latest);
 
-    // add the entry to the project
-    int r = addNewEntry(e);
+    // add the entry to the project and store to disk
+    int r = addNewEntry(i->id, e);
     if (r < 0) {
         delete e;
         return r; // already exists
@@ -1437,10 +1437,6 @@ int Project::addEntry(PropertiesMap properties, std::string &issueId,
         r = insertIssueInTable(i);
         if (r != 0) return r; // already exists
     }
-
-	// update latest entry of issue on disk
-    r = storeRefIssue(i->id, e->id);
-    if (r < 0) return r;
 
     updateLastModified(e);
 
@@ -1458,16 +1454,27 @@ int Project::addEntry(PropertiesMap properties, std::string &issueId,
 }
 
 /** Add a new entry to the project
+  *
+  * 1. Create a commit in the disk database
+  * 2. Insert the entry in the table of entries
   */
-int Project::addNewEntry(Entry *e)
+int Project::addNewEntry(const std::string &issueId, Entry *e)
 {
-    // add this entry in internal in-memory tables
-    int r = insertEntryInTable(e);
-    if (r != 0) return r; // already exists
+    const std::string data = e->serialize();
 
-    r = storeEntry(e); // TODO move the storage before the insertion in RAM
+    std::list<std::string> files; // TODO
 
-    return r;
+    std::string entryId = GitIssue::addCommit(path, issueId, e->author, e->ctime, data, files);
+
+    e->id = entryId;
+
+    if (entryId.empty()) {
+        LOG_ERROR("Failed to commit a new entry");
+        return -1;
+    }
+
+    insertEntryInTable(e);
+    return 0; // success
 }
 
 int Project::addPushedEntry(Entry *e, const std::string &data)
@@ -1662,7 +1669,7 @@ int Project::amendEntry(const std::string &entryId, const std::string &msg,
     // in case of further error, we should delete the entry
     // TODO (memory leak at the moment)
 
-    int r = addNewEntry(amendingEntry);
+    int r = addNewEntry(e->issue->id, amendingEntry);
     if (r != 0) return -2;
 
     // update latest entry of issue on disk

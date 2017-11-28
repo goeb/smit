@@ -137,9 +137,10 @@ am__smit_SOURCES_DIST = src/repository/db.cpp src/project/Entry.cpp \
 	src/utils/stringTools.cpp src/utils/jTools.cpp \
 	src/utils/mutexTools.cpp src/utils/dateTools.cpp \
 	src/utils/logging.cpp src/utils/filesystem.cpp \
-	src/utils/pipe.cpp src/main.cpp src/server/httpdHandlers.cpp \
-	src/server/httpdUtils.cpp src/server/Trigger.cpp \
-	src/server/HttpContext.cpp src/rendering/renderingText.cpp \
+	src/utils/pipe.cpp src/utils/subprocess.cpp src/main.cpp \
+	src/server/httpdHandlers.cpp src/server/httpdUtils.cpp \
+	src/server/Trigger.cpp src/server/HttpContext.cpp \
+	src/rendering/renderingText.cpp \
 	src/rendering/renderingJson.cpp src/rendering/renderingCsv.cpp \
 	src/rendering/renderingHtml.cpp \
 	src/rendering/ContextParameters.cpp \
@@ -174,7 +175,8 @@ am_smit_OBJECTS = src/repository/smit-db.$(OBJEXT) \
 	src/utils/smit-dateTools.$(OBJEXT) \
 	src/utils/smit-logging.$(OBJEXT) \
 	src/utils/smit-filesystem.$(OBJEXT) \
-	src/utils/smit-pipe.$(OBJEXT) src/smit-main.$(OBJEXT) \
+	src/utils/smit-pipe.$(OBJEXT) \
+	src/utils/smit-subprocess.$(OBJEXT) src/smit-main.$(OBJEXT) \
 	src/server/smit-httpdHandlers.$(OBJEXT) \
 	src/server/smit-httpdUtils.$(OBJEXT) \
 	src/server/smit-Trigger.$(OBJEXT) \
@@ -503,9 +505,10 @@ smit_SOURCES = src/repository/db.cpp src/project/Entry.cpp \
 	src/utils/stringTools.cpp src/utils/jTools.cpp \
 	src/utils/mutexTools.cpp src/utils/dateTools.cpp \
 	src/utils/logging.cpp src/utils/filesystem.cpp \
-	src/utils/pipe.cpp src/main.cpp src/server/httpdHandlers.cpp \
-	src/server/httpdUtils.cpp src/server/Trigger.cpp \
-	src/server/HttpContext.cpp src/rendering/renderingText.cpp \
+	src/utils/pipe.cpp src/utils/subprocess.cpp src/main.cpp \
+	src/server/httpdHandlers.cpp src/server/httpdUtils.cpp \
+	src/server/Trigger.cpp src/server/HttpContext.cpp \
+	src/rendering/renderingText.cpp \
 	src/rendering/renderingJson.cpp src/rendering/renderingCsv.cpp \
 	src/rendering/renderingHtml.cpp \
 	src/rendering/ContextParameters.cpp \
@@ -692,6 +695,8 @@ src/utils/smit-filesystem.$(OBJEXT): src/utils/$(am__dirstamp) \
 	src/utils/$(DEPDIR)/$(am__dirstamp)
 src/utils/smit-pipe.$(OBJEXT): src/utils/$(am__dirstamp) \
 	src/utils/$(DEPDIR)/$(am__dirstamp)
+src/utils/smit-subprocess.$(OBJEXT): src/utils/$(am__dirstamp) \
+	src/utils/$(DEPDIR)/$(am__dirstamp)
 src/$(am__dirstamp):
 	@$(MKDIR_P) src
 	@: > src/$(am__dirstamp)
@@ -863,6 +868,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/utils/$(DEPDIR)/smit-parseConfig.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/utils/$(DEPDIR)/smit-pipe.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/utils/$(DEPDIR)/smit-stringTools.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/utils/$(DEPDIR)/smit-subprocess.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/utils/$(DEPDIR)/smparser-filesystem.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/utils/$(DEPDIR)/smparser-parseConfig.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/utils/$(DEPDIR)/smparser-stringTools.Po@am__quote@
@@ -1206,6 +1212,20 @@ src/utils/smit-pipe.obj: src/utils/pipe.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/utils/pipe.cpp' object='src/utils/smit-pipe.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/utils/smit-pipe.obj `if test -f 'src/utils/pipe.cpp'; then $(CYGPATH_W) 'src/utils/pipe.cpp'; else $(CYGPATH_W) '$(srcdir)/src/utils/pipe.cpp'; fi`
+
+src/utils/smit-subprocess.o: src/utils/subprocess.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/utils/smit-subprocess.o -MD -MP -MF src/utils/$(DEPDIR)/smit-subprocess.Tpo -c -o src/utils/smit-subprocess.o `test -f 'src/utils/subprocess.cpp' || echo '$(srcdir)/'`src/utils/subprocess.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/utils/$(DEPDIR)/smit-subprocess.Tpo src/utils/$(DEPDIR)/smit-subprocess.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/utils/subprocess.cpp' object='src/utils/smit-subprocess.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/utils/smit-subprocess.o `test -f 'src/utils/subprocess.cpp' || echo '$(srcdir)/'`src/utils/subprocess.cpp
+
+src/utils/smit-subprocess.obj: src/utils/subprocess.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/utils/smit-subprocess.obj -MD -MP -MF src/utils/$(DEPDIR)/smit-subprocess.Tpo -c -o src/utils/smit-subprocess.obj `if test -f 'src/utils/subprocess.cpp'; then $(CYGPATH_W) 'src/utils/subprocess.cpp'; else $(CYGPATH_W) '$(srcdir)/src/utils/subprocess.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/utils/$(DEPDIR)/smit-subprocess.Tpo src/utils/$(DEPDIR)/smit-subprocess.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/utils/subprocess.cpp' object='src/utils/smit-subprocess.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/utils/smit-subprocess.obj `if test -f 'src/utils/subprocess.cpp'; then $(CYGPATH_W) 'src/utils/subprocess.cpp'; else $(CYGPATH_W) '$(srcdir)/src/utils/subprocess.cpp'; fi`
 
 src/smit-main.o: src/main.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/smit-main.o -MD -MP -MF src/$(DEPDIR)/smit-main.Tpo -c -o src/smit-main.o `test -f 'src/main.cpp' || echo '$(srcdir)/'`src/main.cpp

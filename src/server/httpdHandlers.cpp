@@ -2128,6 +2128,7 @@ void parseMultipartAndStoreUploadedFiles(const std::string &part, std::string bo
             if (lastSlash != std::string::npos) filename = filename.substr(lastSlash+1);
 
             // store to objects directory
+            // TODO/gitdb store in tmp dir somewhere (filename being the sha1)
             std::string objectid;
             int r = Object::write(project.getObjectsDir(), data, dataSize, objectid);
             if (r < 0) {

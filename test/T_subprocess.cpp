@@ -61,6 +61,21 @@ int errCount = 0;
 		PRINTF_41(__VA_ARGS__); \
 	} } while (0)
 		
+
+int test_x()
+{
+	// if stdout is too big, calling "wait" before "getStdout"
+	// leads to a dead-lock
+	char *const argv[] = { "sh", "-c", "for i in $(seq 1 33000); do echo a; done", 0 };
+	Subprocess *subp = Subprocess::launch(argv, 0, 0);
+	int ret = subp->wait();
+	printf("ret=%d\n", ret);
+	std::string data = subp->getStdout();
+	printf("stdout: %s", data.c_str());
+	delete subp;
+	return 0;
+}
+
 int test_basic(bool close_std_fd)
 {
 	char *const argv[] = { "sh", "-c", "sed -e 's/^/line: /'", 0 };
@@ -122,6 +137,7 @@ int main(int argc, char **argv)
 	if (0 == strcmp(argv[1], "--basic")) return test_basic(false);
 	if (0 == strcmp(argv[1], "--close-std-fd")) return test_basic(true);
 	if (0 == strcmp(argv[1], "--chdir")) return test_chdir(argc-2, argv+2);
+	if (0 == strcmp(argv[1], "--x")) return test_x();
 
 	usage();
 }

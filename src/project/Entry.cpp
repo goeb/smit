@@ -233,7 +233,8 @@ Entry *Entry::createNewEntry(const PropertiesMap &props, const std::string &auth
     if (eParent) e->parent = eParent->id;
     else e->parent = K_PARENT_NULL;
 
-    e->setId();
+    LOG_ERROR("TODO remove this e->setId()");
+    e->setId(); // TODO remove
 
     return e;
 }
