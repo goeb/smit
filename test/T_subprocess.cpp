@@ -21,7 +21,7 @@ void usage()
 
 int test_args(int argc, char **argv)
 {
-	char *const envp[] = { "X=foo", 0 };
+	char *const envp[] = { "X=foo", "Y=bar", "Z=1234", 0 };
 	Subprocess *subp = Subprocess::launch(argv, envp, 0);
 	std::string data;
 	while(std::getline(std::cin, data)) {

@@ -45,11 +45,13 @@ void listEntries(const std::string &issueId)
 	elist.close();
 }
 
-void test_commit()
+void test_commit(const char *text)
 {
 	std::list<std::string> files;
-	std::string eid = GitIssue::addCommit(".", "1", "toto", 1234, "hello world\ngoodbye.", files);
-	printf("eid=%s\n", eid);
+	const char *body = "hello world\ngoodbye.";
+	if (text) body = text;
+	std::string eid = GitIssue::addCommit(".", "1", "John", 1511992000, body, files);
+	printf("eid=%s\n", eid.c_str());
 }
 
 int main(int argc, char **argv)
@@ -59,7 +61,10 @@ int main(int argc, char **argv)
 	if (0 == strcmp("issue", argv[1])) {
 		if (argc == 3) listEntries(argv[2]);
 		else listIssues();
-	} else if (0 == strcmp("commit", argv[1])) test_commit();
+	} else if (0 == strcmp("commit", argv[1])) {
+		if (argc > 2) test_commit(argv[2]);
+		else test_commit(0);
+	}
 	else usage();
 
 	return 0;

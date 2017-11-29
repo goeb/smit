@@ -1,7 +1,6 @@
 #include <string>
 #include <string.h>
 #include <stdlib.h>
-#include <stdarg.h>
 
 #include "gitdb.h"
 #include "utils/logging.h"
@@ -124,27 +123,6 @@ void GitIssue::close()
     Pipe::close(p);
 }
 
-class Argv {
-public:
-    void set(const char *first, ...) {
-        argv.clear();
-        argv.push_back(first);
-        char *p;
-        va_list ap;
-        va_start(ap, first);
-        while((p = va_arg(ap, char *))) {
-            argv.push_back(p);
-        }
-
-        va_end(ap);
-        argv.push_back(0);
-    }
-    char *const* getVector() { return (char *const*) &argv[0]; }
-
-private:
-    std::vector<const char*> argv;
-};
-
 /**
  * @brief add an entry (ie: a commit) in the branch of the issue
  * @param gitRepoPath
@@ -176,8 +154,8 @@ std::string GitIssue::addCommit(const std::string &gitRepoPath, const std::strin
     Argv argv;
     Subprocess *subp = 0;
 
-    argv.set("git", "read-tree", "--empty");
-    subp = Subprocess::launch(argv.getVector(), 0, bareGitRepo.c_str());
+    argv.set("git", "read-tree", "--empty", 0);
+    subp = Subprocess::launch(argv.getv(), 0, bareGitRepo.c_str());
     if (!subp) return "";
     std::string stderrString = subp->getStderr(); // must be called before wait()
     int err = subp->wait();
@@ -193,8 +171,8 @@ std::string GitIssue::addCommit(const std::string &gitRepoPath, const std::strin
     //     git update-index --add --cacheinfo 100644 ...
     LOG_ERROR("addCommit attached files not implemented");
 
-    argv.set("git", "write-tree");
-    subp = Subprocess::launch(argv.getVector(), 0, bareGitRepo.c_str());
+    argv.set("git", "write-tree", 0);
+    subp = Subprocess::launch(argv.getv(), 0, bareGitRepo.c_str());
     if (!subp) return "";
     std::string treeId = subp->getline();
     stderrString = subp->getStderr(); // must be called before wait()
@@ -213,8 +191,8 @@ std::string GitIssue::addCommit(const std::string &gitRepoPath, const std::strin
 
     // git show-ref issues/<id>
     std::string branchName = "issues/" + issueId;
-    argv.set("git", "show-ref", branchName.c_str());
-    subp = Subprocess::launch(argv.getVector(), 0, bareGitRepo.c_str());
+    argv.set("git", "show-ref", "-s", branchName.c_str(), 0);
+    subp = Subprocess::launch(argv.getv(), 0, bareGitRepo.c_str());
     if (!subp) return "";
     std::string branchRef = subp->getline();
     stderrString = subp->getStderr(); // must be called before wait()
@@ -226,40 +204,60 @@ std::string GitIssue::addCommit(const std::string &gitRepoPath, const std::strin
     }
 
     trim(branchRef);
-    if (branchRef.size() != SIZE_COMMIT_ID) {
+    // check that branchRef is either empty or consistent with a commit id
+    if (branchRef.size() && branchRef.size() != SIZE_COMMIT_ID) {
         LOG_ERROR("addCommit show-ref error: branchRef=%s", branchRef.c_str());
         return "";
     }
 
     // git commit-tree
 
-    argv.set("git", "commit-tree", treeId.c_str());
+    argv.set("git", "commit-tree", treeId.c_str(), 0);
+    if (!branchRef.empty()) {
+        argv.append("-p", branchRef.c_str(), 0);
+    }
     std::string gitAuthorEnv = "GIT_AUTHOR_NAME=" + author;
-    std::string gitCommiterEnv = "GIT_COMMITTER_NAME=" + author;
-    std::stringstream gitAuthorDate;
-    gitAuthorDate << "GIT_AUTHOR_DATE=" << ctime;
-    std::stringstream gitCommiterDate;
-    gitCommiterDate << "GIT_COMMITTER_DATE=" << ctime;
-
+    std::string gitCommitterEnv = "GIT_COMMITTER_NAME=" + author;
+    std::stringstream ss;
+    ss << "GIT_AUTHOR_DATE=" << ctime;
+    std::string gitAuthorDate = ss.str();
+    ss.str("");
+    ss << "GIT_COMMITTER_DATE=" << ctime;
+    std::string gitCommitterDate = ss.str();
     Argv envp;
     envp.set(gitAuthorEnv.c_str(),
             "GIT_AUTHOR_EMAIL=<>",
-            gitAuthorDate.str().c_str(),
-            gitCommiterEnv.c_str(),
+            gitAuthorDate.c_str(),
+            gitCommitterEnv.c_str(),
             "GIT_COMMITTER_EMAIL=<>",
-            gitCommiterDate.str().c_str());
+            gitCommitterDate.c_str(),
+            0);
 
-    subp = Subprocess::launch(argv.getVector(), envp.getVector(), bareGitRepo.c_str());
+    subp = Subprocess::launch(argv.getv(), envp.getv(), bareGitRepo.c_str());
     if (!subp) return "";
 
     subp->write(body);
     subp->closeStdin();
     std::string commitId = subp->getline();
+    trim(commitId);
     stderrString = subp->getStderr(); // must be called before wait()
     err = subp->wait();
     delete subp;
     if (err) {
         LOG_ERROR("addCommit commit-tree error %d: %s", err, stderrString.c_str());
+        return "";
+    }
+
+    // git update-ref refs/heads/$branch $commit_id
+    std::string branchPath = "refs/heads/" + branchName;
+    argv.set("git", "update-ref", branchPath.c_str(), commitId.c_str(), 0);
+    subp = Subprocess::launch(argv.getv(), 0, bareGitRepo.c_str());
+    if (!subp) return "";
+    stderrString = subp->getStderr(); // must be called before wait()
+    err = subp->wait();
+    delete subp;
+    if (err) {
+        LOG_ERROR("addCommit update-ref error %d: %s", err, stderrString.c_str());
         return "";
     }
 

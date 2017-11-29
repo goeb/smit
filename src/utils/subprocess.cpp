@@ -2,6 +2,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <stdint.h>
+#include <stdarg.h>
 
 #include "subprocess.h"
 #include "utils/logging.h"
@@ -104,6 +105,17 @@ Subprocess::~Subprocess()
  */
 Subprocess *Subprocess::launch(char *const argv[], char *const envp[], const char *dir)
 {
+    std::string debugStr;
+    char *const *ptr = argv;
+    while (*ptr) {
+        debugStr += " ";
+        debugStr += *ptr;
+        ptr++;
+    }
+    const char *dirStr = "."; // use for debug
+    if (dir) dirStr = dir;
+    LOG_DIAG("Subprocess::launch: %s (%s)", debugStr.c_str(), dirStr);
+
     Subprocess *handler = new Subprocess();
 
     int err = handler->initPipes();
@@ -265,3 +277,44 @@ std::string Subprocess::getStderr()
 }
 
 
+// ------------- class Argv
+/** Set a list of arguments (must be terminated by a null pointer)
+ */
+void Argv::set(const char *first, ...) {
+    argv.clear();
+    va_list ap;
+    va_start(ap, first);
+    vappend(first, ap);
+    va_end(ap);
+}
+
+/** Continue a list of arguments (must be terminated by a null pointer)
+ */
+void Argv::append(const char *first, ...) {
+    va_list ap;
+    va_start(ap, first);
+    vappend(first, ap);
+    va_end(ap);
+}
+
+char *const* Argv::getv()
+{
+    return (char *const*) &argv[0];
+}
+
+void Argv::vappend(const char *first, va_list ap) {
+    if (argv.empty()) {
+        // nothing to do
+    } else {
+        if (!argv.back()) {
+            // remove terminating null
+            argv.pop_back();
+        }
+    }
+    argv.push_back(first);
+    char *p;
+    while((p = va_arg(ap, char *))) {
+        argv.push_back(p);
+    }
+    argv.push_back(0); // add a terminating null
+}
