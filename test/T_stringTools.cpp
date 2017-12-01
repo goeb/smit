@@ -6,10 +6,29 @@
 #include "utest.h"
 #include "stringTools.h"
 
-
-int main(int argc, char **argv)
+void test_popToken()
 {
-    // test getBasename
+	// 
+    std::string x = "/a/b/c";
+    std::string y = popToken(x, '/');
+    ASSERT(x == "b/c");
+    ASSERT(y == "a");
+	y = popToken(x, '/');
+	ASSERT(x == "c");
+	ASSERT(y == "b");
+	y = popToken(x, '/');
+	ASSERT(x == "");
+	ASSERT(y == "c");
+	y = popToken(x, '/');
+	ASSERT(x == "");
+	ASSERT(y == "");
+
+	// with 
+
+}
+
+void test_basename()
+{
     std::string out;
     out = getBasename("");
     ASSERT(out == "");
@@ -31,6 +50,12 @@ int main(int argc, char **argv)
 
     out = getBasename("a/bcdef");
     ASSERT(out == "bcdef");
+}
+
+int main(int argc, char **argv)
+{
+	test_basename();
+	test_popToken();
 
     utestEnd();
 }
