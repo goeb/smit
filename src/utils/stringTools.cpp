@@ -49,40 +49,42 @@ std::string bin2hex(const uint8_t *buffer, size_t len)
     return hexResult;
 }
 
-
-/** Take first token name out of string (typically uri)
+/** Extract the first token out of a string
   *
-  * And consume the first separator encountered.
-  * Several consecutive separators are taken as a single one.
+  * @param type
+  *     TOK_TRIM_BOTH
+  *         Consume all separators before the token, as if it was a single separator.
+  *         Consume all separators after the extracted token.
+  *         Eg: text="///a/b/d"
+  *             -> return "a", text="b/d"
   *
-  * Examples:
-  *     popToken("/a/b/c", '/') -> return "a" and set uri to "b/c"
-  *     popToken("a/b/c", '/') -> return "a" and set uri to "b/c"
-  *     popToken("x=1&y=2", '&') -> return "x=1" and set uri to "y=2"
+  *     TOK_TRIM_BEFORE
+  *         Consume all separators before the token, as if it was a single separator.
+  *         Eg: text="///a/b/d"
+  *             -> return "a", text="/b/d"
   *
-  *  @param trimNext
-  *      If true, then the remaining text immediately after the token is trimmed.
+  *     TOK_STRICT
+  *         Consume exactly one separator
+  *         Eg : text="\n\nhello\n"
+  *              -> return "", text="\nhello\n"
   */
-std::string popToken(std::string & uri, char separator, bool trimNext)
+std::string popToken(std::string &text, char separator, TokenExtractionType type)
 {
-    if (uri.empty()) return "";
+    std::string firstToken;
+    if (text.empty()) return "";
 
-    size_t i = 0;
+    if (TOK_TRIM_BOTH == type || TOK_TRIM_BEFORE == type) trimLeft(text, separator);
 
-    // convert char to char *
-    char sepStr[2];
-    sepStr[0] = separator;
-    sepStr[1] = 0;
+    size_t pos = text.find_first_of(separator, 0);
 
-    trimLeft(uri, sepStr);
+    if (pos == std::string::npos) {
+        firstToken = text;
+        text = "";
 
-    size_t pos = uri.find_first_of(sepStr, i); // skip the first leading / of the uri
-    std::string firstToken = uri.substr(i, pos-i);
-
-    if (pos == std::string::npos) uri = "";
-    else {
-        uri = uri.substr(pos);
-        if (trimNext) trimLeft(uri, sepStr); // Several consecutive separators are taken as a single one
+    } else {
+        firstToken = text.substr(0, pos);
+        text = text.substr(pos+1);
+        if (TOK_TRIM_BOTH == type) trimLeft(text, separator);
     }
 
     return firstToken;
@@ -108,6 +110,17 @@ void trimLeft(std::string &s, const char* c)
     if (i >= s.size()) s = "";
     else s = s.substr(i);
 }
+
+void trimLeft(std::string & s, const char c)
+{
+    size_t i = 0;
+    size_t len = s.size();
+    while ( i<len && s[i]==c ) i++;
+
+    if (i >= s.size()) s = "";
+    else s = s.substr(i);
+}
+
 
 void trim(std::string &s, const char *c)
 {

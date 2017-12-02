@@ -13,7 +13,7 @@ int nCheckpoints = 0;
 void utAssert(bool condition, const char * file, int line)
 {
     if (!condition) {
-        fprintf(stderr, "Error: %s:%d", file, line);
+        fprintf(stderr, "Error: %s:%d\n", file, line);
         //std::ostringstream s;
         //s << "sed -n '" << line << "p' " << file;
         //system(s.str().c_str());

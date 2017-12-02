@@ -8,8 +8,8 @@
 
 void test_popToken()
 {
-	// 
-    std::string x = "/a/b/c";
+	//  default mode TOK_TRIM_BOTH
+    std::string x = "//a//b/c";
     std::string y = popToken(x, '/');
     ASSERT(x == "b/c");
     ASSERT(y == "a");
@@ -23,8 +23,23 @@ void test_popToken()
 	ASSERT(x == "");
 	ASSERT(y == "");
 
-	// with 
+	// TOK_TRIM_BEFORE
+	x = "//a//b/c";
+	y = popToken(x, '/', TOK_TRIM_BEFORE);
+	ASSERT(x == "/b/c");
+	ASSERT(y == "a");
 
+	// TOK_STRICT
+	x = "//a//b/c";
+	y = popToken(x, '/', TOK_STRICT);
+	ASSERT(x == "/a//b/c");
+	ASSERT(y == "");
+	y = popToken(x, '/', TOK_STRICT);
+	ASSERT(x == "a//b/c");
+	ASSERT(y == "");
+	y = popToken(x, '/', TOK_STRICT);
+	ASSERT(x == "/b/c");
+	ASSERT(y == "a");
 }
 
 void test_basename()
