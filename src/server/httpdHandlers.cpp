@@ -2124,19 +2124,17 @@ void parseMultipartAndStoreUploadedFiles(const std::string &part, std::string bo
 
             // case of a file
             // keep only the basename
-            size_t lastSlash = filename.find_last_of("\\/");
-            if (lastSlash != std::string::npos) filename = filename.substr(lastSlash+1);
+            filename = getBasename(filename);
 
             // store to objects directory
-            // TODO/gitdb store in tmp dir somewhere (filename being the sha1)
-            std::string objectid;
-            int r = Object::write(project.getObjectsDir(), data, dataSize, objectid);
-            if (r < 0) {
-                LOG_ERROR("Could not store uploaded file: %s", filename.c_str());
-                return;
+            std::string fileId = project.storeFile(filename, data);
+            if (fileId.empty()) {
+                // error
+                LOG_ERROR("cannot store file %s.", filename.c_str());
+                // ignore this file and continue
+            } else {
+                vars[name].push_back(fileId);
             }
-            std::string base = objectid + "/" + filename;
-            vars[name].push_back(base);
         }
 
         offset += n;

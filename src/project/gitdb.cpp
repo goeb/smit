@@ -123,6 +123,28 @@ void GitIssue::close()
     Pipe::close(p);
 }
 
+/** Store data in the git repo
+ */
+std::string gitdbStoreFile(const std::string &gitRepoPath, const std::string &data)
+{
+    Argv argv;
+    Subprocess *subp = 0;
+
+    argv.set("git", "hash-object", "-w", 0);
+    subp = Subprocess::launch(argv.getv(), 0, gitRepoPath.c_str());
+    if (!subp) return "";
+    std::string sha1Id = subp->getStdout();
+    trim(sha1Id);
+    std::string stderrString = subp->getStderr(); // must be called before wait()
+    int err = subp->wait();
+    delete subp;
+    if (err) {
+        LOG_ERROR("gitdbStoreFile error %d: %s", err, stderrString.c_str());
+        return "";
+    }
+    return sha1Id;
+}
+
 /**
  * @brief add an entry (ie: a commit) in the branch of the issue
  * @param gitRepoPath
@@ -130,6 +152,9 @@ void GitIssue::close()
  * @param author
  * @param body
  * @param files
+ *    List of files identifiers, in the form: <sha1-id>/<filename>
+ *    The file itself must have been previously stored in the git
+ *    repository with git hash-object -w (see related function)
  * @return
  *
  * The atomicity and thread safety is not garanteed at this level.
@@ -142,9 +167,7 @@ std::string GitIssue::addCommit(const std::string &gitRepoPath, const std::strin
     // The git commands must be run in a bare git repo (the ".git/").
 
     // git read-tree --empty
-    // attached files
-    //     git hash-object -w
-    //     git update-index --add --cacheinfo 100644 ...
+    // attached files: git update-index --add --cacheinfo 100644 ...
     // git write-tree
     // git show-ref issues/<id>
     // git commit-tree
@@ -167,7 +190,6 @@ std::string GitIssue::addCommit(const std::string &gitRepoPath, const std::strin
 
     // attached files
     // TODO
-    //     git hash-object -w
     //     git update-index --add --cacheinfo 100644 ...
     LOG_ERROR("addCommit attached files not implemented");
 

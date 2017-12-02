@@ -95,6 +95,9 @@ public:
     void getObjects(std::list<std::string> &objects) const;
 
     // methods for handling attached files
+    std::string storeFile(const std::string &filename, const std::string &data) const;
+
+    // TODO remove obsolete file after gitdb completed
     int addFile(const std::string &objectId);
 
     // methods for handling views

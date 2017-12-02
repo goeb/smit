@@ -777,6 +777,14 @@ void Project::getObjects(std::list<std::string> &objects) const
     }
 }
 
+std::string Project::storeFile(const std::string &filename, const std::string &data) const
+{
+    std::string sha1id = gitdbStoreFile(path, data);
+    if (sha1id.empty()) return ""; // error
+
+    return sha1id + "/" + filename;
+}
+
 
 /** Insert a file in the directory of attached files
   *

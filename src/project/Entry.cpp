@@ -40,6 +40,9 @@
 
 const std::string Entry::EMPTY_MESSAGE("");
 
+#define K_MSG_V4 "msg"
+#define K_AMEND_V4 "amend"
+#define K_PROPERTY_V4 "property"
 
 /** Load an entry from a string
   *
@@ -119,22 +122,22 @@ Entry *Entry::loadEntry(std::string data)
 
             // do not trim now the rest of the line, as multilines
             // need their spaces (indentation, etc.)
-            key = popToken(line, ' ', false);
-            if (key == "amend") {
+            key = popToken(line, ' ', TOK_TRIM_BEFORE);
+            if (key == K_AMEND_V4) {
                 trim(line);
                 e->properties[K_AMEND].push_back(line);
 
-            } else if (key == "msg") {
+            } else if (key == K_MSG_V4) {
                 // remove one space -- the space that separates the "msg" keyword
                 // from the rest iof the line.
                 // concatenate with previous msg lines
                 if (!msg.empty()) msg += '\n';
                 if (!line.empty()) msg += line.substr(1);
 
-            } else if (key == "property") {
+            } else if (key == K_PROPERTY_V4) {
                 // do not trim now the rest of the line, as multilines
                 // need their spaces (indentation, etc.)
-                std::string propertyId = popToken(line, ' ', false);
+                std::string propertyId = popToken(line, ' ', TOK_TRIM_BEFORE);
 
                 if (propertyId.empty()) continue;
 
@@ -252,16 +255,47 @@ std::string Entry::serialize() const
 {
     std::ostringstream s;
 
-    s << K_SMIT_VERSION << " " << VERSION << "\n";
-    s << K_PARENT << " " << parent << "\n";
-    s << serializeProperty(K_AUTHOR, author);
-    s << K_CTIME << " " << ctime << "\n";
-
     std::map<std::string, std::list<std::string> >::const_iterator p;
     for (p = properties.begin(); p != properties.end(); p++) {
         std::string key = p->first;
-        std::list<std::string> value = p->second;
-        s << serializeProperty(key, value);
+
+        if (key == K_MESSAGE) {
+            // serialize each line, prefixed by "msg"
+            if (p->second.empty()) continue;
+            std::string message = p->second.front();
+
+            while (!message.empty()) {
+                std::string line = popToken(message, '\n', TOK_STRICT);
+                s << K_MSG_V4 << " " << line << '\n';
+            }
+
+        } else if (key == K_AMEND) {
+            if (p->second.empty()) continue;
+            s << K_AMEND_V4 << " " << p->second.front() << '\n';
+
+        } else {
+            // regular property
+
+            if ( (p->second.size() == 1) && (p->second.front().find('\n') != std::string::npos) ) {
+                // serialize as multi-line
+                s << K_PROPERTY_V4 << " " << key << " <\n";
+                std::string text = p->second.front();
+                while (!text.empty()) {
+                    std::string line = popToken(text, '\n', TOK_STRICT);
+                    s << K_PROPERTY_V4 << " " << key << " " << line << '\n';
+                }
+
+            } else {
+                // serialize as one-line
+                s << K_PROPERTY_V4 << " " << key << " ";
+                std::list<std::string>::const_iterator v;
+                for (v = p->second.begin(); v != p->second.end(); v++) {
+                    s << " " << serializeSimpleToken(*v);
+                }
+                s << '\n';
+
+            }
+        }
     }
     return s.str();
 }
