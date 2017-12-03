@@ -430,8 +430,7 @@ std::string RHtmlIssue::getEntryExtraStyles(const ProjectConfig &pconfig, const 
     // look if class sm_no_contents is applicable
     // an entry has no contents if no message and no file
     if (ee.getMessage().empty() || ee.isAmending()) {
-        std::map<std::string, std::list<std::string> >::const_iterator files = ee.properties.find(K_FILE);
-        if (files == ee.properties.end() || files->second.empty()) {
+        if (ee.files.empty()) {
             extraStyles += " sm_entry_no_contents";
         }
     }
@@ -552,27 +551,23 @@ std::string RHtmlIssue::renderEntry(const ContextParameters &ctx, const IssueCop
 
 
     // uploaded / attached files
-    std::map<std::string, std::list<std::string> >::const_iterator files = ee.properties.find(K_FILE);
-    if (files != ee.properties.end() && files->second.size() > 0) {
+    if (!ee.files.empty()) {
         ss.printf("<div class=\"sm_entry_files\">\n");
-        std::list<std::string>::const_iterator itf;
-        FOREACH(itf, files->second) {
-            std::string f = *itf;
-            std::string objectId = popToken(f, '/');
-            std::string basename = f;
+        std::list<AttachedFileRef>::const_iterator afr;
+        FOREACH(afr, ee.files) {
 
-            std::string href = RESOURCE_FILES "/" + urlEncode(objectId) + "/" + urlEncode(basename);
+            std::string href = RESOURCE_FILES "/" + urlEncode(afr->id) + "/" + urlEncode(afr->filename);
             ss.printf("<div class=\"sm_entry_file\">\n");
             ss.printf("<a href=\"../%s\" class=\"sm_entry_file\">", href.c_str());
-            if (isImage(f)) {
+            if (isImage(afr->filename)) {
                 // do not escape slashes
                 ss.printf("<img src=\"../%s\" class=\"sm_entry_file\"><br>", href.c_str());
             }
-            ss.printf("%s", htmlEscape(basename).c_str());
+            ss.printf("%s", htmlEscape(afr->filename).c_str());
+
             // size of the file
-            std::string path = Project::getObjectPath(ctx.projectPath, objectId);
-            std::string size = getFileSize(path);
-            ss.printf("<span> (%s)</span>", size.c_str());
+            ss.printf("<span> (%s)</span>", filesize2string(afr->size).c_str());
+
             ss.printf("</a>");
             ss.printf("</div>\n"); // end file
         }

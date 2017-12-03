@@ -377,7 +377,9 @@ Entry *mergeEntry(const Entry *localEntry, Issue &remoteIssue, const Issue &remo
     // check if this new entry must be kept
     if (newProperties.size() > 0) {
         // store the new entry
-        Entry *e = Entry::createNewEntry(newProperties, localEntry->author, remoteIssue.latest);
+        std::list<AttachedFileRef> files;
+        LOG_ERROR("attached files broken");
+        Entry *e = Entry::createNewEntry(newProperties, files, localEntry->author, remoteIssue.latest);
         remoteIssue.addEntry(e);
         LOG_CLI("New entry: %s\n", e->id.c_str());
         return e;

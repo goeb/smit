@@ -154,6 +154,41 @@ std::string gitdbStoreFile(const std::string &gitRepoPath, const char *data, siz
     return sha1Id;
 }
 
+int gitdbLsTree(const std::string &gitRepoPath, const std::string &treeid, std::list<AttachedFileRef> &files)
+{
+    Argv argv;
+    Subprocess *subp = 0;
+    files.clear();
+
+    argv.set("git", "ls-tree", "-l", "-z", treeid.c_str(), 0);
+    subp = Subprocess::launch(argv.getv(), 0, gitRepoPath.c_str());
+    if (!subp) return -1;
+    std::string result = subp->getStdout();
+    std::string stderrString = subp->getStderr(); // must be called before wait()
+    int err = subp->wait();
+    delete subp;
+    if (err) {
+        LOG_ERROR("gitdbLsTree error %d: %s", err, stderrString.c_str());
+        return -1;
+    }
+
+    // parse the result
+    while (!result.empty()) {
+        AttachedFileRef afr;
+        std::string line = popToken(result, '\0', TOK_STRICT);
+        std::string mode = popToken(line, ' ', TOK_STRICT); // unused
+        std::string type = popToken(line, ' ', TOK_STRICT);
+        afr.id = popToken(line, ' ', TOK_STRICT);
+        std::string size = popToken(line, '\t', TOK_STRICT);
+        afr.size = atoi(size.c_str());
+        afr.filename = line;
+        files.push_back(afr);
+    }
+
+    return 0;
+
+}
+
 /**
  * @brief add an entry (ie: a commit) in the branch of the issue
  * @param gitRepoPath
@@ -170,7 +205,7 @@ std::string gitdbStoreFile(const std::string &gitRepoPath, const char *data, siz
  * The caller must manage his own mutex.
  */
 std::string GitIssue::addCommit(const std::string &gitRepoPath, const std::string &issueId,
-                                const std::string &author, long ctime, const std::string &body, const std::list<std::string> &files)
+                                const std::string &author, long ctime, const std::string &body, const std::list<AttachedFileRef> &files)
 {
     // git commit in a branch issues/<id> without checking out the branch
     // The git commands must be run in a bare git repo (the ".git/").
@@ -198,13 +233,11 @@ std::string GitIssue::addCommit(const std::string &gitRepoPath, const std::strin
     }
 
     // attached files
-    std::list<std::string>::const_iterator fit;
-    FOREACH (fit, files) {
-        std::string file = *fit;
-        std::string sha1id = popToken(file, '/');
+    std::list<AttachedFileRef>::const_iterator afr;
+    FOREACH (afr, files) {
         // 100644 : Regular non-executable file
         argv.set("git", "update-index", "--add", "--cacheinfo", "100644",
-                 sha1id.c_str(), file.c_str(), 0);
+                 afr->id.c_str(), afr->filename.c_str(), 0);
         subp = Subprocess::launch(argv.getv(), 0, bareGitRepo.c_str());
         if (!subp) return "";
         std::string stderrString = subp->getStderr(); // must be called before wait()

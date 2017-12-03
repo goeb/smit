@@ -265,6 +265,23 @@ int mkdirs(const std::string &path)
     return 0;
 }
 
+std::string filesize2string(size_t size)
+{
+    std::stringstream sizeStr;
+    sizeStr.setf(std::ios::fixed, std:: ios::floatfield);
+    sizeStr.precision(1);
+    if (size < 1024) {
+        sizeStr << size << "o";
+    } else if (size < 1024*1024) {
+        double s = (double)size/1024;
+        sizeStr << s << "ko";
+    } else {
+        double s = (double)size/1024/1024;
+        sizeStr << s << "Mo";
+    }
+    return sizeStr.str();
+}
+
 std::string getFileSize(const std::string &path)
 {
     struct stat fileStat;

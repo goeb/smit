@@ -2100,6 +2100,7 @@ int httpGetIssue(const RequestContext *req, Project &p, const std::string &issue
 
 void parseMultipartAndStoreUploadedFiles(const std::string &part, std::string boundary,
                                          std::map<std::string, std::list<std::string> > &vars,
+                                         std::list<AttachedFileRef> &files,
                                          const Project &project)
 {
     size_t n;
@@ -2123,17 +2124,18 @@ void parseMultipartAndStoreUploadedFiles(const std::string &part, std::string bo
             LOG_DIAG("Multipart: filename=%s", filename.c_str());
 
             // case of a file
-            // keep only the basename
-            filename = getBasename(filename);
-
             // store to objects directory
-            std::string fileId = project.storeFile(filename, data, dataSize);
+            std::string fileId = project.storeFile(data, dataSize);
             if (fileId.empty()) {
                 // error
                 LOG_ERROR("cannot store file %s.", filename.c_str());
                 // ignore this file and continue
             } else {
-                vars[K_FILE].push_back(fileId);
+                AttachedFileRef file;
+                file.size = dataSize;
+                file.filename = getBasename(filename);
+                file.id = fileId;
+                files.push_back(file);
             }
         }
 
@@ -2260,7 +2262,8 @@ void httpPostEntry(const RequestContext *req, Project &pro, const std::string & 
         return;
     }
 
-    parseMultipartAndStoreUploadedFiles(postData, boundary, vars, pro);
+    std::list<AttachedFileRef> files;
+    parseMultipartAndStoreUploadedFiles(postData, boundary, vars, files, pro);
 
     std::string id = issueId;
     Entry *entry = 0;
@@ -2287,7 +2290,7 @@ void httpPostEntry(const RequestContext *req, Project &pro, const std::string & 
         if (id == "new") {
             id = "";
         }
-        r = pro.addEntry(vars, id, entry, u.username, oldIssue);
+        r = pro.addEntry(vars, files, id, entry, u.username, oldIssue);
         if (r < 0) {
             // error
             sendHttpHeader500(req, "Cannot add entry");

@@ -56,7 +56,7 @@ public:
     void consolidateAssociations(IssueCopy &issue, bool forward) const;
 
     // methods for handling entries
-    int addEntry(PropertiesMap properties, std::string &iid,
+    int addEntry(PropertiesMap properties, const std::list<AttachedFileRef> &files, std::string &iid,
                  Entry *&entry, std::string username, IssueCopy &oldIssue);
     int pushEntry(std::string &issueId, const std::string &entryId,
                   const std::string &user, const std::string &data);
@@ -95,7 +95,7 @@ public:
     void getObjects(std::list<std::string> &objects) const;
 
     // methods for handling attached files
-    std::string storeFile(const std::string &filename, const char *data, size_t len) const;
+    std::string storeFile(const char *data, size_t len) const;
 
     // TODO remove obsolete file after gitdb completed
     int addFile(const std::string &objectId);

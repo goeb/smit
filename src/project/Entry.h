@@ -11,6 +11,7 @@
 #include "utils/ustring.h"
 #include "utils/stringTools.h"
 #include "Object.h"
+#include "gitdb.h"
 
 #define K_MESSAGE     "+message" // keyword used for the message
 #define K_FILE        "+file" // keyword used for uploaded files
@@ -75,12 +76,13 @@ public:
     long ctime; // creation time
     std::string author;
     PropertiesMap properties;
+    std::list<AttachedFileRef> files;
     Issue *issue;
 
 
     // methods
     Entry() : ctime(0), issue(0), next(0), prev(0), message(&EMPTY_MESSAGE) {}
-    static Entry *loadEntry(std::string data);
+    static Entry *loadEntry(std::string data, std::__cxx11::string &treeid);
 
     void setId();
     void updateMessage();
@@ -100,7 +102,8 @@ public:
     bool isAmending() const;
     inline std::string getSubpath() const { return Object::getSubpath(id); }
     static inline std::string getSubpath(const std::string identifier) { return Object::getSubpath(identifier); }
-    static Entry *createNewEntry(const PropertiesMap &props, const std::string &author, const Entry *eParent);
+    static Entry *createNewEntry(const PropertiesMap &props, const std::list<AttachedFileRef> &files,
+                                 const std::string &author, const Entry *eParent);
 
     // methods managing the linked list
     void append(Entry *e);

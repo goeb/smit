@@ -124,7 +124,9 @@ Entry *Issue::amendEntry(const std::string &entryId, const std::string &newMsg, 
     PropertiesMap properties;
     properties[K_MESSAGE].push_back(newMsg);
     properties[K_AMEND].push_back(entryId);
-    Entry *amendingEntry = Entry::createNewEntry(properties, username, latest);
+
+    std::list<AttachedFileRef> files; // no file, empty list
+    Entry *amendingEntry = Entry::createNewEntry(properties, files, username, latest);
 
     addEntry(amendingEntry);
 

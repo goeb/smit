@@ -183,6 +183,7 @@ void printAllIssues(const Project &p)
 
 int helpIssue()
 {
+    // TODO add -f to attach a file
     printf("Usage: smit issue [options] <path-to-project> [<id>]\n"
            "\n"
            "  Print an issue.\n"
@@ -309,7 +310,8 @@ int cmdIssue(int argc, char * const *argv)
         Entry *entry = 0;
         IssueCopy oldIssue;
         if (issueId == "-") issueId = "";
-        int r = p->addEntry(properties, issueId, entry, username, oldIssue);
+        std::list<AttachedFileRef> files; // no file, empty list
+        int r = p->addEntry(properties, files, issueId, entry, username, oldIssue);
         if (r >= 0) {
             if (entry) {
                 printf("%s/%s\n", entry->issue->id.c_str(), entry->id.c_str());

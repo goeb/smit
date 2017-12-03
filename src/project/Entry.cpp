@@ -47,6 +47,7 @@ const std::string Entry::EMPTY_MESSAGE("");
 /** Load an entry from a string
   *
   * @param data
+  * @param[out] treeid
   *
   * The format of data is the one returned by:
   *      git log --format=raw --notes
@@ -71,9 +72,10 @@ const std::string Entry::EMPTY_MESSAGE("");
   *
   *     smit-v3-id: zQp6nXdMe4EbIlG9wFuUqwtSZG4
   */
-Entry *Entry::loadEntry(std::string data)
+Entry *Entry::loadEntry(std::string data, std::string &treeid)
 {
     Entry *e = new Entry;
+    treeid.clear();
 
     // extract the entry id (ie: commit id)
     std::string commitKey = popToken(data, ' '); // should be "commit", not verified...
@@ -86,7 +88,6 @@ Entry *Entry::loadEntry(std::string data)
     }
 
     std::string key;
-    std::string tree;
     bool inNotesPart = false;
     std::string msg; // at most one message is supported in an entry
     std::string multilineValue; // at most one at a time (not interleaved)
@@ -99,7 +100,7 @@ Entry *Entry::loadEntry(std::string data)
 
         if (line[0] != ' ') {
             key = popToken(line, ' ');
-            if (key == "tree") tree = line;
+            if (key == "tree") treeid = line;
             else if (key == "parent") e->parent = line;
             else if (key == "Notes:") inNotesPart = true;
             else if (key == "author") {
@@ -222,12 +223,14 @@ void Entry::updateMessage()
     setMessage(m);
 }
 
-Entry *Entry::createNewEntry(const PropertiesMap &props, const std::string &author, const Entry *eParent)
+Entry *Entry::createNewEntry(const PropertiesMap &props, const std::list<AttachedFileRef> &files,
+                             const std::string &author, const Entry *eParent)
 {
     Entry *e = new Entry();
     e->properties = props;
     e->author = author;
     e->ctime = time(0);
+    e->files = files;
 
     e->updateMessage();
 
@@ -266,6 +269,9 @@ std::string Entry::serialize() const
                 std::string line = popToken(message, '\n', TOK_STRICT);
                 s << K_MSG_V4 << " " << line << '\n';
             }
+
+        } else if (key == K_FILE) {
+            // attached files are not referenced here, but in a git tree
 
         } else if (key == K_AMEND) {
             if (p->second.empty()) continue;

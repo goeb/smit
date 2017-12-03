@@ -21,6 +21,7 @@ bool isDir(const std::string &path);
 int mkdirs(const std::string &path);
 
 std::string getExePath();
+std::string filesize2string(size_t size);
 std::string getFileSize(const std::string &path);
 
 DIR *openDir(const std::string &path);

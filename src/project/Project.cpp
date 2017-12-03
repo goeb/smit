@@ -215,11 +215,20 @@ Issue *Project::loadIssue(const std::string &issueId)
         std::string entryString = elist.getNextEntry();
         if (entryString.empty()) break; // reached the end
 
-        Entry *e = Entry::loadEntry(entryString);
+        std::string treeid;
+        Entry *e = Entry::loadEntry(entryString, treeid);
         if (!e) {
             LOG_ERROR("Cannot load entry '%s'", entryString.c_str());
             error = 1;
             break; // abort the loading of this issue
+        }
+        if (!treeid.empty() && treeid != K_EMPTY_TREE) {
+            int err = gitdbLsTree(path, treeid, e->files);
+            if (err) {
+                LOG_ERROR("Cannot load attached files: tree %s", treeid.c_str());
+                error = 1;
+                break; // abort the loading of this issue
+            }
         }
 
         issue->insertEntry(e); // store the entry in the chain list
@@ -777,12 +786,9 @@ void Project::getObjects(std::list<std::string> &objects) const
     }
 }
 
-std::string Project::storeFile(const std::string &filename, const char *data, size_t len) const
+std::string Project::storeFile(const char *data, size_t len) const
 {
-    std::string sha1id = gitdbStoreFile(path, data, len);
-    if (sha1id.empty()) return ""; // error
-
-    return sha1id + "/" + filename;
+    return gitdbStoreFile(path, data, len);
 }
 
 
@@ -1322,8 +1328,8 @@ int Project::storeEntry(const Entry *e)
   *    >0 no entry was created due to no change.
   *    -1 error
   */
-int Project::addEntry(PropertiesMap properties, std::string &issueId,
-                      Entry *&entry, std::string username, IssueCopy &oldIssue)
+int Project::addEntry(PropertiesMap properties, const std::list<AttachedFileRef> &files,
+                      std::string &issueId, Entry *&entry, std::string username, IssueCopy &oldIssue)
 {
     ScopeLocker scopeLocker(locker, LOCK_READ_WRITE);
     ScopeLocker scopeLockerConfig(lockerForConfig, LOCK_READ_ONLY);
@@ -1341,8 +1347,7 @@ int Project::addEntry(PropertiesMap properties, std::string &issueId,
         bool doErase = false;
         std::string propertyName = p->first;
 
-        if ( (propertyName == K_MESSAGE) ||
-             (propertyName == K_FILE)    || (propertyName == K_AMEND) )  {
+        if ( (propertyName == K_MESSAGE) || (propertyName == K_AMEND) )  {
             if (p->second.size() && p->second.front().empty()) {
                 // erase if message or file is emtpy
                 doErase = true;
@@ -1408,7 +1413,7 @@ int Project::addEntry(PropertiesMap properties, std::string &issueId,
         }
     }
 
-    if (properties.size() == 0) {
+    if (properties.size() == 0 && files.empty()) {
         LOG_INFO("addEntry: no change. return without adding entry.");
         return 1; // no change
     }
@@ -1429,7 +1434,7 @@ int Project::addEntry(PropertiesMap properties, std::string &issueId,
     }
 
     // create the new entry object
-    Entry *e = Entry::createNewEntry(properties, username, i->latest);
+    Entry *e = Entry::createNewEntry(properties, files, username, i->latest);
 
     // add the entry to the project and store to disk
     int r = addNewEntry(i->id, e);
@@ -1470,10 +1475,7 @@ int Project::addNewEntry(const std::string &issueId, Entry *e)
 {
     const std::string data = e->serialize();
 
-    std::list<std::string> files;
-    if (e->properties.find(K_FILE) != e->properties.end()) files = e->properties[K_FILE];
-
-    std::string entryId = GitIssue::addCommit(path, issueId, e->author, e->ctime, data, files);
+    std::string entryId = GitIssue::addCommit(path, issueId, e->author, e->ctime, data, e->files);
 
     e->id = entryId;
 
@@ -1505,7 +1507,7 @@ int Project::addPushedEntry(Entry *e, const std::string &data)
 
 
 
-/** Push an uploaded entry in the database
+/** Push an uploaded entry in the database (TODO remove after gitdb fulfilled)
   *
   * An error is raised in any of the following cases:
   * (a) the author of the entry is not the same as the username
@@ -1531,7 +1533,8 @@ int Project::pushEntry(std::string &issueId, const std::string &entryId,
     LOG_DEBUG("pushEntry(%s, %s, %s, ...)", issueId.c_str(), entryId.c_str(), username.c_str());
 
     // load the file as an entry
-    Entry *e = Entry::loadEntry(data);
+    std::string treeid;
+    Entry *e = Entry::loadEntry(data, treeid);
     if (!e) return -1;
 
     // check that the username is the same as the author of the entry
