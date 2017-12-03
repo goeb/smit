@@ -128,11 +128,9 @@ Entry *Entry::loadEntry(std::string data)
                 e->properties[K_AMEND].push_back(line);
 
             } else if (key == K_MSG_V4) {
-                // remove one space -- the space that separates the "msg" keyword
-                // from the rest iof the line.
                 // concatenate with previous msg lines
                 if (!msg.empty()) msg += '\n';
-                if (!line.empty()) msg += line.substr(1);
+                if (!line.empty()) msg += line;
 
             } else if (key == K_PROPERTY_V4) {
                 // do not trim now the rest of the line, as multilines
