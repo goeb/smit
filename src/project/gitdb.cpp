@@ -130,9 +130,11 @@ std::string gitdbStoreFile(const std::string &gitRepoPath, const std::string &da
     Argv argv;
     Subprocess *subp = 0;
 
-    argv.set("git", "hash-object", "-w", 0);
+    argv.set("git", "hash-object", "-w", "--stdin", 0);
     subp = Subprocess::launch(argv.getv(), 0, gitRepoPath.c_str());
     if (!subp) return "";
+    subp->write(data);
+    subp->closeStdin();
     std::string sha1Id = subp->getStdout();
     trim(sha1Id);
     std::string stderrString = subp->getStderr(); // must be called before wait()
@@ -142,6 +144,12 @@ std::string gitdbStoreFile(const std::string &gitRepoPath, const std::string &da
         LOG_ERROR("gitdbStoreFile error %d: %s", err, stderrString.c_str());
         return "";
     }
+
+    if (sha1Id.size() != SIZE_COMMIT_ID) {
+        LOG_ERROR("gitdbStoreFile error: sha1Id=%s", sha1Id.c_str());
+        return "";
+    }
+
     return sha1Id;
 }
 
