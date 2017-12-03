@@ -3,6 +3,7 @@
 #include <stdlib.h>
 
 #include "gitdb.h"
+#include "global.h"
 #include "utils/logging.h"
 #include "utils/stringTools.h"
 #include "utils/subprocess.h"
@@ -125,7 +126,7 @@ void GitIssue::close()
 
 /** Store data in the git repo
  */
-std::string gitdbStoreFile(const std::string &gitRepoPath, const std::string &data)
+std::string gitdbStoreFile(const std::string &gitRepoPath, const char *data, size_t len)
 {
     Argv argv;
     Subprocess *subp = 0;
@@ -133,7 +134,7 @@ std::string gitdbStoreFile(const std::string &gitRepoPath, const std::string &da
     argv.set("git", "hash-object", "-w", "--stdin", 0);
     subp = Subprocess::launch(argv.getv(), 0, gitRepoPath.c_str());
     if (!subp) return "";
-    subp->write(data);
+    subp->write(data, len);
     subp->closeStdin();
     std::string sha1Id = subp->getStdout();
     trim(sha1Id);
@@ -193,13 +194,27 @@ std::string GitIssue::addCommit(const std::string &gitRepoPath, const std::strin
     delete subp;
     if (err) {
         LOG_ERROR("addCommit read-tree error %d: %s", err, stderrString.c_str());
-        return "";
+       return "";
     }
 
     // attached files
-    // TODO
-    //     git update-index --add --cacheinfo 100644 ...
-    LOG_ERROR("addCommit attached files not implemented");
+    std::list<std::string>::const_iterator fit;
+    FOREACH (fit, files) {
+        std::string file = *fit;
+        std::string sha1id = popToken(file, '/');
+        // 100644 : Regular non-executable file
+        argv.set("git", "update-index", "--add", "--cacheinfo", "100644",
+                 sha1id.c_str(), file.c_str(), 0);
+        subp = Subprocess::launch(argv.getv(), 0, bareGitRepo.c_str());
+        if (!subp) return "";
+        std::string stderrString = subp->getStderr(); // must be called before wait()
+        int err = subp->wait();
+        delete subp;
+        if (err) {
+            LOG_ERROR("addCommit update-index error %d: %s", err, stderrString.c_str());
+            return "";
+        }
+    }
 
     argv.set("git", "write-tree", 0);
     subp = Subprocess::launch(argv.getv(), 0, bareGitRepo.c_str());

@@ -777,9 +777,9 @@ void Project::getObjects(std::list<std::string> &objects) const
     }
 }
 
-std::string Project::storeFile(const std::string &filename, const std::string &data) const
+std::string Project::storeFile(const std::string &filename, const char *data, size_t len) const
 {
-    std::string sha1id = gitdbStoreFile(path, data);
+    std::string sha1id = gitdbStoreFile(path, data, len);
     if (sha1id.empty()) return ""; // error
 
     return sha1id + "/" + filename;
@@ -1470,7 +1470,8 @@ int Project::addNewEntry(const std::string &issueId, Entry *e)
 {
     const std::string data = e->serialize();
 
-    std::list<std::string> files; // TODO
+    std::list<std::string> files;
+    if (e->properties.find(K_FILE) != e->properties.end()) files = e->properties[K_FILE];
 
     std::string entryId = GitIssue::addCommit(path, issueId, e->author, e->ctime, data, files);
 

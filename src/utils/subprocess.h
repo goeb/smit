@@ -23,6 +23,7 @@ public:
     ~Subprocess();
     int wait();
     int write(const std::string &data);
+    int write(const char *data, size_t len);
     int read(std::string &data, StandardFd fd=SUBP_STDOUT);
     std::string getline();
     void closeStdin();

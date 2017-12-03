@@ -6,7 +6,7 @@
 
 #include "utils/pipe.h"
 
-std::string gitdbStoreFile(const std::string &gitRepoPath, const std::string &data);
+std::string gitdbStoreFile(const std::string &gitRepoPath, const char *data, size_t len);
 
 class GitIssueList {
 

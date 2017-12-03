@@ -2127,13 +2127,13 @@ void parseMultipartAndStoreUploadedFiles(const std::string &part, std::string bo
             filename = getBasename(filename);
 
             // store to objects directory
-            std::string fileId = project.storeFile(filename, data);
+            std::string fileId = project.storeFile(filename, data, dataSize);
             if (fileId.empty()) {
                 // error
                 LOG_ERROR("cannot store file %s.", filename.c_str());
                 // ignore this file and continue
             } else {
-                vars[name].push_back(fileId);
+                vars[K_FILE].push_back(fileId);
             }
         }
 

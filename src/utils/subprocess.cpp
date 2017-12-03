@@ -175,18 +175,26 @@ int Subprocess::wait()
  */
 int Subprocess::write(const std::string &data)
 {
-    size_t remaining = data.size();
+    return write(data.data(), data.size());
+}
+
+int Subprocess::write(const char *data, size_t len)
+{
+    size_t remaining = len;
 
     while (remaining) {
-        ssize_t n = ::write(pipes[SUBP_STDIN][SUBP_WRITE], data.data(), data.size());
+        ssize_t n = ::write(pipes[SUBP_STDIN][SUBP_WRITE], data, remaining);
         if (n < 0) {
             LOG_ERROR("Subprocess::write() error: %s", STRERROR(errno));
             return -1;
         }
         remaining -= n;
+        data += n;
     }
     return 0;
+
 }
+
 
 /** Read from the stdout or stderr of the child process
  */
