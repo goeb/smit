@@ -43,6 +43,7 @@
 #include "rendering/ContextParameters.h"
 #include "rendering/renderingCsv.h"
 #include "rendering/renderingJson.h"
+#include "project/gitdb.h"
 #include "user/session.h"
 #include "user/Recipient.h"
 #include "user/AuthSha1.h"
@@ -1715,23 +1716,6 @@ void httpGetView(const RequestContext *req, Project &p, const std::string &view,
     }
 }
 
-/** Get the list of objects of a project
-  *
-  * Send the list of objects ids, separated by \n
-  */
-void httpGetObjects(const RequestContext *req, Project &p)
-{
-    sendHttpHeader200(req);
-    req->printf("Content-Type: text/plain\r\n\r\n");
-
-    std::list<std::string> objects;
-    std::list<std::string>::iterator o;
-    p.getObjects(objects);
-    FOREACH(o, objects) {
-        req->printf("%s\n", o->c_str());
-    }
-}
-
 /** Get an object
   *
   * Read access is supposed to have already been granted.
@@ -1741,21 +1725,57 @@ void httpGetObjects(const RequestContext *req, Project &p)
   *    - <id> is the identifier of the object
   *    - <filename> is the name of the file. The extension is used to determine the type.
   */
-void httpGetObject(const RequestContext *req, Project &p, std::string object)
+void httpGetObject(const RequestContext *req, const Project &p, std::string object)
 {
-    if (object.empty()) return httpGetObjects(req, p);
+    if (object.empty()) return;
 
     std::string id = popToken(object, '/');
-    std::string basemane = object;
-    std::string realpath = p.getObjectsDir() + "/" + Object::getSubpath(id);
-    LOG_DEBUG("httpGetObject: basename=%s, realpath=%s", basemane.c_str(), realpath.c_str());
-    req->sendObject(basemane, realpath);
+    std::string filename = object;
+
+    // TODO check if project needs read-only locking
+    GitObject o(p.getPath(), id);
+    int size = o.getSize();
+    if (size < 0) {
+        sendHttpHeader404(req);
+        return;
+    }
+
+    // send header
+    int err = o.open();
+    if (err) {
+        sendHttpHeader500(req, "Error while opening subprocess");
+        return;
+    }
+
+    const char *mimeType = mg_get_builtin_mime_type(filename.c_str());
+    sendHttpHeader200(req);
+    req->printf("Etag: %s\r\n", id.c_str());
+    req->printf("Content-Type: %s\r\n", mimeType);
+    req->printf("Content-Length: %ld\r\n", L(size));
+    req->printf("\r\n");
+    const int BUF_SIZ = 4096;
+    char buffer[BUF_SIZ];
+    while (1)
+    {
+        int n = o.read(buffer, BUF_SIZ);
+        if (n < 0) {
+            // error
+            LOG_ERROR("Error while sending object %s (%s)", id.c_str(), p.getPath().c_str());
+            // TODO how to deal with this server side error ?
+            break;
+        }
+        if (n == 0) break; // end of file
+        req->write(buffer, n);
+    }
 }
+
+
 
 /** Get the HEAD of an object
   *
   * This is used by client pushers to know if a file exists.
   */
+// TODO DEPRECATED
 void httpGetHeadObject(const RequestContext *req, Project &p, std::string object)
 {
     LOG_FUNC();

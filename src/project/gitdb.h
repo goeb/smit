@@ -5,6 +5,7 @@
 #include <list>
 
 #include "utils/pipe.h"
+#include "utils/subprocess.h"
 
 // SHA1 id of an empty tree
 #define K_EMPTY_TREE "4b825dc642cb6eb9a060e54bf8d69288fbee4904"
@@ -48,5 +49,17 @@ private:
 
 };
 
+class GitObject {
+public:
+    GitObject(const std::string &gitRepoPath, const std::string &objectid);
+    int getSize();
+    int open();
+    int read(char *buffer, size_t size);
+    void close();
+private:
+    std::string path; // path of the git repository
+    std::string id;
+    Subprocess *subp;
+};
 
 #endif // _gitdb_h

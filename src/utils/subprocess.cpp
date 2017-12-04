@@ -195,6 +195,28 @@ int Subprocess::write(const char *data, size_t len)
 
 }
 
+/** Read bytes from the stdout or stderr of the child process
+ */
+int Subprocess::read(char *buffer, size_t size)
+{
+    size_t remaining = size;
+    while (remaining) {
+
+        ssize_t n = ::read(pipes[SUBP_STDOUT][SUBP_READ], buffer, remaining);
+
+        if (n < 0) {
+            LOG_ERROR("Subprocess::read() error: %s", STRERROR(errno));
+            return -1;
+        }
+
+        remaining -= n;
+        buffer += n;
+
+        if (n == 0) break; // end of file
+    }
+
+    return size-remaining;
+}
 
 /** Read from the stdout or stderr of the child process
  */

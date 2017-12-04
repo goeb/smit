@@ -344,3 +344,55 @@ std::string GitIssue::addCommit(const std::string &gitRepoPath, const std::strin
     return commitId;
 }
 
+
+GitObject::GitObject(const std::string &gitRepoPath, const std::string &objectid) :
+    path(gitRepoPath), id(objectid), subp(0)
+{
+}
+
+int GitObject::getSize()
+{
+    Argv argv;
+    Subprocess *subproc = 0;
+
+    argv.set("git", "cat-file", "-s", id.c_str(), 0);
+    subproc = Subprocess::launch(argv.getv(), 0, path.c_str());
+    if (!subproc) return -1;
+    std::string stderrString = subproc->getStderr(); // must be called before wait()
+    std::string stdoutString = subproc->getStdout(); // must be called before wait()
+    int err = subproc->wait();
+    delete subproc;
+    if (err) {
+        LOG_ERROR("addCommit read-tree error %d: %s", err, stderrString.c_str());
+       return -1;
+    }
+    return atoi(stdoutString.c_str());
+}
+
+/** Open an object for reading
+  */
+int GitObject::open()
+{
+    if (subp) {
+        LOG_ERROR("GitObject::open subp already open");
+        return -1;
+    }
+    Argv argv;
+    argv.set("git", "cat-file", "-p", id.c_str(), 0);
+    subp = Subprocess::launch(argv.getv(), 0, path.c_str());
+    if (!subp) return -1;
+
+    return 0;
+}
+
+int GitObject::read(char *buffer, size_t size)
+{
+    return subp->read(buffer, size);
+}
+
+void GitObject::close()
+{
+    subp->wait();
+    delete subp;
+    subp = 0;
+}
