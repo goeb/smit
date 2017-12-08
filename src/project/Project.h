@@ -160,7 +160,6 @@ private:
     Issue *loadIssue(const std::string &issueId);
     int loadIssues();
     void loadPredefinedViews();
-    void loadTags();
     void computeAssociations();
     void cleanupMultiselect(std::list<std::string> &values,
                             const std::list<std::string> &selectOptions);

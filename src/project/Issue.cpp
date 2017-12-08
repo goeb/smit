@@ -405,6 +405,10 @@ int Issue::getNumberOfTaggedIEntries(const std::string &tagname) const
     return n;
 }
 
+void Issue::setTag(const std::string &entryId, const std::string &tagname)
+{
+    tags[entryId].insert(tagname);
+}
 
 void Issue::toggleTag(const std::string &entryId, const std::string &tagname)
 {
@@ -420,6 +424,7 @@ void Issue::toggleTag(const std::string &entryId, const std::string &tagname)
     }
     if (!hasTag) tags[entryId].insert(tagname);
 }
+
 bool Issue::hasTag(const std::string &entryId, const std::string &tagname) const
 {
     std::map<std::string, std::set<std::string> >::const_iterator tit = tags.find(entryId);

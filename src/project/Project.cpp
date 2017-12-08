@@ -165,8 +165,6 @@ int Project::load()
         return r;
     }
 
-    loadTags();
-
     LOG_INFO("Project %s loaded: %ld issues", path.c_str(), L(issues.size()));
 
     computeAssociations();
@@ -216,12 +214,14 @@ Issue *Project::loadIssue(const std::string &issueId)
         if (entryString.empty()) break; // reached the end
 
         std::string treeid;
-        Entry *e = Entry::loadEntry(entryString, treeid);
+        std::list<std::string> tags;
+        Entry *e = Entry::loadEntry(entryString, treeid, tags);
         if (!e) {
             LOG_ERROR("Cannot load entry '%s'", entryString.c_str());
             error = 1;
             break; // abort the loading of this issue
         }
+
         if (!treeid.empty() && treeid != K_EMPTY_TREE) {
             int err = gitdbLsTree(path, treeid, e->files);
             if (err) {
@@ -232,6 +232,12 @@ Issue *Project::loadIssue(const std::string &issueId)
         }
 
         issue->insertEntry(e); // store the entry in the chain list
+
+        // set the tags
+        std::list<std::string>::const_iterator tagname;
+        FOREACH(tagname, tags) {
+            issue->setTag(e->id, *tagname);
+        }
     }
 
     elist.close();
@@ -876,50 +882,6 @@ void Project::loadPredefinedViews()
     LOG_DEBUG("predefined views loaded: %ld", L(predefinedViews.size()));
 }
 
-/** Load tags, strating from the latest, ie: <p>/refs/tags
-  *
-  */
-void Project::loadTags()
-{
-    std::string tagRef = getPath() + "/" + PATH_TAGS;
-    std::string latestTag;
-    int r = loadFile(tagRef, latestTag);
-    if (r != 0) {
-        // No tag ref. No tag in this project.
-        LOG_DIAG("Cannot load '%s': %s", tagRef.c_str(), STRERROR(errno));
-        return;
-    }
-
-    trim(latestTag);
-    latestTagId = latestTag;
-
-    // load all the tags, chained from the latest
-
-    int n = 0;
-    std::string currentTag = latestTag;
-    while (currentTag != K_PARENT_NULL) {
-        std::string path = getObjectsDir() + "/" + Object::getSubpath(currentTag);
-        Tag *tag = Tag::load(path, currentTag);
-        if (!tag) break;
-
-        Entry *e = getEntry(tag->entryId);
-        if (!e) {
-            LOG_ERROR("Tag to unknown entry: %s -> %s", path.c_str(), tag->entryId.c_str());
-        } else if (!e->issue) {
-            LOG_ERROR("Tagged entry has unknwon issue: %s", e->id.c_str());
-        } else {
-            // Toggle the tag of the entry
-            e->issue->toggleTag(e->id, tag->tagName);
-            n++;
-        }
-
-        currentTag = tag->parent;
-        delete tag;
-    }
-    LOG_INFO("Project %s: %d tags", getName().c_str(), n);
-}
-
-
 /** Parse the sorting specification
   * Input syntax is:
   *    aa+bb-cc
@@ -956,7 +918,6 @@ std::list<std::pair<bool, std::string> > parseSortingSpec(const char *sortingSpe
 
     return result;
 }
-
 
 void Project::searchEntries(const char *sortingSpec, std::vector<Entry> &entries, int limit) const
 {
@@ -1534,7 +1495,8 @@ int Project::pushEntry(std::string &issueId, const std::string &entryId,
 
     // load the file as an entry
     std::string treeid;
-    Entry *e = Entry::loadEntry(data, treeid);
+    std::list<std::string> tags;
+    Entry *e = Entry::loadEntry(data, treeid, tags);
     if (!e) return -1;
 
     // check that the username is the same as the author of the entry

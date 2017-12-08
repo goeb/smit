@@ -82,7 +82,7 @@ public:
 
     // methods
     Entry() : ctime(0), issue(0), next(0), prev(0), message(&EMPTY_MESSAGE) {}
-    static Entry *loadEntry(std::string data, std::__cxx11::string &treeid);
+    static Entry *loadEntry(std::string data, std::string &treeid, std::list<std::string> &tags);
 
     void setId();
     void updateMessage();

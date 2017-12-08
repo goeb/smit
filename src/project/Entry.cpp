@@ -48,6 +48,7 @@ const std::string Entry::EMPTY_MESSAGE("");
   *
   * @param data
   * @param[out] treeid
+  * @param[out] tags
   *
   * The format of data is the one returned by:
   *      git log --format=raw --notes
@@ -72,7 +73,7 @@ const std::string Entry::EMPTY_MESSAGE("");
   *
   *     smit-v3-id: zQp6nXdMe4EbIlG9wFuUqwtSZG4
   */
-Entry *Entry::loadEntry(std::string data, std::string &treeid)
+Entry *Entry::loadEntry(std::string data, std::string &treeid, std::list<std::string> &tags)
 {
     Entry *e = new Entry;
     treeid.clear();
@@ -116,7 +117,8 @@ Entry *Entry::loadEntry(std::string data, std::string &treeid)
             // in notes part
             key = popToken(line, ' ');
             if (key == "tag") {
-                // TODO xxxxxxxxxxxxxxxxxxxxxxxxxx
+                std::string tagname = popToken(line, ' ');
+                tags.push_back(tagname);
             }
         } else {
             // in the body part

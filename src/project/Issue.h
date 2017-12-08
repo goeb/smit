@@ -62,6 +62,7 @@ struct Issue {
     void consolidateAmendment(Entry *e);
     bool searchFullText(const char *text) const;
     int getNumberOfTaggedIEntries(const std::string &tagname) const;
+    void setTag(const std::string &entryId, const std::string &tagname);
     void toggleTag(const std::string &entryId, const std::string &tagname);
     bool hasTag(const std::string &entryId, const std::string &tagname) const;
 
