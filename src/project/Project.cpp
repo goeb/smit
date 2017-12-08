@@ -54,6 +54,11 @@ const char *Project::reservedNames[] = {
     0
 };
 
+Project::Project(const std::string &pathToDir): path(pathToDir)
+{
+    // nothing
+}
+
 /** init and load in memory the given project
   *
   * @param path
@@ -397,20 +402,9 @@ void Project::getAllIssues(std::vector<Issue*> &issuesList)
 int Project::loadConfig()
 {
     LOG_FUNC();
-    std::string pathToProjectFile = path + "/" PATH_PROJECT_CONFIG;
-    std::string objectid;
-    int r = loadFile(pathToProjectFile, objectid);
-    if (r != 0) {
-        LOG_ERROR("Cannot load project config '%s': %s", pathToProjectFile.c_str(), strerror(errno));
-        return -1;
-    }
-
-    trim(objectid);
-
-    std::string pathToProjectConfig = getObjectsDir() + "/" + Object::getSubpath(objectid);
-
-    r = ProjectConfig::load(pathToProjectConfig, config, objectid);
-    return r;
+    std::string pathToProjectConfig = path + "/" PATH_PROJECT_CONFIG;
+    int err = ProjectConfig::load(pathToProjectConfig, config);
+    return err;
 }
 
 int Project::modifyConfig(std::list<std::list<std::string> > &tokens, const std::string &author)
@@ -428,29 +422,20 @@ int Project::modifyConfig(ProjectConfig newConfig, const std::string &author)
     ScopeLocker scopeLocker(lockerForConfig, LOCK_READ_WRITE);
 
     newConfig.ctime = time(0);
-    newConfig.parent = config.id;
     newConfig.author = author;
 
     // write to file
     std::string data = newConfig.serialize();
 
-    // write into objects database
-    std::string newid;
-    int r = Object::write(getObjectsDir(), data, newid);
-    if (r < 0) {
-        LOG_ERROR("Cannot write new config of project: id=%s", newid.c_str());
-        return -1;
-    }
-    // write ref
-    std::string newProjectRef = path + "/" PATH_PROJECT_CONFIG;
-    r = writeToFile(newProjectRef, newid);
-    if (r != 0) {
-        LOG_ERROR("Cannot write new config of project: %s", newProjectRef.c_str());
+    LOG_ERROR("git-commit new config: not implemented");
+    std::string pConfigPath = path + "/" PATH_PROJECT_CONFIG;
+    int err = writeToFile(data, pConfigPath);
+    if (err != 0) {
+        LOG_ERROR("Cannot write new config of project: %s", pConfigPath.c_str());
         return -1;
     }
 
     config = newConfig;
-    config.id = newid;
 
     return 0;
 }
@@ -632,25 +617,13 @@ int Project::createProjectFiles(const std::string &repositoryPath, const std::st
     }
 
     // create file 'project'
-    const std::string config = ProjectConfig::getDefaultConfig().serialize();
-    std::string id;
-    // Create object in database
-    // This also creates the directory 'objects'
-    std::string objectsDir = newProjectPath + "/" + PATH_OBJECTS;
-    r = Object::write(objectsDir, config, id);
-    if (r < 0) {
-        LOG_ERROR("Could not create project config");
-        return r;
-    }
-    // Store the reference 'id'
-    subpath = newProjectPath  + "/" + PATH_PROJECT_CONFIG;
-    r = writeToFile(subpath, id);
-    if (r != 0) {
-        LOG_ERROR("Could not create file '%s': %s", subpath.c_str(), strerror(errno));
-        return r;
-    }
+    Project p(newProjectPath);
+    ProjectConfig pconfig = ProjectConfig::getDefaultConfig();
+    p.modifyConfig(pconfig, "create");
 
     // create file 'views'
+    std::string id;
+    std::string objectsDir = newProjectPath + "/" + PATH_OBJECTS;
     std::map<std::string, PredefinedView> defaultViews = PredefinedView::getDefaultViews();
     std::string viewsStr = PredefinedView::serializeViews(defaultViews);
     r = Object::write(objectsDir, viewsStr, id);

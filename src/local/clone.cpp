@@ -692,54 +692,6 @@ static int pullTemplates(const PullContext &ctx, const std::string &resource, co
     return -1;
 }
 
-int pullProjectConfig(const PullContext &ctx, Project &p)
-{
-    // The object of the config itself is supposed already pulled.
-    // Now pull the refs/project.
-
-    // First, download the ref
-    std::string localTmp = ctx.getTmpDir() + "/.download";
-    std::string url = ctx.rooturl + "/" + p.getUrlName() + "/" + RSRC_PROJECT_CONFIG;
-    int r = HttpRequest::downloadFile(ctx.httpCtx, url, localTmp);
-    if (r != 0) {
-        LOG_ERROR("Cannot download project config: r=%d", r);
-        return -1;
-    }
-
-    std::string id;
-    r = loadFile(localTmp, id);
-    if (r != 0) {
-        LOG_ERROR("Cannot load downloaded project config '%s': %s", localTmp.c_str(), strerror(errno));
-        return -1;
-    }
-
-    unlink(localTmp.c_str());
-    trim(id);
-
-    // Check if it is different from the present config
-    if (id == p.getConfig().id) return 0; // no change
-
-    LOG_CLI("  new project config: %s\n", id.c_str());
-
-    // Check that the project config is valid.
-    std::string configPath = p.getObjectsDir() + "/" + Object::getSubpath(id);
-    ProjectConfig dlConfig;
-    r = ProjectConfig::load(configPath, dlConfig, id);
-    if (r != 0) return -1;
-    if (dlConfig.properties.empty()) {
-        LOG_ERROR("Invalid remote project config: no properties");
-        return -1;
-    }
-
-    // Officialize the project config of the remote end
-    std::string configRef = p.getPath() + "/" + PATH_PROJECT_CONFIG;
-    r = writeToFile(configRef, id);
-    if (r != 0) {
-        LOG_ERROR("Cannot write project ref '%s': %s", configRef.c_str(), strerror(errno));
-    }
-
-    return r;
-}
 
 static int pullProject(const PullContext &pullCtx, Project &p, bool doPullTemplates)
 {
@@ -771,7 +723,7 @@ static int pullProject(const PullContext &pullCtx, Project &p, bool doPullTempla
     }
 
     // pull project configuration
-    pullProjectConfig(pullCtx, p);
+    //pullProjectConfig(pullCtx, p);
 
     // pull predefined views
     pullProjectViews(pullCtx, p);

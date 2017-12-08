@@ -63,7 +63,7 @@ struct ProjectConfig {
     time_t ctime;
 
     // methods
-    static int load(const std::string &path, ProjectConfig &config, const std::string &objid);
+    static int load(const std::string &path, ProjectConfig &config);
     std::string serialize() const;
     static ProjectConfig parseProjectConfig(std::list<std::list<std::string> > &lines);
     int addProperty(std::list<std::string> &tokens);
