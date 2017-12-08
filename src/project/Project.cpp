@@ -241,7 +241,7 @@ Issue *Project::loadIssue(const std::string &issueId)
         // set the tags
         std::list<std::string>::const_iterator tagname;
         FOREACH(tagname, tags) {
-            issue->setTag(e->id, *tagname);
+            issue->addTag(e->id, *tagname);
         }
     }
 
@@ -660,39 +660,25 @@ int Project::toggleTag(const std::string &entryId, const std::string &tagname, c
         return -1;
     }
 
-    Tag tag;
-    tag.author = author;
-    tag.ctime = time(0);
-    if (latestTagId.empty()) latestTagId = K_PARENT_NULL;
-    else tag.parent = latestTagId;
-    tag.entryId = entryId;
-    tag.tagName = tagname;
-    std::string tagContents = tag.serialize();
-    tag.id = getSha1(tagContents);
+    std::set<std::string> tags = e->issue->getTags(e->id);
+    std::set<std::string>::iterator itt = tags.find(tagname);
 
-    // store the tag object to persistent storage
-    std::string tagSubdir = getObjectsDir() + "/" + Object::getSubdir(tag.id);
-    mkdir(tagSubdir);
-    std::string objectPath = getObjectsDir() + "/" + Object::getSubpath(tag.id);
-    if (fileExists(objectPath)) {
-        LOG_ERROR("Cannot set tag, file exists: %s", objectPath.c_str());
-        return -1;
+    if (itt != tags.end()) {
+        // remove the tag
+        tags.erase(itt);
+
+    } else {
+        // add the tag
+        tags.insert(tagname);
     }
-    int r = writeToFile(objectPath, tagContents);
-    if (r != 0) {
-        LOG_ERROR("Cannot set tag '%s': %s", objectPath.c_str(), STRERROR(errno));
+
+    std::string tagData = Entry::serializeTags(tags);
+    int err = gitdbSetNotes(path, entryId, tagData);
+    if (err) {
         return -1;
     }
 
-    // store the refs/tags file
-    std::string tagRef = getPath() + "/" + PATH_TAGS;
-    r = writeToFile(tagRef, tag.id);
-
-    // update latestTagId
-    latestTagId = tag.id;
-
-    // invert the tag in RAM
-    e->issue->toggleTag(e->id, tagname);
+    e->issue->setTags(e->id, tags);
 
     return 0;
 }

@@ -43,6 +43,7 @@ const std::string Entry::EMPTY_MESSAGE("");
 #define K_MSG_V4 "msg"
 #define K_AMEND_V4 "amend"
 #define K_PROPERTY_V4 "property"
+#define K_TAG_V4 "tag"
 
 /** Load an entry from a string
   *
@@ -116,7 +117,7 @@ Entry *Entry::loadEntry(std::string data, std::string &treeid, std::list<std::st
         } else if (inNotesPart) {
             // in notes part
             key = popToken(line, ' ');
-            if (key == "tag") {
+            if (key == K_TAG_V4) {
                 std::string tagname = popToken(line, ' ');
                 tags.push_back(tagname);
             }
@@ -305,6 +306,20 @@ std::string Entry::serialize() const
     }
     return s.str();
 }
+
+std::string Entry::serializeTags(const std::set<std::string> &tags)
+{
+    std::string result;
+    std::set<std::string>::const_iterator t;
+    FOREACH(t, tags) {
+        if (t != tags.begin()) result += '\n';
+        result += K_TAG_V4;
+        result += ' ';
+        result += serializeSimpleToken(*t);
+    }
+    return result;
+}
+
 
 /**
   * sortingSpec: a list of pairs (ascending-order, property-name)

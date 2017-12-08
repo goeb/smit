@@ -87,6 +87,7 @@ public:
     void setId();
     void updateMessage();
     std::string serialize() const;
+    static std::string serializeTags(const std::set<std::string> &tags);
     int getCtime() const;
 
     inline const std::string &getMessage() const { return *((const std::string*)atomicGet(message)); }
@@ -104,6 +105,7 @@ public:
     static inline std::string getSubpath(const std::string identifier) { return Object::getSubpath(identifier); }
     static Entry *createNewEntry(const PropertiesMap &props, const std::list<AttachedFileRef> &files,
                                  const std::string &author, const Entry *eParent);
+
 
     // methods managing the linked list
     void append(Entry *e);

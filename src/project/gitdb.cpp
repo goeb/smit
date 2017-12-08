@@ -189,6 +189,28 @@ int gitdbLsTree(const std::string &gitRepoPath, const std::string &treeid, std::
 
 }
 
+/** Set git notes
+ */
+int gitdbSetNotes(const std::string &gitRepoPath, const ObjectId &entryId, const std::string &data)
+{
+    // git notes add --force --file=- <id>
+    Argv argv;
+    Subprocess *subp = 0;
+
+    argv.set("git", "notes", "add", "--force", "--file=-", entryId.c_str(), 0);
+    subp = Subprocess::launch(argv.getv(), 0, gitRepoPath.c_str());
+    if (!subp) return -1;
+    subp->write(data);
+    subp->closeStdin();
+    std::string stderrString = subp->getStderr(); // must be called before wait()
+    int err = subp->wait();
+    delete subp;
+    if (err) {
+        LOG_ERROR("addCommit read-tree error %d: %s", err, stderrString.c_str());
+    }
+    return err;
+}
+
 /**
  * @brief add an entry (ie: a commit) in the branch of the issue
  * @param gitRepoPath
