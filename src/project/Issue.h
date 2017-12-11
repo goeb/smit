@@ -72,7 +72,7 @@ struct Issue {
     void addEntry(Entry *e);
     static void destroy(Issue *i);
     void insertEntry(Entry *e);
-    Entry *amendEntry(const std::string &entryId, const std::string &newMsg, const std::string &username);
+    void amendEntry(Entry *amendingEntry);
 
     std::string getProperty(const std::string &propertyName) const;
     int makeSnapshot(time_t datetime);

@@ -54,7 +54,6 @@ public:
 
     int get(const std::string &issueId, IssueCopy &issue) const;
     void getAllIssues(std::vector<Issue*> &issuesList);
-    int storeRefIssue(const std::string &issueId, const std::string &entryId);
     void consolidateAssociations(IssueCopy &issue, bool forward) const;
 
     // methods for handling entries

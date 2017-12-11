@@ -119,20 +119,11 @@ void Issue::destroy(Issue *i)
   * The former message will be replaced by the new one
   * in the consolidation of the issue.
   */
-Entry *Issue::amendEntry(const std::string &entryId, const std::string &newMsg, const std::string &username)
+void Issue::amendEntry(Entry *amendingEntry)
 {
-    PropertiesMap properties;
-    properties[K_MESSAGE].push_back(newMsg);
-    properties[K_AMEND].push_back(entryId);
-
-    std::list<AttachedFileRef> files; // no file, empty list
-    Entry *amendingEntry = Entry::createNewEntry(properties, files, username, latest);
-
     addEntry(amendingEntry);
 
     consolidateAmendment(amendingEntry);
-
-    return amendingEntry;
 }
 
 

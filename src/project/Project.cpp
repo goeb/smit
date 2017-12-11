@@ -1024,19 +1024,6 @@ void Project::updateLastModified(Entry *e)
     if (lastModified < e->ctime) lastModified = e->ctime;
 }
 
-/** TODO Obsolete, to be removed
- */
-int Project::storeRefIssue(const std::string &issueId, const std::string &entryId)
-{
-    LOG_DIAG("storeRefIssue: %s -> %s", issueId.c_str(), entryId.c_str());
-    std::string issuePath = path + "/" PATH_ISSUES "/" + issueId;
-    int r = writeToFile(issuePath, entryId);
-    if (r!=0) {
-        LOG_ERROR("Cannot store issue %s", issueId.c_str());
-    }
-    return r;
-}
-
 /** Rename an issue (take the next available id)
   *
   * No mutex protection here.
@@ -1084,19 +1071,7 @@ int Project::renameIssue(Issue &i, const std::string &newId)
     // set the new id
     i.id = newId;
 
-    // store the new id on disk
-    int r = storeRefIssue(newId, i.latest->id);
-    if (r!=0) {
-        return -1;
-    }
-
-    // unlink the old issue
-    std::string oldIssuePath = path + "/" PATH_ISSUES "/" + oldId;
-    r = unlink(oldIssuePath.c_str());
-    if (r!=0) {
-        LOG_ERROR("Cannot unlink %s: %s", oldIssuePath.c_str(), strerror(errno));
-        return -1;
-    }
+    LOG_ERROR("Project::renameIssue TODO git storage");
 
     return 0;
 }
@@ -1111,7 +1086,7 @@ int Project::addNewIssue(Issue &i)
     if (r!=0) return r;
 
     // Store issue ref on disk
-    r = storeRefIssue(i.id, i.latest->id);
+    LOG_ERROR("Project::addNewIssue TODO");
 
     return r;
 }
@@ -1201,7 +1176,6 @@ void parseAssociation(std::list<std::string> &values)
 Issue *Project::createNewIssue()
 {
     LOG_FUNC();
-    // create new directory for this issue
     std::string issueId = allocateNewIssueId();
 
     Issue *i = new Issue();
@@ -1519,13 +1493,7 @@ int Project::pushEntry(std::string &issueId, const std::string &entryId,
     int r = addPushedEntry(e, data);
     if (r != 0) return -2;
 
-    // store the new ref of the issue
-    r = storeRefIssue(i->id, i->latest->id);
-    if (r != 0) {
-        if (newI) delete newI;
-        delete e;
-        return -2;
-    }
+    LOG_ERROR("push entry storage TODO");
 
     updateLastModified(e);
 
@@ -1592,22 +1560,20 @@ int Project::amendEntry(const std::string &entryId, const std::string &msg,
 
     oldIssue = copyIssue(*(e->issue));
 
-    Entry *amendingEntry = e->issue->amendEntry(entryId, msg, username);
-    if (!amendingEntry) {
-        // should never happen
-        LOG_ERROR("amending entry: null");
+    PropertiesMap properties;
+    properties[K_MESSAGE].push_back(msg);
+    properties[K_AMEND].push_back(entryId);
+
+    std::list<AttachedFileRef> files; // no file, empty list
+    Entry *amendingEntry = Entry::createNewEntry(properties, files, username, e->issue->latest);
+
+    int r = addNewEntry(e->issue->id, amendingEntry);
+    if (r != 0) {
+        delete amendingEntry;
         return -2;
     }
 
-    // in case of further error, we should delete the entry
-    // TODO (memory leak at the moment)
-
-    int r = addNewEntry(e->issue->id, amendingEntry);
-    if (r != 0) return -2;
-
-    // update latest entry of issue on disk
-    r = storeRefIssue(e->issue->id, amendingEntry->id);
-    if (r < 0) return -2;
+    e->issue->amendEntry(amendingEntry);
 
     updateLastModified(amendingEntry);
 

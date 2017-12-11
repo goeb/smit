@@ -295,15 +295,22 @@ std::string GitIssue::addCommit(const std::string &gitRepoPath, const std::strin
     subp = Subprocess::launch(argv.getv(), 0, bareGitRepo.c_str());
     if (!subp) return "";
     std::string branchRef = subp->getline();
+    trim(branchRef);
     stderrString = subp->getStderr(); // must be called before wait()
     err = subp->wait();
     delete subp;
     if (err) {
-        LOG_ERROR("addCommit show-ref error %d: %s", err, stderrString.c_str());
-        return "";
+        if (stderrString.empty() && branchRef.empty()) {
+            // This is a new issue. The git branch will be created later.
+            LOG_INFO("addCommit: new issue to be created: %s", issueId.c_str());
+
+        } else {
+            LOG_ERROR("addCommit show-ref error %d: %s (branchRef=%s)",
+                      err, stderrString.c_str(), branchRef.c_str());
+            return "";
+        }
     }
 
-    trim(branchRef);
     // check that branchRef is either empty or consistent with a commit id
     if (branchRef.size() && branchRef.size() != SIZE_COMMIT_ID) {
         LOG_ERROR("addCommit show-ref error: branchRef=%s", branchRef.c_str());

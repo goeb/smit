@@ -207,14 +207,6 @@ int Entry::getCtime() const
     return ctime;
 }
 
-/** Compute self sha1 and store it
-  */
-void Entry::setId()
-{
-    std::string data = serialize();
-    id = getSha1(data);
-}
-
 void Entry::updateMessage()
 {
     // update pointer to message
@@ -239,9 +231,6 @@ Entry *Entry::createNewEntry(const PropertiesMap &props, const std::list<Attache
 
     if (eParent) e->parent = eParent->id;
     else e->parent = K_PARENT_NULL;
-
-    LOG_ERROR("TODO remove this e->setId()");
-    e->setId(); // TODO remove
 
     return e;
 }
