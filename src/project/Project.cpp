@@ -427,13 +427,8 @@ int Project::modifyConfig(ProjectConfig newConfig, const std::string &author)
     // write to file
     std::string data = newConfig.serialize();
 
-    LOG_ERROR("git-commit new config: not implemented");
-    std::string pConfigPath = path + "/" PATH_PROJECT_CONFIG;
-    int err = writeToFile(data, pConfigPath);
-    if (err != 0) {
-        LOG_ERROR("Cannot write new config of project: %s", pConfigPath.c_str());
-        return -1;
-    }
+    int err = gitdbCommitMaster(path, PATH_PROJECT_CONFIG, data);
+    if (err) return -1;
 
     config = newConfig;
 
