@@ -23,9 +23,8 @@
 #define PATH_TEMPLATES   PATH_SMIP "/" P_TEMPLATES
 #define PATH_ISSUES         PATH_REFS "/issues" // sub-directory of a project where the entries are stored
 #define PATH_PROJECT_CONFIG PATH_CONFIG_D "/config"
-#define PATH_VIEWS          PATH_REFS "/views"
-#define PATH_TAGS           PATH_REFS "/tags"
-#define PATH_TRIGGER        PATH_REFS "/trigger"
+#define PATH_VIEWS          PATH_CONFIG_D "/views"
+#define PATH_TRIGGER        PATH_CONFIG_D "/trigger"
 
 /** Class for holding project config and some other info
   */

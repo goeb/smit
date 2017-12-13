@@ -509,14 +509,8 @@ int Project::storeViewsToFile()
 
     fileContents += PredefinedView::serializeViews(predefinedViews);
 
-    std::string id;
-    int r = Object::write(getObjectsDir(), fileContents, id);
-    if (r < 0) return r;
-
-    std::string subpath = path  + "/" + PATH_VIEWS;
-    r = writeToFile(subpath, id);
-
-    return r;
+    int err = gitdbCommitMaster(path, PATH_VIEWS, fileContents);
+    return err;
 }
 
 int Project::deletePredefinedView(const std::string &name)
@@ -830,14 +824,7 @@ void Project::loadPredefinedViews()
 
     std::string viewsPath = path + '/' + PATH_VIEWS;
 
-    std::string id;
-    int n = loadFile(viewsPath.c_str(), id);
-    if (n == 0) {
-        trim(id); // remove possible \n
-        std::string path = getObjectsDir() + "/" + Object::getSubpath(id);
-        PredefinedView::loadViews(path, predefinedViews);
-    } // else error of empty file
-
+    PredefinedView::loadViews(viewsPath, predefinedViews);
     LOG_DEBUG("predefined views loaded: %ld", L(predefinedViews.size()));
 }
 

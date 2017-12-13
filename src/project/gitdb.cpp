@@ -7,6 +7,7 @@
 #include "utils/logging.h"
 #include "utils/stringTools.h"
 #include "utils/subprocess.h"
+#include "utils/filesystem.h"
 
 #define BRANCH_PREFIX_ISSUES "issues/"
 #define SIZE_COMMIT_ID 40
@@ -210,6 +211,43 @@ int gitdbSetNotes(const std::string &gitRepoPath, const ObjectId &entryId, const
     }
     return err;
 }
+
+/** Modify a file
+ *
+ * This stores the file in the working directory, and commit the modification.
+ * The working directory is supposed to be the checkout of the branch 'master'.
+ *
+ * Intermediate sub-directories must exist.
+ * The file must already be tracked by git.
+ *
+ */
+int gitdbCommitMaster(const std::string &gitRepoPath, const std::string &subpath, const std::string &data)
+{
+    int err;
+
+    std::string path = gitRepoPath + "/" + subpath;
+    err = writeToFile(path, data);
+    if (err) {
+        return -1;
+    }
+
+    // commit
+    Argv argv;
+    Subprocess *subp = 0;
+
+    argv.set("git", "commit", subpath.c_str(), "-m", "modified", 0);
+    subp = Subprocess::launch(argv.getv(), 0, gitRepoPath.c_str());
+    if (!subp) return -1;
+    std::string stderrString = subp->getStderr(); // must be called before wait()
+    err = subp->wait();
+    delete subp;
+    if (err) {
+        LOG_ERROR("gitdbCommitMaster: cannot commit: %d: %s", err, stderrString.c_str());
+       return -1;
+    }
+    return 0;
+}
+
 
 /**
  * @brief add an entry (ie: a commit) in the branch of the issue
