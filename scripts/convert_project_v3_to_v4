@@ -1,7 +1,7 @@
 #!/bin/sh
 
 usage() {
-	echo "Usage: $0 <project-v2> <project-v3>"
+	echo "Usage: $0 <project-v3> <project-v4>"
 	echo
 	echo "SMPARSER must point to the smparser tool."
 	exit 1
@@ -29,7 +29,7 @@ if [ "$src_v3" = "" -o "$dst_v4" = "" ]; then
 fi
 
 if [ ! -d "$src_v3/.smip" ]; then
-	die "source directory '$src_v3' is not a smit project version 2."
+	die "source directory '$src_v3' is not a smit project version 3."
 fi
 
 if [ -e "$dst_v4" ]; then
