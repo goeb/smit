@@ -1,0 +1,95 @@
+#!/bin/sh
+
+# struture of a v4 repository
+#
+# - each project is a git repository
+# - the .smit dir of the smit repo is a git repo
+# - the 'public' dir is a git repo
+#
+
+usage() {
+	echo "Usage: $0 <repo-v3> <repo-v4>"
+	echo
+	echo "SMPARSER must point to the smparser tool."
+	exit 1
+}
+
+DEFAULT_COMMIT_MSG=convert_repo_v3_to_v4
+
+error() {
+	echo "error: $*"
+}
+
+die() {
+	error "$*"
+	exit 1
+}
+
+if [ ! -x "$SMPARSER" ]; then
+	die "SMPARSER does not point to an executable."
+fi
+SMPARSER=$(realpath "$SMPARSER")
+
+src_v3="$1"
+dst_v4="$2"
+
+if [ "$src_v3" = "" -o "$dst_v4" = "" ]; then
+	usage
+fi
+
+if [ ! -d "$src_v3/.smit" ]; then
+	die "source directory '$src_v3' is not a smit repository version 3."
+fi
+
+if [ -e "$dst_v4" ]; then
+	die "destination directory '$dst_v4' must not exist."
+fi
+
+convert_public() {
+	local src_v3="$1"
+	local dst_v4="$2"
+	if [ ! -d "$src_v3/public" ]; then
+		echo "no public dir."
+		return
+	fi
+
+	cp -a "$src_v3/public" "$dst_v4"
+	git -C "$dst_v4/public" init
+	git -C "$dst_v4/public" add .
+	git -C "$dst_v4/public" commit -m "$DEFAULT_COMMIT_MSG"
+}
+
+convert_smit() {
+	local src_v3="$1"
+	local dst_v4="$2"
+	cp -a "$src_v3/.smit" "$dst_v4"
+	git -C "$dst_v4/.smit" init
+	git -C "$dst_v4/.smit" add .
+	git -C "$dst_v4/.smit" commit -m "$DEFAULT_COMMIT_MSG"
+}
+
+convert_projects() {
+	local src_v3="$1"
+	local dst_v4="$2"
+	same_dir=$(dirname $0)
+
+	for dir in "$src_v3"/*; do
+		[ "$dir" = "public" ] && continue # already done
+		[ "$dir" = ".smit" ] && continue # already done
+		if [ ! -d "$dir" ]; then
+			echo "not converted: $dir (not a directory)"
+			continue
+		fi
+
+		project_dirname=$(basename "$dir")
+		"$same_dir"/convert_project_v3_to_v4 "$dir" "$dst_v4/$project_dirname"
+	done
+}
+
+# main
+mkdir "$dst_v4" || exit 1
+
+convert_public "$src_v3" "$dst_v4"
+convert_smit "$src_v3" "$dst_v4"
+convert_projects "$src_v3" "$dst_v4"
+

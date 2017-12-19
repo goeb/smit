@@ -11,6 +11,10 @@ error() {
 	echo "error: $*"
 }
 
+debug() {
+	[ "$DEBUG" = 1 ] && echo "debug: $*"
+}
+
 die() {
 	error "$*"
 	exit 1
@@ -57,11 +61,11 @@ get_v3_history() {
 	if [ "$parent" = "" ]; then return; fi
 
 	history=""
-	while [ "$parent" != null ]; do
+	while [ "$parent" != null -a "$parent" != "" ]; do
 		history="$parent $history"
-		parent=$(cat_file_v3 "$src_v3" $parent | grep ^+parent | sed -e "s/^+parent *//")
+		parent=$(cat_file_v3 "$src_v3" $parent | grep ^+parent | head -1 | sed -e "s/^+parent *//")
 	done
-	echo $history
+	debug $history
 }
 
 convert_v3_to_v4_master_file() {
@@ -71,7 +75,7 @@ convert_v3_to_v4_master_file() {
 	new_location="$4" # within $dst_v4
 
 	# recall the history...
-	id=$(cat $src_v3/.smip/refs/$filename)
+	id=$(cat "$src_v3/.smip/refs/$filename")
 	history=$(get_v3_history "$src_v3" "$id")
 
 	# replay and commit
@@ -99,7 +103,7 @@ convert_v3_to_v4_master() {
 	convert_v3_to_v4_master_file "$src_v3" "$dst_v4" project "$conf_v4/config"
 
 	# views
-	id=$(cat $src_v3/.smip/refs/views)
+	id=$(cat "$src_v3/.smip/refs/views")
 	cat_file_v3 "$src_v3" $id > "$dst_v4/$conf_v4/views"
 	(cd "$dst_v4"; git add $conf_v4/views)
 
@@ -148,7 +152,7 @@ convert_v3_to_v4_master() {
 # $5 : the file for mapping v3 and v4 entries identifiers
 create_commit() {
 
-	echo create_commit $*
+	debug create_commit $*
 
 	local src_v3=$(realpath "$1")
 	local dst_v4="$2"
@@ -183,7 +187,7 @@ create_commit() {
     tree_id=$(git write-tree)
 
     parent_id=$(cat refs/heads/$branch 2>/dev/null)
-	echo parent_id=$parent_id
+	debug parent_id=$parent_id
     if [ "$parent_id" = "" ]; then
         # this is the first commit in the orphan branch
         # read from stdin
@@ -215,6 +219,7 @@ convert_v3_to_v4_issues() {
 		history=$(get_v3_history "$src_v3" "$id")
 
 		for entry in $history; do
+			printf "." # progress bar
 			# for each item of history
 			author=$(cat_file_v3 "$src_v3" $entry | grep ^+author | head -1 | sed -e "s/.* //")
 			ctime=$(cat_file_v3 "$src_v3" $entry | grep ^+ctime | head -1 | sed -e "s/.* //")
@@ -248,6 +253,7 @@ convert_v3_to_v4_issues() {
 			' | create_commit "$src_v3" "$dst_v4/.git" $branch $entry "$mapping_entries_v3_v4"
 		done
 	done
+	echo # terminate the progress bar
 }
 # convert smit tags to git notes
 convert_v3_to_v4_tags() {
@@ -256,12 +262,12 @@ convert_v3_to_v4_tags() {
 	local mapping_entries_v3_v4="$3"
 
 	# recall the history...
-	id=$(cat $src_v3/.smip/refs/tags)
+	id=$(cat "$src_v3/.smip/refs/tags" 2>/dev/null)
 	history=$(get_v3_history "$src_v3" "$id")
 
 	# replay and commit
 	for tag in $history; do
-		echo tag=$tag
+		debug tag=$tag
 		author=$(cat_file_v3 "$src_v3" $tag | grep "^+author" | sed -e "s/^+author *//")
 		ctime=$(cat_file_v3 "$src_v3" $tag | grep "^+ctime" | sed -e "s/.* //")
 		tag_name=$(cat_file_v3 "$src_v3" $tag | grep "^+tag" | awk '{print $2;}')
@@ -278,12 +284,12 @@ convert_v3_to_v4_tags() {
 		# else: add it
 		# (and preserve other tags)
 
-		(cd "$dst_v4"; git notes show $v4_entry) | awk -v tag_name="$tag_name" '
+		(cd "$dst_v4"; git notes show $v4_entry 2>/dev/null) | awk -v tag_name="$tag_name" '
 		BEGIN { was_present = 0; }
 		$1 == "tag" && $2 == tag_name { was_present = 1; next; }
 		{ print $0; }
 		END { if (!was_present) print "tag", tag_name; }
-		' | (cd "$dst_v4"; git notes add --force --file=- $v4_entry)
+		' | (cd "$dst_v4"; git notes add --force --file=- $v4_entry 2>/dev/null)
 
 	done
 }
