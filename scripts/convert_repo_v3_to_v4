@@ -16,6 +16,10 @@ usage() {
 
 DEFAULT_COMMIT_MSG=convert_repo_v3_to_v4
 
+info() {
+	echo "$*"
+}
+
 error() {
 	echo "error: $*"
 }
@@ -48,6 +52,9 @@ fi
 convert_public() {
 	local src_v3="$1"
 	local dst_v4="$2"
+
+	info convert_public
+
 	if [ ! -d "$src_v3/public" ]; then
 		echo "no public dir."
 		return
@@ -56,38 +63,69 @@ convert_public() {
 	cp -a "$src_v3/public" "$dst_v4"
 	git -C "$dst_v4/public" init
 	git -C "$dst_v4/public" add .
-	git -C "$dst_v4/public" commit -m "$DEFAULT_COMMIT_MSG"
+	git -C "$dst_v4/public" commit -m "$DEFAULT_COMMIT_MSG" -q
 }
 
 convert_smit() {
 	local src_v3="$1"
 	local dst_v4="$2"
+
+	info convert_smit
+
 	cp -a "$src_v3/.smit" "$dst_v4"
 	git -C "$dst_v4/.smit" init
 	git -C "$dst_v4/.smit" add .
-	git -C "$dst_v4/.smit" commit -m "$DEFAULT_COMMIT_MSG"
+	git -C "$dst_v4/.smit" commit -m "$DEFAULT_COMMIT_MSG" -q
 }
 
 convert_projects() {
 	local src_v3="$1"
 	local dst_v4="$2"
+
+	info convert_projects
+
 	same_dir=$(dirname $0)
 
-	for dir in "$src_v3"/*; do
-		[ "$dir" = "public" ] && continue # already done
-		[ "$dir" = ".smit" ] && continue # already done
-		if [ ! -d "$dir" ]; then
-			echo "not converted: $dir (not a directory)"
-			continue
-		fi
-
+	find "$src_v3" -name .smip |
+	while read f; do
+		dir=$(dirname "$f")
 		project_dirname=$(basename "$dir")
 		"$same_dir"/convert_project_v3_to_v4 "$dir" "$dst_v4/$project_dirname"
 	done
 }
 
+# Copy files that are not part of a project, nor 'public', nor '.smit'
+convert_others() {
+	local src_v3="$1"
+	local dst_v4="$2"
+
+	info "convert_others '$src_v3' '$dst_v4'"
+
+	# this is a protection against rm -rf unwanted directories
+	if [ -e "$dst_v4" ]; then
+		die "Existing '$dst_v4'"
+	fi
+
+	# copy all
+	cp -a "$src_v3" "$dst_v4"
+
+	# then remove the unwanted parts
+	rm -rf "$dst_v4"/public
+	rm -rf "$dst_v4"/.smit
+
+	# remove projects
+	find "$dst_v4" -name .smip |
+	while read f; do
+		dir=$(dirname "$f")
+		rm -rf "$dir"
+	done
+}
+
 # main
-mkdir "$dst_v4" || exit 1
+[ ! -e "$dst_v4" ] || exit 1
+
+# convert_others must be called before the others
+convert_others "$src_v3" "$dst_v4"
 
 convert_public "$src_v3" "$dst_v4"
 convert_smit "$src_v3" "$dst_v4"
