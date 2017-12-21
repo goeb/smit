@@ -4,6 +4,8 @@ usage() {
 	echo "Usage: $0 <project-v3> <project-v4>"
 	echo
 	echo "SMPARSER must point to the smparser tool."
+	echo "Sub-projects are not converted."
+	echo
 	exit 1
 }
 
@@ -65,7 +67,7 @@ get_v3_history() {
 		history="$parent $history"
 		parent=$(cat_file_v3 "$src_v3" $parent | grep ^+parent | head -1 | sed -e "s/^+parent *//")
 	done
-	debug $history
+	echo $history
 }
 
 convert_v3_to_v4_master_file() {
@@ -84,7 +86,8 @@ convert_v3_to_v4_master_file() {
 		ctime=$(cat_file_v3 "$src_v3" $i | grep +ctime | sed -e "s/.* //")
 		cat_file_v3 "$src_v3" $i |
 			grep -v ^+ > "$dst_v4/$new_location"
-		(cd "$dst_v4"; git add $new_location; git commit -m "convert_v3_to_v4_master" --author "$author <>" --date=$ctime)
+		git -C "$dst_v4" add $new_location
+		git -C "$dst_v4" commit -m "convert_v3_to_v4_master" --author "$author <>" --date=$ctime -q
 	done
 }
 
@@ -105,7 +108,7 @@ convert_v3_to_v4_master() {
 	# views
 	id=$(cat "$src_v3/.smip/refs/views")
 	cat_file_v3 "$src_v3" $id > "$dst_v4/$conf_v4/views"
-	(cd "$dst_v4"; git add $conf_v4/views)
+	git -C "$dst_v4" add $conf_v4/views
 
 	# templates
 	if [ -d "$src_v3/.smip/templates" ]; then
@@ -118,31 +121,30 @@ convert_v3_to_v4_master() {
 			subdir=$(dirname "$file")
 			mkdir -p "$dst_v4/$conf_v4/templates/$subdir"
 			cp "$src_v3/.smip/templates/$file" "$dst_v4/$conf_v4/templates/$file"
-			(cd "$dst_v4"; git add "$conf_v4/templates/$file")
+			git -C "$dst_v4" add "$conf_v4/templates/$file"
 		done
 	fi
 	# trigger
 	if [ -f "$src_v3/.smip/refs/trigger" ]; then
 		cp "$src_v3/.smip/refs/trigger" "$dst_v4/$conf_v4/trigger"
-		(cd "$dst_v4"; git add "$conf_v4/trigger")
+		git -C "$dst_v4" add "$conf_v4/trigger"
 	fi
 
 	# other pages, files,...
-	# a limitation here: pages of a nested projects will be included
-	# in the parent project.
-	(cd "$src_v3"; find . ! -type d ! -path "*/.smip/*" ! -name ".*" ) |
-	while [ 1 = 1 ]; do
-		read file
-		if [ "$file" = "" ]; then
-			break
-		fi
-		subdir=$(dirname "$file")
-		mkdir -p "$dst_v4/data/$subdir"
-		cp "$src_v3/$file" "$dst_v4/data/$subdir/."
-		(cd "$dst_v4"; git add "data/$file")
-	done
-	(cd "$dst_v4"; git commit -m "convert_v3_to_v4_master" --author "$author <>")
 
+	ls "$src_v3" |
+	while read f; do
+		cp -a "$src_v3/$f" "$dst_v4/."
+	done
+	# remove copied sub projects
+	find "$dst_v4" -name ".smip" |
+	while read f; do
+		dname=$(dirname "$f")
+		rm -rf "$dname"
+	done
+	# add what is not yet added
+	git -C "$dst_v4" add .
+	git -C "$dst_v4" commit -m "convert_v3_to_v4_master" --author "$author <>" -q
 }
 
 # $1 : src smit-v3 repository
@@ -154,18 +156,16 @@ create_commit() {
 
 	debug create_commit $*
 
-	local src_v3=$(realpath "$1")
+	local src_v3="$1"
 	local dst_v4="$2"
-    local branch=$3 # make an orphan branch if not existing
+	local branch=$3 # make an orphan branch if not existing
 	local entry=$4
 	local mapping_entries_v3_v4="$5"
-    # stdin: commit message
+	# stdin: commit message
 
-	cd "$dst_v4" # must be a bare git repository
+	git -C "$dst_v4" read-tree --empty
 
-    git read-tree --empty
-
-    shift 3
+	shift 3
 
 	# attached files
 	# use smparser in order to manage spaces in file names
@@ -180,29 +180,27 @@ create_commit() {
 
 		hash=$(echo $f | sed -e "s;/.*;;")
 		base_name=$(echo $f | sed -e "s;.*/;;")
-		id=$(cat_file_v3 "$src_v3" $hash | git hash-object -w --stdin)
-        git update-index --add --cacheinfo 100644 $id "$base_name"
+		id=$(cat_file_v3 "$src_v3" $hash | git -C "$dst_v4" hash-object -w --stdin)
+		git -C "$dst_v4" update-index --add --cacheinfo 100644 $id "$base_name"
 	done
 
-    tree_id=$(git write-tree)
+	tree_id=$(git -C "$dst_v4" write-tree)
 
-    parent_id=$(cat refs/heads/$branch 2>/dev/null)
+	parent_id=$(cat "$dst_v4/refs/heads/$branch" 2>/dev/null)
 	debug parent_id=$parent_id
-    if [ "$parent_id" = "" ]; then
-        # this is the first commit in the orphan branch
-        # read from stdin
-        commit_id=$(git commit-tree $tree_id)
-    else
-        # read from stdin
-        commit_id=$(git commit-tree $tree_id -p $parent_id)
-    fi
+	if [ "$parent_id" = "" ]; then
+		# this is the first commit in the orphan branch
+		# read from stdin
+		commit_id=$(git -C "$dst_v4" commit-tree $tree_id)
+	else
+		# read from stdin
+		commit_id=$(git -C "$dst_v4" commit-tree $tree_id -p $parent_id)
+	fi
 
-    # update the branch
-    git update-ref refs/heads/$branch $commit_id
+	# update the branch
+	git -C "$dst_v4" update-ref refs/heads/$branch $commit_id
 
 	echo "$entry $commit_id" >> "$mapping_entries_v3_v4"
-
-	cd - > /dev/null # back to previous working directory
 }
 
 convert_v3_to_v4_issues() {
@@ -212,7 +210,8 @@ convert_v3_to_v4_issues() {
 	local dst_v4="$2"
 	local mapping_entries_v3_v4="$3"
 
-	for i in "$src_v3"/.smip/refs/issues/*; do
+	for i in $(ls "$src_v3"/.smip/refs/issues/* 2>/dev/null); do
+		debug "issues $i..."
 		id=$(cat "$i")
 		branch="issues/$(basename $i)"
 
@@ -238,13 +237,13 @@ convert_v3_to_v4_issues() {
 			cat_file_v3 "$src_v3" "$entry" |
 			awk -v entry=$entry -v amended="$amended" 'BEGIN { boundary=""; multiline_prefix=""; print "convert_v3_to_v4_issues\n"; }
 			boundary=="" && $2=="<" { boundary=$3;
-		                              if ($1=="+message") {
-			                              multiline_prefix="msg";
-			                          } else {
-			                              multiline_prefix="property " $1;
-			                              print multiline_prefix, "<";
-			                          }
-			                          next; }
+									  if ($1=="+message") {
+										  multiline_prefix="msg";
+									  } else {
+										  multiline_prefix="property " $1;
+										  print multiline_prefix, "<";
+									  }
+									  next; }
 	 		boundary=="" && $1 !~ /^+/ { print "property", $0; next; }
 	 		boundary=="" && $1 == "+amend" { print "amend", amended; next; }
 			boundary!="" && $1==boundary { boundary=""; next; }
@@ -284,12 +283,12 @@ convert_v3_to_v4_tags() {
 		# else: add it
 		# (and preserve other tags)
 
-		(cd "$dst_v4"; git notes show $v4_entry 2>/dev/null) | awk -v tag_name="$tag_name" '
+		git -C "$dst_v4" notes show $v4_entry 2>/dev/null | awk -v tag_name="$tag_name" '
 		BEGIN { was_present = 0; }
 		$1 == "tag" && $2 == tag_name { was_present = 1; next; }
 		{ print $0; }
 		END { if (!was_present) print "tag", tag_name; }
-		' | (cd "$dst_v4"; git notes add --force --file=- $v4_entry 2>/dev/null)
+		' | git -C "$dst_v4" notes add --force --file=- $v4_entry 2>/dev/null
 
 	done
 }
@@ -300,7 +299,7 @@ convert_v3_to_v4_issues "$src_v3" "$dst_v4" "$MAPPING_ENTRIES_V3_V4"
 convert_v3_to_v4_tags "$src_v3" "$dst_v4" "$MAPPING_ENTRIES_V3_V4"
 
 # restore dst_v4 staging index
-(cd "$dst_v4" && git reset master)
+git -C "$dst_v4" reset master
 
 rm "$MAPPING_ENTRIES_V3_V4"
 
