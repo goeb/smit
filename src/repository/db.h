@@ -14,8 +14,8 @@
 #include "project/Project.h"
 
 #define PATH_REPO ".smit"
-#define P_TEMPLATES "templates"
-#define PATH_REPO_TEMPLATES PATH_REPO "/" P_TEMPLATES
+#define P_TEMPLATES ".templates"
+#define PATH_REPO_TEMPLATES "/public/" P_TEMPLATES
 
 class ProjectSummary {
 public:

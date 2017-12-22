@@ -15,16 +15,13 @@
 #include "Issue.h"
 #include "ProjectConfig.h"
 
-#define PATH_CONFIG_D "config.d"
 #define PATH_SMIP ".smip"
-#define PATH_REFS        PATH_SMIP "/refs"
+#define PATH_ENTRIES_DB ".entries"
 #define PATH_OBJECTS     PATH_SMIP "/objects"
-#define PATH_PROJECT_TMP PATH_SMIP "/tmp"
-#define PATH_TEMPLATES   PATH_SMIP "/" P_TEMPLATES
-#define PATH_ISSUES         PATH_REFS "/issues" // sub-directory of a project where the entries are stored
-#define PATH_PROJECT_CONFIG PATH_CONFIG_D "/config"
-#define PATH_VIEWS          PATH_CONFIG_D "/views"
-#define PATH_TRIGGER        PATH_CONFIG_D "/trigger"
+#define PATH_TEMPLATES   P_TEMPLATES
+#define PATH_PROJECT_CONFIG PATH_SMIP "/config"
+#define PATH_VIEWS          PATH_SMIP "/views"
+#define PATH_TRIGGER        PATH_SMIP "/trigger"
 
 /** Class for holding project config and some other info
   */
@@ -73,7 +70,7 @@ public:
     inline static std::string urlNameEncode(const std::string &name) { return urlEncode(name, '%', "/"); }
     inline static std::string urlNameDecode(const std::string &name) { return urlDecode(name, false, '%'); }
     inline std::string getPath() const { return path; }
-    inline std::string getTmpDir() const { return path + "/" PATH_PROJECT_TMP; }
+    inline std::string getPathEntries() const { return path + "/" PATH_ENTRIES_DB; }
 
     // project config
     ProjectConfig getConfig() const;
@@ -88,17 +85,9 @@ public:
 
     // methods for database access
     inline std::string getObjectsDir() const { return path + '/' + PATH_OBJECTS; }
-    inline static std::string getObjectPath(const std::string path, const std::string &oid) {
-        return path + '/' + PATH_OBJECTS + '/' + Object::getSubpath(oid);
-    }
-    inline std::string getIssuesDir() const { return path + '/' + PATH_ISSUES; }
-    void getObjects(std::list<std::string> &objects) const;
 
     // methods for handling attached files
     std::string storeFile(const char *data, size_t len) const;
-
-    // TODO remove obsolete file after gitdb completed
-    int addFile(const std::string &objectId);
 
     // methods for handling views
     PredefinedView getPredefinedView(const std::string &name);

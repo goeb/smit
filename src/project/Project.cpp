@@ -205,9 +205,10 @@ void Project::computeAssociations()
 Issue *Project::loadIssue(const std::string &issueId)
 {
     GitIssue elist;
-    int ret = elist.open(path, issueId);
+    std::string pathEntries = getPathEntries();
+    int ret = elist.open(pathEntries, issueId);
     if (ret) {
-        LOG_ERROR("Cannot load issue %s (%s)", issueId.c_str(), path.c_str());
+        LOG_ERROR("Cannot load issue %s (%s)", issueId.c_str(), pathEntries.c_str());
         return 0;
     }
 
@@ -228,7 +229,7 @@ Issue *Project::loadIssue(const std::string &issueId)
         }
 
         if (!treeid.empty() && treeid != K_EMPTY_TREE) {
-            int err = gitdbLsTree(path, treeid, e->files);
+            int err = gitdbLsTree(pathEntries, treeid, e->files);
             if (err) {
                 LOG_ERROR("Cannot load attached files: tree %s", treeid.c_str());
                 error = 1;
@@ -260,11 +261,11 @@ Issue *Project::loadIssue(const std::string &issueId)
 
 int Project::loadIssues()
 {
-    LOG_DEBUG("Loading issues (%s)", path.c_str());
+    LOG_DEBUG("Loading issues (%s)", getPathEntries().c_str());
     GitIssueList ilist;
-    int ret = ilist.open(path);
+    int ret = ilist.open(getPathEntries());
     if (ret) {
-        LOG_ERROR("Cannot load issues of project (%s)", path.c_str());
+        LOG_ERROR("Cannot load issues of project (%s)", getPathEntries().c_str());
         return -1;
     }
 
@@ -573,31 +574,7 @@ int Project::createProjectFiles(const std::string &repositoryPath, const std::st
         return -1;
     }
 
-    // create directory 'objects'
-    subpath = newProjectPath + "/" PATH_OBJECTS;
-    r = mkdir(subpath);
-    if (r != 0) {
-        LOG_ERROR("Could not create directory '%s': %s", subpath.c_str(), strerror(errno));
-        return -1;
-    }
-
-    // create directory 'refs'
-    subpath = newProjectPath + "/" PATH_REFS;
-    r = mkdir(subpath);
-    if (r != 0) {
-        LOG_ERROR("Could not create directory '%s': %s", subpath.c_str(), strerror(errno));
-        return -1;
-    }
-
-    // create directory 'issues'
-    subpath = newProjectPath + '/' + PATH_ISSUES;
-    r = mkdir(subpath);
-    if (r != 0) {
-        LOG_ERROR("Could not create directory '%s': %s", subpath.c_str(), strerror(errno));
-        return -1;
-    }
-
-    // create directory 'templates'
+    // create directory '.templates'
     subpath = newProjectPath + "/" PATH_TEMPLATES;
     r = mkdir(subpath);
     if (r != 0) {
@@ -622,14 +599,6 @@ int Project::createProjectFiles(const std::string &repositoryPath, const std::st
     if (r != 0) {
         LOG_ERROR("Could not create file '%s': %s", subpath.c_str(), strerror(errno));
         return r;
-    }
-
-    // create directory 'tmp'
-    subpath = newProjectPath + "/" PATH_PROJECT_TMP;
-    r = mkdir(subpath);
-    if (r != 0) {
-        LOG_ERROR("Could not create directory '%s': %s", subpath.c_str(), strerror(errno));
-        return -1;
     }
 
     return 0;
@@ -726,77 +695,9 @@ int Project::reload()
     return r;
 }
 
-/** Get the list of all objects of the project
-  *
-  */
-void Project::getObjects(std::list<std::string> &objects) const
-{
-    ScopeLocker L1(locker, LOCK_READ_ONLY);
-
-    ObjectIteraror oit(getObjectsDir());
-    std::string objectId;
-    while ( (objectId = Object::getNextObject(oit)) != "") {
-        objects.push_back(objectId);
-    }
-}
-
 std::string Project::storeFile(const char *data, size_t len) const
 {
     return gitdbStoreFile(path, data, len);
-}
-
-
-/** Insert a file in the directory of attached files
-  *
-  * @param basename
-  *     The file must be already present in the tmp directory of the project.
-  *
-  * @return
-  *     0 : ok
-  *     -1: file already exists
-  *     -2: file name does not match hash of the file contents
-  *     -3: internal error: cannot rename
-  */
-int Project::addFile(const std::string &objectId)
-{
-    ScopeLocker L1(locker, LOCK_READ_WRITE);
-
-    std::string srcPath = getTmpDir() + "/" + objectId;
-    std::string destPath = getObjectsDir() + "/" + Object::getSubpath(objectId);
-
-    // TODO use Object::insertFile(getObjectsDir(), srcPath, id)
-
-    // check that the hash of the file contents matches the file name (the 40 first characters)
-    std::string sha1 = getSha1OfFile(srcPath);
-    // check the SHA1
-    if (sha1 != objectId) {
-        LOG_ERROR("SHA1 does not match: %s (%s)", objectId.c_str(), sha1.c_str());
-        // remove tmp file
-        return -1;
-    }
-
-    if (fileExists(destPath)) {
-        int r = cmpFiles(srcPath, destPath);
-        if (r != 0) {
-            LOG_ERROR("ID collision, files differ(%d): %s", r, objectId.c_str());
-            return -2;
-        } else {
-            // ok the are the same
-            return 0;
-        }
-    }
-
-    // rename to final location
-    std::string subdir = getObjectsDir() + "/" + Object::getSubdir(objectId);
-    mkdir(subdir);
-    int r = rename(srcPath.c_str(), destPath.c_str());
-    if (r != 0) {
-        LOG_ERROR("cannot rename %s -> %s: %s", srcPath.c_str(), destPath.c_str(), strerror(errno));
-        // remove tmp file
-        return -3;
-    }
-
-    return 0;
 }
 
 

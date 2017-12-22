@@ -61,7 +61,7 @@ repo-v4
         └── permissions
 
 project-v4
-├── entries.git/
+├── .entries/
 ├── .git/
 ├── .smip/
 │   ├── config

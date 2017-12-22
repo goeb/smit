@@ -13,6 +13,10 @@ error() {
 	echo "error: $*"
 }
 
+info() {
+	echo "$*"
+}
+
 debug() {
 	[ "$DEBUG" = 1 ] && echo "debug: $*"
 }
@@ -41,13 +45,6 @@ fi
 if [ -e "$dst_v4" ]; then
 	die "destination directory '$dst_v4' must not exist."
 fi
-
-mkdir "$dst_v4" || exit 1
-
-
-# main
-# init new repo
-git init "$dst_v4"
 
 cat_file_v3() {
 	project_dir="$1"
@@ -91,59 +88,67 @@ convert_v3_to_v4_master_file() {
 	done
 }
 
+# $1 : source v3 smit project
+# $2 : destination v4 smit project
+#      (must be a checked-out git repo, branch master)
 convert_v3_to_v4_master() {
 	# create files in branch 'master'
 	local src_v3="$1"
 	local dst_v4="$2"
 
-	author=convert_v3_to_v4_master
-	conf_v4=config.d
+	# Create the directory here
+	# This is a protection against the following rm -rf
+	mkdir "$dst_v4" || exit 1
+	git init "$dst_v4"
 
-	# Project configuration and templates
-	mkdir -p "$dst_v4/$conf_v4/templates"
+	# First, copy all
+	ls -a "$src_v3" |
+	while read f; do
+		[ "$f" = "." ] && continue
+		[ "$f" = ".." ] && continue
+		cp -a "$src_v3/$f" "$dst_v4/."
+	done
 
-	# project configuration
+	# Remove the top level .smip directory
+	rm -rf "$dst_v4/.smip"
+
+	# Then remove copied sub projects (detected by their .smip dir)
+	find "$dst_v4" -name ".smip" |
+	while read f; do
+		dname=$(dirname "$f")
+		rm -rf "$dname"
+	done
+
+	# Add all remaining files
+	git -C "$dst_v4" add .
+
+	# Now recreate the .smip dir (v4 format)
+	conf_v4=.smip
+	mkdir "$dst_v4/$conf_v4"
+
+	# Project configuration
 	convert_v3_to_v4_master_file "$src_v3" "$dst_v4" project "$conf_v4/config"
 
 	# views
-	id=$(cat "$src_v3/.smip/refs/views")
-	cat_file_v3 "$src_v3" $id > "$dst_v4/$conf_v4/views"
-	git -C "$dst_v4" add $conf_v4/views
+	if [ -f "$src_v3/.smip/refs/views" ]; then
+		id=$(cat "$src_v3/.smip/refs/views")
+		cat_file_v3 "$src_v3" $id > "$dst_v4/$conf_v4/views"
+		git -C "$dst_v4" add $conf_v4/views
+	fi
 
 	# templates
 	if [ -d "$src_v3/.smip/templates" ]; then
-		(cd "$src_v3/.smip/templates"; find . ! -type d ! -name ".*" ) |
-		while [ 1 = 1 ]; do
-			read file
-			if [ "$file" = "" ]; then
-				break
-			fi
-			subdir=$(dirname "$file")
-			mkdir -p "$dst_v4/$conf_v4/templates/$subdir"
-			cp "$src_v3/.smip/templates/$file" "$dst_v4/$conf_v4/templates/$file"
-			git -C "$dst_v4" add "$conf_v4/templates/$file"
-		done
+		cp -a "$src_v3/.smip/templates" "$dst_v4/.templates"
+		git -C "$dst_v4" add .templates
 	fi
+
 	# trigger
 	if [ -f "$src_v3/.smip/refs/trigger" ]; then
 		cp "$src_v3/.smip/refs/trigger" "$dst_v4/$conf_v4/trigger"
 		git -C "$dst_v4" add "$conf_v4/trigger"
 	fi
 
-	# other pages, files,...
-
-	ls "$src_v3" |
-	while read f; do
-		cp -a "$src_v3/$f" "$dst_v4/."
-	done
-	# remove copied sub projects
-	find "$dst_v4" -name ".smip" |
-	while read f; do
-		dname=$(dirname "$f")
-		rm -rf "$dname"
-	done
-	# add what is not yet added
-	git -C "$dst_v4" add .
+	author=convert_v3_to_v4_master
 	git -C "$dst_v4" commit -m "convert_v3_to_v4_master" --author "$author <>" -q
 }
 
@@ -203,6 +208,9 @@ create_commit() {
 	echo "$entry $commit_id" >> "$mapping_entries_v3_v4"
 }
 
+# $1 : source v3 smit project
+# $2 : destination v4 smit entries (must be a bare git repo)
+# $3 : file for the mapping of entries v3 <=> v4
 convert_v3_to_v4_issues() {
 	# convert issues
 	# in v4, each issue is a branch named issues/<id>
@@ -249,12 +257,15 @@ convert_v3_to_v4_issues() {
 			boundary!="" && $1==boundary { boundary=""; next; }
 			boundary!="" { print multiline_prefix, $0; }
 			END { print "\nsmit-v3-id:", entry; }
-			' | create_commit "$src_v3" "$dst_v4/.git" $branch $entry "$mapping_entries_v3_v4"
+			' | create_commit "$src_v3" "$dst_v4" $branch $entry "$mapping_entries_v3_v4"
 		done
 	done
 	echo # terminate the progress bar
 }
 # convert smit tags to git notes
+# $1 : source v3 smit project
+# $2 : destination v4 smit entries (must be a bare git repo)
+# $3 : file for the mapping of entries v3 <=> v4
 convert_v3_to_v4_tags() {
 	local src_v3="$1"
 	local dst_v4="$2"
@@ -293,10 +304,17 @@ convert_v3_to_v4_tags() {
 	done
 }
 
-MAPPING_ENTRIES_V3_V4=$(mktemp)
+
+# main
+info $0 $*
 convert_v3_to_v4_master "$src_v3" "$dst_v4"
-convert_v3_to_v4_issues "$src_v3" "$dst_v4" "$MAPPING_ENTRIES_V3_V4"
-convert_v3_to_v4_tags "$src_v3" "$dst_v4" "$MAPPING_ENTRIES_V3_V4"
+
+git init --bare "$dst_v4/.entries"
+
+MAPPING_ENTRIES_V3_V4=$(mktemp)
+
+convert_v3_to_v4_issues "$src_v3" "$dst_v4/.entries" "$MAPPING_ENTRIES_V3_V4"
+convert_v3_to_v4_tags "$src_v3" "$dst_v4/.entries" "$MAPPING_ENTRIES_V3_V4"
 
 # restore dst_v4 staging index
 git -C "$dst_v4" reset master

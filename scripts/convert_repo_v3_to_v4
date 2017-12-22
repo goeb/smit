@@ -73,9 +73,16 @@ convert_smit() {
 	info convert_smit
 
 	cp -a "$src_v3/.smit" "$dst_v4"
+
+	# templates
+	mv "$dst_v4/.smit/templates" "$dst_v4/public/.templates"
+
 	git -C "$dst_v4/.smit" init
 	git -C "$dst_v4/.smit" add .
 	git -C "$dst_v4/.smit" commit -m "$DEFAULT_COMMIT_MSG" -q
+
+	git -C "$dst_v4/public" add .templates
+	git -C "$dst_v4/public" commit -m "$DEFAULT_COMMIT_MSG" -q
 }
 
 convert_projects() {
@@ -86,11 +93,11 @@ convert_projects() {
 
 	same_dir=$(dirname $0)
 
-	find "$src_v3" -name .smip |
+	# The containing projects must be converted before the contained projects
+	(cd "$src_v3" && find . -name .smip) | sort |
 	while read f; do
-		dir=$(dirname "$f")
-		project_dirname=$(basename "$dir")
-		"$same_dir"/convert_project_v3_to_v4 "$dir" "$dst_v4/$project_dirname"
+		subdir_project=$(dirname "$f")
+		"$same_dir"/convert_project_v3_to_v4 "$src_v3/$subdir_project" "$dst_v4/$subdir_project"
 	done
 }
 
