@@ -1,0 +1,106 @@
+
+
+TODO
+	script to convert whole smit repo v3 -> v4 (including .smit and public)
+	web update users
+	web create project
+	cli project, issue, user, etc
+
+
+store using a git repository.
+
+Roadmap:
+- step 1: http server, same http interface, storage in a git repo
+	* config, views
+	* pages (public, templates, html, ...)
+	* admin (users, permissions)
+- step 2: smit clone
+- step 3; smit pull & merge
+- step 4: smit push
+
+Example
+git log issues/<id>
+
+	Author: ...
+	Date: ...
+	Parent: ...
+	Tree: ... (attached files are in the tree)
+	
+	amend ...
+	property summary ...
+	property owner ...
+	property textarea2 <
+	property textarea2 first line ...
+	property textarea2 bla bla
+	property textarea2 last line
+	msg this is the first line of the message	
+	msg (.. second line...)
+	msg etc.
+	msg last line...
+
+Notes:
+	tag_x,tag_y
+
+---------
+repo-v4
+├── project-a/
+├── project-b/
+├── public/
+│    ├── .git/
+│    ├── .templates/
+│    └── files
+└── .smit
+    ├── .git/
+    ├── config
+    ├── other-files
+    └── users/
+        ├── auth
+        ├── notifications/
+        │   ├── alice : email, gpg-key, notification policy
+        │   └── bob
+        └── permissions
+
+project-v4
+├── entries.git/
+├── .git/
+├── .smip/
+│   ├── config
+│   ├── trigger
+│   └── views
+├── .templates/
+├── other-folder-sub-project/
+└── other-files/
+
+Project User Access
+-------------------
+Who can                    Read (pull)    Modify (push)
+project-v4/database.git/   ro,rw,admin    rw(, admin?)
+project-v4/<others>        ro,rw,admin    admin
+repo-v4/public             all            superadmin
+repo-v4/.smit              superadmin     superadmin
+
+REST API
+---------
+    Resources               Methods    Acces Granted     Description
+    -------------------------------------------------------------------------
+    /                       GET/POST   user              list of projects / management of projects (create, ...)
+    /_                      GET/POST   superadmin        new project
+    /public/...             GET        all               public pages, javascript, CSS, logo
+    /signin                 POST       all               sign-in
+    /users/                            superadmin        management of users for all projects
+    /users/<user>           GET/POST   user, superadmin  management of a single user
+    /users/_                GET/POST   superadmin        new user
+    /<p>/config             GET/POST   admin             configuration of the project
+    /<p>/views/             GET/POST   admin             list predefined views / create new view
+    /<p>/views/_            GET        admin             form for advanced search / new predefined view
+    /<p>/views/xyz          GET/POST   admin             display / update / rename predefined view
+    /<p>/views/xyz?delete=1 POST       admin             delete predefined view
+    /<p>/issues             GET/POST   user              issues of the project / add new issue
+M   /<p>/issues/_           GET        user              page with a form for submitting new issue
+    /<p>/issues/123         GET/POST   user              a particular issue: get all entries or add a new entry
+    /<p>/tags/x/y           POST       user              tag / untag an entry
+    /<p>/reload             POST       admin             reload project from disk storage
+    /<p>/files/<id>/<name>  GET        user              get an attached file
+    /<p>/other/file         GET        user              any static file
+    / * /issues             GET        user              issues of all projects
+
