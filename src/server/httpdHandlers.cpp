@@ -65,10 +65,6 @@
 #define MAX_SIZE_UPLOAD (10*1024*1024)
 #define COOKIE_ORIGIN_VIEW "view-"
 
-void httpPostRoot(const RequestContext *req, const User &u)
-{
-}
-
 int httpPostSignin(const RequestContext *req)
 {
     LOG_FUNC();
@@ -1405,59 +1401,6 @@ void httpIssuesAccrossProjects(const RequestContext *req, const User &u, const s
 
 }
 
-
-/** Get some meta-data of the smit repository
-  *
-  * @param uri
-  *     - if empty, return the list of allowed sub-directories
-  *
-  * This service is useful only for cloning (or pulling) a smit repository.
-  *
-  * Superadmin can clone all. Other users can read only:
-  * - templates
-  * - users/permissions (only the permissions of the signe-in user)
-  *
-  */
-int httpGetSmitRepo(const RequestContext *req, const User &u, std::string uri)
-{
-    LOG_DIAG("httpGetSmitRepo: user=%s uri=%s", u.username.c_str(), uri.c_str());
-
-    if (u.superadmin) return httpGetFile(req); // Superadmin gets all
-
-    std::string subdir = popToken(uri, '/');
-
-    if (subdir.empty()) {
-        // Send the list of allowed sub-directories
-        sendHttpHeader200(req);
-        req->printf("Content-Type: text/directory\r\n\r\n");
-        req->printf("%s\n", P_TEMPLATES);
-        req->printf("%s\n", P_USERS);
-        return REQUEST_COMPLETED;
-
-    } else if (subdir == P_USERS && uri.empty()) {
-        // Listing of the "users" directory
-        sendHttpHeader200(req);
-        req->printf("Content-Type: text/directory\r\n\r\n");
-        req->printf("%s\n", P_PERMISSIONS);
-        return REQUEST_COMPLETED;
-
-    } else if (subdir == P_USERS && uri == P_PERMISSIONS) {
-        // print the permissions of the signed-in user
-        sendHttpHeader200(req);
-        req->printf("Content-Type: text/plain\r\n\r\n");
-        req->printf("%s\n", u.serializePermissions().c_str());
-        return REQUEST_COMPLETED;
-
-    } else if (subdir == P_TEMPLATES) {
-        // serve the template file
-        return httpGetFile(req);
-    }
-
-    sendHttpHeader403(req);
-    return REQUEST_COMPLETED;
-}
-
-
 void httpCloneIssues(const RequestContext *req, const Project &p)
 {
     const std::map<std::string, std::list<std::string> > filterIn;
@@ -1770,27 +1713,6 @@ void httpGetObject(const RequestContext *req, const Project &p, std::string obje
 }
 
 
-
-/** Get the HEAD of an object
-  *
-  * This is used by client pushers to know if a file exists.
-  */
-// TODO DEPRECATED
-void httpGetHeadObject(const RequestContext *req, Project &p, std::string object)
-{
-    LOG_FUNC();
-    std::string id = popToken(object, '/');
-    std::string basemane = object;
-    std::string realpath = p.getObjectsDir() + "/" + Object::getSubpath(id);
-
-    if (fileExists(realpath)) {
-        sendHttpHeader204(req, 0);
-
-    } else {
-        sendHttpHeader404(req);
-    }
-}
-
 void httpGetStat(const RequestContext *req, Project &p, const User &u)
 {
     sendHttpHeader200(req);
@@ -1799,59 +1721,6 @@ void httpGetStat(const RequestContext *req, Project &p, const User &u)
     RHtml::printPageStat(ctx, u);
 }
 
-/** Handle the pushing of a file
-  *
-  * If the file already exists, then do not overwrite it.
-  */
-void httpPushAttachedFile(const RequestContext *req, Project &p, const std::string &filename, const User &u)
-{
-    enum Role role = u.getRole(p.getName());
-    if (role != ROLE_ADMIN && role != ROLE_RW) {
-        sendHttpHeader403(req);
-        return;
-    }
-
-    // store the file in a temporary location
-    std::string tmpPath = p.getTmpDir() + '/' + filename;
-
-    std::ofstream tmp(tmpPath.c_str(), std::ios_base::binary);
-
-    // get the data
-    const int SIZ = 4096;
-    char postFragment[SIZ+1];
-    size_t n; // number of bytes read
-    int totalBytes = 0;
-
-    while ( (n = req->read(postFragment, SIZ)) > 0) {
-        LOG_DEBUG("postFragment size=%lu", L(n));
-        tmp.write(postFragment, n);
-
-        totalBytes += n;
-        if (totalBytes > MAX_SIZE_UPLOAD) {
-            LOG_ERROR("Pushed file too big: %s\n", filename.c_str());
-            sendHttpHeader400(req, "Pushed file too big");
-            return;
-        }
-    }
-    tmp.close();
-
-    int r = p.addFile(filename);
-    if (r != 0) {
-        // error, file not added in database
-        unlink(tmpPath.c_str());
-
-        if (r == -1) {
-            sendHttpHeader400(req, "Bad file name (hash)");
-            return;
-
-        } else if (r == -2) return sendHttpHeader403(req);
-
-        else return sendHttpHeader500(req, "cannot rename pushed file");
-    }
-
-    LOG_INFO("File pushed: (%s) %s", p.getName().c_str(), filename.c_str());
-    sendHttpHeader201(req);
-}
 
 /** Handle the POST of a view
   *
@@ -2164,57 +2033,6 @@ void parseMultipartAndStoreUploadedFiles(const std::string &part, std::string bo
 }
 
 
-void httpPushEntry(const RequestContext *req, Project &p, const std::string &issueId,
-                   const std::string &entryId, const User &u)
-{
-    LOG_DEBUG("httpPushEntry: %s/%s", issueId.c_str(), entryId.c_str());
-
-    enum Role role = u.getRole(p.getName());
-    if (role != ROLE_RW && role != ROLE_ADMIN) {
-        sendHttpHeader403(req);
-        return;
-    }
-
-    ContentType ct = getContentType(req);
-    if (ct != CT_OCTET_STREAM) {
-        LOG_ERROR("Content-Type '%s' not supported", getContentTypeString(req));
-        sendHttpHeader400(req, "bad content-type");
-        return;
-    }
-
-    std::string postData;
-    int rc = readMgreq(req, postData, MAX_SIZE_UPLOAD);
-    if (rc < 0) {
-        sendHttpHeader413(req, "You tried to upload too much data. Max is 10 MB.");
-        return;
-    }
-
-    LOG_DEBUG("Got upload data: %ld bytes", L(postData.size()));
-
-    // insert the entry into the database
-    std::string id = issueId;
-    int ret = p.pushEntry(id, entryId, u.username, postData);
-    if (ret == -1) {
-        std::string msg = "Cannot push the entry";
-        sendHttpHeader400(req, msg.c_str());
-
-    } else if (ret == -2) {
-        // Internal Server Error
-        std::string msg = "pushEntry error";
-        sendHttpHeader500(req, msg.c_str());
-    } else if (ret == -3) {
-        // HTTP 409 Conflict
-        sendHttpHeader409(req);
-
-    } else {
-        // ok, no problem
-        sendHttpHeader201(req);
-        // give the issue id, as it may be necessary to inform
-        // the client that it has been renamed (renumbered)
-        req->printf("issue: %s\r\n", id.c_str());
-    }
-}
-
 /** Remove empty values for multiselect properties
   *
   * empty values are not relevant
@@ -2422,13 +2240,13 @@ int begin_request_handler(const RequestContext *req)
 
     if      ( (resource == "signout") && (method == "POST") ) httpPostSignout(req, sessionId);
     else if ( (resource == "") && (method == "GET") ) httpGetProjects(req, user);
-    else if ( (resource == "") && (method == "POST") ) httpPostRoot(req, user);
+    else if ( resource.empty() ) sendHttpHeader400(req, "void resource");
+    else if ( resource[0] == '.' ) sendHttpHeader400(req, "invalid resource");
     else if ( (resource == "users") && (method == "GET") ) httpGetUser(req, user, uri);
     else if ( (resource == "users") && (method == "POST") ) httpPostUser(req, user, uri);
     else if ( (resource == "users") && (method == "DELETE") ) httpDeleteUser(req, user, uri);
     else if ( (resource == "_") && (method == "GET") ) httpGetNewProject(req, user);
-    else if ( (resource == "_") && (method == "POST") ) httpPostNewProject(req, user);
-    else if ( (resource == ".smit") && (method == "GET") ) return httpGetSmitRepo(req, user, uri);
+    else if ( (resource == "_")&& (method == "POST") ) httpPostNewProject(req, user);
     else {
         // Get the projects given by the uri.
         // We need to concatenate back 'resource' and 'uri', as resource was
@@ -2477,7 +2295,6 @@ int begin_request_handler(const RequestContext *req)
             std::string issueId = popToken(uri, '/');
             std::string entryId = popToken(uri, '/');
             if (entryId.empty()) httpPostEntry(req, *p, issueId, user);
-            else if (uri.empty()) httpPushEntry(req, *p, issueId, entryId, user);
             else return sendHttpHeader400(req, "");
 
         } else if ( (resource == "issues") && (uri == "new") && (method == "GET") ) httpGetNewIssueForm(req, *p, user);
@@ -2490,9 +2307,7 @@ int begin_request_handler(const RequestContext *req)
         else if ( (resource == "views") && (method == "POST") ) httpPostView(req, *p, uri, user);
         else if ( (resource == "tags") && (method == "POST") ) httpPostTag(req, *p, uri, user);
         else if ( (resource == "reload") && (method == "POST") ) httpReloadProject(req, *p, user);
-        else if ( (resource == RESOURCE_FILES) && (method == "POST") ) httpPushAttachedFile(req, *p, uri, user);
         else if ( (resource == RESOURCE_FILES) && (method == "GET") ) httpGetObject(req, *p, uri);
-        else if ( (resource == RESOURCE_FILES) && (method == "HEAD") ) httpGetHeadObject(req, *p, uri);
         else if ( (resource == "stat") && (method == "GET") ) httpGetStat(req, *p, user);
         else handled = false;
 
