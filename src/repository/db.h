@@ -43,7 +43,7 @@ public:
     inline static std::string getRootDir() { return Db.pathToRepository; }
     static std::list<std::string> getProjects();
     static Project *loadProject(const std::string &path); // load a project
-    static Project *createProject(const std::string &projectName);
+    static Project *createProject(const std::string &projectName, const std::string &author);
     static std::string allocateNewIssueId(const std::string &realm);
     static void updateMaxIssueId(const std::string &realm, uint32_t i);
     inline static uint32_t getMaxIssueId() { return Db.maxIssueId; }

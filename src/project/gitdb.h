@@ -21,7 +21,9 @@ struct AttachedFileRef {
 std::string gitdbStoreFile(const std::string &gitRepoPath, const char *data, size_t len);
 int gitdbLsTree(const std::string &gitRepoPath, const std::string &treeid, std::list<AttachedFileRef> &files);
 int gitdbSetNotes(const std::string &gitRepoPath, const ObjectId &entryId, const std::string &data);
-int gitdbCommitMaster(const std::string &gitRepoPath, const std::string &subpath, const std::string &data);
+int gitdbCommitMaster(const std::string &gitRepoPath, const std::string &subpath,
+                      const std::string &data, const std::string &author);
+int gitInit(const std::string &gitRepoPath);
 
 class GitIssueList {
 

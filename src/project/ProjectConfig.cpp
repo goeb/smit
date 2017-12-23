@@ -186,10 +186,6 @@ ProjectConfig ProjectConfig::getDefaultConfig()
     pspec.selectOptions.clear();
     pconfig.properties.push_back(pspec);
 
-    pconfig.author = "";
-    pconfig.ctime = time(0);
-    pconfig.parent = K_PARENT_NULL;
-
     return pconfig;
 }
 
@@ -325,13 +321,6 @@ std::string ProjectConfig::serialize() const
 
     // header
     result += serializeProperty(K_SMIT_VERSION, VERSION);
-
-    // authors, parent, ctime
-    result += K_PARENT " " + serializeSimpleToken(parent) + "\n";
-    char timestamp[128];
-    sprintf(timestamp, "%ld", ctime);
-    result += K_CTIME " " + serializeSimpleToken(timestamp) + "\n";
-    result += K_AUTHOR " " + serializeSimpleToken(author) + "\n";
 
     // setPropertyLabel
     // for reserved properties
@@ -478,18 +467,6 @@ ProjectConfig ProjectConfig::parseProjectConfig(std::list<std::list<std::string>
             LOG_DEBUG("%s '%s' -label '%s' -display=%d", KEY_TAG, tagspec.id.c_str(),
                       tagspec.label.c_str(), tagspec.display);
             config.tags[tagspec.id] = tagspec;
-
-        } else if (token == K_PARENT) {
-            token = pop(*line);
-            config.parent = token;
-
-        } else if (token == K_CTIME) {
-            token = pop(*line);
-            config.ctime = atoi(token.c_str());
-
-        } else if (token == K_AUTHOR) {
-            token = pop(*line);
-            config.author = token;
 
         } else {
             LOG_DEBUG("Unknown function '%s'", token.c_str());

@@ -80,7 +80,7 @@ public:
     int modifyConfig(std::list<std::list<std::string> > &tokens, const std::string &author);
     int modifyConfig(ProjectConfig newConfig, const std::string &author);
     static int createProjectFiles(const std::string &repositoryPath, const std::string &projectName,
-                                  std::string &resultingPath);
+                                  std::string &resultingPath, const std::string &author);
     int reload(); // reload a project from disk storage
 
     // methods for database access
@@ -91,8 +91,9 @@ public:
 
     // methods for handling views
     PredefinedView getPredefinedView(const std::string &name);
-    int setPredefinedView(const std::string &name, const PredefinedView &pv);
-    int deletePredefinedView(const std::string &name);
+    int setPredefinedView(const std::string &name, const PredefinedView &pv, const std::string &author);
+    int setPredefinedView(std::map<std::string, PredefinedView> views, const std::string &author);
+    int deletePredefinedView(const std::string &name, const std::string &author);
     PredefinedView getDefaultView() const;
 
     // methods for handling tags
@@ -152,7 +153,7 @@ private:
     void computeAssociations();
     void cleanupMultiselect(std::list<std::string> &values,
                             const std::list<std::string> &selectOptions);
-    int storeViewsToFile();
+    int storeViewsToFile(const std::string &author);
     Issue *getIssue(const std::string &id) const;
     int insertEntryInTable(Entry *e);
     int insertIssueInTable(Issue *i);

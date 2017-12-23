@@ -1,10 +1,11 @@
 
 
 TODO
-	script to convert whole smit repo v3 -> v4 (including .smit and public)
 	web update users
-	web create project
 	cli project, issue, user, etc
+	cli clone, pull, push
+	windows
+	heroku
 
 
 store using a git repository.
@@ -12,7 +13,6 @@ store using a git repository.
 Roadmap:
 - step 1: http server, same http interface, storage in a git repo
 	* config, views
-	* pages (public, templates, html, ...)
 	* admin (users, permissions)
 - step 2: smit clone
 - step 3; smit pull & merge

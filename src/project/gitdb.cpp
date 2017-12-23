@@ -221,7 +221,8 @@ int gitdbSetNotes(const std::string &gitRepoPath, const ObjectId &entryId, const
  * The file must already be tracked by git.
  *
  */
-int gitdbCommitMaster(const std::string &gitRepoPath, const std::string &subpath, const std::string &data)
+int gitdbCommitMaster(const std::string &gitRepoPath, const std::string &subpath,
+                      const std::string &data, const std::string &author)
 {
     int err;
 
@@ -231,18 +232,50 @@ int gitdbCommitMaster(const std::string &gitRepoPath, const std::string &subpath
         return -1;
     }
 
-    // commit
+    // add
     Argv argv;
-    Subprocess *subp = 0;
+    argv.set("git", "add", subpath.c_str(), 0);
 
-    argv.set("git", "commit", subpath.c_str(), "-m", "modified", 0);
-    subp = Subprocess::launch(argv.getv(), 0, gitRepoPath.c_str());
+    Subprocess *subp = Subprocess::launch(argv.getv(), 0, gitRepoPath.c_str());
     if (!subp) return -1;
     std::string stderrString = subp->getStderr(); // must be called before wait()
     err = subp->wait();
     delete subp;
     if (err) {
+        LOG_ERROR("gitdbCommitMaster: cannot add: %d: %s", err, stderrString.c_str());
+        return -1;
+    }
+
+    // commit
+    std::string gitAuthor = author + " <>";
+    argv.set("git", "commit", "-m", "modified", "--author", gitAuthor.c_str(), 0);
+    subp = Subprocess::launch(argv.getv(), 0, gitRepoPath.c_str());
+    if (!subp) return -1;
+    stderrString = subp->getStderr(); // must be called before wait()
+    err = subp->wait();
+    delete subp;
+    if (err) {
         LOG_ERROR("gitdbCommitMaster: cannot commit: %d: %s", err, stderrString.c_str());
+       return -1;
+    }
+    return 0;
+}
+
+int gitInit(const std::string &gitRepoPath)
+{
+    int err;
+
+    Argv argv;
+    Subprocess *subp = 0;
+
+    argv.set("git", "init", gitRepoPath.c_str(), 0);
+    subp = Subprocess::launch(argv.getv(), 0, 0);
+    if (!subp) return -1;
+    std::string stderrString = subp->getStderr(); // must be called before wait()
+    err = subp->wait();
+    delete subp;
+    if (err) {
+        LOG_ERROR("gitInit error: %s (%s)", stderrString.c_str(), gitRepoPath.c_str());
        return -1;
     }
     return 0;

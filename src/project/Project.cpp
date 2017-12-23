@@ -422,13 +422,10 @@ int Project::modifyConfig(ProjectConfig newConfig, const std::string &author)
     LOG_FUNC();
     ScopeLocker scopeLocker(lockerForConfig, LOCK_READ_WRITE);
 
-    newConfig.ctime = time(0);
-    newConfig.author = author;
-
     // write to file
     std::string data = newConfig.serialize();
 
-    int err = gitdbCommitMaster(path, PATH_PROJECT_CONFIG, data);
+    int err = gitdbCommitMaster(path, PATH_PROJECT_CONFIG, data, author);
     if (err) return -1;
 
     config = newConfig;
@@ -458,7 +455,7 @@ PredefinedView Project::getPredefinedView(const std::string &name)
   *     <0 error
   * When creating a new view, setting the name of an existing view is forbidden.
   */
-int Project::setPredefinedView(const std::string &name, const PredefinedView &pv)
+int Project::setPredefinedView(const std::string &name, const PredefinedView &pv, const std::string &author)
 {
     LOG_DEBUG("setPredefinedView: %s -> %s", name.c_str(), pv.name.c_str());
     if (pv.name.empty()) return -3;
@@ -490,26 +487,31 @@ int Project::setPredefinedView(const std::string &name, const PredefinedView &pv
     }
 
     // store to file
-    return storeViewsToFile();
+    return storeViewsToFile(author);
 }
 
+int Project::setPredefinedView(std::map<std::string, PredefinedView> views, const std::string &author)
+{
+    predefinedViews = views;
+    return storeViewsToFile(author);
+}
 
 /**
   * No mutex handled in here.
   * Must be called from a mutexed scope (lockerForViews)
   */
-int Project::storeViewsToFile()
+int Project::storeViewsToFile(const std::string &author)
 {
     std::string fileContents;
     fileContents = K_SMIT_VERSION " " VERSION "\n";
 
     fileContents += PredefinedView::serializeViews(predefinedViews);
 
-    int err = gitdbCommitMaster(path, PATH_VIEWS, fileContents);
+    int err = gitdbCommitMaster(path, PATH_VIEWS, fileContents, author);
     return err;
 }
 
-int Project::deletePredefinedView(const std::string &name)
+int Project::deletePredefinedView(const std::string &name, const std::string &author)
 {
     if (name.empty()) return -1;
     ScopeLocker scopeLocker(lockerForViews, LOCK_READ_WRITE);
@@ -517,7 +519,7 @@ int Project::deletePredefinedView(const std::string &name)
     std::map<std::string, PredefinedView>::iterator i = predefinedViews.find(name);
     if (i != predefinedViews.end()) {
         predefinedViews.erase(i);
-        return storeViewsToFile();
+        return storeViewsToFile(author);
 
     } else {
         LOG_ERROR("Cannot delete view: %s", name.c_str());
@@ -541,7 +543,7 @@ PredefinedView Project::getDefaultView() const
   * @param[out] newProjectPath
   */
 int Project::createProjectFiles(const std::string &repositoryPath, const std::string &projectName,
-                                std::string &newProjectPath)
+                                std::string &newProjectPath, const std::string &author)
 {
     if (projectName.empty()) {
         LOG_ERROR("Cannot create project with empty name");
@@ -582,23 +584,28 @@ int Project::createProjectFiles(const std::string &repositoryPath, const std::st
         return -1;
     }
 
+    // init git repo
+    r = gitInit(newProjectPath);
+    if (r != 0) {
+        LOG_ERROR("Could not init git '%s'", newProjectPath.c_str());
+        return -1;
+    }
+
     // create file 'project'
     Project p(newProjectPath);
     ProjectConfig pconfig = ProjectConfig::getDefaultConfig();
-    p.modifyConfig(pconfig, "create");
+    r = p.modifyConfig(pconfig, author);
+    if (r != 0) {
+        LOG_ERROR("Could not create project config '%s'", newProjectPath.c_str());
+        return -1;
+    }
 
     // create file 'views'
-    std::string id;
-    std::string objectsDir = newProjectPath + "/" + PATH_OBJECTS;
     std::map<std::string, PredefinedView> defaultViews = PredefinedView::getDefaultViews();
-    std::string viewsStr = PredefinedView::serializeViews(defaultViews);
-    r = Object::write(objectsDir, viewsStr, id);
-
-    subpath = newProjectPath  + "/" + PATH_VIEWS;
-    r = writeToFile(subpath, id);
+    r = p.setPredefinedView(defaultViews, author);
     if (r != 0) {
-        LOG_ERROR("Could not create file '%s': %s", subpath.c_str(), strerror(errno));
-        return r;
+        LOG_ERROR("Could not create project views '%s'", newProjectPath.c_str());
+        return -1;
     }
 
     return 0;

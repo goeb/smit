@@ -127,10 +127,11 @@ int Database::loadProjects(const std::string &path, bool recurse)
 }
 
 
-Project *Database::createProject(const std::string &name)
+Project *Database::createProject(const std::string &name, const std::string &author)
 {
     std::string resultingPath;
-    int r = Project::createProjectFiles(Db.getRootDir().c_str(), name.c_str(), resultingPath);
+    LOG_DIAG("createProject %s", name.c_str());
+    int r = Project::createProjectFiles(Db.getRootDir().c_str(), name.c_str(), resultingPath, author);
     if (r != 0) return 0;
 
     Project *p = loadProject(resultingPath.c_str());

@@ -273,7 +273,7 @@ int cmdProject(int argc, char **argv)
             std::string resultingPath;
             std::string projectName = getBasename(path);
             std::string repo = getDirname(path);
-            int r = Project::createProjectFiles(repo, projectName, resultingPath);
+            int r = Project::createProjectFiles(repo, projectName, resultingPath, "anonymous");
             if (r < 0) return 1;
             printf("Project created: %s\n", resultingPath.c_str());
         }

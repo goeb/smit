@@ -47,7 +47,7 @@ struct PropertySpec {
 #define OPT_DISPLAY "-display"
 
 struct ProjectConfig {
-    ProjectConfig() : numberIssueAcrossProjects(false), ctime(0) {}
+    ProjectConfig() : numberIssueAcrossProjects(false) {}
 
     // user defined configuration
     std::list<PropertySpec> properties; // user defined properties
@@ -55,12 +55,6 @@ struct ProjectConfig {
     std::map<std::string, std::string> propertyReverseLabels; // used for associations
     std::map<std::string, TagSpec> tags;
     bool numberIssueAcrossProjects; // accross project
-
-    // internal properties
-    std::string author; // author of a modification
-    std::string parent; // id of previous known config
-    std::string id; // id of this config
-    time_t ctime;
 
     // methods
     static int load(const std::string &path, ProjectConfig &config);

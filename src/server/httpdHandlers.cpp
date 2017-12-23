@@ -1242,7 +1242,7 @@ void httpPostProjectConfig(const RequestContext *req, Project &p, const User &u)
         }
 
         // request for creation of a new project
-        Project *newProject = Database::createProject(projectName);
+        Project *newProject = Database::createProject(projectName, u.username);
         if (!newProject) return sendHttpHeader500(req, "Cannot create project");
 
         ptr = newProject;
@@ -1756,7 +1756,7 @@ void httpPostView(const RequestContext *req, Project &p, const std::string &name
             return;
         } else {
             // delete the view
-            p.deletePredefinedView(name);
+            p.deletePredefinedView(name, u.username);
             std::string redirectUrl = "/" + p.getUrlName() + "/issues/";
             sendHttpRedirect(req, redirectUrl.c_str(), 0);
             return;
@@ -1832,7 +1832,7 @@ void httpPostView(const RequestContext *req, Project &p, const std::string &name
             return;
         }
         // store the view
-        int r = p.setPredefinedView(name, pv);
+        int r = p.setPredefinedView(name, pv, u.username);
         if (r < 0) {
             LOG_ERROR("Cannot set predefined view");
             sendHttpHeader500(req, "Cannot set predefined view");
