@@ -22,6 +22,7 @@
 #include "utils/identifiers.h"
 #include "utils/filesystem.h"
 #include "utils/parseConfig.h"
+#include "utils/gitTools.h"
 #include "global.h"
 #include "repository/db.h"
 #include "fnmatch.h"
@@ -467,25 +468,42 @@ int UserBase::initUsersFile(const char *repository)
 /** Store the user configuration to the filesystem
   *
   */
-int UserBase::store(const std::string &repository)
+int UserBase::store(const std::string &repository, const std::string &author)
 {
     std::string permissions; // this will be stored into file 'permissions'
     std::string auth; // and this will be stored into file 'auth'
+    int err;
 
     std::map<std::string, User*>::iterator uit;
     FOREACH(uit, UserDb.configuredUsers) {
         permissions += uit->second->serializePermissions();
         auth += uit->second->serializeAuth();
     }
-    std::string pathPermissions = repository + "/" PATH_REPO "/" PATH_PERMISSIONS;
-    int r = writeToFile(pathPermissions, permissions);
-    if (r < 0) return r;
 
-    std::string pathAuth = repository + "/" PATH_REPO "/" PATH_AUTH;
-    r = writeToFile(pathAuth, auth);
-    if (r < 0) return r;
+    // permissions
+    err = writeToFile(repository + "/" PATH_REPO "/" PATH_PERMISSIONS, permissions);
+    if (err) {
+        return -1;
+    }
 
-    return r;
+    err = gitAdd(repository + "/" PATH_REPO, PATH_PERMISSIONS);
+    if (err) return err;
+
+
+    // auth
+    err = writeToFile(repository + "/" PATH_REPO "/" PATH_AUTH, auth);
+    if (err) {
+        return -1;
+    }
+
+    err = gitAdd(repository + "/" PATH_REPO, PATH_AUTH);
+    if (err) return err;
+
+
+    err = gitCommit(repository + "/" PATH_REPO, author);
+    if (err) return err;
+
+    return err;
 }
 
 
@@ -514,7 +532,7 @@ User *UserBase::addUserInArray(const User &newUser)
 
 /** Add a new user in database and store it.
   */
-int UserBase::addUser(const User &newUser)
+int UserBase::addUser(const User &newUser, const std::string &author)
 {
     if (newUser.username.empty()) return -1;
 
@@ -528,7 +546,7 @@ int UserBase::addUser(const User &newUser)
     }
 
     User *u = addUserInArray(newUser);
-    int r = store(Repository);
+    int r = store(Repository, author);
     if (r < 0) return r;
 
     u->consolidateRoles();
@@ -541,7 +559,7 @@ int UserBase::addUser(const User &newUser)
     return 0;
 }
 
-int UserBase::deleteUser(const std::string &username)
+int UserBase::deleteUser(const std::string &username, const std::string &author)
 {
     if (username.empty()) return -1;
 
@@ -557,7 +575,7 @@ int UserBase::deleteUser(const std::string &username)
     UserDb.configuredUsers.erase(uit);
 
     // store
-    int r = store(Repository);
+    int r = store(Repository, author);
     if (r < 0) {
         LOG_ERROR("Cannot store deletion of user '%s'", username.c_str());
     }
@@ -680,7 +698,7 @@ std::map<Role, std::set<std::string> > UserBase::getUsersByRole(const std::strin
   * In case of renaming, username is the old name, and
   * newConfig.name is the new name.
   */
-int UserBase::updateUser(const std::string &username, const User &newConfig)
+int UserBase::updateUser(const std::string &username, const User &newConfig, const std::string &author)
 {
     if (username.empty() || newConfig.username.empty()) return -1;
 
@@ -708,7 +726,7 @@ int UserBase::updateUser(const std::string &username, const User &newConfig)
         UserDb.configuredUsers.erase(username);
     }
 
-    int r = store(Repository);
+    int r = store(Repository, author);
     if (r < 0) return r;
 
     existingUser->second->consolidateRoles();
@@ -721,7 +739,7 @@ int UserBase::updateUser(const std::string &username, const User &newConfig)
     return 0;
 }
 
-int UserBase::updatePassword(const std::string &username, const AuthSha1 *authSha1)
+int UserBase::updatePassword(const std::string &username, const AuthSha1 *authSha1, const std::string &author)
 {
     ScopeLocker scopeLocker(UserDb.locker, LOCK_READ_WRITE);
     std::map<std::string, User*>::iterator u = UserDb.configuredUsers.find(username);
@@ -729,7 +747,7 @@ int UserBase::updatePassword(const std::string &username, const AuthSha1 *authSh
 
     LOG_DIAG("updatePassword for %s", username.c_str());
     u->second->authHandler = authSha1->createCopy();
-    return store(Repository);
+    return store(Repository, author);
 }
 
 std::list<User> UserBase::getAllUsers()

@@ -512,10 +512,10 @@ int cmdUser(int argc, char **argv)
                 }
             }
             // store the user (the existing user that has been updated)
-            r = UserBase::updateUser(username, *existingUser);
+            r = UserBase::updateUser(username, *existingUser, "local");
 
         } else {
-            r = UserBase::addUser(newUser);
+            r = UserBase::addUser(newUser, "local");
         }
         if (r < 0) {
             LOG_ERROR("Abort.");

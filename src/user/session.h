@@ -14,10 +14,10 @@
 #include "Recipient.h"
 
 #define COOKIE_VIEW_DURATION (60*60*24) // 1 day
-#define PATH_AUTH  "/users/auth"
+#define PATH_AUTH  "users/auth"
 #define P_USERS       "users"
 #define P_PERMISSIONS "permissions"
-#define PATH_PERMISSIONS "/" P_USERS "/" P_PERMISSIONS
+#define PATH_PERMISSIONS P_USERS "/" P_PERMISSIONS
 
 // authentication schemes
 
@@ -67,19 +67,19 @@ public:
     static int load(const std::string &repository, std::map<std::string, User*> &users);
     static void loadNotifications(const std::string &pathRepo, std::map<std::string, User*> &users);
     static void setLocalInterfaceUser(const std::string &username);
-    static int store(const std::string &repository);
+    static int store(const std::string &repository, const std::string &author);
     static int initUsersFile(const char *repository);
     static User* getUser(const std::string &username);
-    static int addUser(const User &u);
-    static int deleteUser(const std::string &username);
+    static int addUser(const User &u, const std::string &author);
+    static int deleteUser(const std::string &username, const std::string &author);
     static int hotReload();
     static void computePermissions();
 
     static std::set<std::string> getUsersOfProject(const std::string &project);
     static std::map<std::string, Role> getUsersRolesOfProject(const std::string &project);
     static std::map<Role, std::set<std::string> > getUsersByRole(const std::string &project);
-    static int updateUser(const std::string &username, const User &newConfig);
-    static int updatePassword(const std::string &username, const AuthSha1 *authSha1);
+    static int updateUser(const std::string &username, const User &newConfig, const std::string &author);
+    static int updatePassword(const std::string &username, const AuthSha1 *authSha1, const std::string &author);
     static std::list<User> getAllUsers();
     static inline bool isLocalUserInterface() {return !localInterfaceUsername.empty(); }
     static const std::string getLocalInterfaceUser() { return localInterfaceUsername; }

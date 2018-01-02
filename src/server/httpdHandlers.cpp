@@ -432,7 +432,7 @@ void httpDeleteUser(const RequestContext *request, const User &signedInUser, con
 
     LOG_INFO("User '%s' deleted by '%s'", username.c_str(), signedInUser.username.c_str());
 
-    int r = UserBase::deleteUser(username);
+    int r = UserBase::deleteUser(username, signedInUser.username);
 
     if (r != 0) {
         sendHttpHeader400(request, "Cannot delete user");
@@ -725,12 +725,12 @@ void httpPostUserAsSuperadmin(const RequestContext *req, const std::string &user
     // If no error, then take into account the new configuration
     std::string error;
     if (username == "_") {
-        r = UserBase::addUser(newUserConfig);
+        r = UserBase::addUser(newUserConfig, superadminName);
         if (r == -1) error = "Cannot create user with empty name";
         else if (r == -2) error = "Cannot create new user as name already exists";
 
     } else {
-        r = UserBase::updateUser(username, newUserConfig);
+        r = UserBase::updateUser(username, newUserConfig, superadminName);
         if (r == -1) error = "Cannot create user with empty name";
         else if (r == -2) error = "Cannot change name as new name already exists";
         else if (r < 0) error = "Cannot update non existing user";
@@ -808,7 +808,7 @@ void httpPostUserSelf(const RequestContext *req, const std::string &username)
     processNofiticationConfig(params, newUserConfig);
 
     std::string error;
-    r = UserBase::updateUser(username, newUserConfig);
+    r = UserBase::updateUser(username, newUserConfig, username);
     if (r == -1) error = "Cannot create user with empty name";
     else if (r == -2) error = "Cannot change name as new name already exists";
     else if (r < 0) error = "Cannot update non existing user";
