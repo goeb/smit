@@ -1676,7 +1676,7 @@ void httpGetObject(const RequestContext *req, const Project &p, std::string obje
     std::string filename = object;
 
     // TODO check if project needs read-only locking
-    GitObject o(p.getPath(), id);
+    GitObject o(p.getPathEntries(), id);
     int size = o.getSize();
     if (size < 0) {
         sendHttpHeader404(req);

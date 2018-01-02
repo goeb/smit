@@ -20,6 +20,8 @@ class Subprocess {
 
 public:
     static Subprocess *launch(char *const argv[], char * const envp[], const char *dir);
+    static int launchSync(char *const argv[], char * const envp[], const char *dir,
+                          const char *subStdin, size_t subStdinSize, std::string &subStdout, std::string &subStderr);
     Subprocess();
     ~Subprocess();
     int wait();

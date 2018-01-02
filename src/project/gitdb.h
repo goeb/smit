@@ -21,6 +21,10 @@ struct AttachedFileRef {
 std::string gitdbStoreFile(const std::string &gitRepoPath, const char *data, size_t len);
 int gitdbLsTree(const std::string &gitRepoPath, const std::string &treeid, std::list<AttachedFileRef> &files);
 int gitdbSetNotes(const std::string &gitRepoPath, const ObjectId &entryId, const std::string &data);
+
+
+
+// admin repo (to be moved else where)
 int gitdbCommitMaster(const std::string &gitRepoPath, const std::string &subpath,
                       const std::string &data, const std::string &author);
 int gitInit(const std::string &gitRepoPath);
@@ -44,7 +48,7 @@ public:
     int open(const std::string &gitRepoPath, const std::string &issueId);
     std::string getNextEntry();
     void close();
-    static std::string addCommit(const std::string &gitRepoPath, const std::string &issueId,
+    static std::string addCommit(const std::string &bareGitRepo, const std::string &issueId,
                                  const std::string &author, long ctime, const std::string &body, const std::list<AttachedFileRef> &files);
 
 private:

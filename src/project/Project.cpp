@@ -638,7 +638,7 @@ int Project::toggleTag(const std::string &entryId, const std::string &tagname, c
     }
 
     std::string tagData = Entry::serializeTags(tags);
-    int err = gitdbSetNotes(path, entryId, tagData);
+    int err = gitdbSetNotes(getPathEntries(), entryId, tagData);
     if (err) {
         return -1;
     }
@@ -704,7 +704,7 @@ int Project::reload()
 
 std::string Project::storeFile(const char *data, size_t len) const
 {
-    return gitdbStoreFile(path, data, len);
+    return gitdbStoreFile(getPathEntries(), data, len);
 }
 
 
@@ -1259,7 +1259,7 @@ int Project::addNewEntry(const std::string &issueId, Entry *e)
 {
     const std::string data = e->serialize();
 
-    std::string entryId = GitIssue::addCommit(path, issueId, e->author, e->ctime, data, e->files);
+    std::string entryId = GitIssue::addCommit(getPathEntries(), issueId, e->author, e->ctime, data, e->files);
 
     e->id = entryId;
 

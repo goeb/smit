@@ -152,6 +152,30 @@ Subprocess *Subprocess::launch(char *const argv[], char *const envp[], const cha
     return handler;
 }
 
+/** Launch the subprocess, and wait for its return
+ *
+ */
+int Subprocess::launchSync(char *const argv[], char * const envp[], const char *dir,
+                           const char *subStdin, size_t subStdinSize, std::string &subStdout, std::string &subStderr)
+{
+    Subprocess *subp = Subprocess::launch(argv, envp, dir);
+    if (!subp) return -1;
+
+    if (subStdin) {
+        subp->write(subStdin, subStdinSize);
+    }
+
+    subp->closeStdin();
+
+    subStdout = subp->getStdout();
+    subStderr = subp->getStderr();
+
+    int err = subp->wait();
+    delete subp;
+    return err;
+}
+
+
 int Subprocess::wait()
 {
     int status;

@@ -130,23 +130,16 @@ void GitIssue::close()
 std::string gitdbStoreFile(const std::string &gitRepoPath, const char *data, size_t len)
 {
     Argv argv;
-    Subprocess *subp = 0;
 
     argv.set("git", "hash-object", "-w", "--stdin", 0);
-    subp = Subprocess::launch(argv.getv(), 0, gitRepoPath.c_str());
-    if (!subp) return "";
-    subp->write(data, len);
-    subp->closeStdin();
-    std::string sha1Id = subp->getStdout();
-    trim(sha1Id);
-    std::string stderrString = subp->getStderr(); // must be called before wait()
-    int err = subp->wait();
-    delete subp;
+    std::string sha1Id, subStderr;
+    int err = Subprocess::launchSync(argv.getv(), 0, gitRepoPath.c_str(), data, len, sha1Id, subStderr);
     if (err) {
-        LOG_ERROR("gitdbStoreFile error %d: %s", err, stderrString.c_str());
+        LOG_ERROR("gitdbStoreFile error %d: %s", err, subStderr.c_str());
         return "";
     }
 
+    trim(sha1Id);
     if (sha1Id.size() != SIZE_COMMIT_ID) {
         LOG_ERROR("gitdbStoreFile error: sha1Id=%s", sha1Id.c_str());
         return "";
@@ -155,19 +148,20 @@ std::string gitdbStoreFile(const std::string &gitRepoPath, const char *data, siz
     return sha1Id;
 }
 
+/** Read the list of files of a tree id
+ *
+ * @param gitRepoPath
+ * @param treeid
+ * @param[out] files
+ */
 int gitdbLsTree(const std::string &gitRepoPath, const std::string &treeid, std::list<AttachedFileRef> &files)
 {
     Argv argv;
-    Subprocess *subp = 0;
     files.clear();
 
     argv.set("git", "ls-tree", "-l", "-z", treeid.c_str(), 0);
-    subp = Subprocess::launch(argv.getv(), 0, gitRepoPath.c_str());
-    if (!subp) return -1;
-    std::string result = subp->getStdout();
-    std::string stderrString = subp->getStderr(); // must be called before wait()
-    int err = subp->wait();
-    delete subp;
+    std::string result, stderrString;
+    int err = Subprocess::launchSync(argv.getv(), 0, gitRepoPath.c_str(), 0, 0, result, stderrString);
     if (err) {
         LOG_ERROR("gitdbLsTree error %d: %s", err, stderrString.c_str());
         return -1;
@@ -196,18 +190,12 @@ int gitdbSetNotes(const std::string &gitRepoPath, const ObjectId &entryId, const
 {
     // git notes add --force --file=- <id>
     Argv argv;
-    Subprocess *subp = 0;
 
     argv.set("git", "notes", "add", "--force", "--file=-", entryId.c_str(), 0);
-    subp = Subprocess::launch(argv.getv(), 0, gitRepoPath.c_str());
-    if (!subp) return -1;
-    subp->write(data);
-    subp->closeStdin();
-    std::string stderrString = subp->getStderr(); // must be called before wait()
-    int err = subp->wait();
-    delete subp;
+    std::string subStdout, subStderr;
+    int err = Subprocess::launchSync(argv.getv(), 0, gitRepoPath.c_str(), data.data(), data.size(), subStdout, subStderr);
     if (err) {
-        LOG_ERROR("addCommit read-tree error %d: %s", err, stderrString.c_str());
+        LOG_ERROR("addCommit read-tree error %d: %s", err, subStderr.c_str());
     }
     return err;
 }
@@ -236,26 +224,19 @@ int gitdbCommitMaster(const std::string &gitRepoPath, const std::string &subpath
     Argv argv;
     argv.set("git", "add", subpath.c_str(), 0);
 
-    Subprocess *subp = Subprocess::launch(argv.getv(), 0, gitRepoPath.c_str());
-    if (!subp) return -1;
-    std::string stderrString = subp->getStderr(); // must be called before wait()
-    err = subp->wait();
-    delete subp;
+    std::string subStdout, subStderr;
+    err = Subprocess::launchSync(argv.getv(), 0, gitRepoPath.c_str(), 0, 0, subStdout, subStderr);
     if (err) {
-        LOG_ERROR("gitdbCommitMaster: cannot add: %d: %s", err, stderrString.c_str());
+        LOG_ERROR("gitdbCommitMaster: cannot add: %d: %s", err, subStderr.c_str());
         return -1;
     }
 
     // commit
     std::string gitAuthor = author + " <>";
     argv.set("git", "commit", "-m", "modified", "--author", gitAuthor.c_str(), 0);
-    subp = Subprocess::launch(argv.getv(), 0, gitRepoPath.c_str());
-    if (!subp) return -1;
-    stderrString = subp->getStderr(); // must be called before wait()
-    err = subp->wait();
-    delete subp;
+    err = Subprocess::launchSync(argv.getv(), 0, gitRepoPath.c_str(), 0, 0, subStdout, subStderr);
     if (err) {
-        LOG_ERROR("gitdbCommitMaster: cannot commit: %d: %s", err, stderrString.c_str());
+        LOG_ERROR("gitdbCommitMaster: cannot commit: %d: %s", err, subStderr.c_str());
        return -1;
     }
     return 0;
@@ -263,19 +244,13 @@ int gitdbCommitMaster(const std::string &gitRepoPath, const std::string &subpath
 
 int gitInit(const std::string &gitRepoPath)
 {
-    int err;
-
     Argv argv;
-    Subprocess *subp = 0;
 
     argv.set("git", "init", gitRepoPath.c_str(), 0);
-    subp = Subprocess::launch(argv.getv(), 0, 0);
-    if (!subp) return -1;
-    std::string stderrString = subp->getStderr(); // must be called before wait()
-    err = subp->wait();
-    delete subp;
+    std::string subStdout, subStderr;
+    int err = Subprocess::launchSync(argv.getv(), 0, 0, 0, 0, subStdout, subStderr);
     if (err) {
-        LOG_ERROR("gitInit error: %s (%s)", stderrString.c_str(), gitRepoPath.c_str());
+        LOG_ERROR("gitInit error: %s (%s)", subStderr.c_str(), gitRepoPath.c_str());
        return -1;
     }
     return 0;
@@ -284,7 +259,7 @@ int gitInit(const std::string &gitRepoPath)
 
 /**
  * @brief add an entry (ie: a commit) in the branch of the issue
- * @param gitRepoPath
+ * @param bareGitRepo Must be the path to a bare git repository
  * @param issueId
  * @param author
  * @param body
@@ -297,7 +272,7 @@ int gitInit(const std::string &gitRepoPath)
  * The atomicity and thread safety is not garanteed at this level.
  * The caller must manage his own mutex.
  */
-std::string GitIssue::addCommit(const std::string &gitRepoPath, const std::string &issueId,
+std::string GitIssue::addCommit(const std::string &bareGitRepo, const std::string &issueId,
                                 const std::string &author, long ctime, const std::string &body, const std::list<AttachedFileRef> &files)
 {
     // git commit in a branch issues/<id> without checking out the branch
@@ -310,18 +285,14 @@ std::string GitIssue::addCommit(const std::string &gitRepoPath, const std::strin
     // git commit-tree
     // git update-ref refs/heads/issues/<id>
 
-    std::string bareGitRepo = gitRepoPath + "/.git";
+    int err;
+    std::string subStdout, subStderr;
     Argv argv;
-    Subprocess *subp = 0;
 
     argv.set("git", "read-tree", "--empty", 0);
-    subp = Subprocess::launch(argv.getv(), 0, bareGitRepo.c_str());
-    if (!subp) return "";
-    std::string stderrString = subp->getStderr(); // must be called before wait()
-    int err = subp->wait();
-    delete subp;
+    err = Subprocess::launchSync(argv.getv(), 0, bareGitRepo.c_str(), 0, 0, subStdout, subStderr);
     if (err) {
-        LOG_ERROR("addCommit read-tree error %d: %s", err, stderrString.c_str());
+        LOG_ERROR("addCommit read-tree error %d: %s", err, subStderr.c_str());
        return "";
     }
 
@@ -331,29 +302,21 @@ std::string GitIssue::addCommit(const std::string &gitRepoPath, const std::strin
         // 100644 : Regular non-executable file
         argv.set("git", "update-index", "--add", "--cacheinfo", "100644",
                  afr->id.c_str(), afr->filename.c_str(), 0);
-        subp = Subprocess::launch(argv.getv(), 0, bareGitRepo.c_str());
-        if (!subp) return "";
-        std::string stderrString = subp->getStderr(); // must be called before wait()
-        int err = subp->wait();
-        delete subp;
+        err = Subprocess::launchSync(argv.getv(), 0, bareGitRepo.c_str(), 0, 0, subStdout, subStderr);
         if (err) {
-            LOG_ERROR("addCommit update-index error %d: %s", err, stderrString.c_str());
+            LOG_ERROR("addCommit update-index error %d: %s", err, subStderr.c_str());
             return "";
         }
     }
 
     argv.set("git", "write-tree", 0);
-    subp = Subprocess::launch(argv.getv(), 0, bareGitRepo.c_str());
-    if (!subp) return "";
-    std::string treeId = subp->getline();
-    stderrString = subp->getStderr(); // must be called before wait()
-    err = subp->wait();
-    delete subp;
+    err = Subprocess::launchSync(argv.getv(), 0, bareGitRepo.c_str(), 0, 0, subStdout, subStderr);
     if (err) {
-        LOG_ERROR("addCommit write-tree error %d: %s", err, stderrString.c_str());
+        LOG_ERROR("addCommit write-tree error %d: %s", err, subStderr.c_str());
         return "";
     }
 
+    std::string treeId = subStdout;
     trim(treeId);
     if (treeId.size() != SIZE_COMMIT_ID) {
         LOG_ERROR("addCommit write-tree error: treeId=%s", treeId.c_str());
@@ -363,24 +326,20 @@ std::string GitIssue::addCommit(const std::string &gitRepoPath, const std::strin
     // git show-ref issues/<id>
     std::string branchName = "issues/" + issueId;
     argv.set("git", "show-ref", "-s", branchName.c_str(), 0);
-    subp = Subprocess::launch(argv.getv(), 0, bareGitRepo.c_str());
-    if (!subp) return "";
-    std::string branchRef = subp->getline();
-    trim(branchRef);
-    stderrString = subp->getStderr(); // must be called before wait()
-    err = subp->wait();
-    delete subp;
+    err = Subprocess::launchSync(argv.getv(), 0, bareGitRepo.c_str(), 0, 0, subStdout, subStderr);
     if (err) {
-        if (stderrString.empty() && branchRef.empty()) {
+        if (subStderr.empty() && subStdout.empty()) {
             // This is a new issue. The git branch will be created later.
             LOG_INFO("addCommit: new issue to be created: %s", issueId.c_str());
 
         } else {
             LOG_ERROR("addCommit show-ref error %d: %s (branchRef=%s)",
-                      err, stderrString.c_str(), branchRef.c_str());
+                      err, subStderr.c_str(), subStdout.c_str());
             return "";
         }
     }
+    std::string branchRef = subStdout;
+    trim(branchRef);
 
     // check that branchRef is either empty or consistent with a commit id
     if (branchRef.size() && branchRef.size() != SIZE_COMMIT_ID) {
@@ -411,31 +370,22 @@ std::string GitIssue::addCommit(const std::string &gitRepoPath, const std::strin
             gitCommitterDate.c_str(),
             0);
 
-    subp = Subprocess::launch(argv.getv(), envp.getv(), bareGitRepo.c_str());
-    if (!subp) return "";
-
-    subp->write(body);
-    subp->closeStdin();
-    std::string commitId = subp->getline();
-    trim(commitId);
-    stderrString = subp->getStderr(); // must be called before wait()
-    err = subp->wait();
-    delete subp;
+    err = Subprocess::launchSync(argv.getv(), envp.getv(), bareGitRepo.c_str(), body.data(), body.size(), subStdout, subStderr);
     if (err) {
-        LOG_ERROR("addCommit commit-tree error %d: %s", err, stderrString.c_str());
+        LOG_ERROR("addCommit commit-tree error %d: %s", err, subStderr.c_str());
         return "";
     }
+
+    std::string commitId = subStdout;
+    trim(commitId);
+
 
     // git update-ref refs/heads/$branch $commit_id
     std::string branchPath = "refs/heads/" + branchName;
     argv.set("git", "update-ref", branchPath.c_str(), commitId.c_str(), 0);
-    subp = Subprocess::launch(argv.getv(), 0, bareGitRepo.c_str());
-    if (!subp) return "";
-    stderrString = subp->getStderr(); // must be called before wait()
-    err = subp->wait();
-    delete subp;
+    err = Subprocess::launchSync(argv.getv(), 0, bareGitRepo.c_str(), 0, 0, subStdout, subStderr);
     if (err) {
-        LOG_ERROR("addCommit update-ref error %d: %s", err, stderrString.c_str());
+        LOG_ERROR("addCommit update-ref error %d: %s", err, subStderr.c_str());
         return "";
     }
 
@@ -453,20 +403,15 @@ GitObject::GitObject(const std::string &gitRepoPath, const std::string &objectid
 int GitObject::getSize()
 {
     Argv argv;
-    Subprocess *subproc = 0;
+    std::string subStdout, subStderr;
 
     argv.set("git", "cat-file", "-s", id.c_str(), 0);
-    subproc = Subprocess::launch(argv.getv(), 0, path.c_str());
-    if (!subproc) return -1;
-    std::string stderrString = subproc->getStderr(); // must be called before wait()
-    std::string stdoutString = subproc->getStdout(); // must be called before wait()
-    int err = subproc->wait();
-    delete subproc;
+    int err = Subprocess::launchSync(argv.getv(), 0, path.c_str(), 0, 0, subStdout, subStderr);
     if (err) {
-        LOG_ERROR("addCommit read-tree error %d: %s", err, stderrString.c_str());
+        LOG_ERROR("addCommit cat-file error %d: %s", err, subStderr.c_str());
        return -1;
     }
-    return atoi(stdoutString.c_str());
+    return atoi(subStdout.c_str());
 }
 
 /** Open an object for reading
