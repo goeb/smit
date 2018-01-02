@@ -36,6 +36,7 @@
 #include "utils/logging.h"
 #include "utils/identifiers.h"
 #include "utils/stringTools.h"
+#include "utils/gitTools.h"
 #include "global.h"
 #include "mg_win32.h"
 #include "gitdb.h"

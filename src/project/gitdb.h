@@ -22,13 +22,6 @@ std::string gitdbStoreFile(const std::string &gitRepoPath, const char *data, siz
 int gitdbLsTree(const std::string &gitRepoPath, const std::string &treeid, std::list<AttachedFileRef> &files);
 int gitdbSetNotes(const std::string &gitRepoPath, const ObjectId &entryId, const std::string &data);
 
-
-
-// admin repo (to be moved else where)
-int gitdbCommitMaster(const std::string &gitRepoPath, const std::string &subpath,
-                      const std::string &data, const std::string &author);
-int gitInit(const std::string &gitRepoPath);
-
 class GitIssueList {
 
 public:
