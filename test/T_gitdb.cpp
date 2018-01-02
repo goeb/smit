@@ -47,7 +47,7 @@ void listEntries(const std::string &issueId)
 
 void test_commit(const char *text)
 {
-	std::list<std::string> files;
+	std::list<AttachedFileRef> files;
 	const char *body = "hello world\ngoodbye.";
 	if (text) body = text;
 	std::string eid = GitIssue::addCommit(".", "1", "John", 1511992000, body, files);
