@@ -1,7 +1,6 @@
 
 
 TODO
-	web update users
 	cli project, issue, user, etc
 	cli clone, pull, push
 	windows
