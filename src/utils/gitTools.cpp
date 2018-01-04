@@ -76,4 +76,26 @@ int gitCommit(const std::string &gitRepoPath, const std::string &author)
     return err;
 }
 
+int gitAddCommitDir(const std::string &gitRepoPath, const std::string &author)
+{
+    int err;
 
+    err = gitInit(gitRepoPath);
+    if (err) {
+        LOG_ERROR("gitAddCommitDir: cannot init '%s': %d", gitRepoPath.c_str(), err);
+        return -1;
+    }
+
+    err = gitAdd(gitRepoPath, ".");
+    if (err) {
+        LOG_ERROR("gitAddCommitDir: cannot add '%s': %d", gitRepoPath.c_str(), err);
+        return -1;
+    }
+
+    err = gitCommit(gitRepoPath, "local");
+    if (err) {
+        LOG_ERROR("gitAddCommitDir: cannot commit '%s': %d", gitRepoPath.c_str(), err);
+        return -1;
+    }
+    return 0;
+}

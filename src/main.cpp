@@ -36,6 +36,7 @@
 #include "utils/cpio.h"
 #include "utils/identifiers.h"
 #include "utils/filesystem.h"
+#include "utils/gitTools.h"
 #include "repository/db.h"
 #include "user/session.h"
 #include "global.h"
@@ -44,6 +45,9 @@
 #ifdef CURL_ENABLED
   #include "local/clone.h"
 #endif
+
+#define DEFAULT_REPO_CONFIG "editDelay 600\n" \
+                            "sessionDuration 129600\n"
 
 void usage()
 {
@@ -90,6 +94,7 @@ int initRepository(int argc, char **argv)
     const char *directory = ".";
 
     int c;
+    int err;
     int optionIndex = 0;
     struct option longOptions[] = { {NULL, 0, NULL, 0}  };
     while ((c = getopt_long(argc, argv, "", longOptions, &optionIndex)) != -1) {
@@ -143,17 +148,15 @@ int initRepository(int argc, char **argv)
     int r = cpioExtractFile("public", directory);
     if (r < 0) {
         LOG_ERROR("Error while extracting 'public/*': r=%d", r);
-        return 3;
+        return 1;
     }
 
-    // Extract the files 'templates' to the new repository
-    std::string templatesDir = directory;
-    templatesDir += "/" PATH_REPO;
-    mkdirs(templatesDir);
-    r = cpioExtractFile(P_TEMPLATES, templatesDir.c_str());
-    if (r < 0) {
-        LOG_ERROR("Error while extracting 'templates/*': r=%d", r);
-        return 4;
+    // init the git repo
+    std::string gitrepoPublic = std::string(directory) + "/public";
+    err = gitAddCommitDir(gitrepoPublic, "local-user");
+    if (err) {
+        LOG_ERROR("Error while initializing '%s': %d", gitrepoPublic.c_str(), err);
+        return 1;
     }
 
     r = UserBase::initUsersFile(directory);
@@ -161,6 +164,22 @@ int initRepository(int argc, char **argv)
         LOG_ERROR("Abort.");
         return 1;
     }
+
+    std::string gitrepoSmit = std::string(directory) + "/" PATH_REPO;
+
+    // init config
+    err = writeToFile(gitrepoSmit + "/config", DEFAULT_REPO_CONFIG);
+    if (err) {
+        LOG_ERROR("Error while initializing config in '%s': %d", gitrepoSmit.c_str(), err);
+        return 1;
+    }
+
+    err = gitAddCommitDir(gitrepoSmit, "local-user");
+    if (err) {
+        LOG_ERROR("Error while initializing '%s': %d", gitrepoSmit.c_str(), err);
+        return 1;
+    }
+
     LOG_INFO("Done.");
     return 0;
 }

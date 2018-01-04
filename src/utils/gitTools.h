@@ -8,6 +8,7 @@ int gitdbCommitMaster(const std::string &gitRepoPath, const std::string &subpath
 int gitInit(const std::string &gitRepoPath);
 int gitAdd(const std::string &gitRepoPath, const std::string &subpath);
 int gitCommit(const std::string &gitRepoPath, const std::string &author);
+int gitAddCommitDir(const std::string &gitRepoPath, const std::string &author);
 
 
 #endif // _gitTools_h
