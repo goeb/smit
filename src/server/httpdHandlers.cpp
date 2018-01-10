@@ -2124,8 +2124,8 @@ int begin_request_handler(const RequestContext *req)
     if (m != "GET" && m != "POST" && m != "HEAD" && m != "DELETE") return sendHttpHeader400(req, "invalid method");
 
     // public access to /public and /sm
-    if    ( (resource == "public") && (method == "GET")) return REQUEST_NOT_PROCESSED; // let mongoose handle it
-    else if (resource == "public") return sendHttpHeader400(req, "invalid method");
+    if    ( (resource == RESOURCE_PUBLIC) && (method == "GET")) return REQUEST_NOT_PROCESSED; // let mongoose handle it
+    else if (resource == RESOURCE_PUBLIC) return sendHttpHeader400(req, "invalid method");
 
     if      ( (resource == "sm") && (method == "GET") ) return httpGetSm(req, uri);
     else if ( (resource == "sm") && (method == "POST") ) return httpPostSm(req, uri);
