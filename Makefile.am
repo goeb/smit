@@ -54,6 +54,7 @@ smit_SOURCES = \
 			   src/main.cpp \
 			   src/server/httpdHandlers.cpp \
 			   src/server/httpdUtils.cpp \
+			   src/server/httpdHandlerGit.cpp \
 			   src/server/Trigger.cpp \
 			   src/server/HttpContext.cpp \
 			   src/rendering/renderingText.cpp \

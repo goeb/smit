@@ -532,7 +532,6 @@ HttpRequest::HttpRequest(const HttpClientContext &ctx)
     else if (httpCtx.tlsInsecure) curl_easy_setopt(curlHandle, CURLOPT_SSL_VERIFYPEER, 0);
 
     headerList = 0;
-    headerList = curl_slist_append(headerList, "Accept: " APP_X_SMIT);
     if (!httpCtx.cookieSessid.empty()) {
         std::string cookie = "Cookie: " + httpCtx.cookieSessid;
         headerList = curl_slist_append(headerList, cookie.c_str());

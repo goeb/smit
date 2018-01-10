@@ -140,8 +140,8 @@ am__smit_SOURCES_DIST = src/repository/db.cpp src/project/Entry.cpp \
 	src/utils/pipe.cpp src/utils/subprocess.cpp \
 	src/utils/gitTools.cpp src/main.cpp \
 	src/server/httpdHandlers.cpp src/server/httpdUtils.cpp \
-	src/server/Trigger.cpp src/server/HttpContext.cpp \
-	src/rendering/renderingText.cpp \
+	src/server/httpdHandlerGit.cpp src/server/Trigger.cpp \
+	src/server/HttpContext.cpp src/rendering/renderingText.cpp \
 	src/rendering/renderingJson.cpp src/rendering/renderingCsv.cpp \
 	src/rendering/renderingHtml.cpp \
 	src/rendering/ContextParameters.cpp \
@@ -181,6 +181,7 @@ am_smit_OBJECTS = src/repository/smit-db.$(OBJEXT) \
 	src/utils/smit-gitTools.$(OBJEXT) src/smit-main.$(OBJEXT) \
 	src/server/smit-httpdHandlers.$(OBJEXT) \
 	src/server/smit-httpdUtils.$(OBJEXT) \
+	src/server/smit-httpdHandlerGit.$(OBJEXT) \
 	src/server/smit-Trigger.$(OBJEXT) \
 	src/server/smit-HttpContext.$(OBJEXT) \
 	src/rendering/smit-renderingText.$(OBJEXT) \
@@ -510,8 +511,8 @@ smit_SOURCES = src/repository/db.cpp src/project/Entry.cpp \
 	src/utils/pipe.cpp src/utils/subprocess.cpp \
 	src/utils/gitTools.cpp src/main.cpp \
 	src/server/httpdHandlers.cpp src/server/httpdUtils.cpp \
-	src/server/Trigger.cpp src/server/HttpContext.cpp \
-	src/rendering/renderingText.cpp \
+	src/server/httpdHandlerGit.cpp src/server/Trigger.cpp \
+	src/server/HttpContext.cpp src/rendering/renderingText.cpp \
 	src/rendering/renderingJson.cpp src/rendering/renderingCsv.cpp \
 	src/rendering/renderingHtml.cpp \
 	src/rendering/ContextParameters.cpp \
@@ -720,6 +721,8 @@ src/server/smit-httpdHandlers.$(OBJEXT): src/server/$(am__dirstamp) \
 	src/server/$(DEPDIR)/$(am__dirstamp)
 src/server/smit-httpdUtils.$(OBJEXT): src/server/$(am__dirstamp) \
 	src/server/$(DEPDIR)/$(am__dirstamp)
+src/server/smit-httpdHandlerGit.$(OBJEXT): src/server/$(am__dirstamp) \
+	src/server/$(DEPDIR)/$(am__dirstamp)
 src/server/smit-Trigger.$(OBJEXT): src/server/$(am__dirstamp) \
 	src/server/$(DEPDIR)/$(am__dirstamp)
 src/server/smit-HttpContext.$(OBJEXT): src/server/$(am__dirstamp) \
@@ -854,6 +857,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/repository/$(DEPDIR)/smit-db.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/server/$(DEPDIR)/smit-HttpContext.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/server/$(DEPDIR)/smit-Trigger.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/server/$(DEPDIR)/smit-httpdHandlerGit.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/server/$(DEPDIR)/smit-httpdHandlers.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/server/$(DEPDIR)/smit-httpdUtils.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/third-party/$(DEPDIR)/smit-fnmatch.Po@am__quote@
@@ -1288,6 +1292,20 @@ src/server/smit-httpdUtils.obj: src/server/httpdUtils.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/server/httpdUtils.cpp' object='src/server/smit-httpdUtils.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/server/smit-httpdUtils.obj `if test -f 'src/server/httpdUtils.cpp'; then $(CYGPATH_W) 'src/server/httpdUtils.cpp'; else $(CYGPATH_W) '$(srcdir)/src/server/httpdUtils.cpp'; fi`
+
+src/server/smit-httpdHandlerGit.o: src/server/httpdHandlerGit.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/server/smit-httpdHandlerGit.o -MD -MP -MF src/server/$(DEPDIR)/smit-httpdHandlerGit.Tpo -c -o src/server/smit-httpdHandlerGit.o `test -f 'src/server/httpdHandlerGit.cpp' || echo '$(srcdir)/'`src/server/httpdHandlerGit.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/server/$(DEPDIR)/smit-httpdHandlerGit.Tpo src/server/$(DEPDIR)/smit-httpdHandlerGit.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/server/httpdHandlerGit.cpp' object='src/server/smit-httpdHandlerGit.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/server/smit-httpdHandlerGit.o `test -f 'src/server/httpdHandlerGit.cpp' || echo '$(srcdir)/'`src/server/httpdHandlerGit.cpp
+
+src/server/smit-httpdHandlerGit.obj: src/server/httpdHandlerGit.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/server/smit-httpdHandlerGit.obj -MD -MP -MF src/server/$(DEPDIR)/smit-httpdHandlerGit.Tpo -c -o src/server/smit-httpdHandlerGit.obj `if test -f 'src/server/httpdHandlerGit.cpp'; then $(CYGPATH_W) 'src/server/httpdHandlerGit.cpp'; else $(CYGPATH_W) '$(srcdir)/src/server/httpdHandlerGit.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/server/$(DEPDIR)/smit-httpdHandlerGit.Tpo src/server/$(DEPDIR)/smit-httpdHandlerGit.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/server/httpdHandlerGit.cpp' object='src/server/smit-httpdHandlerGit.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/server/smit-httpdHandlerGit.obj `if test -f 'src/server/httpdHandlerGit.cpp'; then $(CYGPATH_W) 'src/server/httpdHandlerGit.cpp'; else $(CYGPATH_W) '$(srcdir)/src/server/httpdHandlerGit.cpp'; fi`
 
 src/server/smit-Trigger.o: src/server/Trigger.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/server/smit-Trigger.o -MD -MP -MF src/server/$(DEPDIR)/smit-Trigger.Tpo -c -o src/server/smit-Trigger.o `test -f 'src/server/Trigger.cpp' || echo '$(srcdir)/'`src/server/Trigger.cpp

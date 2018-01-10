@@ -21,7 +21,7 @@ enum RenderingFormat { RENDERING_HTML,
                        RENDERING_CSV,
                        RENDERING_JSON,
                        RENDERING_ZIP,
-                       X_SMIT };
+                     };
 
 enum HttpEvent {
     H_GET,
@@ -74,6 +74,7 @@ std::string getServerCookie(const RequestContext *req, const std::string &prefix
 std::string getDeletedCookieString(const RequestContext *req, const std::string &prefix);
 void sendCookie(const RequestContext *request, const std::string &name, const std::string &value, int duration);
 int sendHttpHeaderInvalidResource(const RequestContext *request);
+std::string getUserAgent(const RequestContext *request);
 RenderingFormat getFormat(const RequestContext *request);
 int getFromCookie(const RequestContext *request, const std::string &prefix, std::string &value);
 std::list<std::list<std::string> > convertPostToTokens(std::string &postData);

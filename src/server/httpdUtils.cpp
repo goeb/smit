@@ -306,6 +306,11 @@ int sendHttpHeaderInvalidResource(const RequestContext *request)
     return 1; // request processed
 }
 
+std::string getUserAgent(const RequestContext *request)
+{
+    return request->getHeader("User-Agent");
+}
+
 enum RenderingFormat getFormat(const RequestContext *request)
 {
     std::string q = request->getQueryString();
@@ -323,7 +328,6 @@ enum RenderingFormat getFormat(const RequestContext *request)
         if (!contentType) return RENDERING_HTML; // no such header, return default value
         if (0 == strcasecmp(contentType, "text/html")) return RENDERING_HTML;
         if (0 == strcasecmp(contentType, "text/plain")) return RENDERING_TEXT;
-        if (0 == strcasecmp(contentType, APP_X_SMIT)) return X_SMIT;
     }
     return RENDERING_HTML;
 }

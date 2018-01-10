@@ -29,6 +29,7 @@
 
 #include "httpdHandlers.h"
 #include "httpdUtils.h"
+#include "httpdHandlerGit.h"
 #include "repository/db.h"
 #include "utils/logging.h"
 #include "utils/identifiers.h"
@@ -133,7 +134,7 @@ int httpPostSignin(const RequestContext *req)
     std::string redirect;
     enum RenderingFormat format = getFormat(req);
 
-    if (format == X_SMIT || format == RENDERING_TEXT) {
+    if (format == RENDERING_TEXT) {
         std::string cookieSessid = getServerCookie(req, COOKIE_SESSID_PREFIX, sessionId,
                                                    Database::getSessionDuration());
         sendHttpHeader204(req, cookieSessid.c_str());
@@ -408,7 +409,7 @@ void httpGetUser(const RequestContext *request, const User &signedInUser, const 
             sendHttpHeader200(request);
 
             enum RenderingFormat format = getFormat(request);
-            if (format == X_SMIT || format == RENDERING_TEXT) {
+            if (format == RENDERING_TEXT) {
                 // print the permissions of the signed-in user
                 request->printf("Content-Type: text/plain\r\n\r\n");
                 request->printf("%s\n", editedUser->serializePermissions().c_str());
@@ -862,35 +863,6 @@ int handleUnauthorizedAccess(const RequestContext *req, bool signedIn)
     return REQUEST_COMPLETED;
 }
 
-/** Serve a GET request to a file
-  *
-  * Access restriction must have been done before calling this function.
-  * (this function does not verify access rights)
-  */
-int httpGetFile(const RequestContext *request)
-{
-    if (getFormat(request) != X_SMIT) return REQUEST_NOT_PROCESSED; // let mongoose handle it
-
-    std::string uri = request->getUri();
-    std::string dir = Database::Db.pathToRepository + uri; // uri contains a leading /
-
-    DIR *d = openDir(dir.c_str());
-    if (!d) return REQUEST_NOT_PROCESSED; // not a directory: let Mongoose handle it
-
-    // send the directory contents
-    // walk through the directory and print the entries
-    sendHttpHeader200(request);
-    request->printf("Content-Type: text/directory\r\n\r\n");
-
-    std::string f;
-    while ((f = getNextFile(d)) != "") request->printf("%s\n", f.c_str());
-
-    closeDir(d);
-
-    return REQUEST_COMPLETED; // the request is completely handled
-}
-
-
 /** Get a list of the projects to which a user may access
   *
   * @param[out] pList
@@ -947,17 +919,7 @@ void httpGetProjects(const RequestContext *req, const User &u)
 
     if (format == RENDERING_TEXT) RText::printProjectList(req, pList);
     else if (format == RENDERING_CSV) RCsv::printProjectList(req, pList);
-    else if (format == X_SMIT) {
-        // print the list of the projects (for cloning tool)
-        req->printf("Content-Type: text/directory\r\n\r\n");
-        std::list<ProjectSummary>::iterator p;
-        FOREACH(p, pList) {
-           req->printf("%s\n", p->name.c_str());
-        }
-        req->printf("public\n");
-        req->printf(PATH_REPO "\n");
-
-    } else {
+    else {
 
         // get the list of users and roles for each project
         std::map<std::string, std::map<Role, std::set<std::string> > > usersRolesByProject;
@@ -1401,26 +1363,6 @@ void httpIssuesAccrossProjects(const RequestContext *req, const User &u, const s
 
 }
 
-void httpCloneIssues(const RequestContext *req, const Project &p)
-{
-    const std::map<std::string, std::list<std::string> > filterIn;
-    const std::map<std::string, std::list<std::string> > filterOut;
-
-    sendHttpHeader200(req);
-    req->printf("Content-Type: text/plain\r\n\r\n");
-
-    // get all the issues, sorted by id
-    std::vector<IssueCopy> issues;
-    p.search(0, filterIn, filterOut, "id", issues);
-    std::vector<IssueCopy>::const_iterator i;
-    FOREACH(i, issues) {
-        if (!i->first) continue;
-        if (!i->latest) continue;
-        req->printf("%s %s %s\n", i->id.c_str(),
-                    i->first->id.c_str(), i->latest->id.c_str());
-    }
-}
-
 void httpSendIssueList(const RequestContext *req, const Project &p,
                        const User &u, const std::vector<IssueCopy> &issueList)
 {
@@ -1532,8 +1474,6 @@ void httpGetListOfIssues(const RequestContext *req, const Project &p, const User
 
 void httpGetListOfIssues(const RequestContext *req, const Project &p, const User &u)
 {
-    if (getFormat(req) == X_SMIT) return httpCloneIssues(req, p); // used for cloning
-
     // get query string parameters:
     //     colspec    which fields are to be displayed in the table, and their order
     //     filter     select issues with fields of the given values
@@ -1592,19 +1532,6 @@ void httpGetListOfIssues(const RequestContext *req, const Project &p, const User
 
 void httpGetProject(const RequestContext *req, const Project &p, const User &u)
 {
-
-    if (getFormat(req) == X_SMIT) { // used for cloning
-        sendHttpHeader200(req);
-        req->printf("Content-Type: text/directory\r\n\r\n");
-
-        DIR *d = openDir(p.getPath().c_str());
-        std::string f;
-        while ((f = getNextFile(d)) != "") req->printf("%s\n", f.c_str());
-
-        closedir(d);
-        return;
-    }
-
     // case of HTML web client
 
     // redirect to list of issues
@@ -1917,72 +1844,52 @@ int httpGetIssue(const RequestContext *req, Project &p, const std::string &issue
         // for example because the issueId has also the entry id: id/entry
         return REQUEST_NOT_PROCESSED;
 
-    } else if (format == X_SMIT) {
-        // for cloning, print the entries in the right order
-        const Entry *e = issue.first;
+    }
 
-        if (!e) {
-            std::string msg = "null entry for issue: ";
-            msg += issue.id;
-            sendHttpHeader500(req, msg.c_str());
-            return REQUEST_COMPLETED;
-        }
+    sendHttpHeader200(req);
 
-        // print the entries in the rigth order
-        sendHttpHeader200(req);
-        req->printf("Content-Type: text/directory\r\n\r\n");
+    if (format == RENDERING_TEXT) RText::printIssue(req, issue);
 
-        while (e) {
-           req->printf("%s\n", e->id.c_str());
-           e = e->getNext();
-        }
+    else if (format == RENDERING_ZIP) {
+        ContextParameters ctx = ContextParameters(req, u, p.getProjectParameters());
+        RZip::printIssue(ctx, issue);
+
+    } else if (format == RENDERING_CSV) {
+        ProjectConfig pconfig = p.getConfig();
+        RCsv::printIssue(req, issue, pconfig);
+
+    } else if (format == RENDERING_JSON) {
+        RJson::printIssue(req, issue);
 
     } else {
 
-        sendHttpHeader200(req);
+        std::string q = req->getQueryString();
+        std::string amend = getFirstParamFromQueryString(q, "amend");
+        Entry *entryToBeAmended = 0;
 
-        if (format == RENDERING_TEXT) RText::printIssue(req, issue);
-
-        else if (format == RENDERING_ZIP) {
-            ContextParameters ctx = ContextParameters(req, u, p.getProjectParameters());
-            RZip::printIssue(ctx, issue);
-
-        } else if (format == RENDERING_CSV) {
-            ProjectConfig pconfig = p.getConfig();
-            RCsv::printIssue(req, issue, pconfig);
-
-        } else if (format == RENDERING_JSON) {
-            RJson::printIssue(req, issue);
-
-        } else {
-
-            std::string q = req->getQueryString();
-            std::string amend = getFirstParamFromQueryString(q, "amend");
-            Entry *entryToBeAmended = 0;
-
-            if (!amend.empty()) {
-                // look for the entry in the entries of the issue
-                Entry *e = issue.first;
-                while (e) {
-                    if (e->id == amend) break;
-                    e = e->getNext();
-                }
-                entryToBeAmended = e;
+        if (!amend.empty()) {
+            // look for the entry in the entries of the issue
+            Entry *e = issue.first;
+            while (e) {
+                if (e->id == amend) break;
+                e = e->getNext();
             }
-
-            ContextParameters ctx = ContextParameters(req, u, p.getProjectParameters());
-            std::string originView;
-            int r = getFromCookie(req, COOKIE_ORIGIN_VIEW, originView);
-            if (r == 0) ctx.originView = originView.c_str();
-
-            // clear this cookie, so that getting any other issue
-            // without coming from a view does not display get/next
-            // (get/next use a redirection from a view, so the cookie will be set for these)
-            req->printf("%s\r\n", getDeletedCookieString(req, COOKIE_ORIGIN_VIEW).c_str());
-            if (ctx.originView) LOG_DEBUG("originView=%s", ctx.originView);
-            RHtml::printPageIssue(ctx, issue, entryToBeAmended);
+            entryToBeAmended = e;
         }
+
+        ContextParameters ctx = ContextParameters(req, u, p.getProjectParameters());
+        std::string originView;
+        int r = getFromCookie(req, COOKIE_ORIGIN_VIEW, originView);
+        if (r == 0) ctx.originView = originView.c_str();
+
+        // clear this cookie, so that getting any other issue
+        // without coming from a view does not display get/next
+        // (get/next use a redirection from a view, so the cookie will be set for these)
+        req->printf("%s\r\n", getDeletedCookieString(req, COOKIE_ORIGIN_VIEW).c_str());
+        if (ctx.originView) LOG_DEBUG("originView=%s", ctx.originView);
+        RHtml::printPageIssue(ctx, issue, entryToBeAmended);
     }
+
     return REQUEST_COMPLETED;
 }
 
@@ -2195,6 +2102,12 @@ int begin_request_handler(const RequestContext *req)
 {
     LOG_FUNC();
 
+    std::string userAgent = getUserAgent(req);
+    if (0 == strncmp("git/", userAgent.c_str(), 4)) {
+        httpGitServeRequest(req);
+        return REQUEST_COMPLETED; // do not let mongoose handle this request further
+    }
+
     std::string uri = req->getUri();
     std::string method = req->getMethod();
     LOG_DIAG("%s %s", method.c_str(), uri.c_str());
@@ -2211,7 +2124,7 @@ int begin_request_handler(const RequestContext *req)
     if (m != "GET" && m != "POST" && m != "HEAD" && m != "DELETE") return sendHttpHeader400(req, "invalid method");
 
     // public access to /public and /sm
-    if    ( (resource == "public") && (method == "GET")) return httpGetFile(req);
+    if    ( (resource == "public") && (method == "GET")) return REQUEST_NOT_PROCESSED; // let mongoose handle it
     else if (resource == "public") return sendHttpHeader400(req, "invalid method");
 
     if      ( (resource == "sm") && (method == "GET") ) return httpGetSm(req, uri);
@@ -2235,8 +2148,6 @@ int begin_request_handler(const RequestContext *req)
 
     // at this point there is a signed-in user
     LOG_DIAG("User signed-in: %s", user.username.c_str());
-
-    bool handled = true; // by default, do not let Mongoose handle the request
 
     if      ( (resource == "signout") && (method == "POST") ) httpPostSignout(req, sessionId);
     else if ( (resource == "") && (method == "GET") ) httpGetProjects(req, user);
@@ -2283,9 +2194,6 @@ int begin_request_handler(const RequestContext *req)
         // case of a single project
         Project *p = projects.front();
 
-        bool isdir = false;
-        if (!uri.empty() && uri[uri.size()-1] == '/') isdir = true;
-
         resource = popToken(uri, '/');
         LOG_DEBUG("resource=%s", resource.c_str());
         if      ( resource.empty()       && (method == "GET") ) httpGetProject(req, *p, user);
@@ -2302,18 +2210,16 @@ int begin_request_handler(const RequestContext *req)
         else if ( (resource == "entries") && (method == "GET") ) httpGetListOfEntries(req, *p, user);
         else if ( (resource == "config") && (method == "GET") ) httpGetProjectConfig(req, *p, user);
         else if ( (resource == "config") && (method == "POST") ) httpPostProjectConfig(req, *p, user);
-        else if ( (resource == "views") && (method == "GET") && !isdir && uri.empty()) return httpGetFile(req);
         else if ( (resource == "views") && (method == "GET")) httpGetView(req, *p, uri, user);
         else if ( (resource == "views") && (method == "POST") ) httpPostView(req, *p, uri, user);
         else if ( (resource == "tags") && (method == "POST") ) httpPostTag(req, *p, uri, user);
         else if ( (resource == "reload") && (method == "POST") ) httpReloadProject(req, *p, user);
         else if ( (resource == RESOURCE_FILES) && (method == "GET") ) httpGetObject(req, *p, uri);
         else if ( (resource == "stat") && (method == "GET") ) httpGetStat(req, *p, user);
-        else handled = false;
+        else return REQUEST_NOT_PROCESSED; // other static file, let mongoose handle it
 
     }
 
-    if (handled) return REQUEST_COMPLETED; // do not let Mongoose handle the request
-    else return httpGetFile(req);
+    return REQUEST_COMPLETED; // do not let Mongoose handle the request
 }
 
