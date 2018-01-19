@@ -137,7 +137,7 @@ am__smit_SOURCES_DIST = src/repository/db.cpp src/project/Entry.cpp \
 	src/utils/stringTools.cpp src/utils/jTools.cpp \
 	src/utils/mutexTools.cpp src/utils/dateTools.cpp \
 	src/utils/logging.cpp src/utils/filesystem.cpp \
-	src/utils/pipe.cpp src/utils/subprocess.cpp \
+	src/utils/pipe.cpp src/utils/subprocess.cpp src/utils/argv.cpp \
 	src/utils/gitTools.cpp src/main.cpp \
 	src/server/httpdHandlers.cpp src/server/httpdUtils.cpp \
 	src/server/httpdHandlerGit.cpp src/server/Trigger.cpp \
@@ -178,6 +178,7 @@ am_smit_OBJECTS = src/repository/smit-db.$(OBJEXT) \
 	src/utils/smit-filesystem.$(OBJEXT) \
 	src/utils/smit-pipe.$(OBJEXT) \
 	src/utils/smit-subprocess.$(OBJEXT) \
+	src/utils/smit-argv.$(OBJEXT) \
 	src/utils/smit-gitTools.$(OBJEXT) src/smit-main.$(OBJEXT) \
 	src/server/smit-httpdHandlers.$(OBJEXT) \
 	src/server/smit-httpdUtils.$(OBJEXT) \
@@ -508,7 +509,7 @@ smit_SOURCES = src/repository/db.cpp src/project/Entry.cpp \
 	src/utils/stringTools.cpp src/utils/jTools.cpp \
 	src/utils/mutexTools.cpp src/utils/dateTools.cpp \
 	src/utils/logging.cpp src/utils/filesystem.cpp \
-	src/utils/pipe.cpp src/utils/subprocess.cpp \
+	src/utils/pipe.cpp src/utils/subprocess.cpp src/utils/argv.cpp \
 	src/utils/gitTools.cpp src/main.cpp \
 	src/server/httpdHandlers.cpp src/server/httpdUtils.cpp \
 	src/server/httpdHandlerGit.cpp src/server/Trigger.cpp \
@@ -701,6 +702,8 @@ src/utils/smit-pipe.$(OBJEXT): src/utils/$(am__dirstamp) \
 	src/utils/$(DEPDIR)/$(am__dirstamp)
 src/utils/smit-subprocess.$(OBJEXT): src/utils/$(am__dirstamp) \
 	src/utils/$(DEPDIR)/$(am__dirstamp)
+src/utils/smit-argv.$(OBJEXT): src/utils/$(am__dirstamp) \
+	src/utils/$(DEPDIR)/$(am__dirstamp)
 src/utils/smit-gitTools.$(OBJEXT): src/utils/$(am__dirstamp) \
 	src/utils/$(DEPDIR)/$(am__dirstamp)
 src/$(am__dirstamp):
@@ -867,6 +870,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/user/$(DEPDIR)/smit-AuthSha1.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/user/$(DEPDIR)/smit-notification.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/user/$(DEPDIR)/smit-session.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/utils/$(DEPDIR)/smit-argv.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/utils/$(DEPDIR)/smit-cpio.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/utils/$(DEPDIR)/smit-dateTools.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/utils/$(DEPDIR)/smit-filesystem.Po@am__quote@
@@ -1236,6 +1240,20 @@ src/utils/smit-subprocess.obj: src/utils/subprocess.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/utils/subprocess.cpp' object='src/utils/smit-subprocess.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/utils/smit-subprocess.obj `if test -f 'src/utils/subprocess.cpp'; then $(CYGPATH_W) 'src/utils/subprocess.cpp'; else $(CYGPATH_W) '$(srcdir)/src/utils/subprocess.cpp'; fi`
+
+src/utils/smit-argv.o: src/utils/argv.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/utils/smit-argv.o -MD -MP -MF src/utils/$(DEPDIR)/smit-argv.Tpo -c -o src/utils/smit-argv.o `test -f 'src/utils/argv.cpp' || echo '$(srcdir)/'`src/utils/argv.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/utils/$(DEPDIR)/smit-argv.Tpo src/utils/$(DEPDIR)/smit-argv.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/utils/argv.cpp' object='src/utils/smit-argv.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/utils/smit-argv.o `test -f 'src/utils/argv.cpp' || echo '$(srcdir)/'`src/utils/argv.cpp
+
+src/utils/smit-argv.obj: src/utils/argv.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/utils/smit-argv.obj -MD -MP -MF src/utils/$(DEPDIR)/smit-argv.Tpo -c -o src/utils/smit-argv.obj `if test -f 'src/utils/argv.cpp'; then $(CYGPATH_W) 'src/utils/argv.cpp'; else $(CYGPATH_W) '$(srcdir)/src/utils/argv.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/utils/$(DEPDIR)/smit-argv.Tpo src/utils/$(DEPDIR)/smit-argv.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/utils/argv.cpp' object='src/utils/smit-argv.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/utils/smit-argv.obj `if test -f 'src/utils/argv.cpp'; then $(CYGPATH_W) 'src/utils/argv.cpp'; else $(CYGPATH_W) '$(srcdir)/src/utils/argv.cpp'; fi`
 
 src/utils/smit-gitTools.o: src/utils/gitTools.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/utils/smit-gitTools.o -MD -MP -MF src/utils/$(DEPDIR)/smit-gitTools.Tpo -c -o src/utils/smit-gitTools.o `test -f 'src/utils/gitTools.cpp' || echo '$(srcdir)/'`src/utils/gitTools.cpp

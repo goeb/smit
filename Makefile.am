@@ -50,6 +50,7 @@ smit_SOURCES = \
 			   src/utils/filesystem.cpp \
 			   src/utils/pipe.cpp \
 			   src/utils/subprocess.cpp \
+			   src/utils/argv.cpp \
 			   src/utils/gitTools.cpp \
 			   src/main.cpp \
 			   src/server/httpdHandlers.cpp \
