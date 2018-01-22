@@ -77,7 +77,6 @@ int readMgreq(const RequestContext *request, std::string &data, size_t maxSize)
 
             return -1;
         }
-
     }
     LOG_DEBUG("data size=%lu", L(data.size()));
 
