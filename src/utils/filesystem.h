@@ -41,6 +41,7 @@ int mkdir(const std::string &path);
 int mkdir(const char *path, int mode);
 #endif
 
+std::string getAbsolutePath(const std::string &path);
 int lockFile(const std::string &path);
 void unlockFile(int fd);
 

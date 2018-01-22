@@ -48,6 +48,8 @@
 
 #include <unistd.h>
 #include <fcntl.h>
+#include <limits.h>
+#include <stdlib.h>
 
 #endif
 
@@ -466,6 +468,29 @@ int cmpContents(const char *contents, size_t size, const std::string &file)
 int cmpContents(const std::string &contents, const std::string &file)
 {
     return cmpContents(contents.data(), contents.size(), file);
+}
+
+
+std::string getAbsolutePath(const std::string &path)
+{
+    char result[MAX_PATH];
+
+#if defined(_WIN32)
+    DWORD retval = GetFullPathName(path.c_str(), MAX_PATH, result, NULL);
+    if (0 == retval) {
+        LOG_ERROR("realpath error for '%s': %d\n", path.c_str(), GetLastError());
+        return "";
+    }
+#else // linux
+    char *ptr = realpath(path.c_str(), result);
+    if (!ptr) {
+        LOG_ERROR("realpath error for '%s': %s\n", path.c_str(), strerror(errno));
+        return "";
+    }
+
+#endif
+
+    return std::string(result);
 }
 
 
