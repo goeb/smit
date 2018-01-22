@@ -219,11 +219,30 @@ int Subprocess::write(const char *data, size_t len)
 
 }
 
-/** Read bytes from the stdout or stderr of the child process
+/** Read bytes from the stdout of the child process
  */
 int Subprocess::read(char *buffer, size_t size)
 {
     size_t remaining = size;
+
+    if (!getlineBuffer.empty()) {
+        // if calls to getline and read are mixed, we need to keep
+        // the dara buffered by getline
+        if (getlineBuffer.size() < size) {
+            // all the buffered data shall be consumed
+            memcpy(buffer, getlineBuffer.data(), getlineBuffer.size());
+            remaining -= getlineBuffer.size();
+            getlineBuffer.clear();
+
+        } else {
+            // requested size <= buffered data size
+            // (there is more buffered data than requested)
+            memcpy(buffer, getlineBuffer.data(), size);
+            getlineBuffer = getlineBuffer.substr(size);
+            return size;
+        }
+    }
+
     while (remaining) {
 
         ssize_t n = ::read(pipes[SUBP_STDOUT][SUBP_READ], buffer, remaining);
@@ -247,6 +266,14 @@ int Subprocess::read(char *buffer, size_t size)
 int Subprocess::read(std::string &data, StandardFd fd)
 {
     data.clear();
+
+    if (fd == SUBP_STDOUT && !getlineBuffer.empty()) {
+        // if calls to getline and read are mixed, we need to keep
+        // the dara buffered by getline
+        data = getlineBuffer;
+        getlineBuffer.clear();
+    }
+
     char buffer[BUF_SIZ];
     while (1) {
 

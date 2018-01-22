@@ -42,7 +42,7 @@ private:
     int initPipes();
     void setupChildPipes();
     void setupParentPipes();
-    std::string getlineBuffer; // data read but not yet consumed
+    std::string getlineBuffer; // data read from stdout but not yet consumed
 
 };
 
