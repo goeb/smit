@@ -48,6 +48,7 @@ Database Database::Db;
 int dbLoad(const char *path)
 {
     Database::Db.pathToRepository = path;
+    Database::Db.absolutePath = getAbsolutePath(path);
     int ret = Database::Db.loadConfig(path);
     int n = Database::Db.loadProjects(path, true);
     return n;

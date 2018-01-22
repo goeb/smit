@@ -39,8 +39,10 @@ public:
     static void lookupProjectsWildcard(std::string &resource, const std::list<std::string> &projects,
                                 std::list<Project *> &result);
     static Project *getProject(const std::string &projectName);
-    std::string pathToRepository;
+    std::string pathToRepository; // path, possibly local
+    std::string absolutePath; // absolute full path
     inline static std::string getRootDir() { return Db.pathToRepository; }
+    inline static std::string getRootDirAbsolute() { return Db.absolutePath; }
     static std::list<std::string> getProjects();
     static Project *loadProject(const std::string &path); // load a project
     static Project *createProject(const std::string &projectName, const std::string &author);
