@@ -2,6 +2,7 @@
 #define _argv_h
 
 #include <vector>
+#include <string>
 #include <stdarg.h>
 
 /** Helper for passing command line arguments
@@ -16,6 +17,7 @@ public:
     void set(const char *first, ...);
     void append(const char *first, ...);
     char *const* getv();
+    std::string toString(const char *separator=", ");
 
 private:
     std::vector<const char*> argv;

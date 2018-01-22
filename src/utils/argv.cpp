@@ -26,6 +26,19 @@ char *const* Argv::getv()
     return (char *const*) &argv[0];
 }
 
+std::string Argv::toString(const char *separator)
+{
+    std::string result;
+    std::vector<const char*>::const_iterator arg;
+    for(arg = argv.begin(); arg < argv.end(); arg++) {
+        if (!*arg) continue;
+        if (separator && arg != argv.begin()) result += separator;
+        result += *arg;
+    }
+    return result;
+}
+
+
 void Argv::vappend(const char *first, va_list ap) {
     if (argv.empty()) {
         // nothing to do
