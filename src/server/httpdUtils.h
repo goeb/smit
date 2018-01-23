@@ -68,6 +68,7 @@ void sendHttpHeader413(const RequestContext *request, const char *msg);
 void sendHttpHeader404(const RequestContext *request);
 void sendHttpHeader409(const RequestContext *request);
 void sendHttpHeader500(const RequestContext *request, const char *msg);
+void sendBasicAuthenticationRequest(const RequestContext *req, const char *realm);
 int sendHttpRedirect(const RequestContext *request, const std::string &redirectUrl, const char *otherHeader);
 std::string mangleCookieName(const RequestContext *req, const std::string &prefix);
 std::string getServerCookie(const RequestContext *req, const std::string &prefix, const std::string &value, int maxAgeSeconds);

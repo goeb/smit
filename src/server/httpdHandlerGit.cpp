@@ -1,4 +1,8 @@
 
+#include <regex.h>
+#include <openssl/bio.h>
+#include <openssl/evp.h>
+
 #include "httpdHandlerGit.h"
 #include "httpdUtils.h"
 #include "restApi.h"
@@ -153,6 +157,72 @@ static void httpHandleGitFetch(const RequestContext *req, const std::string &res
     }
 }
 
+// regular expression of valid git resources
+static const char *GIT_RESOURCES[] = {
+    "/HEAD$",
+    "/info/refs$",
+    "/objects/info/alternates$",
+    "/objects/info/http-alternates$",
+    "/objects/info/packs$",
+    "/objects/[0-9a-f]{2}/[0-9a-f]{38}$",
+    "/objects/pack/pack-[0-9a-f]{40}\\.pack$",
+    "/objects/pack/pack-[0-9a-f]{40}\\.idx$",
+    "/git-upload-pack$",
+    "/git-receive-pack$",
+    0
+};
+
+static std::string extractResource(const std::string &uri)
+{
+    const char **ptr = GIT_RESOURCES;
+    while (*ptr) {
+        regex_t re;
+        regmatch_t out[1];
+        int err;
+        err = regcomp(&re, *ptr, REG_EXTENDED);
+        if (err) {
+            LOG_ERROR("Bogus regex in git resources table: %s", *ptr);
+            return "";
+        }
+        err = regexec(&re, uri.c_str(), 1, out, 0);
+        if (!err) {
+            // match
+            return uri.substr(0, out[0].rm_so);
+        }
+        ptr++;
+    }
+    return ""; // no match found
+}
+
+std::string base64decode(const std::string &b64string)
+{
+    BIO *bio, *b64;
+    const int BUF_SIZE = 1024;
+    char buffer[BUF_SIZE];
+
+    int resultMaxLen = (b64string.size()/4+1)*3; // +1 to protect against malformed input (not 4-aligned)
+    if (resultMaxLen > BUF_SIZE) {
+        LOG_ERROR("base64decode: input size too big (%s)", b64string.c_str());
+        return "";
+    }
+
+    bio = BIO_new_mem_buf(b64string.c_str(), -1);
+    b64 = BIO_new(BIO_f_base64());
+    bio = BIO_push(b64, bio);
+
+    BIO_set_flags(bio, BIO_FLAGS_BASE64_NO_NL); // do not use newlines to flush buffer
+    int n = BIO_read(bio, buffer, b64string.size());
+
+    BIO_free_all(bio);
+
+    if (n <= 0) {
+        LOG_ERROR("base64decode error (%s)", b64string.c_str());
+        return "";
+    }
+
+    return std::string(buffer, n);
+}
+
 /* Serve a git fetch or push
  *
  * if /public + fetch => ok
@@ -170,19 +240,43 @@ void httpGitServeRequest(const RequestContext *req)
     std::string uri = req->getUri();
     std::string service = getFirstParamFromQueryString(qs, "service");
 
-// TODO authenticate
-
-    return httpHandleGitFetch(req, uri);
-
-
-    // Do not check the method. Assume GET.
-
     LOG_DIAG("httpGitServeRequest: uri=%s, q=%s", uri.c_str(), qs.c_str());
 
-    if (uri == RESOURCE_PUBLIC && service == GIT_SERVICE_FETCH) {
-        // publc access, no authentication required
+    std::string resource = extractResource(uri);
+    if (resource.empty()) {
+        // error
+        LOG_ERROR("httpGitServeRequest: cannot extract resource (%s)", uri.c_str());
+        sendHttpHeader400(req, "Cannot extract resource");
+        return;
+    }
+
+    std::string firstPart = popToken(resource, '/');
+
+    if (firstPart == RESOURCE_PUBLIC && service == GIT_SERVICE_FETCH) {
+        // public access, no authentication required
         return httpHandleGitFetch(req, uri);
     }
+
+    // check authentication
+    const char *authHeader = req->getHeader("Authorization");
+    if (authHeader) {
+        std::string auth = authHeader;
+        std::string basic = popToken(auth, ' ');
+
+        // decode base64
+        auth = base64decode(auth);
+        std::string username = popToken(auth, ':');
+        std::string &password = auth;
+
+        LOG_DIAG("httpGitServeRequest: username=%s, password=%s", username.c_str(), password.c_str()); //TODO remove password
+    }
+
+    // xxxxxxxxxxxx
+
+    // authenticate
+    std::string realm = "Access for: " + resource;
+    sendBasicAuthenticationRequest(req, realm.c_str());
+
 }
 
 

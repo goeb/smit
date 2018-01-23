@@ -222,6 +222,15 @@ void sendHttpHeader500(const RequestContext *request, const char *msg)
     addHttpStat(H_500);
 }
 
+void sendBasicAuthenticationRequest(const RequestContext *req, const char *realm)
+{
+    LOG_DIAG("HTTP 401 BasicAuthenticationRequest");
+    req->printf("HTTP/1.1 401 Access Denied\r\n");
+    req->printf("WWW-Authenticate: Basic realm=\"%s\" charset=\"UTF-8\"\r\n", realm);
+    req->printf("Content-Length: 0\r\n");
+    req->printf("\r\n");
+}
+
 /**
   * @redirectUrl
   *    Must be an absolute path (starting with /)
