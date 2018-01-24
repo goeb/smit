@@ -51,6 +51,7 @@ smit_SOURCES = \
 			   src/utils/pipe.cpp \
 			   src/utils/subprocess.cpp \
 			   src/utils/argv.cpp \
+			   src/utils/base64.cpp \
 			   src/utils/gitTools.cpp \
 			   src/main.cpp \
 			   src/server/httpdHandlers.cpp \
@@ -58,6 +59,7 @@ smit_SOURCES = \
 			   src/server/httpdHandlerGit.cpp \
 			   src/server/Trigger.cpp \
 			   src/server/HttpContext.cpp \
+			   src/server/cgi.cpp \
 			   src/rendering/renderingText.cpp \
 			   src/rendering/renderingJson.cpp \
 			   src/rendering/renderingCsv.cpp \

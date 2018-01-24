@@ -16,8 +16,8 @@ class Argv {
 public:
     void set(const char *first, ...);
     void append(const char *first, ...);
-    char *const* getv();
-    std::string toString(const char *separator=", ");
+    char *const* getv() const;
+    std::string toString(const char *separator=", ") const;
 
 private:
     std::vector<const char*> argv;

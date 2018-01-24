@@ -1,7 +1,5 @@
 
 #include <regex.h>
-#include <openssl/bio.h>
-#include <openssl/evp.h>
 
 #include "httpdHandlerGit.h"
 #include "httpdUtils.h"
@@ -12,6 +10,8 @@
 #include "utils/argv.h"
 #include "utils/subprocess.h"
 #include "utils/logging.h"
+#include "utils/base64.h"
+#include "cgi.h"
 
 #define GIT_SERVICE_PUSH "git-receive-pack"
 #define GIT_SERVICE_FETCH "git-upload-pack"
@@ -28,11 +28,6 @@
     Host: localhost:8090
     User-Agent: git/2.11.0
 */
-
-struct HttpHeader {
-    std::string name;
-    std::string value;
-};
 
 /* Serve a git fetch request
  *
@@ -77,84 +72,8 @@ static void httpHandleGitFetch(const RequestContext *req, const std::string &res
              varContentType.c_str(),
              0);
 
-    Argv argv;
-    argv.set(GIT_HTTP_BACKEND, 0);
-    LOG_DIAG("httpHandleGitFetch: envp=%s", envp.toString().c_str());
-    Subprocess *subp = Subprocess::launch(argv.getv(), envp.getv(), getDirname(GIT_HTTP_BACKEND).c_str());
-    if (!subp) {
-        LOG_ERROR("Cannot launch CGI: %s", GIT_HTTP_BACKEND);
-        sendHttpHeader500(req, "cannot launch git backend");
-        return;
-    }
-
-    LOG_DIAG("httpHandleGitFetch: CGI launched");
-
-    // Send data from client to the CGI
-    const int SIZ = 4096;
-    char datachunk[SIZ];
-    int n; // number of bytes read
-
-    if (std::string("POST") == req->getMethod()) {
-        while ( (n = req->read(datachunk, SIZ)) > 0) {
-            subp->write(datachunk, n);
-        }
-    }
-
-    LOG_DIAG("httpHandleGitFetch: closeStdin");
-    subp->closeStdin();
-
-    // read the header from the CGI
-    std::list<HttpHeader> headers;
-    std::string statusText = "OK";
-    int status = 200;
-    // and process some HTTP headers
-    while (1) {
-        std::string line = subp->getline();
-        LOG_DIAG("httpHandleGitFetch: got line %s", line.c_str());
-
-        if (line.empty() || line == "\r\n") break; // end of headers
-
-        HttpHeader hh;
-        hh.name = popToken(line, ':', TOK_TRIM_BOTH);
-        trim(line); // remove surrounding blanks and ending CR or LF
-        hh.value = line;
-
-        if (hh.name == "Status") {
-            // eg : Status:  404 Not Found
-            // => we need to capture status=404 and statusText="Not Found"
-            std::string statusStr = popToken(line, ' ', TOK_TRIM_BOTH);
-            status = atoi(statusStr.c_str());
-            statusText = line;
-        }
-
-        headers.push_back(hh);
-    }
-
-    LOG_DIAG("httpHandleGitFetch: send status line");
-
-    // send the status line
-    req->printf("HTTP/1.1 %d %s\r\n", status, statusText.c_str());
-
-    // send the headers
-    // process the headers from the CGI before sending to the client
-    std::list<HttpHeader>::iterator header;
-    FOREACH(header, headers) {
-        req->printf("%s: %s\r\n", header->name.c_str(), header->value.c_str());
-    }
-
-    // end of headers
-    req->write("\r\n", 2);
-
-    // read the remaining bytes and send back to the client
-    while ( (n = subp->read(datachunk, SIZ)) > 0) {
-        req->write(datachunk, n);
-    }
-
-    std::string subpStderr = subp->getStderr();
-    int err = subp->wait();
-    if (err || !subpStderr.empty()) {
-        LOG_ERROR("httpHandleGitFetch: err=%d, strerror=%s", err, subpStderr.c_str());
-    }
+    launchCgi(req, GIT_HTTP_BACKEND, envp);
+    return;
 }
 
 // regular expression of valid git resources
@@ -172,6 +91,16 @@ static const char *GIT_RESOURCES[] = {
     0
 };
 
+/** Extract the smit related resource by removing the git-related part
+ *
+ * @param uri
+ *      The URI as received by the server
+ *      Eg: /public/info/refs
+ *
+ * @return
+ *      The smit resource
+ *      Eg: /public/
+ */
 static std::string extractResource(const std::string &uri)
 {
     const char **ptr = GIT_RESOURCES;
@@ -194,35 +123,6 @@ static std::string extractResource(const std::string &uri)
     return ""; // no match found
 }
 
-std::string base64decode(const std::string &b64string)
-{
-    BIO *bio, *b64;
-    const int BUF_SIZE = 1024;
-    char buffer[BUF_SIZE];
-
-    int resultMaxLen = (b64string.size()/4+1)*3; // +1 to protect against malformed input (not 4-aligned)
-    if (resultMaxLen > BUF_SIZE) {
-        LOG_ERROR("base64decode: input size too big (%s)", b64string.c_str());
-        return "";
-    }
-
-    bio = BIO_new_mem_buf(b64string.c_str(), -1);
-    b64 = BIO_new(BIO_f_base64());
-    bio = BIO_push(b64, bio);
-
-    BIO_set_flags(bio, BIO_FLAGS_BASE64_NO_NL); // do not use newlines to flush buffer
-    int n = BIO_read(bio, buffer, b64string.size());
-
-    BIO_free_all(bio);
-
-    if (n <= 0) {
-        LOG_ERROR("base64decode error (%s)", b64string.c_str());
-        return "";
-    }
-
-    return std::string(buffer, n);
-}
-
 /* Serve a git fetch or push
  *
  * if /public + fetch => ok
@@ -240,15 +140,18 @@ void httpGitServeRequest(const RequestContext *req)
     std::string uri = req->getUri();
     std::string service = getFirstParamFromQueryString(qs, "service");
 
-    LOG_DIAG("httpGitServeRequest: uri=%s, q=%s", uri.c_str(), qs.c_str());
-
     std::string resource = extractResource(uri);
+
+    LOG_DIAG("httpGitServeRequest: uri=%s, resource=%s, q=%s", uri.c_str(), resource.c_str(), qs.c_str());
+
     if (resource.empty()) {
         // error
         LOG_ERROR("httpGitServeRequest: cannot extract resource (%s)", uri.c_str());
         sendHttpHeader400(req, "Cannot extract resource");
         return;
     }
+
+    // Depending on the resource, proceed with the authentication
 
     std::string firstPart = popToken(resource, '/');
 

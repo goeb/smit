@@ -21,12 +21,12 @@ void Argv::append(const char *first, ...) {
     va_end(ap);
 }
 
-char *const* Argv::getv()
+char *const* Argv::getv() const
 {
     return (char *const*) &argv[0];
 }
 
-std::string Argv::toString(const char *separator)
+std::string Argv::toString(const char *separator) const
 {
     std::string result;
     std::vector<const char*>::const_iterator arg;
