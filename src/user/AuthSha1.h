@@ -11,7 +11,7 @@
 struct AuthSha1 : Auth {
     std::string hash;
     std::string salt;
-    virtual int authenticate(char *password);
+    virtual int authenticate(const char *password);
     virtual std::string serialize();
     virtual Auth *createCopy() const;
     static Auth *deserialize(std::list<std::string> &tokens);

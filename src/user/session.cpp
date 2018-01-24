@@ -195,7 +195,7 @@ void User::setPasswd(const std::string &password)
   *    -1 failure
   *    -2 failure, password expired
   */
-int User::authenticate(char *passwd)
+int User::authenticate(const char *passwd)
 {
     if (authHandler) {
         return authHandler->authenticate(passwd);
@@ -860,6 +860,27 @@ std::string SessionBase::requestSession(const std::string &username, char *passw
         LOG_INFO("Session request for unknown user '%s'", username.c_str());
     }
     return sessid;
+}
+
+const User *SessionBase::authenticate(const std::string &username, const std::string &passwd)
+{
+    User *usr = UserBase::getUser(username);
+    LOG_DIAG("Authenticating: %s", username.c_str());
+    if (usr) {
+        int r = usr->authenticate(passwd.c_str());
+        if (r == 0) {
+            // authentication succeeded
+            LOG_DEBUG("User '%s' authenticated successfully", username.c_str());
+            return usr;
+        } else {
+            return 0;
+        }
+    } else {
+        LOG_DIAG("No such user: %s", username.c_str());
+    }
+
+    return 0;
+
 }
 
 /** Return a user object

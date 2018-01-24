@@ -19,7 +19,7 @@
   *    0 success
   *   -1 error
   */
-int AuthLdap::authenticate(char *password)
+int AuthLdap::authenticate(const char *password)
 {
     LOG_DIAG("ldapAuthenticate(%s@%s)", dname.c_str(), uri.c_str());
 
@@ -42,12 +42,13 @@ int AuthLdap::authenticate(char *password)
 
     struct berval cred;
     cred.bv_len = strlen(password);
-    cred.bv_val = password;
+    cred.bv_val = strdup(password);
 
     struct berval *servcred = 0;
 
     // User authentication
     r = ldap_sasl_bind_s(ld, dname.c_str(), 0, &cred, 0, 0, &servcred);
+    free(cred.bv_val);
     if (r != LDAP_SUCCESS) {
         LOG_ERROR("ldap_simple_bind_s error for '%s': %s", dname.c_str(), ldap_err2string(r));
         result = -1;

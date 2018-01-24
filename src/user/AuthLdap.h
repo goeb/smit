@@ -12,7 +12,7 @@
 struct AuthLdap : public Auth {
     std::string uri; // eg: ldaps://example.com:389
     std::string dname; // Distinguished name. Eg: uid=john,ou=people,dc=example,dc=com
-    virtual int authenticate(char *password);
+    virtual int authenticate(const char *password);
     virtual std::string serialize();
     static Auth *deserialize(std::list<std::string> &tokens);
     virtual Auth *createCopy() const;

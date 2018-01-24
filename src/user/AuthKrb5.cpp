@@ -13,7 +13,7 @@
   *   -2, error, password expired
   *   -1, other authentication error
   */
-int AuthKrb5::authenticate(char *password)
+int AuthKrb5::authenticate(const char *password)
 {
     std::string localUsername = username;
     if (!alternateUsername.empty()) localUsername = alternateUsername;

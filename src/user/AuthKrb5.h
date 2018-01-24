@@ -11,7 +11,7 @@
 struct AuthKrb5 : public Auth {
     std::string realm; // Must generally be upper case
     std::string alternateUsername; // Optional. If empty, then username is used.
-    virtual int authenticate(char *password);
+    virtual int authenticate(const char *password);
     virtual std::string serialize();
     virtual Auth *createCopy() const;
     static Auth *deserialize(std::list<std::string> &tokens);

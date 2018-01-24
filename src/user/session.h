@@ -55,7 +55,7 @@ public:
     std::string serializeAuth();
     int loadAuth(std::list<std::string> &tokens);
     void setPasswd(const std::string &passwd);
-    int authenticate(char *passwd);
+    int authenticate(const char *passwd);
     void consolidateRoles();
     bool shouldBeNotified(const Entry *entry, const IssueCopy &oldIssue);
 };
@@ -111,6 +111,7 @@ struct Session {
 class SessionBase {
 public:
     static std::string requestSession(const std::string &username, char *passwd); // return session id
+    static const User *authenticate(const std::string &username, const std::string &passwd);
 
     static User getLoggedInUser(const std::string &sessionId); // return user name
     static int destroySession(const std::string &sessionId);

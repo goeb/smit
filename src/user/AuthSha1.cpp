@@ -11,7 +11,7 @@
   *   -2, error, password expired
   *   -1, other authentication error
   */
-int AuthSha1::authenticate(char *password)
+int AuthSha1::authenticate(const char *password)
 {
     std::string tmp = password;
     tmp += salt;
