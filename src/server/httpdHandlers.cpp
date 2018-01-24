@@ -2104,6 +2104,7 @@ int begin_request_handler(const RequestContext *req)
 
     std::string userAgent = getUserAgent(req);
     if (0 == strncmp("git/", userAgent.c_str(), 4)) {
+        // TODO check query string instead of user agent
         httpGitServeRequest(req);
         return REQUEST_COMPLETED; // do not let mongoose handle this request further
     }

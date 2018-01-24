@@ -11,6 +11,7 @@
 #include "utils/subprocess.h"
 #include "utils/logging.h"
 #include "utils/base64.h"
+#include "user/session.h"
 #include "cgi.h"
 
 #define GIT_SERVICE_PUSH "git-receive-pack"
@@ -29,7 +30,7 @@
     User-Agent: git/2.11.0
 */
 
-/* Serve a git fetch request
+/* Serve a git fetch or push request
  *
  * Access restriction must have been done before calling this function.
  * (this function does not verify access rights)
@@ -38,20 +39,12 @@
  *     Eg: /project/info/refs
  *         /project/HEAD
  *
- * Examples of the smit resources:
- *
- * Resource as set in the git client      Directory on the server side
- * -------------------------------------------------------------------
- * http://server:port/project/         -> project/.git
- * http://server:port/project/.entries -> project/.entries
- * http://server:port/public/          -> public/.git
- * http://server:port/.smit            -> .smit
- *
  */
-static void httpHandleGitFetch(const RequestContext *req, const std::string &resourcePath)
+static void httpCgiGitBackend(const RequestContext *req, const std::string &resourcePath, const std::string &username="")
 {
     // run a CGI git-http-backend
 
+    std::string varRemoteUser;
     std::string varGitRoot = "GIT_PROJECT_ROOT=" + Database::getRootDirAbsolute();
     std::string varPathInfo = "PATH_INFO=" + resourcePath;
     std::string varQueryString = "QUERY_STRING=";
@@ -71,6 +64,11 @@ static void httpHandleGitFetch(const RequestContext *req, const std::string &res
              varGitHttpExport.c_str(),
              varContentType.c_str(),
              0);
+
+    if (username.size()) {
+        varRemoteUser = "REMOTE_USER=" + username;
+        envp.append(varRemoteUser.c_str(), 0);
+    }
 
     launchCgi(req, GIT_HTTP_BACKEND, envp);
     return;
@@ -97,11 +95,14 @@ static const char *GIT_RESOURCES[] = {
  *      The URI as received by the server
  *      Eg: /public/info/refs
  *
+ * @param[out] gitPart
+ *      Eg: /info/refs
+ *
  * @return
  *      The smit resource
- *      Eg: /public/
+ *      Eg: /public
  */
-static std::string extractResource(const std::string &uri)
+static std::string extractResource(const std::string &uri, std::string &gitPart)
 {
     const char **ptr = GIT_RESOURCES;
     while (*ptr) {
@@ -116,6 +117,7 @@ static std::string extractResource(const std::string &uri)
         err = regexec(&re, uri.c_str(), 1, out, 0);
         if (!err) {
             // match
+            gitPart = uri.substr(out[0].rm_so);
             return uri.substr(0, out[0].rm_so);
         }
         ptr++;
@@ -133,14 +135,16 @@ static std::string extractResource(const std::string &uri)
  * if /<p>/.git + push => require admin
  * if /<p>/.entries + fetch => require ro+
  * if /<p>/.entries + push => require rw+
-*/
+ *
+ */
 void httpGitServeRequest(const RequestContext *req)
 {
     std::string qs = req->getQueryString();
     std::string uri = req->getUri();
     std::string service = getFirstParamFromQueryString(qs, "service");
 
-    std::string resource = extractResource(uri);
+    std::string gitUriPart;
+    std::string resource = extractResource(uri, gitUriPart);
 
     LOG_DIAG("httpGitServeRequest: uri=%s, resource=%s, q=%s", uri.c_str(), resource.c_str(), qs.c_str());
 
@@ -155,30 +159,61 @@ void httpGitServeRequest(const RequestContext *req)
 
     std::string firstPart = popToken(resource, '/');
 
-    if (firstPart == RESOURCE_PUBLIC && service == GIT_SERVICE_FETCH) {
+    if ( (firstPart == RESOURCE_PUBLIC && service == GIT_SERVICE_FETCH) ||
+         (firstPart == RESOURCE_PUBLIC && gitUriPart == "/" GIT_SERVICE_FETCH) ) {
         // public access, no authentication required
-        return httpHandleGitFetch(req, uri);
+        httpCgiGitBackend(req, uri);
+        return;
     }
 
     // check authentication
     const char *authHeader = req->getHeader("Authorization");
-    if (authHeader) {
-        std::string auth = authHeader;
-        std::string basic = popToken(auth, ' ');
 
-        // decode base64
-        auth = base64decode(auth);
-        std::string username = popToken(auth, ':');
-        std::string &password = auth;
-
-        LOG_DIAG("httpGitServeRequest: username=%s, password=%s", username.c_str(), password.c_str()); //TODO remove password
+    if (!authHeader) {
+        // request authentication to the client
+        std::string realm = "Access for: " + resource;
+        sendBasicAuthenticationRequest(req, realm.c_str());
+        return;
     }
 
-    // xxxxxxxxxxxx
+    // check given authentication info
+    std::string auth = authHeader;
+    popToken(auth, ' '); // remove "Basic"
 
-    // authenticate
-    std::string realm = "Access for: " + resource;
-    sendBasicAuthenticationRequest(req, realm.c_str());
+    // decode base64
+    auth = base64decode(auth);
+    std::string username = popToken(auth, ':');
+    std::string &password = auth;
+
+    LOG_DIAG("httpGitServeRequest: username=%s", username.c_str());
+
+    const User *usr = SessionBase::authenticate(username, password);
+
+    if (!usr) {
+        return sendHttpHeader403(req);
+    }
+
+    // At this point we now have a valid user authenticated
+
+    // Check if this user has sufficient privilege
+
+    if (firstPart == RESOURCE_PUBLIC) {
+        if (usr->superadmin) httpCgiGitBackend(req, uri, usr->username);
+        else sendHttpHeader403(req);
+        return;
+    }
+
+    if (firstPart == ".smit") {
+        if (usr->superadmin) httpCgiGitBackend(req, uri, usr->username);
+        else sendHttpHeader403(req);
+        return;
+    }
+
+    // At this point we expect the uri to point to a project
+
+    // TODO
+
+    LOG_ERROR("httpGitServeRequest: not implemented");
 
 }
 
