@@ -73,6 +73,7 @@ public:
     static int addUser(const User &u, const std::string &author);
     static int deleteUser(const std::string &username, const std::string &author);
     static int hotReload();
+    static int hotReload_NL(); // no lock
     static void computePermissions();
 
     static std::set<std::string> getUsersOfProject(const std::string &project);
@@ -85,6 +86,7 @@ public:
     static const std::string getLocalInterfaceUser() { return localInterfaceUsername; }
     static std::list<Recipient> getRecipients(const std::string &projectName,
                                               const Entry *entry, const IssueCopy &oldIssue);
+    static inline Locker &getLocker() { return UserDb.locker; }
 
 private:
     static UserBase UserDb;

@@ -184,6 +184,16 @@ int sendHttpHeader400(const RequestContext *request, const char *msg)
 
     return REQUEST_COMPLETED; // request completely handled
 }
+
+void sendHttpHeader401(const RequestContext *req)
+{
+    LOG_INFO("HTTP 401 Unauthorized: %s %s?%s", req->getMethod(), req->getUri(), req->getQueryString());
+    req->printf("HTTP/1.1 401 Unauthorized\r\n\r\n");
+    req->printf("401 Unauthorized\r\n");
+    addHttpStat(H_401);
+}
+
+
 void sendHttpHeader403(const RequestContext *req)
 {
     LOG_INFO("HTTP 403 Forbidden: %s %s?%s", req->getMethod(), req->getUri(), req->getQueryString());

@@ -91,6 +91,12 @@ int Database::loadConfig(const std::string &path)
     return err;
 }
 
+int Database::reloadConfig()
+{
+    return loadConfig(pathToRepository);
+}
+
+
 
 /** Recursively load all projects under the given path
   *

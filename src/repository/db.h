@@ -53,8 +53,11 @@ public:
     Project *getNextProject(const Project *p) const;
     static int loadProjects(const std::string &path, bool recurse);
     int loadConfig(const std::string &path);
+    int reloadConfig();
     static inline int getEditDelay() { return Db.editDelay; }
     static inline int getSessionDuration() { return Db.sessionDuration; }
+
+    static inline Locker &getLocker() { return Db.locker; }
 
 private:
     std::map<std::string, Project*> projects;

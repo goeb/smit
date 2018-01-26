@@ -39,6 +39,10 @@ git log issues/<id>
 Notes:
 	tag_x,tag_y
 
+Git hooks server-side
+	/public, /.smit, /<p>/
+	git config receive.denyCurrentBranch updateInsteads
+
 ---------
 repo-v4
 ├── project-a/

@@ -592,6 +592,15 @@ int UserBase::deleteUser(const std::string &username, const std::string &author)
 int UserBase::hotReload()
 {
     LOG_INFO("Hot reload of users");
+    LOCK_SCOPE(UserDb.locker, LOCK_READ_WRITE);
+
+
+    return hotReload_NL();
+}
+
+int UserBase::hotReload_NL()
+{
+    LOG_INFO("Hot reload of users NO LOCK");
 
     std::map<std::string, User*> newUsers;
     int r = load(UserDb.Repository, newUsers);
@@ -606,8 +615,6 @@ int UserBase::hotReload()
 
     // Ok, the files were loaded successfully.
 
-    LOCK_SCOPE(UserDb.locker, LOCK_READ_WRITE);
-
     // free the old objects
     std::map<std::string, User*>::iterator u;
     FOREACH(u, UserDb.configuredUsers) {
@@ -618,6 +625,7 @@ int UserBase::hotReload()
 
     return 0;
 }
+
 
 /** Compute the permissions of all users
   *

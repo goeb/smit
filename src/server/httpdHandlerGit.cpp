@@ -12,6 +12,8 @@
 #include "utils/logging.h"
 #include "utils/base64.h"
 #include "user/session.h"
+#include "repository/db.h"
+
 #include "cgi.h"
 
 #define GIT_SERVICE_PUSH "git-receive-pack"
@@ -40,7 +42,8 @@
  *         /project/HEAD
  *
  */
-static void httpCgiGitBackend(const RequestContext *req, const std::string &resourcePath, const std::string &username="")
+static void httpCgiGitBackend(const RequestContext *req, const std::string &resourcePath,
+                              const std::string &username, const std::string &role)
 {
     // run a CGI git-http-backend
 
@@ -50,6 +53,7 @@ static void httpCgiGitBackend(const RequestContext *req, const std::string &reso
     std::string varQueryString = "QUERY_STRING=";
     std::string varMethod = "REQUEST_METHOD=" + std::string(req->getMethod());
     std::string varGitHttpExport = "GIT_HTTP_EXPORT_ALL=";
+    std::string varRole = "SMIT_ROLE=" + role;
 
     const char *contentType = getContentTypeString(req);
     std::string varContentType = "CONTENT_TYPE=" + std::string(contentType);
@@ -63,6 +67,7 @@ static void httpCgiGitBackend(const RequestContext *req, const std::string &reso
              varMethod.c_str(),
              varGitHttpExport.c_str(),
              varContentType.c_str(),
+             varRole.c_str(), // the pre-receive hook shall take this into account
              0);
 
     if (username.size()) {
@@ -146,7 +151,8 @@ void httpGitServeRequest(const RequestContext *req)
     std::string gitUriPart;
     std::string resource = extractResource(uri, gitUriPart);
 
-    LOG_DIAG("httpGitServeRequest: uri=%s, resource=%s, q=%s", uri.c_str(), resource.c_str(), qs.c_str());
+    LOG_DIAG("httpGitServeRequest: method=%s, uri=%s, resource=%s, q=%s",
+             req->getMethod(), uri.c_str(), resource.c_str(), qs.c_str());
 
     if (resource.empty()) {
         // error
@@ -156,13 +162,13 @@ void httpGitServeRequest(const RequestContext *req)
     }
 
     // Depending on the resource, proceed with the authentication
-
-    std::string firstPart = popToken(resource, '/');
+    std::string tmpResource = resource;
+    std::string firstPart = popToken(tmpResource, '/');
 
     if ( (firstPart == RESOURCE_PUBLIC && service == GIT_SERVICE_FETCH) ||
          (firstPart == RESOURCE_PUBLIC && gitUriPart == "/" GIT_SERVICE_FETCH) ) {
         // public access, no authentication required
-        httpCgiGitBackend(req, uri);
+        httpCgiGitBackend(req, uri, "", "");
         return;
     }
 
@@ -190,31 +196,82 @@ void httpGitServeRequest(const RequestContext *req)
     const User *usr = SessionBase::authenticate(username, password);
 
     if (!usr) {
-        return sendHttpHeader403(req);
+        return sendHttpHeader401(req);
     }
 
     // At this point we now have a valid user authenticated
+    std::string rolename;
 
     // Check if this user has sufficient privilege
 
     if (firstPart == RESOURCE_PUBLIC) {
-        if (usr->superadmin) httpCgiGitBackend(req, uri, usr->username);
-        else sendHttpHeader403(req);
-        return;
+        // consider only the push, as the fetch has been handled earlier
+        if (!usr->superadmin) return sendHttpHeader403(req);
+
+        // no lock needed. Rely on the git http backend CGI
+        httpCgiGitBackend(req, uri, usr->username, "superadmin");
+
+    } else if (firstPart == ".smit") {
+        if (!usr->superadmin) return sendHttpHeader403(req);
+
+        // lock
+        LOCK_SCOPE_I(UserBase::getLocker(), LOCK_READ_WRITE, 1);
+        LOCK_SCOPE_I(Database::getLocker(), LOCK_READ_WRITE, 2);
+
+        httpCgiGitBackend(req, uri, usr->username, "superadmin");
+
+        if (gitUriPart == "/" GIT_SERVICE_PUSH) {
+            // update users and repo config
+            int err;
+            err = Database::Db.reloadConfig();
+            if (err) {
+                LOG_ERROR("Cannot reload smit config after push");
+            }
+            err = UserBase::hotReload_NL();
+            if (err) {
+                LOG_ERROR("Cannot reload smit users config after push");
+            }
+        }
+
+        // unlock, automacially done when leaving the scope
+
+    } else {
+        // At this point we expect the uri to point to a project
+
+        // projet name
+        std::string projectName = resource;
+        trim(projectName, "/");
+
+        Project *pro = Database::getProject(projectName);
+        if (!pro) {
+            LOG_ERROR("httpGitServeRequest: invalid project name: %s", projectName.c_str());
+            return sendHttpHeader403(req);
+        }
+
+        // get user role on this project
+        Role role = usr->getRole(projectName);
+
+        // The access is granted:
+        // - if the user has permission RO, RW or ADMIN and requests a git pull
+        // - if the user has permission RW or ADMIN and requests a git push
+
+        if (role > ROLE_RO) return sendHttpHeader403(req);
+        if (role > ROLE_RW && service == GIT_SERVICE_PUSH) return sendHttpHeader403(req);
+
+        rolename = roleToString(role);
+
+        // lock TODO
+        //pro->
+
+        httpCgiGitBackend(req, uri, usr->username, rolename);
+
+        if (service == GIT_SERVICE_PUSH) {
+            // update project entries if pushed entries
+            //TODO
+        }
+
+        // unlock
     }
-
-    if (firstPart == ".smit") {
-        if (usr->superadmin) httpCgiGitBackend(req, uri, usr->username);
-        else sendHttpHeader403(req);
-        return;
-    }
-
-    // At this point we expect the uri to point to a project
-
-    // TODO
-
-    LOG_ERROR("httpGitServeRequest: not implemented");
-
 }
 
 

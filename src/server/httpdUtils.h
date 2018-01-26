@@ -29,6 +29,7 @@ enum HttpEvent {
     H_OTHER, // other than GET or POST
     H_2XX, // any request with code 2xx
     H_400,
+    H_401,
     H_403,
     H_413, // any other 4xx
     H_500,
@@ -64,6 +65,7 @@ void sendHttpHeader204(const RequestContext *request, const char *extraHeader);
 int sendHttpHeader304(const RequestContext *request);
 int sendHttpHeader400(const RequestContext *request, const char *msg);
 void sendHttpHeader403(const RequestContext *req);
+void sendHttpHeader401(const RequestContext *req);
 void sendHttpHeader413(const RequestContext *request, const char *msg);
 void sendHttpHeader404(const RequestContext *request);
 void sendHttpHeader409(const RequestContext *request);
