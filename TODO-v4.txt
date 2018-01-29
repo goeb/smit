@@ -4,7 +4,7 @@ TODO
 	cli clone, pull, push
 	windows
 	heroku
-
+	remove support for nested projects, but keep projects being in sub-dirs
 
 store using a git repository.
 
@@ -41,7 +41,12 @@ Notes:
 
 Git hooks server-side
 	/public, /.smit, /<p>/
-	git config receive.denyCurrentBranch updateInsteads
+		git config receive.denyCurrentBranch updateInsteads
+	/<p>/
+		update:
+			branch master <=> SMIT_ROLE == admin
+			branches issues/* <=> SMIT_ROLE == rw
+
 
 ---------
 repo-v4
@@ -63,7 +68,6 @@ repo-v4
         └── permissions
 
 project-v4
-├── .entries/
 ├── .git/
 ├── .smip/
 │   ├── config

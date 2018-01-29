@@ -16,7 +16,7 @@
 #include "ProjectConfig.h"
 
 #define PATH_SMIP ".smip"
-#define PATH_ENTRIES_DB ".entries"
+#define PATH_ENTRIES_DB ".git" // considered as bare git repository
 #define PATH_OBJECTS     PATH_SMIP "/objects"
 #define PATH_TEMPLATES   P_TEMPLATES
 #define PATH_PROJECT_CONFIG PATH_SMIP "/config"

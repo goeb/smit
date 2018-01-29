@@ -309,12 +309,10 @@ convert_v3_to_v4_tags() {
 info $0 $*
 convert_v3_to_v4_master "$src_v3" "$dst_v4"
 
-git init --bare "$dst_v4/.entries"
-
 MAPPING_ENTRIES_V3_V4=$(mktemp)
 
-convert_v3_to_v4_issues "$src_v3" "$dst_v4/.entries" "$MAPPING_ENTRIES_V3_V4"
-convert_v3_to_v4_tags "$src_v3" "$dst_v4/.entries" "$MAPPING_ENTRIES_V3_V4"
+convert_v3_to_v4_issues "$src_v3" "$dst_v4/.git" "$MAPPING_ENTRIES_V3_V4"
+convert_v3_to_v4_tags "$src_v3" "$dst_v4/.git" "$MAPPING_ENTRIES_V3_V4"
 
 # restore dst_v4 staging index
 git -C "$dst_v4" reset master
