@@ -18,9 +18,12 @@ public:
     void append(const char *first, ...);
     char *const* getv() const;
     std::string toString(const char *separator=", ") const;
+    ~Argv();
+    Argv(const Argv &other);
+    Argv() {}
 
 private:
-    std::vector<const char*> argv;
+    std::vector<char*> argv;
     void vappend(const char *first, va_list ap);
 };
 
