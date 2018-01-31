@@ -1,4 +1,6 @@
 
+#include <string>
+
 #include "cgi.h"
 #include "global.h"
 #include "httpdUtils.h"
@@ -11,12 +13,29 @@ struct HttpHeader {
     std::string value;
 };
 
-void launchCgi(const RequestContext *req, const std::string &exePath, const Argv &envp)
+void launchCgi(const RequestContext *req, const std::string &exePath, Argv envp)
 {
     Argv argv;
     argv.set(exePath.c_str(), 0);
 
-    LOG_DIAG("launchCgi: exe=%s, envp=%s", exePath.c_str(), envp.toString().c_str());
+    // Add all headers as HTTP_* variables
+    std::string key, value;
+    int i = 0;
+    while (req->getHeader(i, key, value)) {
+        // convert upper case, and change - to _
+        std::string::iterator c;
+        FOREACH(c, key) {
+            if (*c == '-') *c = '_';
+            else *c = ::toupper(*c);
+        }
+
+        std::string var = "HTTP_" + key + "=" + value;
+        envp.append(var.c_str(), 0);
+
+        i++;
+    }
+
+    //LOG_DIAG("launchCgi: exe=%s, envp=%s", exePath.c_str(), envp.toString().c_str());
 
     std::string dir = getDirname(exePath); // CGI must be laucnhed in its directory
 

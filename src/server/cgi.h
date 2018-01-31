@@ -6,6 +6,6 @@
 #include "HttpContext.h"
 #include "utils/argv.h"
 
-void launchCgi(const RequestContext *req, const std::string &exePath, const Argv &envp);
+void launchCgi(const RequestContext *req, const std::string &exePath, Argv envp);
 
 #endif
