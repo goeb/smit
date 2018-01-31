@@ -2,7 +2,7 @@
 #define _HttpContext_h
 
 #include <string>
-#include "mongoose.h"
+#include "third-party/mongoose.h"
 
 // functions not officially exposed by mongoose
 extern "C" {
@@ -73,6 +73,7 @@ public:
     inline const char *getMethod() const { return mg_get_request_info(conn)->request_method; }
     inline const char *getUri() const { return mg_get_request_info(conn)->uri; }
     inline const char *getHeader(const char *h) const { return mg_get_header(conn, h); }
+    bool getHeader(int i, std::string &key, std::string &value) const ;
     inline int isSSL() const { return mg_get_request_info(conn)->is_ssl; }
     inline std::string getListeningPort() const { return serverContext->getListeningPort(); }
     inline void setServerContext(MongooseServerContext *sc) { serverContext = sc; }

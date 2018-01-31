@@ -128,3 +128,33 @@ void MongooseRequestContext::sendObject(const std::string &basemane, const std::
     mg_send_object(conn, basemane.c_str(), realpath.c_str());
 }
 
+/** Get HTTP header #i
+ *
+ * @param i            index
+ * @param[out] key     key of the HTTP header
+ * @param[out] value   value associated  with the key
+ * @return
+ *      true if no header found at index i
+ *      false otherwise
+ *
+ *  Usage:
+ *      MongooseRequestContext *req; // initialized somehow
+ *      int i = 0;
+ *      std::string key, value;
+ *      while (req->getHeader(i, key, value)) {
+ *          ...
+ *          i++;
+ *      }
+ */
+bool MongooseRequestContext::getHeader(int i, std::string &key, std::string &value) const
+{
+    struct mg_request_info *req = mg_get_request_info(conn);
+    if (!req) return false;
+
+    if (i < 0 || i >= req->num_headers) return false;
+
+    key = req->http_headers[i].name;
+    value = req->http_headers[i].value;
+
+    return true;
+}
