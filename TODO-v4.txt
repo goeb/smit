@@ -41,7 +41,9 @@ Notes:
 
 Git hooks server-side
 	/public, /.smit, /<p>/
-		git config receive.denyCurrentBranch updateInsteads
+		git config receive.denyCurrentBranch updateInstead
+		git config receive.denyNonFastForwards true
+		git config receive.denyDeletes true
 	/<p>/
 		update:
 			branch master <=> SMIT_ROLE == admin
