@@ -116,7 +116,7 @@ am_T_gitdb_OBJECTS = T_gitdb.$(OBJEXT) ../src/utils/pipe.$(OBJEXT) \
 	../src/project/gitdb.$(OBJEXT) ../src/utils/gitTools.$(OBJEXT) \
 	../src/utils/stringTools.$(OBJEXT) \
 	../src/utils/filesystem.$(OBJEXT) \
-	../src/utils/subprocess.$(OBJEXT)
+	../src/utils/subprocess.$(OBJEXT) ../src/utils/argv.$(OBJEXT)
 T_gitdb_OBJECTS = $(am_T_gitdb_OBJECTS)
 T_gitdb_LDADD = $(LDADD)
 am_T_parseConfig_OBJECTS = T_parseConfig.$(OBJEXT) \
@@ -132,7 +132,7 @@ am_T_stringTools_OBJECTS = T_stringTools.$(OBJEXT) \
 T_stringTools_OBJECTS = $(am_T_stringTools_OBJECTS)
 T_stringTools_LDADD = $(LDADD)
 am_T_subprocess_OBJECTS = T_subprocess.$(OBJEXT) \
-	../src/utils/subprocess.$(OBJEXT)
+	../src/utils/subprocess.$(OBJEXT) ../src/utils/argv.$(OBJEXT)
 T_subprocess_OBJECTS = $(am_T_subprocess_OBJECTS)
 T_subprocess_LDADD = $(LDADD)
 am_get_random_value_OBJECTS = get_random_value.$(OBJEXT)
@@ -549,9 +549,10 @@ T_gitdb_SOURCES = T_gitdb.cpp \
 				  ../src/utils/gitTools.cpp \
 				  ../src/utils/stringTools.cpp \
 				  ../src/utils/filesystem.cpp \
-				  ../src/utils/subprocess.cpp
+				  ../src/utils/subprocess.cpp \
+				  ../src/utils/argv.cpp
 
-T_subprocess_SOURCES = T_subprocess.cpp ../src/utils/subprocess.cpp
+T_subprocess_SOURCES = T_subprocess.cpp ../src/utils/subprocess.cpp ../src/utils/argv.cpp
 AM_CPPFLAGS = -I$(top_srcdir)/src \
 			  -I$(top_srcdir)/src/utils \
 			  -I$(top_srcdir)/src/project \
@@ -636,6 +637,8 @@ T_Args$(EXEEXT): $(T_Args_OBJECTS) $(T_Args_DEPENDENCIES) $(EXTRA_T_Args_DEPENDE
 	../src/utils/$(DEPDIR)/$(am__dirstamp)
 ../src/utils/subprocess.$(OBJEXT): ../src/utils/$(am__dirstamp) \
 	../src/utils/$(DEPDIR)/$(am__dirstamp)
+../src/utils/argv.$(OBJEXT): ../src/utils/$(am__dirstamp) \
+	../src/utils/$(DEPDIR)/$(am__dirstamp)
 
 T_gitdb$(EXEEXT): $(T_gitdb_OBJECTS) $(T_gitdb_DEPENDENCIES) $(EXTRA_T_gitdb_DEPENDENCIES) 
 	@rm -f T_gitdb$(EXEEXT)
@@ -674,6 +677,7 @@ distclean-compile:
 
 @AMDEP_TRUE@@am__include@ @am__quote@../src/$(DEPDIR)/Args.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@../src/project/$(DEPDIR)/gitdb.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@../src/utils/$(DEPDIR)/argv.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@../src/utils/$(DEPDIR)/filesystem.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@../src/utils/$(DEPDIR)/gitTools.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@../src/utils/$(DEPDIR)/parseConfig.Po@am__quote@

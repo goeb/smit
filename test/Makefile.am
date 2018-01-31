@@ -33,8 +33,9 @@ T_gitdb_SOURCES = T_gitdb.cpp \
 				  ../src/utils/gitTools.cpp \
 				  ../src/utils/stringTools.cpp \
 				  ../src/utils/filesystem.cpp \
-				  ../src/utils/subprocess.cpp
-T_subprocess_SOURCES = T_subprocess.cpp ../src/utils/subprocess.cpp
+				  ../src/utils/subprocess.cpp \
+				  ../src/utils/argv.cpp
+T_subprocess_SOURCES = T_subprocess.cpp ../src/utils/subprocess.cpp ../src/utils/argv.cpp
 
 AM_CPPFLAGS = -I$(top_srcdir)/src \
 			  -I$(top_srcdir)/src/utils \
