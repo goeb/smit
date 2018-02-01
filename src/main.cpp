@@ -644,7 +644,7 @@ int cmdServe(int argc, char **argv)
         exit(1);
     }
 
-    r = setupGitServerSideHooks(repo);
+    r = setupGitServerConfig(repo);
     if (r < 0) {
         LOG_ERROR("Cannot setup server side hooks. Aborting.");
         exit(1);
