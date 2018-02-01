@@ -74,6 +74,7 @@ smit_SOURCES = \
 			   src/user/notification.cpp \
 			   src/local/console.cpp \
 			   src/local/localClient.cpp \
+			   src/local/cmdProject.cpp \
 			   src/Args.cpp \
 			   src/third-party/mongoose.c \
 			   src/third-party/fnmatch.c

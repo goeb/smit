@@ -9,9 +9,8 @@ TODO
 store using a git repository.
 
 Roadmap:
-- step 1: http server, same http interface, storage in a git repo
-	* config, views
-	* admin (users, permissions)
+- step 1: completed
+- step 1.1: smit local commands (project, user, issue)
 - step 2: smit clone
 - step 3; smit pull & merge
 - step 4: smit push
