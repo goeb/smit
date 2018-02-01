@@ -142,7 +142,7 @@ am__smit_SOURCES_DIST = src/repository/db.cpp src/project/Entry.cpp \
 	src/server/httpdHandlers.cpp src/server/httpdUtils.cpp \
 	src/server/httpdHandlerGit.cpp src/server/Trigger.cpp \
 	src/server/HttpContext.cpp src/server/cgi.cpp \
-	src/rendering/renderingText.cpp \
+	src/server/gitconfig.cpp src/rendering/renderingText.cpp \
 	src/rendering/renderingJson.cpp src/rendering/renderingCsv.cpp \
 	src/rendering/renderingHtml.cpp \
 	src/rendering/ContextParameters.cpp \
@@ -187,6 +187,7 @@ am_smit_OBJECTS = src/repository/smit-db.$(OBJEXT) \
 	src/server/smit-Trigger.$(OBJEXT) \
 	src/server/smit-HttpContext.$(OBJEXT) \
 	src/server/smit-cgi.$(OBJEXT) \
+	src/server/smit-gitconfig.$(OBJEXT) \
 	src/rendering/smit-renderingText.$(OBJEXT) \
 	src/rendering/smit-renderingJson.$(OBJEXT) \
 	src/rendering/smit-renderingCsv.$(OBJEXT) \
@@ -516,7 +517,7 @@ smit_SOURCES = src/repository/db.cpp src/project/Entry.cpp \
 	src/server/httpdHandlers.cpp src/server/httpdUtils.cpp \
 	src/server/httpdHandlerGit.cpp src/server/Trigger.cpp \
 	src/server/HttpContext.cpp src/server/cgi.cpp \
-	src/rendering/renderingText.cpp \
+	src/server/gitconfig.cpp src/rendering/renderingText.cpp \
 	src/rendering/renderingJson.cpp src/rendering/renderingCsv.cpp \
 	src/rendering/renderingHtml.cpp \
 	src/rendering/ContextParameters.cpp \
@@ -737,6 +738,8 @@ src/server/smit-HttpContext.$(OBJEXT): src/server/$(am__dirstamp) \
 	src/server/$(DEPDIR)/$(am__dirstamp)
 src/server/smit-cgi.$(OBJEXT): src/server/$(am__dirstamp) \
 	src/server/$(DEPDIR)/$(am__dirstamp)
+src/server/smit-gitconfig.$(OBJEXT): src/server/$(am__dirstamp) \
+	src/server/$(DEPDIR)/$(am__dirstamp)
 src/rendering/$(am__dirstamp):
 	@$(MKDIR_P) src/rendering
 	@: > src/rendering/$(am__dirstamp)
@@ -868,6 +871,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/server/$(DEPDIR)/smit-HttpContext.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/server/$(DEPDIR)/smit-Trigger.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/server/$(DEPDIR)/smit-cgi.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/server/$(DEPDIR)/smit-gitconfig.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/server/$(DEPDIR)/smit-httpdHandlerGit.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/server/$(DEPDIR)/smit-httpdHandlers.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/server/$(DEPDIR)/smit-httpdUtils.Po@am__quote@
@@ -1389,6 +1393,20 @@ src/server/smit-cgi.obj: src/server/cgi.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/server/cgi.cpp' object='src/server/smit-cgi.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/server/smit-cgi.obj `if test -f 'src/server/cgi.cpp'; then $(CYGPATH_W) 'src/server/cgi.cpp'; else $(CYGPATH_W) '$(srcdir)/src/server/cgi.cpp'; fi`
+
+src/server/smit-gitconfig.o: src/server/gitconfig.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/server/smit-gitconfig.o -MD -MP -MF src/server/$(DEPDIR)/smit-gitconfig.Tpo -c -o src/server/smit-gitconfig.o `test -f 'src/server/gitconfig.cpp' || echo '$(srcdir)/'`src/server/gitconfig.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/server/$(DEPDIR)/smit-gitconfig.Tpo src/server/$(DEPDIR)/smit-gitconfig.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/server/gitconfig.cpp' object='src/server/smit-gitconfig.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/server/smit-gitconfig.o `test -f 'src/server/gitconfig.cpp' || echo '$(srcdir)/'`src/server/gitconfig.cpp
+
+src/server/smit-gitconfig.obj: src/server/gitconfig.cpp
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/server/smit-gitconfig.obj -MD -MP -MF src/server/$(DEPDIR)/smit-gitconfig.Tpo -c -o src/server/smit-gitconfig.obj `if test -f 'src/server/gitconfig.cpp'; then $(CYGPATH_W) 'src/server/gitconfig.cpp'; else $(CYGPATH_W) '$(srcdir)/src/server/gitconfig.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/server/$(DEPDIR)/smit-gitconfig.Tpo src/server/$(DEPDIR)/smit-gitconfig.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/server/gitconfig.cpp' object='src/server/smit-gitconfig.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/server/smit-gitconfig.obj `if test -f 'src/server/gitconfig.cpp'; then $(CYGPATH_W) 'src/server/gitconfig.cpp'; else $(CYGPATH_W) '$(srcdir)/src/server/gitconfig.cpp'; fi`
 
 src/rendering/smit-renderingText.o: src/rendering/renderingText.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/rendering/smit-renderingText.o -MD -MP -MF src/rendering/$(DEPDIR)/smit-renderingText.Tpo -c -o src/rendering/smit-renderingText.o `test -f 'src/rendering/renderingText.cpp' || echo '$(srcdir)/'`src/rendering/renderingText.cpp

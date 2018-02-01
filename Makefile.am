@@ -60,6 +60,7 @@ smit_SOURCES = \
 			   src/server/Trigger.cpp \
 			   src/server/HttpContext.cpp \
 			   src/server/cgi.cpp \
+			   src/server/gitconfig.cpp \
 			   src/rendering/renderingText.cpp \
 			   src/rendering/renderingJson.cpp \
 			   src/rendering/renderingCsv.cpp \
