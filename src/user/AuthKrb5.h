@@ -16,7 +16,7 @@ struct AuthKrb5 : public Auth {
     virtual Auth *createCopy() const;
     static Auth *deserialize(std::list<std::string> &tokens);
     inline ~AuthKrb5() { }
-    inline AuthKrb5(const std::string &u, const std::string &r, const std::string &p) :
+    inline AuthKrb5(const std::string &u, const std::string &p, const std::string &r) :
         Auth(AUTH_KRB5, u), realm(r), alternateUsername(p) {}
     virtual std::string getParameter(const char *param);
 

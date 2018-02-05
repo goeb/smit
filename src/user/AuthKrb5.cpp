@@ -118,7 +118,7 @@ Auth *AuthKrb5::deserialize(std::list<std::string> &tokens)
         return 0;
     }
 
-    return new AuthKrb5("", realm, alternateUsername);
+    return new AuthKrb5("", alternateUsername, realm);
 }
 
 std::string AuthKrb5::getParameter(const char *param)
