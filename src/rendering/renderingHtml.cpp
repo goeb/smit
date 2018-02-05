@@ -951,7 +951,7 @@ void RHtml::printUsers(const ResponseContext *req, const std::list<User> &usersL
 
         // print authentication parameters
         req->printf("<td class=\"sm_users\">\n");
-        std::string authString = u->getAuthString();
+        std::string authString = u->getAuthType();
         if (!authString.empty()) {
             req->printf("%s", htmlEscape(authString).c_str());
         } else {

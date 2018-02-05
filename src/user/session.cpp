@@ -258,9 +258,9 @@ bool User::shouldBeNotified(const Entry *entry, const IssueCopy &oldIssue)
     return false;
 }
 
-/** Return textual information on the parameters of authentication
+/** Return serialized configuration of the authentication
  */
-std::string User::getAuthString() const
+std::string User::getAuthSerial() const
 {
     if (!authHandler) return "no authentication method";
     return authHandler->serialize();

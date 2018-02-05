@@ -192,7 +192,7 @@ int showUser(const User &u)
 {
     printf("%s", u.username.c_str());
     if (u.superadmin) printf(" (superadmin)");
-    printf(", %s", u.getAuthString().c_str());
+    printf(", %s", u.getAuthSerial().c_str());
     printf("\n");
 
     std::map<std::string, enum Role>::const_iterator project;

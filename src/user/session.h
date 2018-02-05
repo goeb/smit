@@ -59,7 +59,7 @@ public:
     bool shouldBeNotified(const Entry *entry, const IssueCopy &oldIssue);
 
     // Authentication related methods
-    std::string getAuthString() const;
+    std::string getAuthSerial() const;
     void deleteAuth();
     bool hasAuth();
     void copyAuthFrom(const User &other);
