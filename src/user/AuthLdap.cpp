@@ -72,8 +72,8 @@ std::string AuthLdap::serialize()
 {
     std::string result;
     result += serializeSimpleToken(AUTH_LDAP);
-    result += " -uri " + serializeSimpleToken(dname);
-    result += " -dname " + serializeSimpleToken(uri);
+    result += " -uri " + serializeSimpleToken(uri);
+    result += " -dname " + serializeSimpleToken(dname);
     return result;
 }
 
