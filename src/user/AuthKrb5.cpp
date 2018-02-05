@@ -32,7 +32,7 @@ int AuthKrb5::authenticate(const char *password)
         return -1;
     }
 
-    std::string principal = username + "@" + realm;
+    std::string principal = localUsername + "@" + realm;
     code = krb5_parse_name(ctx, principal.c_str(), &user);
     if (code) {
         LOG_ERROR("krb5_parse_name: %d", code);
@@ -65,16 +65,16 @@ int AuthKrb5::authenticate(const char *password)
         if (code == KRB5KDC_ERR_KEY_EXP) {
             // Password has expired
             LOG_DIAG("krb5_get_init_creds_opt_alloc: password expired for user %s",
-                     username.c_str());
+                     localUsername.c_str());
             result = -2;
         } else {
-            LOG_ERROR("Kerberos authentication failed for user '%s': %d", username.c_str(), code);
+            LOG_ERROR("Kerberos authentication failed for user '%s': %d", localUsername.c_str(), code);
             result = -1;
         }
     } else {
         // success
         result = 0;
-        LOG_DIAG("Kerberos authentication success for user '%s'", username.c_str());
+        LOG_DIAG("Kerberos authentication success for user '%s'", localUsername.c_str());
     }
 
     krb5_get_init_creds_opt_free(ctx, options);
@@ -121,3 +121,16 @@ Auth *AuthKrb5::deserialize(std::list<std::string> &tokens)
     return new AuthKrb5("", realm, alternateUsername);
 }
 
+std::string AuthKrb5::getParameter(const char *param)
+{
+    if (0 == strcmp(param, "primary")) {
+        if (!alternateUsername.empty()) return alternateUsername;
+        else return username;
+
+    } else if (0 == strcmp(param, "realm")) {
+        return realm;
+
+    }
+
+    return "";
+}

@@ -427,18 +427,22 @@ void RHtml::printPageUser(const ContextParameters &ctx, const User *u)
 
         vn.script +=  "addPermission('sm_permissions', '', '');\n";
         vn.script +=  "addPermission('sm_permissions', '', '');\n";
-        if (u && u->authHandler) {
-            if (u->authHandler->type == "sha1") {
+        if (u) {
+            std::string authType = u->getAuthType();
+            if (authType == "sha1") {
                 vn.script += "setAuthSha1();\n";
+
 #ifdef KERBEROS_ENABLED
-            } else if (u->authHandler->type == "krb5") {
-                AuthKrb5 *ah = dynamic_cast<AuthKrb5*>(u->authHandler);
-                vn.script += "setAuthKrb5('" + enquoteJs(ah->alternateUsername) + "', '" + enquoteJs(ah->realm) + "');\n";
+            } else if (authType == "krb5") {
+                std::string primary = u->getAuthParameter("primary");
+                std::string realm = u->getAuthParameter("realm");
+                vn.script += "setAuthKrb5('" + enquoteJs(primary) + "', '" + enquoteJs(realm) + "');\n";
 #endif
 #ifdef LDAP_ENABLED
-            } else if (u->authHandler->type == "ldap") {
-                AuthLdap *ah = dynamic_cast<AuthLdap*>(u->authHandler);
-                vn.script += "setAuthLdap('" + enquoteJs(ah->uri) + "', '" + enquoteJs(ah->dname) + "');\n";
+            } else if (authType == "ldap") {
+                std::string uri = u->getAuthParameter("uri");
+                std::string dname = u->getAuthParameter("dname");
+                vn.script += "setAuthLdap('" + enquoteJs(uri) + "', '" + enquoteJs(dname) + "');\n";
 #endif
             }
             // else, it may be empty, if no auth type is assigned
@@ -947,8 +951,9 @@ void RHtml::printUsers(const ResponseContext *req, const std::list<User> &usersL
 
         // print authentication parameters
         req->printf("<td class=\"sm_users\">\n");
-        if (u->authHandler) {
-            req->printf("%s", htmlEscape(u->authHandler->type).c_str());
+        std::string authString = u->getAuthString();
+        if (!authString.empty()) {
+            req->printf("%s", htmlEscape(authString).c_str());
         } else {
             req->printf("none");
         }

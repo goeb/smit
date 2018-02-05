@@ -110,3 +110,10 @@ Auth *AuthLdap::createCopy() const
     return ah;
 }
 
+std::string AuthLdap::getParameter(const char *param)
+{
+    if (0 == strcmp(param, "uri")) return uri;
+    if (0 == strcmp(param, "dname")) return dname;
+
+    return "";
+}

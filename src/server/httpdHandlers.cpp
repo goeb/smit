@@ -131,12 +131,13 @@ int httpPostSignin(const RequestContext *req)
 
     // Sign-in accepted
 
+    std::string cookieSessid = getServerCookie(req, COOKIE_SESSID_PREFIX, sessionId,
+                                               Database::getSessionDuration());
+
     std::string redirect;
     enum RenderingFormat format = getFormat(req);
 
     if (format == RENDERING_TEXT) {
-        std::string cookieSessid = getServerCookie(req, COOKIE_SESSID_PREFIX, sessionId,
-                                                   Database::getSessionDuration());
         sendHttpHeader204(req, cookieSessid.c_str());
     } else {
         // HTML rendering
@@ -146,15 +147,15 @@ int httpPostSignin(const RequestContext *req)
 
         if (r<0) {
             // error: empty, or too long, or not present
-            LOG_DEBUG("Cannot get redirect. r=%d, postData=%s", r, postData.c_str());
-            return sendHttpHeader400(req, "Cannot get redirection");
-        }
-        redirect = buffer;
+            LOG_DIAG("Cannot get redirect. r=%d, postData=%s", r, postData.c_str());
+            sendHttpHeader204(req, cookieSessid.c_str());
 
-        if (redirect.empty()) redirect = "/";
-        std::string s = getServerCookie(req, COOKIE_SESSID_PREFIX, sessionId,
-                                        Database::getSessionDuration());
-        sendHttpRedirect(req, redirect, s.c_str());
+        } else {
+            redirect = buffer;
+
+            if (redirect.empty()) redirect = "/";
+            sendHttpRedirect(req, redirect, cookieSessid.c_str());
+        }
     }
 
     return REQUEST_COMPLETED;
@@ -395,9 +396,10 @@ void httpGetUser(const RequestContext *request, const User &signedInUser, const 
 
     } else {
         // look for existing user
-        User *editedUser = UserBase::getUser(username);
+        User editedUser;
+        bool userFound = UserBase::getUser(username, editedUser);
 
-        if (!editedUser) {
+        if (!userFound) {
             if (signedInUser.superadmin) sendHttpHeader404(request);
             else sendHttpHeader403(request);
 
@@ -412,10 +414,10 @@ void httpGetUser(const RequestContext *request, const User &signedInUser, const 
             if (format == RENDERING_TEXT) {
                 // print the permissions of the signed-in user
                 request->printf("Content-Type: text/plain\r\n\r\n");
-                request->printf("%s\n", editedUser->serializePermissions().c_str());
+                request->printf("%s\n", editedUser.serializePermissions().c_str());
 
             } else {
-                RHtml::printPageUser(ctx, editedUser);
+                RHtml::printPageUser(ctx, &editedUser);
             }
 
         } else sendHttpHeader403(request);
@@ -606,13 +608,12 @@ void httpPostUserAsSuperadmin(const RequestContext *req, const std::string &user
 
     User newUserConfig;
     if (!username.empty() && username != "_") {
-        // Copy existing config into newUserConfig
-        User *existingUser = UserBase::getUser(username);
-        if (!existingUser) {
+        // Get a copy of the existing config
+        bool userFound = UserBase::getUser(username, newUserConfig);
+        if (!userFound) {
             sendHttpHeader400(req, "No such user");
             return;
         }
-        newUserConfig = *existingUser; // copy
     }
 
     // Process 'sm_username'
@@ -664,8 +665,7 @@ void httpPostUserAsSuperadmin(const RequestContext *req, const std::string &user
         if (authType == AUTH_NONE) {
                // Remove authentication: the user will not be able to sign in
                LOG_INFO("Remove authentication from user: %s", username.c_str());
-               if (newUserConfig.authHandler) delete newUserConfig.authHandler;
-               newUserConfig.authHandler = NULL;
+               newUserConfig.deleteAuth();
         }
 
 #ifdef KERBEROS_ENABLED
@@ -674,7 +674,7 @@ void httpPostUserAsSuperadmin(const RequestContext *req, const std::string &user
             AuthKrb5 authKrb5(newUserConfig.username,
                               pkvGetValue(params, "sm_krb5_primary"),
                               pkvGetValue(params, "sm_krb5_realm"));
-            newUserConfig.authHandler = authKrb5.createCopy();
+            newUserConfig.setAuth(&authKrb5);
         }
 #endif
 
@@ -685,7 +685,7 @@ void httpPostUserAsSuperadmin(const RequestContext *req, const std::string &user
                               pkvGetValue(params, "sm_ldap_uri"),
                               pkvGetValue(params, "sm_ldap_dname"));
 
-            newUserConfig.authHandler = authLdap.createCopy();
+            newUserConfig.setAuth(&authLdap);
         }
 #endif
         else {
@@ -781,12 +781,11 @@ void httpPostUserSelf(const RequestContext *req, const std::string &username)
 
     User newUserConfig;
 
-    User *existingUser = UserBase::getUser(username);
-    if (!existingUser) {
+    bool userFound = UserBase::getUser(username, newUserConfig);
+    if (!userFound) {
         sendHttpHeader400(req, "No such user");
         return;
     }
-    newUserConfig = *existingUser; // Copy existing config into newUserConfig
 
     // Process password
 

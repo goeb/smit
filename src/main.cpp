@@ -192,8 +192,7 @@ int showUser(const User &u)
 {
     printf("%s", u.username.c_str());
     if (u.superadmin) printf(" (superadmin)");
-    if (!u.authHandler) printf(", no password");
-    else printf(", %s", u.authHandler->serialize().c_str());
+    printf(", %s", u.getAuthString().c_str());
     printf("\n");
 
     std::map<std::string, enum Role>::const_iterator project;
@@ -322,13 +321,14 @@ int cmdUser(int argc, char **argv)
         printf("%ld user(s)\n", L(users.size()));
 
     } else {
-        User *existingUser = UserBase::getUser(username);
+        User existingUser;
+        bool userFound = UserBase::getUser(username, existingUser);
         if (action == GET_CONFIG) {
             // list a specific user configuration
-            if (!existingUser) {
+            if (!userFound) {
                 printf("No such user: %s\n", username);
                 return 1;
-            } else return showUser(*existingUser);
+            } else return showUser(existingUser);
         }
 
         // create or update user
@@ -337,16 +337,16 @@ int cmdUser(int argc, char **argv)
         if (superadmin == "no") newUser.superadmin = false;
         else if (superadmin == "yes") newUser.superadmin = true;
 
-        if (existingUser) {
+        if (userFound) {
             // update the existing user
-            if (!superadmin.empty()) existingUser->superadmin = newUser.superadmin;
+            if (!superadmin.empty()) existingUser.superadmin = newUser.superadmin;
             if (deletePasswd) {
-                if (existingUser->authHandler) delete existingUser->authHandler;
-                existingUser->authHandler = 0;
+                existingUser.deleteAuth();
 
-            } else if (newUser.authHandler) {
+            } else if (newUser.hasAuth()) {
                 // keep existing auth scheme
-                existingUser->authHandler = newUser.authHandler;
+                existingUser.copyAuthFrom(newUser);
+
             } else {
                 // keep authentication and password unchanged
             }
@@ -357,22 +357,22 @@ int cmdUser(int argc, char **argv)
                 if (newPermission->second == ROLE_NONE) {
                     // erase if same wildcard in existingUser
                     std::map<std::string, Role>::iterator existingPerm;
-                    existingPerm = existingUser->permissions.find(newPermission->first);
-                    if (existingPerm == existingUser->permissions.end()) {
+                    existingPerm = existingUser.permissions.find(newPermission->first);
+                    if (existingPerm == existingUser.permissions.end()) {
                         // no such existing permission
                         // simlpy add the new wildcard and associated role
-                        existingUser->permissions[newPermission->first] = newPermission->second;
+                        existingUser.permissions[newPermission->first] = newPermission->second;
                     } else {
                         // remove existing wildcard
-                        existingUser->permissions.erase(newPermission->first);
+                        existingUser.permissions.erase(newPermission->first);
                     }
                 } else {
                     // add permission
-                    existingUser->permissions[newPermission->first] = newPermission->second;
+                    existingUser.permissions[newPermission->first] = newPermission->second;
                 }
             }
             // store the user (the existing user that has been updated)
-            r = UserBase::updateUser(username, *existingUser, "local");
+            r = UserBase::updateUser(username, existingUser, "local");
 
         } else {
             r = UserBase::addUser(newUser, "local");

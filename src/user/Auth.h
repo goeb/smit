@@ -12,6 +12,7 @@ struct Auth {
     inline virtual ~Auth() { }
     inline Auth(const std::string &t, const std::string &u) :
         type(t), username(u) {}
+    inline virtual std::string getParameter(const char *param) { return ""; }
 };
 
 #endif

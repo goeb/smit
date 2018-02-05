@@ -19,6 +19,7 @@ struct AuthLdap : public Auth {
     inline ~AuthLdap() { }
     inline AuthLdap(const std::string &username, const std::string &ur, const std::string &dn) :
         Auth(AUTH_LDAP, username), uri(ur), dname(dn) { }
+    virtual std::string getParameter(const char *param);
 };
 
 #endif

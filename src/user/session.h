@@ -38,7 +38,6 @@ std::list<RoleId> getAvailableRoles();
 class User {
 public:
     std::string username;
-    Auth *authHandler; // instance owned by the currect User. Deleted on User destruction.
     std::map<std::string, enum Role> rolesOnProjects;
     bool superadmin;
     std::map<std::string, Role> permissions; // map of projectWildcard => role
@@ -58,6 +57,18 @@ public:
     int authenticate(const char *passwd);
     void consolidateRoles();
     bool shouldBeNotified(const Entry *entry, const IssueCopy &oldIssue);
+
+    // Authentication related methods
+    std::string getAuthString() const;
+    void deleteAuth();
+    bool hasAuth();
+    void copyAuthFrom(const User &other);
+    inline std::string getAuthType() const { if (authHandler) return authHandler->type; return ""; }
+    std::string getAuthParameter(const char *param) const;
+    void setAuth(const Auth *authObject);
+
+private:
+    Auth *authHandler; // instance owned by the currect User. Deleted on User destruction.
 };
 
 class UserBase {
@@ -69,7 +80,7 @@ public:
     static void setLocalInterfaceUser(const std::string &username);
     static int store(const std::string &repository, const std::string &author);
     static int initUsersFile(const char *repository);
-    static User* getUser(const std::string &username);
+    static bool getUser(const std::string &username, User &user);
     static int addUser(const User &u, const std::string &author);
     static int deleteUser(const std::string &username, const std::string &author);
     static int hotReload();
@@ -113,7 +124,7 @@ struct Session {
 class SessionBase {
 public:
     static std::string requestSession(const std::string &username, char *passwd); // return session id
-    static const User *authenticate(const std::string &username, const std::string &passwd);
+    static bool authenticate(const std::string &username, const std::string &passwd, User &usr);
 
     static User getLoggedInUser(const std::string &sessionId); // return user name
     static int destroySession(const std::string &sessionId);

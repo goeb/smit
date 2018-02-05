@@ -18,6 +18,8 @@ struct AuthKrb5 : public Auth {
     inline ~AuthKrb5() { }
     inline AuthKrb5(const std::string &u, const std::string &r, const std::string &p) :
         Auth(AUTH_KRB5, u), realm(r), alternateUsername(p) {}
+    virtual std::string getParameter(const char *param);
+
 };
 
 #endif

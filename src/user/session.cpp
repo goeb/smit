@@ -258,6 +258,50 @@ bool User::shouldBeNotified(const Entry *entry, const IssueCopy &oldIssue)
     return false;
 }
 
+/** Return textual information on the parameters of authentication
+ */
+std::string User::getAuthString() const
+{
+    if (!authHandler) return "no authentication method";
+    return authHandler->serialize();
+}
+
+void User::deleteAuth()
+{
+    if (authHandler) delete authHandler;
+    authHandler = 0;
+}
+
+bool User::hasAuth()
+{
+    if (authHandler) return true;
+    else return false;
+}
+
+void User::copyAuthFrom(const User &other)
+{
+    // Copy the authentication handler from the other.
+    // Each User object must be owner of its authentication handler.
+
+    // free the peviously exiting auth object
+    deleteAuth();
+    // then make a copy from the 'other'
+    authHandler = other.authHandler->createCopy();
+}
+
+std::string User::getAuthParameter(const char *param) const
+{
+    if (!authHandler) return "";
+
+    return authHandler->getParameter(param);
+}
+
+void User::setAuth(const Auth *authObject)
+{
+    deleteAuth();
+    if (!authObject) return;
+    authHandler = authObject->createCopy();
+}
 
 RoleId roleToString(Role r)
 {
@@ -506,13 +550,22 @@ int UserBase::store(const std::string &repository, const std::string &author)
     return err;
 }
 
-
-User* UserBase::getUser(const std::string &username)
+/** Get a user from the database, after the username
+ *
+ * @param      username
+ * @param[out] user
+ * @return
+ *     true  the user has been found, and param 'user' has been fulfilled
+ *     false the user has not been found
+ */
+bool UserBase::getUser(const std::string &username, User &user)
 {
     ScopeLocker scopeLocker(UserDb.locker, LOCK_READ_ONLY);
     std::map<std::string, User*>::iterator u = UserDb.configuredUsers.find(username);
-    if (u == UserDb.configuredUsers.end()) return 0;
-    else return u->second;
+    if (u == UserDb.configuredUsers.end()) return false;
+
+    user = *(u->second);
+    return true;
 }
 
 /** Add a new user in database
@@ -754,7 +807,7 @@ int UserBase::updatePassword(const std::string &username, const AuthSha1 *authSh
     if (u == UserDb.configuredUsers.end()) return -1;
 
     LOG_DIAG("updatePassword for %s", username.c_str());
-    u->second->authHandler = authSha1->createCopy();
+    u->second->setAuth(authSha1);
     return store(Repository, author);
 }
 
@@ -844,6 +897,8 @@ std::list<std::string> User::getProjectsNames() const
 
 /** Check user credentials and initiate a session
   *
+  * @param      username
+  * @param      passwd
   * @return
   *    The session id on success, otherwise, an empty string.
   */
@@ -853,10 +908,11 @@ std::string SessionBase::requestSession(const std::string &username, char *passw
 
     LOG_DEBUG("Requesting session: username=%s, password=****", username.c_str());
     std::string sessid = ""; // empty session id indicates that no session is on
-    User *u = UserBase::getUser(username);
+    User usr;
+    bool userFound = UserBase::getUser(username, usr);
 
-    if (u) {
-        int r = u->authenticate(passwd);
+    if (userFound) {
+        int r = usr.authenticate(passwd);
         if (r == 0) {
             // authentication succeeded, create session
             sessid = SessionDb.createSession(username.c_str());
@@ -869,26 +925,34 @@ std::string SessionBase::requestSession(const std::string &username, char *passw
     }
     return sessid;
 }
-
-const User *SessionBase::authenticate(const std::string &username, const std::string &passwd)
+/** Authenticate a login/password
+ *
+ * @param      username
+ * @param      passwd
+ * @param[out] usr
+ * @return
+ *    true if successful
+ *    false on error
+ */
+bool SessionBase::authenticate(const std::string &username, const std::string &passwd, User &usr)
 {
-    User *usr = UserBase::getUser(username);
     LOG_DIAG("Authenticating: %s", username.c_str());
-    if (usr) {
-        int r = usr->authenticate(passwd.c_str());
+    bool userFound = UserBase::getUser(username, usr);
+    if (userFound) {
+        int r = usr.authenticate(passwd.c_str());
         if (r == 0) {
             // authentication succeeded
             LOG_DEBUG("User '%s' authenticated successfully", username.c_str());
-            return usr;
+            return true;
         } else {
-            return 0;
+            usr = User(); // empty the returned User instance
+            return false;
         }
     } else {
         LOG_DIAG("No such user: %s", username.c_str());
     }
 
-    return 0;
-
+    return false;
 }
 
 /** Return a user object
@@ -900,14 +964,14 @@ User SessionBase::getLoggedInUser(const std::string &sessionId)
 {
     if (UserBase::isLocalUserInterface()) {
         // case of a command 'smit ui'
-        User *u = UserBase::getUser(UserBase::getLocalInterfaceUser());
+        User usr;
+        bool userFound = UserBase::getUser(UserBase::getLocalInterfaceUser(), usr);
 
-        if (!u) {
+        if (!userFound) {
             LOG_ERROR("getLoggedInUser: Cannot get local user");
-            User u;
-            return u;
+            return User();
         }
-        return *(u);
+        return usr;
     }
 
     LOG_DEBUG("getLoggedInUser(%s)...", sessionId.c_str());
@@ -922,10 +986,11 @@ User SessionBase::getLoggedInUser(const std::string &sessionId)
             // session expired
             LOG_DEBUG("getLoggedInUser: session expired: %s", sessionId.c_str());
         } else {
-            User *u = UserBase::getUser(s.username);
-            if (u) {
-                LOG_DEBUG("valid logged-in user: %s", u->username.c_str());
-                return *u;
+            User usr;
+            bool userFound = UserBase::getUser(s.username, usr);
+            if (userFound) {
+                LOG_DEBUG("valid logged-in user: %s", usr.username.c_str());
+                return usr;
             }
             // else session found, but related user no longer exists
         }
