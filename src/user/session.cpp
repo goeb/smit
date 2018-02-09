@@ -916,7 +916,7 @@ std::string SessionBase::requestSession(const std::string &username, char *passw
         if (r == 0) {
             // authentication succeeded, create session
             sessid = SessionDb.createSession(username.c_str());
-            LOG_DEBUG("Session created for '%s': %s", username.c_str(), sessid.c_str());
+            if (!sessid.empty()) LOG_DEBUG("Session created for '%s': %s", username.c_str(), sessid.c_str());
         } else {
             sessid = "";
         }
@@ -1033,11 +1033,23 @@ void SessionBase::garbageCollect()
     if (count > 0) LOG_INFO("Sessions garbage-collected: %d, remaining: %ld", count, L(SessionDb.sessions.size()));
 }
 
+/** Create a user session
+ *
+ * @return session id (or an empty string if max reached)
+ *
+ */
 std::string SessionBase::createSession(const std::string &username)
 {
     LOCK_SCOPE(locker, LOCK_READ_WRITE);
 
     garbageCollect();
+
+    const int SESSION_MAX = 1000; // TODO move this value in the repository config
+    if (SessionDb.sessions.size() > SESSION_MAX) {
+        // To prevent resource exhaustion, setup a maximum number of sessions
+        LOG_ERROR("Cannot create new session: max number reached (%d)", SESSION_MAX);
+        return "";
+    }
 
     Session s;
     s.ctime = time(0);
