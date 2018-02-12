@@ -54,9 +54,13 @@ repo-v4
 ├── project-a/
 ├── project-b/
 ├── public/
-│    ├── .git/
-│    ├── .templates/
-│    └── files
+│   ├── .git/
+│   ├── .templates/
+│   └── files
+├── .smit_local
+│   ├── git_credential
+│   ├── smit_permissions
+│   └── username
 └── .smit
     ├── .git/
     ├── config

@@ -66,6 +66,14 @@
 #define MAX_SIZE_UPLOAD (10*1024*1024)
 #define COOKIE_ORIGIN_VIEW "view-"
 
+/** Handle HTTP POST request to /signin
+ *
+ *  Input Variables:
+ *      username
+ *      password
+ *      session_ttl (seconds) TODO
+ *
+ */
 int httpPostSignin(const RequestContext *req)
 {
     LOG_FUNC();
@@ -117,6 +125,12 @@ int httpPostSignin(const RequestContext *req)
         LOG_DEBUG("Cannot get password. r=%d, postData=%s", r, postData.c_str());
         return sendHttpHeader400(req, "Missing password");
     }
+
+    // TODO get the session_ttl
+    // TODO This value, in seconds, shall be used for short lived sessions (eg: 10 minutes)
+    // TODO used for example for smit clone/pull/push operations
+    // TODO session_ttl must be greater than 60s and less than the default session
+    // TODO duration configured in the smit repository.
 
     // check credentials
     std::string sessionId = SessionBase::requestSession(username, password);
@@ -916,8 +930,11 @@ void httpGetProjects(const RequestContext *req, const User &u)
     getProjects(u, pList);
     enum RenderingFormat format = getFormat(req);
 
-    if (format == RENDERING_TEXT) RText::printProjectList(req, pList);
-    else if (format == RENDERING_CSV) RCsv::printProjectList(req, pList);
+    if (format == RENDERING_TEXT) {
+        RText::printProjectList(req, pList);
+        if (u.superadmin) req->printf("superadmin\n");
+
+    } else if (format == RENDERING_CSV) RCsv::printProjectList(req, pList);
     else {
 
         // get the list of users and roles for each project

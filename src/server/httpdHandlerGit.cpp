@@ -193,9 +193,14 @@ void httpGitServeRequest(const RequestContext *req)
 
     LOG_DIAG("httpGitServeRequest: username=%s", username.c_str());
 
-    const User *usr = SessionBase::authenticate(username, password);
+    // TODO
+    // TODO if username == "", consider the password as a session id
+    // TODO
 
-    if (!usr) {
+    User usr;
+    bool success = SessionBase::authenticate(username, password, usr);
+
+    if (!success) {
         return sendHttpHeader401(req);
     }
 
@@ -206,19 +211,19 @@ void httpGitServeRequest(const RequestContext *req)
 
     if (firstPart == RESOURCE_PUBLIC) {
         // consider only the push, as the fetch has been handled earlier
-        if (!usr->superadmin) return sendHttpHeader403(req);
+        if (!usr.superadmin) return sendHttpHeader403(req);
 
         // no lock needed. Rely on the git http backend CGI
-        httpCgiGitBackend(req, uri, usr->username, "superadmin");
+        httpCgiGitBackend(req, uri, usr.username, "superadmin");
 
     } else if (firstPart == ".smit") {
-        if (!usr->superadmin) return sendHttpHeader403(req);
+        if (!usr.superadmin) return sendHttpHeader403(req);
 
         // lock
         LOCK_SCOPE_I(UserBase::getLocker(), LOCK_READ_WRITE, 1);
         LOCK_SCOPE_I(Database::getLocker(), LOCK_READ_WRITE, 2);
 
-        httpCgiGitBackend(req, uri, usr->username, "superadmin");
+        httpCgiGitBackend(req, uri, usr.username, "superadmin");
 
         if (gitUriPart == "/" GIT_SERVICE_PUSH) {
             // update users and repo config
@@ -249,7 +254,7 @@ void httpGitServeRequest(const RequestContext *req)
         }
 
         // get user role on this project
-        Role role = usr->getRole(projectName);
+        Role role = usr.getRole(projectName);
 
         // The access is granted:
         // - if the user has permission RO, RW or ADMIN and requests a git pull
@@ -263,7 +268,7 @@ void httpGitServeRequest(const RequestContext *req)
         // lock TODO
         //pro->
 
-        httpCgiGitBackend(req, uri, usr->username, rolename);
+        httpCgiGitBackend(req, uri, usr.username, rolename);
 
         if (service == GIT_SERVICE_PUSH) {
             // update project entries if pushed entries

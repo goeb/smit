@@ -33,6 +33,8 @@
 #include "utils/stringTools.h"
 #include "utils/filesystem.h"
 #include "utils/logging.h"
+#include "utils/gitTools.h"
+#include "user/session.h"
 #include "mg_win32.h"
 #include "console.h"
 #include "repository/db.h"
@@ -42,7 +44,7 @@
 #include "project/Project.h"
 #include "localClient.h"
 
-#define LOG_CLI(...) { printf(__VA_ARGS__); fflush(stdout);}
+#define LOG_CLI(...) { printf(__VA_ARGS__); printf("\n"); fflush(stdout);}
 
 /** smit distributed functions
   *     smit clone .... : download a local copy of a smit repository
@@ -103,7 +105,83 @@ int testSessid(const std::string url, const HttpClientContext &ctx)
 
     if (status == 200) return 0;
     return -1;
+}
 
+static int cloneAll(const HttpClientContext &ctx, const std::string &rooturl, const std::string &destdir)
+{
+    int err;
+
+    // clone /public
+    LOG_CLI("Cloning 'public'...");
+    err = gitClone(rooturl+"/public", destdir+"/public", destdir+"/"+PATH_GIT_CREDENTIAL);
+    if (err) {
+        LOG_ERROR("Abort.");
+        exit(1);
+    }
+
+    // get the list of remote projects
+    HttpRequest hr(ctx);
+    hr.setUrl(rooturl + "/?format=text");
+    hr.getRequestLines();
+
+    // Lines are in the format: <permission> <project name>
+    // Except the "superadmin" line, if any.
+    std::list<std::string>::iterator line;
+    bool isSuperadmin = false;
+
+    FOREACH(line, hr.lines) {
+        if ( (*line) == "superadmin") {
+            isSuperadmin = true;
+
+        } else {
+            std::string roleStr = popToken(*line, ' ');
+            std::string projectName = *line;
+
+            Role role = stringToRole(roleStr);
+            if (role <= ROLE_RO) {
+                // do clone
+                LOG_CLI("Cloning '%s'...", projectName.c_str());
+                std::string resource = "/" + Project::urlNameEncode(projectName);
+                err = gitClone(rooturl+"/"+resource, destdir+"/"+resource, destdir+"/"+PATH_GIT_CREDENTIAL);
+                if (err) {
+                    LOG_ERROR("Abort.");
+                    exit(1);
+                }
+            }
+        }
+    }
+
+    // clone /.smit if permission granted
+    if (isSuperadmin) {
+        LOG_CLI("Cloning '.smit'...");
+        err = gitClone(rooturl+"/.smit", destdir+"/.smit", destdir+"/"+PATH_GIT_CREDENTIAL);
+        if (err) {
+            LOG_ERROR("Abort.");
+            exit(1);
+        }
+    }
+
+    return 0;
+}
+
+static int pullAll()
+{
+    // pull --rebase /public
+    // pull --rebase /.smit if permission granted
+    // get list of projects GET /?format=text
+    // for each project, pull --rebase
+
+    return 0;
+}
+
+static int pushAll()
+{
+    // push /public, if permission granted
+    // push /.smit if permission granted
+    // get list of projects GET /?format=text
+    // for each project, push (if permission granted)
+
+    return 0;
 }
 
 /** Get all the projects that we have read-access to
@@ -149,7 +227,7 @@ int pullProjects(const PullContext &pullCtx, bool all)
 
     // get the list of remote projects
     HttpRequest hr(pullCtx.httpCtx);
-    hr.setUrl(pullCtx.rooturl + "/");
+    hr.setUrl(pullCtx.rooturl + "/?format=text");
     hr.getRequestLines();
 
     std::list<std::string>::iterator projectName;
@@ -181,7 +259,7 @@ int pullProjects(const PullContext &pullCtx, bool all)
 
 std::string getSmitDir(const std::string &dir)
 {
-    return dir + "/" SMIT_DIR;
+    return dir + "/" SMIT_LOCAL;
 }
 
 void createSmitDir(const std::string &dir)
@@ -210,7 +288,7 @@ std::string signin(const std::string &rooturl, const std::string &user,
 {
     HttpRequest hr(ctx);
 
-    hr.setUrl(rooturl + "/signin");
+    hr.setUrl(rooturl + "/signin?format=text");
 
     // specify the POST data
     std::string params;
@@ -269,25 +347,76 @@ std::string loadSessid(const std::string &dir)
     return sessid;
 }
 
-// store url in .smit/remote
-void storeUrl(const std::string &dir, const std::string &url)
-{
-    LOG_DEBUG("storeUrl(%s, %s)...", dir.c_str(), url.c_str());
-    std::string path = dir + "/" PATH_URL;
+const char* SCHEMES[] = { "https://", "http://", 0 };
 
-    int r = writeToFile(path, url + "\n");
+/** Store the session id in the git-credential-store format
+ *
+ *  Eg: https://user:pass@example.com
+ */
+static void storeGitCredential(const std::string &dir, const std::string &url, const std::string &username, const std::string &passwd)
+{
+    std::string credential;
+
+    // insert the user:pass in the url
+    const char **ptr = SCHEMES;
+    while (*ptr) {
+        if (0 == strncmp(url.c_str(), *ptr, strlen(*ptr))) {
+            credential = *ptr;
+            credential += username + ":" + passwd + "@" + url.substr(strlen(*ptr));
+            break;
+        }
+        ptr++;
+    }
+
+    if (credential.empty()) {
+        LOG_ERROR("Unsupported scheme (%s). Must be http:// or https://", url.c_str());
+        exit(1);
+    }
+
+    std::string path = dir + "/" PATH_GIT_CREDENTIAL;
+    int r = writeToFile(path, credential + "\n");
     if (r < 0) {
         fprintf(stderr, "Abort.\n");
         exit(1);
     }
 }
 
-std::string loadUrl(const std::string &dir)
+/** Load the root url from the git-credential-store
+ *
+ *  Format in the file is for instance: https://user:pass@example.com
+ *
+ * @return
+ *     https://example.com
+ */
+static std::string loadUrl(const std::string &dir)
 {
-    std::string path = dir + "/" PATH_URL;
+    std::string path = dir + "/" PATH_GIT_CREDENTIAL;
+    std::string data;
     std::string url;
-    loadFile(path.c_str(), url);
-    trim(url);
+
+    int err = loadFile(path, data);
+    if (err) {
+        fprintf(stderr, "Abort.\n");
+        exit(1);
+    }
+
+    // take the first line
+    std::string line = popToken(data, '\n');
+
+    const char **ptr = SCHEMES;
+    while (*ptr) {
+        if (0 == strncmp(line.c_str(), *ptr, strlen(*ptr))) {
+            url = *ptr;
+            popToken(line, '@');
+            url += line;
+            break;
+        }
+        ptr++;
+    }
+    if (url.empty()) {
+        LOG_ERROR("Cannot load url from '%s': malformed", path.c_str());
+        exit(1);
+    }
 
     return url;
 }
@@ -322,7 +451,6 @@ int helpClone(const Args *args)
     args->usage(true);
     return 1;
 }
-
 
 int cmdClone(int argc, char **argv)
 {
@@ -381,9 +509,11 @@ int cmdClone(int argc, char **argv)
     createSmitDir(localdir);
     storeSessid(localdir, httpCtx.cookieSessid);
     storeUsername(localdir, username);
-    storeUrl(localdir, url);
+    storeGitCredential(localdir, url, username, passwd);
 
-    r = getProjects(url, localdir, httpCtx);
+    //
+
+    r = cloneAll(httpCtx, url, localdir);
     if (r < 0) {
         fprintf(stderr, "Clone failed. Abort.\n");
         exit(1);
@@ -447,7 +577,7 @@ static int establishSession(const char *dir, const char *username, const char *p
         ctx.httpCtx.cookieSessid = signin(ctx.rooturl, user, pass, ctx.httpCtx);
         if (!ctx.httpCtx.cookieSessid.empty() && store) {
             storeSessid(dir, ctx.httpCtx.cookieSessid);
-            storeUrl(dir, ctx.rooturl);
+            storeGitCredential(dir, ctx.rooturl, user, pass);
         }
     }
 
@@ -515,7 +645,7 @@ int cmdGet(int argc, char **argv)
 
     // do the GET
     HttpRequest hr(pullCtx.httpCtx);
-    hr.setUrl(std::string(rooturl) + std::string(resource));
+    hr.setUrl(std::string(rooturl) + std::string(resource) + "?format=text");
     hr.getFileStdout();
 
     terminateSession();

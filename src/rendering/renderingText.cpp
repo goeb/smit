@@ -23,7 +23,7 @@ void RText::printProjectList(const RequestContext *req, const std::list<ProjectS
 
     std::list<ProjectSummary>::const_iterator p;
     for (p=pList.begin(); p!=pList.end(); p++) {
-        req->printf("%s %s\n", p->name.c_str(), p->myRole.c_str());
+        req->printf("%s %s\n", p->myRole.c_str(), p->name.c_str());
     }
 }
 

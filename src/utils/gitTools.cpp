@@ -99,3 +99,20 @@ int gitAddCommitDir(const std::string &gitRepoPath, const std::string &author)
     }
     return 0;
 }
+
+int gitClone(const std::string &remote, const std::string &path, const std::string &credentials)
+{
+    // commit
+    Argv argv;
+    std::string subStdout, subStderr;
+
+    std::string config = "credential.helper=store --file " + credentials; // TODO make it more robust to filenames with spaces
+    argv.set("git", "clone", remote.c_str(), path.c_str(), "--config", config.c_str(), 0);
+    int err = Subprocess::launchSync(argv.getv(), 0, 0, 0, 0, subStdout, subStderr);
+    if (err) {
+        LOG_ERROR("gitClone: error: %d: stdout=%s, stderr=%s", err, subStdout.c_str(), subStderr.c_str());
+    }
+    return err;
+}
+
+
