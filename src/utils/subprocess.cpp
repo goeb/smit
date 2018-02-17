@@ -105,16 +105,29 @@ Subprocess::~Subprocess()
  */
 Subprocess *Subprocess::launch(char *const argv[], char *const envp[], const char *dir)
 {
-    std::string debugStr;
-    char *const *ptr = argv;
+    std::string debugArgv;
+    char *const *ptr;
+
+    ptr = argv;
     while (*ptr) {
-        debugStr += " ";
-        debugStr += *ptr;
+        if (ptr != argv) debugArgv += " ";
+        debugArgv += *ptr;
         ptr++;
     }
+
+    std::string debugEnvp;
+    if (envp) {
+        ptr = envp;
+        while (*ptr) {
+            if (ptr != envp) debugEnvp += " ";
+            debugEnvp += *ptr;
+            ptr++;
+        }
+    }
+
     const char *dirStr = "."; // use for debug
     if (dir) dirStr = dir;
-    LOG_DIAG("Subprocess::launch: %s (%s)", debugStr.c_str(), dirStr);
+    LOG_DIAG("Subprocess::launch: %s (env=%s, dir=%s)", debugArgv.c_str(), debugEnvp.c_str(), dirStr);
 
     Subprocess *handler = new Subprocess();
 
@@ -221,17 +234,19 @@ int Subprocess::write(const char *data, size_t len)
 
 /** Read bytes from the stdout of the child process
  */
-int Subprocess::read(char *buffer, size_t size)
+int Subprocess::read(char *buffer, size_t size, StandardFd fd)
 {
     size_t remaining = size;
 
-    if (!getlineBuffer.empty()) {
-        // if calls to getline and read are mixed, we need to keep
-        // the dara buffered by getline
+    if (fd == SUBP_STDOUT && !getlineBuffer.empty()) {
+        LOG_DIAG("getlineBuffer: %s", getlineBuffer.c_str());
+        // if calls to getline() and read() are mixed, we need to take care
+        // of the data buffered by getline
         if (getlineBuffer.size() < size) {
             // all the buffered data shall be consumed
             memcpy(buffer, getlineBuffer.data(), getlineBuffer.size());
             remaining -= getlineBuffer.size();
+            buffer += getlineBuffer.size();
             getlineBuffer.clear();
 
         } else {
@@ -250,6 +265,8 @@ int Subprocess::read(char *buffer, size_t size)
         if (n < 0) {
             LOG_ERROR("Subprocess::read() error: %s", STRERROR(errno));
             return -1;
+        } else {
+            LOG_DIAG("Subprocess::read(): recv %ld bytes", (long)n);
         }
 
         remaining -= n;
@@ -261,35 +278,20 @@ int Subprocess::read(char *buffer, size_t size)
     return size-remaining;
 }
 
-/** Read from the stdout or stderr of the child process
+/** Read all from the stdout or stderr of the child process
  */
 int Subprocess::read(std::string &data, StandardFd fd)
 {
     data.clear();
 
-    if (fd == SUBP_STDOUT && !getlineBuffer.empty()) {
-        // if calls to getline and read are mixed, we need to keep
-        // the dara buffered by getline
-        data = getlineBuffer;
-        getlineBuffer.clear();
-    }
-
     char buffer[BUF_SIZ];
-    while (1) {
-
-        ssize_t n = ::read(pipes[fd][SUBP_READ], buffer, BUF_SIZ);
-
-        if (n < 0) {
-            LOG_ERROR("Subprocess::read() error: %s", STRERROR(errno));
-            return -1;
-        }
-
-        if (n == 0) break; // end of file
-
+    int n;
+    while ( (n = read(buffer, BUF_SIZ, fd)) > 0) {
         data.append(buffer, n);
     }
 
-    return 0;
+    if (n == 0) return data.size();
+    return n; // negative value
 }
 
 /** Get the next line from the child stdout
@@ -332,6 +334,9 @@ std::string Subprocess::getline()
             err = 1;
             // error is not raised immediately. First process
             // data previously received in the buffer.
+        } else {
+            LOG_DIAG("Subprocess::getline(): recv %ld bytes", (long)n);
+
         }
 
         if (n == 0) err = 1;
