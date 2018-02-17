@@ -35,8 +35,6 @@ void launchCgi(const RequestContext *req, const std::string &exePath, Argv envp)
         i++;
     }
 
-    //LOG_DIAG("launchCgi: exe=%s, envp=%s", exePath.c_str(), envp.toString().c_str());
-
     std::string dir = getDirname(exePath); // CGI must be laucnhed in its directory
 
     Subprocess *subp = Subprocess::launch(argv.getv(), envp.getv(), dir.c_str());
@@ -106,12 +104,15 @@ void launchCgi(const RequestContext *req, const std::string &exePath, Argv envp)
 
     // read the remaining bytes and send back to the client
     while ( (n = subp->read(datachunk, SIZ)) > 0) {
+        LOG_DIAG("launchCgi: send response to client: %ld bytes", L(n));
         req->write(datachunk, n);
     }
 
     std::string subpStderr = subp->getStderr();
     int err = subp->wait();
     if (err || !subpStderr.empty()) {
-        LOG_ERROR("launchCgi: err=%d, strerror=%s", err, subpStderr.c_str());
+        LOG_ERROR("launchCgi: err=%d, stderr=%s", err, subpStderr.c_str());
+    } else {
+        LOG_DIAG("launchCgi: err=%d", err);
     }
 }
