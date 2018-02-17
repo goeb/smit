@@ -57,24 +57,21 @@
   * another user modified the same issue on his/her local clone.
   * These conflicts are detected during a pushing, but they can be resolved only
   * by a pulling.
-  * These conflicts are resolved either automatically or interactively.
+  * These conflicts are resolved either automatically as follows:
   *
+  *   TODO
   *
   * 2. Conflicts on new issues
   * These conflicts occur typically when a user creates a new issue on the server and
   * another user creates a new issue on his/her local clone, and both new issues get
   * the same issue id.
   *
-  * These conflicts are resolved by pulling. The local issue of the clone is
-  * renamed. For example issue 123 will be renamed issue 124.
+  * These conflicts within a same project are resolved by pulling: the local
+  * issue of the clone is renamed. For example issue 123 will be renamed issue 124.
   *
-  * These conflicts are also resolved when pushing. New local issues may
-  * be renamed by the server. There may be 2 cases where a conflicting new issue on the server
-  * has already taken the id of the pushed issue :
-  *   - a new issue on the same project
-  *   - or a new issue on a different project (remember that with global numbering,
-  *     the issue ids are shared between several projects)
-  *
+  * Some conflicts are also resolved when pushing. Newly pushed issues may
+  * be renamed by the server if another issue with the same id exists on a
+  * different project (when both projects use global numbering).
   *
   */
 
@@ -107,13 +104,66 @@ int testSessid(const std::string url, const HttpClientContext &ctx)
     return -1;
 }
 
-static int cloneAll(const HttpClientContext &ctx, const std::string &rooturl, const std::string &destdir)
+static Argv getGitEnv(const std::string &smitRepository)
+{
+    std::string varGitConfig = "GIT_CONFIG=" + smitRepository + "/" PATH_GIT_CONFIG;
+    Argv envp;
+    envp.set(varGitConfig.c_str(), 0);
+    return envp;
+}
+
+// TODO remove gitSetupConfig if not used
+static int gitSetupConfig(const std::string &smitRepo)
+{
+    Argv argv;
+    std::string subStdout, subStderr;
+
+    // git config credential.helper store --file $REPO/.smit_local/gitconfig
+    std::string storeOption = "store --file " + smitRepo + "/" PATH_GIT_CREDENTIAL;
+    argv.set("git", "config", "credential.helper", storeOption.c_str(), 0);
+    int err = Subprocess::launchSync(argv.getv(), getGitEnv(smitRepo).getv(), 0, 0, 0, subStdout, subStderr);
+    if (err) {
+        LOG_ERROR("gitSetupConfig: error: %d: stdout=%s, stderr=%s", err, subStdout.c_str(), subStderr.c_str());
+    }
+    return err;
+
+}
+
+static int gitClone(const std::string &remote, const std::string &smitRepo, const std::string &subpath)
+{
+    // commit
+    Argv envp;
+    envp.set("GIT_CURL_VERBOSE=1", 0);
+
+    Argv argv;
+    std::string subStdout, subStderr;
+    std::string into = smitRepo + "/" + subpath; // where to clone into
+    std::string configOpt = "credential.helper=store --file " + smitRepo + "/" PATH_GIT_CREDENTIAL;
+
+    argv.set("git", "clone", remote.c_str(), into.c_str(), "--config", configOpt.c_str(), 0);
+    int err = Subprocess::launchSync(argv.getv(), envp.getv(), 0, 0, 0, subStdout, subStderr);
+    if (err) {
+        LOG_ERROR("gitClone: error: %d: stdout=%s, stderr=%s", err, subStdout.c_str(), subStderr.c_str());
+    } else {
+        LOG_DIAG("gitClone: stdout=%s, stderr=%s", subStdout.c_str(), subStderr.c_str());
+    }
+    return err;
+}
+
+
+static int cloneAll(const HttpClientContext &ctx, const std::string &rooturl, const std::string &smitRepo)
 {
     int err;
 
+    //err = gitSetupConfig(smitRepo);
+    //if (err) {
+    //    LOG_ERROR("Abort.");
+    //    exit(1);
+   // }
+
     // clone /public
     LOG_CLI("Cloning 'public'...");
-    err = gitClone(rooturl+"/public", destdir+"/public", destdir+"/"+PATH_GIT_CREDENTIAL);
+    err = gitClone(rooturl+"/public", smitRepo, "public");
     if (err) {
         LOG_ERROR("Abort.");
         exit(1);
@@ -141,8 +191,10 @@ static int cloneAll(const HttpClientContext &ctx, const std::string &rooturl, co
             if (role <= ROLE_RO) {
                 // do clone
                 LOG_CLI("Cloning '%s'...", projectName.c_str());
+                LOG_DIAG("role=%s", roleStr.c_str());
                 std::string resource = "/" + Project::urlNameEncode(projectName);
-                err = gitClone(rooturl+"/"+resource, destdir+"/"+resource, destdir+"/"+PATH_GIT_CREDENTIAL);
+                std::string projectDir = resource;
+                err = gitClone(rooturl+"/"+resource, smitRepo, projectDir);
                 if (err) {
                     LOG_ERROR("Abort.");
                     exit(1);
@@ -154,7 +206,7 @@ static int cloneAll(const HttpClientContext &ctx, const std::string &rooturl, co
     // clone /.smit if permission granted
     if (isSuperadmin) {
         LOG_CLI("Cloning '.smit'...");
-        err = gitClone(rooturl+"/.smit", destdir+"/.smit", destdir+"/"+PATH_GIT_CREDENTIAL);
+        err = gitClone(rooturl+"/.smit", smitRepo, ".smit");
         if (err) {
             LOG_ERROR("Abort.");
             exit(1);
@@ -462,7 +514,7 @@ int cmdClone(int argc, char **argv)
     if (args->get("insecure")) httpCtx.tlsInsecure = true;
     httpCtx.tlsCacert = args->get("cacert");
     if (args->get("verbose")) {
-        setLoggingLevel(LL_DEBUG);
+        setLoggingLevel(LL_DIAG);
     } else {
         setLoggingLevel(LL_ERROR);
     }

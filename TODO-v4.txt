@@ -2,6 +2,8 @@
 
 TODO
 	cli clone, pull, push
+	push: server-side reloads pushed entries
+	push: conflict with issue id of another project (server-side renaming)
 	windows
 	heroku
 	remove support for nested projects, but keep projects being in sub-dirs
