@@ -40,8 +40,8 @@ private:
     pid_t pid;
     int pipes[3][2]; // stdin/stdout/stderr, read/write,
     int initPipes();
-    void setupChildPipes();
-    void setupParentPipes();
+    void childSetupPipes();
+    void parentClosePipes();
     std::string getlineBuffer; // data read from stdout but not yet consumed
 
 };

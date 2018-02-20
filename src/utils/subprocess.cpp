@@ -3,29 +3,35 @@
 #include <sys/wait.h>
 #include <stdint.h>
 #include <stdarg.h>
+#include <fcntl.h>
 
 #include "subprocess.h"
 #include "utils/logging.h"
 
 #define BUF_SIZ 4096
 
+/** Initialize the pipes for communication between parent and child
+ *
+ *  On error, -1 is returned. Some pipes may have been initialized and others not.
+ *
+ */
 int Subprocess::initPipes()
 {
     int err;
 
-    err = pipe(pipes[SUBP_STDIN]);
+    err = pipe2(pipes[SUBP_STDIN], O_CLOEXEC);
     if (err) {
         LOG_ERROR("Cannot initialize pipe Stdin: %s\n", STRERROR(errno));
         return -1;
     }
 
-    err = pipe(pipes[SUBP_STDOUT]);
+    err = pipe2(pipes[SUBP_STDOUT], O_CLOEXEC);
     if (err) {
         LOG_ERROR("Cannot initialize pipe Stdout: %s\n", STRERROR(errno));
         return -1;
     }
 
-    err = pipe(pipes[SUBP_STDERR]);
+    err = pipe2(pipes[SUBP_STDERR], O_CLOEXEC);
     if (err) {
         LOG_ERROR("Cannot initialize pipe Stderr: %s\n", STRERROR(errno));
         return -1;
@@ -34,53 +40,69 @@ int Subprocess::initPipes()
     return 0;
 }
 
-#define ENSURE_NOT_012(_pipe_fd) \
-    while (_pipe_fd <= 2) { \
-        _pipe_fd = dup(_pipe_fd); \
-    }
-
-#define CLOSE_PIPE(_pipe_fd) do { close(_pipe_fd); _pipe_fd = -1; } while (0)
-
-void Subprocess::setupChildPipes()
+/** Move the file descriptor to a value greater than 2
+ *
+ *  When duplicated, the original file descriptor and
+ *  other created file descriptors are not closed.
+ *  The caller is suppose to take care of closing them.
+ *
+ *  This function is intended to be called in the
+ *  child between the fork and the exec.
+ */
+static void childMoveFdAbove2(int &fd)
 {
-    // As dup2 closes the new file descriptor if previously open
-    // we need to ensure that:
-    // - a needed file descriptor is not closed,
-    // - a file descriptor is not closed twice
+    if (fd <= 2) {
+        // need to be duplicated to a value >= 3
+        int newFd = dup(fd);
+        if (-1 == newFd) {
+            // This is an unpleasant case.
+            // Logging cannot be done, as we are between fork and exec
+            return;
+        }
+        childMoveFdAbove2(newFd);
+        fd = newFd;
+    }
+}
 
-    // first close the unneeded pipes
-    CLOSE_PIPE(pipes[SUBP_STDIN][SUBP_WRITE]);
-    CLOSE_PIPE(pipes[SUBP_STDOUT][SUBP_READ]);
-    CLOSE_PIPE(pipes[SUBP_STDERR][SUBP_READ]);
+void Subprocess::childSetupPipes()
+{
+    // We are between fork and exec. We need to setup the
+    // standard files descriptors 0, 1, 2 of the child.
 
-    // if one of them is in 0..2, then duplicate and used another number
-    ENSURE_NOT_012(pipes[SUBP_STDIN][SUBP_READ]);
-    ENSURE_NOT_012(pipes[SUBP_STDOUT][SUBP_WRITE]);
-    ENSURE_NOT_012(pipes[SUBP_STDERR][SUBP_WRITE]);
+    // the pipes have been open with the flag O_CLOEXEC, therefore
+    // we do not care to close them explicitely (the exec will).
+    childMoveFdAbove2(pipes[SUBP_STDIN][SUBP_READ]);
+    childMoveFdAbove2(pipes[SUBP_STDOUT][SUBP_WRITE]);
+    childMoveFdAbove2(pipes[SUBP_STDERR][SUBP_WRITE]);
 
+    // The close-on-exec flag for the duplicate descriptor is off
     dup2(pipes[SUBP_STDIN][SUBP_READ], STDIN_FILENO);
     dup2(pipes[SUBP_STDOUT][SUBP_WRITE], STDOUT_FILENO);
     dup2(pipes[SUBP_STDERR][SUBP_WRITE], STDERR_FILENO);
-
-    // close the remaining unused pipes
-    CLOSE_PIPE(pipes[SUBP_STDIN][SUBP_READ]);
-    CLOSE_PIPE(pipes[SUBP_STDOUT][SUBP_WRITE]);
-    CLOSE_PIPE(pipes[SUBP_STDERR][SUBP_WRITE]);
 }
 
-void Subprocess::setupParentPipes()
+static void closePipe(int &fd)
 {
-    CLOSE_PIPE(pipes[SUBP_STDIN][SUBP_READ]);
-    CLOSE_PIPE(pipes[SUBP_STDOUT][SUBP_WRITE]);
-    CLOSE_PIPE(pipes[SUBP_STDERR][SUBP_WRITE]);
+    int err = close(fd);
+    if (err) {
+        LOG_ERROR("closePipe: cannot close %d: %s", fd, STRERROR(errno));
+        return;
+    }
+    fd = -1;
+}
+
+void Subprocess::parentClosePipes()
+{
+    closePipe(pipes[SUBP_STDIN][SUBP_READ]);
+    closePipe(pipes[SUBP_STDOUT][SUBP_WRITE]);
+    closePipe(pipes[SUBP_STDERR][SUBP_WRITE]);
 }
 
 /** Close a pipe of the parent side
  */
 void Subprocess::closeStdin()
 {
-    close(pipes[SUBP_STDIN][SUBP_WRITE]);
-    pipes[SUBP_STDIN][SUBP_WRITE] = -1;
+    closePipe(pipes[SUBP_STDIN][SUBP_WRITE]);
 }
 
 Subprocess::Subprocess()
@@ -91,9 +113,10 @@ Subprocess::Subprocess()
 
 Subprocess::~Subprocess()
 {
+    // close remaining open pipes
     int i, j;
     for (i=0; i<3; i++) for (j=0; j<2; j++) {
-        if (pipes[i][j] != -1) CLOSE_PIPE(pipes[i][j]);
+        if (pipes[i][j] != -1) closePipe(pipes[i][j]);
     }
 }
 
@@ -153,14 +176,14 @@ Subprocess *Subprocess::launch(char *const argv[], char *const envp[], const cha
         }
 
         // setup redirection
-        handler->setupChildPipes();
+        handler->childSetupPipes();
 
         execvpe(argv[0], argv, envp);
         _exit(72);
     }
 
     // in parent
-    handler->setupParentPipes();
+    handler->parentClosePipes();
 
     return handler;
 }
