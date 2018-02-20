@@ -110,6 +110,7 @@ void launchCgi(const RequestContext *req, const std::string &exePath, Argv envp)
 
     std::string subpStderr = subp->getStderr();
     int err = subp->wait();
+    delete subp;
     if (err || !subpStderr.empty()) {
         LOG_ERROR("launchCgi: err=%d, stderr=%s", err, subpStderr.c_str());
     } else {
