@@ -35,6 +35,7 @@
 #include "utils/logging.h"
 #include "utils/gitTools.h"
 #include "user/session.h"
+#include "project/gitdb.h"
 #include "mg_win32.h"
 #include "console.h"
 #include "repository/db.h"
@@ -112,24 +113,58 @@ static Argv getGitEnv(const std::string &smitRepository)
     return envp;
 }
 
+static int alignIssueBranches(const std::string &projectPath)
+{
+    int err;
+
+    // create local branches to track remote ones (issues/*)
+    GitIssueList ilist;
+    int ret = ilist.open(projectPath, "origin");
+    if (ret) {
+        LOG_ERROR("Cannot load issues of project (%s)", projectPath.c_str());
+        return -1;
+    }
+
+    while (1) {
+        std::string issueId = ilist.getNext();
+        if (issueId.empty()) break; // reached the end
+
+        // create a local branch
+        Argv argv;
+        std::string subStdout, subStderr;
+        std::string localBranch = BRANCH_PREFIX_ISSUES +  issueId;
+        std::string remoteBranch = "origin/" BRANCH_PREFIX_ISSUES + issueId;
+
+        argv.set("git", "branch", localBranch.c_str(), remoteBranch.c_str(), 0);
+        err = Subprocess::launchSync(argv.getv(), 0, projectPath.c_str(), 0, 0, subStdout, subStderr);
+        if (err) {
+            LOG_ERROR("alignIssueBranches: error: %d: stdout=%s, stderr=%s", err, subStdout.c_str(), subStderr.c_str());
+            break;
+        }
+    }
+    ilist.close();
+    return err;
+}
+
 static int gitClone(const std::string &remote, const std::string &smitRepo, const std::string &subpath)
 {
-    // commit
-    Argv envp;
-    envp.set("GIT_CURL_VERBOSE=1", 0);
-
     Argv argv;
     std::string subStdout, subStderr;
     std::string into = smitRepo + "/" + subpath; // where to clone into
     std::string configOpt = "credential.helper=store --file " + smitRepo + "/" PATH_GIT_CREDENTIAL;
 
     argv.set("git", "clone", remote.c_str(), into.c_str(), "--config", configOpt.c_str(), 0);
-    int err = Subprocess::launchSync(argv.getv(), envp.getv(), 0, 0, 0, subStdout, subStderr);
+    int err = Subprocess::launchSync(argv.getv(), 0, 0, 0, 0, subStdout, subStderr);
     if (err) {
         LOG_ERROR("gitClone: error: %d: stdout=%s, stderr=%s", err, subStdout.c_str(), subStderr.c_str());
-    } else {
-        LOG_DIAG("gitClone: stdout=%s, stderr=%s", subStdout.c_str(), subStderr.c_str());
+        return err;
     }
+
+    LOG_DIAG("gitClone: stdout=%s, stderr=%s", subStdout.c_str(), subStderr.c_str());
+
+    // create local branches to track remote ones
+    err = alignIssueBranches(into);
+
     return err;
 }
 
