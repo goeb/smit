@@ -104,7 +104,7 @@ void launchCgi(const RequestContext *req, const std::string &exePath, Argv envp)
 
     // read the remaining bytes and send back to the client
     while ( (n = subp->read(datachunk, SIZ)) > 0) {
-        LOG_DIAG("launchCgi: send response to client: %ld bytes", L(n));
+        LOG_DEBUG("launchCgi: send response to client: %ld bytes", L(n));
         req->write(datachunk, n);
     }
 

@@ -289,7 +289,7 @@ int Subprocess::read(char *buffer, size_t size, StandardFd fd)
             LOG_ERROR("Subprocess::read() error: %s", STRERROR(errno));
             return -1;
         } else {
-            LOG_DIAG("Subprocess::read(): recv %ld bytes", (long)n);
+            LOG_DEBUG("Subprocess::read(): recv %ld bytes", (long)n);
         }
 
         remaining -= n;
@@ -358,7 +358,7 @@ std::string Subprocess::getline()
             // error is not raised immediately. First process
             // data previously received in the buffer.
         } else {
-            LOG_DIAG("Subprocess::getline(): recv %ld bytes", (long)n);
+            LOG_DEBUG("Subprocess::getline(): recv %ld bytes", (long)n);
 
         }
 

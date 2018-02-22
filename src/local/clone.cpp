@@ -112,23 +112,6 @@ static Argv getGitEnv(const std::string &smitRepository)
     return envp;
 }
 
-// TODO remove gitSetupConfig if not used
-static int gitSetupConfig(const std::string &smitRepo)
-{
-    Argv argv;
-    std::string subStdout, subStderr;
-
-    // git config credential.helper store --file $REPO/.smit_local/gitconfig
-    std::string storeOption = "store --file " + smitRepo + "/" PATH_GIT_CREDENTIAL;
-    argv.set("git", "config", "credential.helper", storeOption.c_str(), 0);
-    int err = Subprocess::launchSync(argv.getv(), getGitEnv(smitRepo).getv(), 0, 0, 0, subStdout, subStderr);
-    if (err) {
-        LOG_ERROR("gitSetupConfig: error: %d: stdout=%s, stderr=%s", err, subStdout.c_str(), subStderr.c_str());
-    }
-    return err;
-
-}
-
 static int gitClone(const std::string &remote, const std::string &smitRepo, const std::string &subpath)
 {
     // commit
@@ -154,12 +137,6 @@ static int gitClone(const std::string &remote, const std::string &smitRepo, cons
 static int cloneAll(const HttpClientContext &ctx, const std::string &rooturl, const std::string &smitRepo)
 {
     int err;
-
-    //err = gitSetupConfig(smitRepo);
-    //if (err) {
-    //    LOG_ERROR("Abort.");
-    //    exit(1);
-   // }
 
     // clone /public
     LOG_CLI("Cloning 'public'...");
@@ -561,7 +538,9 @@ int cmdClone(int argc, char **argv)
     createSmitDir(localdir);
     storeSessid(localdir, httpCtx.cookieSessid);
     storeUsername(localdir, username);
-    storeGitCredential(localdir, url, username, passwd);
+    std::string sessid = httpCtx.cookieSessid;
+    popToken(sessid, '='); // remove the <key>= part
+    storeGitCredential(localdir, url, BASIC_AUTH_SESSID, sessid);
 
     //
 

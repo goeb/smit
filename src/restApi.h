@@ -15,7 +15,7 @@
 #define COOKIE_PREFIX "smit-"
 #define COOKIE_SESSID_PREFIX COOKIE_PREFIX "sessid-"
 
-
+#define BASIC_AUTH_SESSID "smit_sessid"
 
 
 #endif

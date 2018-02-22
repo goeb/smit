@@ -188,19 +188,27 @@ void httpGitServeRequest(const RequestContext *req)
 
     // decode base64
     auth = base64decode(auth);
-    std::string username = popToken(auth, ':');
+    std::string username = popToken(auth, ':', TOK_STRICT);
     std::string &password = auth;
 
     LOG_DIAG("httpGitServeRequest: username=%s", username.c_str());
 
-    // TODO
-    // TODO if username == "", consider the password as a session id
-    // TODO
-
+    bool authSuccess = false;
     User usr;
-    bool success = SessionBase::authenticate(username, password, usr);
 
-    if (!success) {
+    if (username == BASIC_AUTH_SESSID) {
+        // expect password to be the session id of an already opened session
+        // (obtained via /signin)
+        usr = SessionBase::getLoggedInUser(password);
+        if (usr.username.empty()) authSuccess = false;
+        else authSuccess = true;
+
+    } else {
+        // expect a regular user/password
+        authSuccess = SessionBase::authenticate(username, password, usr);
+    }
+
+    if (!authSuccess) {
         return sendHttpHeader401(req);
     }
 
