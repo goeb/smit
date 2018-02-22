@@ -13,6 +13,7 @@
  */
 Pipe *Pipe::open(const std::string &command, const char *mode)
 {
+    LOG_DIAG("Pipe::open: %s", command.c_str());
     FILE *fp = popen(command.c_str(), mode);
     if (!fp) return 0;
 
