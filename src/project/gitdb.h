@@ -9,6 +9,7 @@
 
 // SHA1 id of an empty tree
 #define K_EMPTY_TREE "4b825dc642cb6eb9a060e54bf8d69288fbee4904"
+#define BRANCH_PREFIX_ISSUES "issues/"
 
 typedef std::string ObjectId;
 
@@ -25,13 +26,13 @@ int gitdbSetNotes(const std::string &gitRepoPath, const ObjectId &entryId, const
 class GitIssueList {
 
 public:
-    int open(const std::string &gitRepoPath);
+    int open(const std::string &gitRepoPath, const std::string &remote="");
     std::string getNext();
     void close();
 
 private:
     Pipe *p;
-
+    std::string remoteName;
 };
 
 

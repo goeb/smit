@@ -9,13 +9,15 @@
 #include "utils/subprocess.h"
 #include "utils/filesystem.h"
 
-#define BRANCH_PREFIX_ISSUES "issues/"
 #define SIZE_COMMIT_ID 40
 
-int GitIssueList::open(const std::string &gitRepoPath)
+int GitIssueList::open(const std::string &gitRepoPath, const std::string &remote)
 {
+    remoteName = remote;
     // git branch --list issues/*
-    std::string cmd = "git -C \"" + gitRepoPath + "\" branch --list \"" BRANCH_PREFIX_ISSUES "*\"";
+    std::string cmd = "git -C \"" + gitRepoPath + "\" branch --list ";
+    if (!remote.empty()) cmd += "--remotes " + remote + "/";
+    cmd += "\"" BRANCH_PREFIX_ISSUES "*\"";
     p = Pipe::open(cmd, "re"); // with FD_CLOEXEC
 
     if (p) return 0;
@@ -32,9 +34,11 @@ std::string GitIssueList::getNext()
     std::string line = p->getline();
     if (line.empty()) return line;
 
-    // trim the "  issues/" prefix
-    if (line.size() > strlen(BRANCH_PREFIX_ISSUES)+2) {
-        line = line.substr(strlen(BRANCH_PREFIX_ISSUES)+2);
+    // trim the "  issues/" prefix (or "  <remote>/issues/")
+    int addLength = 0;
+    if (!remoteName.empty()) addLength = remoteName.size() + 1; // +1 for the "/"
+    if (line.size() > strlen(BRANCH_PREFIX_ISSUES)+2+addLength) {
+        line = line.substr(strlen(BRANCH_PREFIX_ISSUES)+2+addLength);
         trimRight(line, "\n"); // remove possible trailing LF
 
     } else {
