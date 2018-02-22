@@ -283,7 +283,7 @@ int Subprocess::read(char *buffer, size_t size, StandardFd fd)
 
     while (remaining) {
 
-        ssize_t n = ::read(pipes[SUBP_STDOUT][SUBP_READ], buffer, remaining);
+        ssize_t n = ::read(pipes[fd][SUBP_READ], buffer, remaining);
 
         if (n < 0) {
             LOG_ERROR("Subprocess::read() error: %s", STRERROR(errno));
