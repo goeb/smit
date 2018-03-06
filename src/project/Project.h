@@ -109,6 +109,8 @@ public:
 
     Project() : maxIssueId(0) {}
 
+    inline Locker &getLocker() { return locker; }
+
 private:
     // private member variables
     std::string name; //< name of the project, plain text, UTF-8 encoded
