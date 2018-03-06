@@ -136,10 +136,13 @@ static std::string extractResource(const std::string &uri, std::string &gitPart)
  * if /public + push => require superadmin
  *
  * if / (.smit) + fetch|push => require superadmin
- * if /<p>/.git + fetch => require ro+
- * if /<p>/.git + push => require admin
- * if /<p>/.entries + fetch => require ro+
- * if /<p>/.entries + push => require rw+
+ * if /<p> + fetch => require ro+
+ * if /<p> + push => require admin or rw+ (check done by update hook)
+ *
+ * When git-pushing, the client sends 2 requests:
+ * 1. GET .../info/refs?service=git-receive-pack
+ * 2. POST .../git-receive-pack
+ * We need to update the in-memory tables only after the second request.
  *
  */
 void httpGitServeRequest(const RequestContext *req)
@@ -147,12 +150,18 @@ void httpGitServeRequest(const RequestContext *req)
     std::string qs = req->getQueryString();
     std::string uri = req->getUri();
     std::string service = getFirstParamFromQueryString(qs, "service");
+    std::string method = req->getMethod();
 
     std::string gitUriPart;
     std::string resource = extractResource(uri, gitUriPart);
 
+    bool isPushRequest = false; // indicate if the request is a push or a pull
+    if (gitUriPart == "/" GIT_SERVICE_PUSH || service == GIT_SERVICE_PUSH) {
+        isPushRequest = true;
+    }
+
     LOG_DIAG("httpGitServeRequest: method=%s, uri=%s, resource=%s, q=%s",
-             req->getMethod(), uri.c_str(), resource.c_str(), qs.c_str());
+             method.c_str(), uri.c_str(), resource.c_str(), qs.c_str());
 
     if (resource.empty()) {
         // error
@@ -165,9 +174,8 @@ void httpGitServeRequest(const RequestContext *req)
     std::string tmpResource = resource;
     std::string firstPart = popToken(tmpResource, '/');
 
-    if ( (firstPart == RESOURCE_PUBLIC && service == GIT_SERVICE_FETCH) ||
-         (firstPart == RESOURCE_PUBLIC && gitUriPart == "/" GIT_SERVICE_FETCH) ) {
-        // public access, no authentication required
+    if (firstPart == RESOURCE_PUBLIC && !isPushRequest) {
+        // pull request, public access, no authentication required
         httpCgiGitBackend(req, uri, "", "");
         return;
     }
@@ -221,19 +229,27 @@ void httpGitServeRequest(const RequestContext *req)
         // consider only the push, as the fetch has been handled earlier
         if (!usr.superadmin) return sendHttpHeader403(req);
 
-        // no lock needed. Rely on the git http backend CGI
+        // no lock needed:
+        // - rely on the git http backend CGI
+        // - the 'public' resource contains only static files
         httpCgiGitBackend(req, uri, usr.username, "superadmin");
 
     } else if (firstPart == ".smit") {
+
         if (!usr.superadmin) return sendHttpHeader403(req);
 
+        LockMode lockmode = LOCK_READ_ONLY;
+        if (isPushRequest && method == "POST") {
+            lockmode = LOCK_READ_WRITE;
+        }
+
         // lock
-        LOCK_SCOPE_I(UserBase::getLocker(), LOCK_READ_WRITE, 1);
-        LOCK_SCOPE_I(Database::getLocker(), LOCK_READ_WRITE, 2);
+        LOCK_SCOPE_I(UserBase::getLocker(), lockmode, 1);
+        LOCK_SCOPE_I(Database::getLocker(), lockmode, 2);
 
         httpCgiGitBackend(req, uri, usr.username, "superadmin");
 
-        if (gitUriPart == "/" GIT_SERVICE_PUSH) {
+        if (isPushRequest && method == "POST") {
             // update users and repo config
             int err;
             err = Database::Db.reloadConfig();
@@ -269,18 +285,22 @@ void httpGitServeRequest(const RequestContext *req)
         // - if the user has permission RW or ADMIN and requests a git push
 
         if (role > ROLE_RO) return sendHttpHeader403(req);
-        if (role > ROLE_RW && service == GIT_SERVICE_PUSH) return sendHttpHeader403(req);
+        if (role > ROLE_RW && isPushRequest) return sendHttpHeader403(req);
 
         rolename = roleToString(role);
 
-        // lock TODO
-        //pro->
+        LockMode lockmode = LOCK_READ_ONLY;
+        if (isPushRequest && method == "POST") {
+            lockmode = LOCK_READ_WRITE;
+        }
+
+        LOCK_SCOPE(pro->getLocker(), lockmode);
 
         httpCgiGitBackend(req, uri, usr.username, rolename);
 
         if (service == GIT_SERVICE_PUSH) {
             // update project entries if pushed entries
-            //TODO
+            //TODOin update
         }
 
         // unlock
