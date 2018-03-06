@@ -421,7 +421,7 @@ int Project::modifyConfig(std::list<std::list<std::string> > &tokens, const std:
 int Project::modifyConfig(ProjectConfig newConfig, const std::string &author)
 {
     LOG_FUNC();
-    ScopeLocker scopeLocker(lockerForConfig, LOCK_READ_WRITE);
+    ScopeLocker scopeLocker(locker, LOCK_READ_WRITE);
 
     // write to file
     std::string data = newConfig.serialize();
@@ -440,7 +440,7 @@ int Project::modifyConfig(ProjectConfig newConfig, const std::string &author)
   */
 PredefinedView Project::getPredefinedView(const std::string &name)
 {
-    ScopeLocker scopeLocker(lockerForViews, LOCK_READ_ONLY);
+    ScopeLocker scopeLocker(locker, LOCK_READ_ONLY);
 
     std::map<std::string, PredefinedView>::const_iterator pv;
     pv = predefinedViews.find(name);
@@ -462,7 +462,7 @@ int Project::setPredefinedView(const std::string &name, const PredefinedView &pv
     if (pv.name.empty()) return -3;
     if (pv.name == "_") return -2; // '_' is reserved
 
-    ScopeLocker scopeLocker(lockerForViews, LOCK_READ_WRITE);
+    ScopeLocker scopeLocker(locker, LOCK_READ_WRITE);
 
     if (name == "_" && predefinedViews.count(pv.name)) {
         // reject creating a new view with the name of an existing view
@@ -515,7 +515,7 @@ int Project::storeViewsToFile(const std::string &author)
 int Project::deletePredefinedView(const std::string &name, const std::string &author)
 {
     if (name.empty()) return -1;
-    ScopeLocker scopeLocker(lockerForViews, LOCK_READ_WRITE);
+    ScopeLocker scopeLocker(locker, LOCK_READ_WRITE);
 
     std::map<std::string, PredefinedView>::iterator i = predefinedViews.find(name);
     if (i != predefinedViews.end()) {
@@ -531,7 +531,7 @@ int Project::deletePredefinedView(const std::string &name, const std::string &au
 
 PredefinedView Project::getDefaultView() const
 {
-    ScopeLocker scopeLocker(lockerForViews, LOCK_READ_ONLY);
+    ScopeLocker scopeLocker(locker, LOCK_READ_ONLY);
     std::map<std::string, PredefinedView>::const_iterator i;
     FOREACH(i, predefinedViews) {
         if (i->second.isDefault) return i->second;
@@ -682,8 +682,7 @@ void Project::updateMaxIssueId(uint32_t i)
   */
 int Project::reload()
 {
-    ScopeLocker L1(locker, LOCK_READ_WRITE);
-    ScopeLocker L2(lockerForConfig, LOCK_READ_WRITE);
+    ScopeLocker scopeLocker(locker, LOCK_READ_WRITE);
 
     LOG_INFO("Reloading project '%s'...", getName().c_str());
 
@@ -1124,7 +1123,6 @@ int Project::addEntry(PropertiesMap properties, const std::list<AttachedFileRef>
                       std::string &issueId, Entry *&entry, std::string username, IssueCopy &oldIssue)
 {
     ScopeLocker scopeLocker(locker, LOCK_READ_WRITE);
-    ScopeLocker scopeLockerConfig(lockerForConfig, LOCK_READ_ONLY);
 
     entry = 0;
 
@@ -1408,13 +1406,13 @@ Entry *Project::getEntry(const std::string &id) const
 
 ProjectConfig Project::getConfig() const
 {
-    ScopeLocker scopeLocker(lockerForConfig, LOCK_READ_ONLY);
+    ScopeLocker scopeLocker(locker, LOCK_READ_ONLY);
     return config;
 }
 
 ProjectParameters Project::getProjectParameters() const
 {
-    ScopeLocker scopeLocker(lockerForConfig, LOCK_READ_ONLY);
+    ScopeLocker scopeLocker(locker, LOCK_READ_ONLY);
     ProjectParameters pParams;
     pParams.projectName = name;
     pParams.projectPath = path;

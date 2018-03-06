@@ -117,9 +117,8 @@ private:
     std::map<std::string, Entry*> entries;
     std::map<std::string, Issue*> issues;
     ProjectConfig config;
-    mutable Locker locker; // mutex for issues and entries
-    mutable Locker lockerForConfig; // mutext for config
-    mutable Locker lockerForViews; // mutext for views
+
+    mutable Locker locker; // mutex for issues, entries, config, views
 
     // associations table
     // { issue : { association-name : [other-issues] } }
