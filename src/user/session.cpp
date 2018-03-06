@@ -208,8 +208,8 @@ int User::authenticate(const char *passwd)
 
 /** Consolidate roles on projects after the permissions
   *
-  * The for each known project, examine the permissions
-  * of the users on this project.
+  * For each project, examine the permissions
+  * of the user on this project.
   *
   * If several wildcard expressions match for a given project,
   * then the most restrictive permission is chosen.
@@ -230,6 +230,7 @@ void User::consolidateRoles()
                 // keep the most restrictive permission if several wildcard match
                 if (roleOnThisProject == ROLE_NONE) roleOnThisProject = perm->second;
                 else if (perm->second > roleOnThisProject) roleOnThisProject = perm->second;
+                // else do not change the role on this project
             }
         }
         if (roleOnThisProject != ROLE_NONE) {
