@@ -33,6 +33,8 @@ public:
     int read(std::string &data, StandardFd fd=SUBP_STDOUT);
     std::string getline();
     void closeStdin();
+    void closePipes();
+    void shutdown();
     std::string getStdout();
     std::string getStderr();
 

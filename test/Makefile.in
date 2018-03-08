@@ -95,8 +95,8 @@ TESTS = T_parseConfig$(EXEEXT) T_stringTools$(EXEEXT) T_smparser \
 	T_permissions_repo.sh T_project_config.sh T_user_config.sh \
 	T_get_json.sh
 check_PROGRAMS = T_parseConfig$(EXEEXT) T_stringTools$(EXEEXT) \
-	T_Args$(EXEEXT) get_random_value$(EXEEXT) T_pipe$(EXEEXT) \
-	T_gitdb$(EXEEXT) T_subprocess$(EXEEXT)
+	T_Args$(EXEEXT) get_random_value$(EXEEXT) T_gitdb$(EXEEXT) \
+	T_subprocess$(EXEEXT)
 subdir = test
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/configure.ac
@@ -112,8 +112,8 @@ am_T_Args_OBJECTS = T_Args.$(OBJEXT) ../src/Args.$(OBJEXT) \
 	../src/utils/stringTools.$(OBJEXT)
 T_Args_OBJECTS = $(am_T_Args_OBJECTS)
 T_Args_LDADD = $(LDADD)
-am_T_gitdb_OBJECTS = T_gitdb.$(OBJEXT) ../src/utils/pipe.$(OBJEXT) \
-	../src/project/gitdb.$(OBJEXT) ../src/utils/gitTools.$(OBJEXT) \
+am_T_gitdb_OBJECTS = T_gitdb.$(OBJEXT) ../src/project/gitdb.$(OBJEXT) \
+	../src/utils/gitTools.$(OBJEXT) \
 	../src/utils/stringTools.$(OBJEXT) \
 	../src/utils/filesystem.$(OBJEXT) \
 	../src/utils/subprocess.$(OBJEXT) ../src/utils/argv.$(OBJEXT)
@@ -124,9 +124,6 @@ am_T_parseConfig_OBJECTS = T_parseConfig.$(OBJEXT) \
 	../src/utils/stringTools.$(OBJEXT)
 T_parseConfig_OBJECTS = $(am_T_parseConfig_OBJECTS)
 T_parseConfig_LDADD = $(LDADD)
-am_T_pipe_OBJECTS = T_pipe.$(OBJEXT) ../src/utils/pipe.$(OBJEXT)
-T_pipe_OBJECTS = $(am_T_pipe_OBJECTS)
-T_pipe_LDADD = $(LDADD)
 am_T_stringTools_OBJECTS = T_stringTools.$(OBJEXT) \
 	../src/utils/stringTools.$(OBJEXT)
 T_stringTools_OBJECTS = $(am_T_stringTools_OBJECTS)
@@ -180,13 +177,11 @@ am__v_CXXLD_ = $(am__v_CXXLD_@AM_DEFAULT_V@)
 am__v_CXXLD_0 = @echo "  CXXLD   " $@;
 am__v_CXXLD_1 = 
 SOURCES = $(T_Args_SOURCES) $(T_gitdb_SOURCES) \
-	$(T_parseConfig_SOURCES) $(T_pipe_SOURCES) \
-	$(T_stringTools_SOURCES) $(T_subprocess_SOURCES) \
-	$(get_random_value_SOURCES)
+	$(T_parseConfig_SOURCES) $(T_stringTools_SOURCES) \
+	$(T_subprocess_SOURCES) $(get_random_value_SOURCES)
 DIST_SOURCES = $(T_Args_SOURCES) $(T_gitdb_SOURCES) \
-	$(T_parseConfig_SOURCES) $(T_pipe_SOURCES) \
-	$(T_stringTools_SOURCES) $(T_subprocess_SOURCES) \
-	$(get_random_value_SOURCES)
+	$(T_parseConfig_SOURCES) $(T_stringTools_SOURCES) \
+	$(T_subprocess_SOURCES) $(get_random_value_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -542,9 +537,7 @@ T_parseConfig_SOURCES = T_parseConfig.cpp ../src/utils/parseConfig.cpp ../src/ut
 T_stringTools_SOURCES = T_stringTools.cpp ../src/utils/stringTools.cpp
 T_Args_SOURCES = T_Args.cpp ../src/Args.cpp ../src/utils/stringTools.cpp
 get_random_value_SOURCES = get_random_value.c
-T_pipe_SOURCES = T_pipe.cpp ../src/utils/pipe.cpp
 T_gitdb_SOURCES = T_gitdb.cpp \
-				  ../src/utils/pipe.cpp \
 				  ../src/project/gitdb.cpp \
 				  ../src/utils/gitTools.cpp \
 				  ../src/utils/stringTools.cpp \
@@ -621,8 +614,6 @@ clean-checkPROGRAMS:
 T_Args$(EXEEXT): $(T_Args_OBJECTS) $(T_Args_DEPENDENCIES) $(EXTRA_T_Args_DEPENDENCIES) 
 	@rm -f T_Args$(EXEEXT)
 	$(AM_V_CXXLD)$(CXXLINK) $(T_Args_OBJECTS) $(T_Args_LDADD) $(LIBS)
-../src/utils/pipe.$(OBJEXT): ../src/utils/$(am__dirstamp) \
-	../src/utils/$(DEPDIR)/$(am__dirstamp)
 ../src/project/$(am__dirstamp):
 	@$(MKDIR_P) ../src/project
 	@: > ../src/project/$(am__dirstamp)
@@ -649,10 +640,6 @@ T_gitdb$(EXEEXT): $(T_gitdb_OBJECTS) $(T_gitdb_DEPENDENCIES) $(EXTRA_T_gitdb_DEP
 T_parseConfig$(EXEEXT): $(T_parseConfig_OBJECTS) $(T_parseConfig_DEPENDENCIES) $(EXTRA_T_parseConfig_DEPENDENCIES) 
 	@rm -f T_parseConfig$(EXEEXT)
 	$(AM_V_CXXLD)$(CXXLINK) $(T_parseConfig_OBJECTS) $(T_parseConfig_LDADD) $(LIBS)
-
-T_pipe$(EXEEXT): $(T_pipe_OBJECTS) $(T_pipe_DEPENDENCIES) $(EXTRA_T_pipe_DEPENDENCIES) 
-	@rm -f T_pipe$(EXEEXT)
-	$(AM_V_CXXLD)$(CXXLINK) $(T_pipe_OBJECTS) $(T_pipe_LDADD) $(LIBS)
 
 T_stringTools$(EXEEXT): $(T_stringTools_OBJECTS) $(T_stringTools_DEPENDENCIES) $(EXTRA_T_stringTools_DEPENDENCIES) 
 	@rm -f T_stringTools$(EXEEXT)
@@ -681,13 +668,11 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@../src/utils/$(DEPDIR)/filesystem.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@../src/utils/$(DEPDIR)/gitTools.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@../src/utils/$(DEPDIR)/parseConfig.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@../src/utils/$(DEPDIR)/pipe.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@../src/utils/$(DEPDIR)/stringTools.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@../src/utils/$(DEPDIR)/subprocess.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/T_Args.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/T_gitdb.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/T_parseConfig.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/T_pipe.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/T_stringTools.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/T_subprocess.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/get_random_value.Po@am__quote@

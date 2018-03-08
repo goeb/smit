@@ -17,7 +17,6 @@ check_PROGRAMS = T_parseConfig \
 				 T_stringTools \
 				 T_Args \
 				 get_random_value \
-				 T_pipe \
 				 T_gitdb \
 				 T_subprocess
 
@@ -26,9 +25,7 @@ T_stringTools_SOURCES = T_stringTools.cpp ../src/utils/stringTools.cpp
 T_Args_SOURCES = T_Args.cpp ../src/Args.cpp ../src/utils/stringTools.cpp
 get_random_value_SOURCES = get_random_value.c
 
-T_pipe_SOURCES = T_pipe.cpp ../src/utils/pipe.cpp
 T_gitdb_SOURCES = T_gitdb.cpp \
-				  ../src/utils/pipe.cpp \
 				  ../src/project/gitdb.cpp \
 				  ../src/utils/gitTools.cpp \
 				  ../src/utils/stringTools.cpp \

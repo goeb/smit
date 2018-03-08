@@ -4,7 +4,6 @@
 #include <string>
 #include <list>
 
-#include "utils/pipe.h"
 #include "utils/subprocess.h"
 
 // SHA1 id of an empty tree
@@ -31,7 +30,7 @@ public:
     void close();
 
 private:
-    Pipe *p;
+    Subprocess *subp;
     std::string remoteName;
 };
 
@@ -46,7 +45,7 @@ public:
                                  const std::string &author, long ctime, const std::string &body, const std::list<AttachedFileRef> &files);
 
 private:
-    Pipe *p;
+    Subprocess *subp;
     std::string previousCommitLine;
 
 };

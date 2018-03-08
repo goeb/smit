@@ -137,7 +137,7 @@ am__smit_SOURCES_DIST = src/repository/db.cpp src/project/Entry.cpp \
 	src/utils/stringTools.cpp src/utils/jTools.cpp \
 	src/utils/mutexTools.cpp src/utils/dateTools.cpp \
 	src/utils/logging.cpp src/utils/filesystem.cpp \
-	src/utils/pipe.cpp src/utils/subprocess.cpp src/utils/argv.cpp \
+	src/utils/subprocess.cpp src/utils/argv.cpp \
 	src/utils/base64.cpp src/utils/gitTools.cpp src/main.cpp \
 	src/server/httpdHandlers.cpp src/server/httpdUtils.cpp \
 	src/server/httpdHandlerGit.cpp src/server/Trigger.cpp \
@@ -178,7 +178,6 @@ am_smit_OBJECTS = src/repository/smit-db.$(OBJEXT) \
 	src/utils/smit-dateTools.$(OBJEXT) \
 	src/utils/smit-logging.$(OBJEXT) \
 	src/utils/smit-filesystem.$(OBJEXT) \
-	src/utils/smit-pipe.$(OBJEXT) \
 	src/utils/smit-subprocess.$(OBJEXT) \
 	src/utils/smit-argv.$(OBJEXT) src/utils/smit-base64.$(OBJEXT) \
 	src/utils/smit-gitTools.$(OBJEXT) src/smit-main.$(OBJEXT) \
@@ -514,7 +513,7 @@ smit_SOURCES = src/repository/db.cpp src/project/Entry.cpp \
 	src/utils/stringTools.cpp src/utils/jTools.cpp \
 	src/utils/mutexTools.cpp src/utils/dateTools.cpp \
 	src/utils/logging.cpp src/utils/filesystem.cpp \
-	src/utils/pipe.cpp src/utils/subprocess.cpp src/utils/argv.cpp \
+	src/utils/subprocess.cpp src/utils/argv.cpp \
 	src/utils/base64.cpp src/utils/gitTools.cpp src/main.cpp \
 	src/server/httpdHandlers.cpp src/server/httpdUtils.cpp \
 	src/server/httpdHandlerGit.cpp src/server/Trigger.cpp \
@@ -704,8 +703,6 @@ src/utils/smit-dateTools.$(OBJEXT): src/utils/$(am__dirstamp) \
 src/utils/smit-logging.$(OBJEXT): src/utils/$(am__dirstamp) \
 	src/utils/$(DEPDIR)/$(am__dirstamp)
 src/utils/smit-filesystem.$(OBJEXT): src/utils/$(am__dirstamp) \
-	src/utils/$(DEPDIR)/$(am__dirstamp)
-src/utils/smit-pipe.$(OBJEXT): src/utils/$(am__dirstamp) \
 	src/utils/$(DEPDIR)/$(am__dirstamp)
 src/utils/smit-subprocess.$(OBJEXT): src/utils/$(am__dirstamp) \
 	src/utils/$(DEPDIR)/$(am__dirstamp)
@@ -899,7 +896,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/utils/$(DEPDIR)/smit-logging.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/utils/$(DEPDIR)/smit-mutexTools.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/utils/$(DEPDIR)/smit-parseConfig.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@src/utils/$(DEPDIR)/smit-pipe.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/utils/$(DEPDIR)/smit-stringTools.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/utils/$(DEPDIR)/smit-subprocess.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/utils/$(DEPDIR)/smparser-filesystem.Po@am__quote@
@@ -1231,20 +1227,6 @@ src/utils/smit-filesystem.obj: src/utils/filesystem.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/utils/filesystem.cpp' object='src/utils/smit-filesystem.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/utils/smit-filesystem.obj `if test -f 'src/utils/filesystem.cpp'; then $(CYGPATH_W) 'src/utils/filesystem.cpp'; else $(CYGPATH_W) '$(srcdir)/src/utils/filesystem.cpp'; fi`
-
-src/utils/smit-pipe.o: src/utils/pipe.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/utils/smit-pipe.o -MD -MP -MF src/utils/$(DEPDIR)/smit-pipe.Tpo -c -o src/utils/smit-pipe.o `test -f 'src/utils/pipe.cpp' || echo '$(srcdir)/'`src/utils/pipe.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/utils/$(DEPDIR)/smit-pipe.Tpo src/utils/$(DEPDIR)/smit-pipe.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/utils/pipe.cpp' object='src/utils/smit-pipe.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/utils/smit-pipe.o `test -f 'src/utils/pipe.cpp' || echo '$(srcdir)/'`src/utils/pipe.cpp
-
-src/utils/smit-pipe.obj: src/utils/pipe.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/utils/smit-pipe.obj -MD -MP -MF src/utils/$(DEPDIR)/smit-pipe.Tpo -c -o src/utils/smit-pipe.obj `if test -f 'src/utils/pipe.cpp'; then $(CYGPATH_W) 'src/utils/pipe.cpp'; else $(CYGPATH_W) '$(srcdir)/src/utils/pipe.cpp'; fi`
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/utils/$(DEPDIR)/smit-pipe.Tpo src/utils/$(DEPDIR)/smit-pipe.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/utils/pipe.cpp' object='src/utils/smit-pipe.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/utils/smit-pipe.obj `if test -f 'src/utils/pipe.cpp'; then $(CYGPATH_W) 'src/utils/pipe.cpp'; else $(CYGPATH_W) '$(srcdir)/src/utils/pipe.cpp'; fi`
 
 src/utils/smit-subprocess.o: src/utils/subprocess.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/utils/smit-subprocess.o -MD -MP -MF src/utils/$(DEPDIR)/smit-subprocess.Tpo -c -o src/utils/smit-subprocess.o `test -f 'src/utils/subprocess.cpp' || echo '$(srcdir)/'`src/utils/subprocess.cpp

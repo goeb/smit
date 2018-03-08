@@ -105,6 +105,31 @@ void Subprocess::closeStdin()
     closePipe(pipes[SUBP_STDIN][SUBP_WRITE]);
 }
 
+/** Close stdin, stdout, sterr
+ */
+void Subprocess::closePipes()
+{
+    int i, j;
+    for (i=0; i<3; i++) for (j=0; j<2; j++) {
+        if (pipes[i][j] != -1) closePipe(pipes[i][j]);
+    }
+}
+
+/** Request the end of the child process and wait
+ *
+ *  At the moment, the termination of the child process
+ *  relies on the closing of the file descriptors.
+ */
+void Subprocess::shutdown()
+{
+    closePipes();
+    int err = wait();
+    if (err) {
+        LOG_ERROR("Subprocess::shutdown: err=%d", err);
+    }
+}
+
+
 Subprocess::Subprocess()
 {
     int i, j;
@@ -114,10 +139,7 @@ Subprocess::Subprocess()
 Subprocess::~Subprocess()
 {
     // close remaining open pipes
-    int i, j;
-    for (i=0; i<3; i++) for (j=0; j<2; j++) {
-        if (pipes[i][j] != -1) closePipe(pipes[i][j]);
-    }
+    closePipes();
 }
 
 /** Launch a subprocess

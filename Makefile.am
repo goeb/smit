@@ -48,7 +48,6 @@ smit_SOURCES = \
 			   src/utils/dateTools.cpp \
 			   src/utils/logging.cpp \
 			   src/utils/filesystem.cpp \
-			   src/utils/pipe.cpp \
 			   src/utils/subprocess.cpp \
 			   src/utils/argv.cpp \
 			   src/utils/base64.cpp \

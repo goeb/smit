@@ -14,15 +14,33 @@
 int GitIssueList::open(const std::string &gitRepoPath, const std::string &remote)
 {
     remoteName = remote;
-    // git branch --list issues/*
-    std::string cmd = "git -C \"" + gitRepoPath + "\" branch --list ";
-    if (!remote.empty()) cmd += "--remotes " + remote + "/";
-    cmd += "\"" BRANCH_PREFIX_ISSUES "*\"";
-    p = Pipe::open(cmd, "re"); // with FD_CLOEXEC
 
-    if (p) return 0;
-    LOG_ERROR("Cannot get issue list (%s)", gitRepoPath.c_str());
-    return -1;
+    // git branch --list issues/*
+    // OR
+    // git branch --list --remotes <remote>/issues/*
+
+    Argv argv;
+    argv.set("git", "branch", "--list", 0);
+
+    // branch name (remote or not)
+    std::string branchName = BRANCH_PREFIX_ISSUES "*";
+    if (!remote.empty()) {
+        // remote requested
+        argv.append("--remotes", 0);
+        branchName = remote + "/" + branchName;
+    }
+
+    argv.append(branchName.c_str(), 0);
+
+    subp = Subprocess::launch(argv.getv(), 0, gitRepoPath.c_str());
+    if (!subp) {
+        LOG_ERROR("GitIssueList::open: failed to launch: %s", argv.toString().c_str());
+        return -1;
+    }
+
+    subp->closeStdin();
+
+    return 0;
 }
 
 /** Read the next line
@@ -31,7 +49,7 @@ int GitIssueList::open(const std::string &gitRepoPath, const std::string &remote
  */
 std::string GitIssueList::getNext()
 {
-    std::string line = p->getline();
+    std::string line = subp->getline();
     if (line.empty()) return line;
 
     // trim the "  issues/" prefix (or "  <remote>/issues/")
@@ -51,21 +69,28 @@ std::string GitIssueList::getNext()
 
 void GitIssueList::close()
 {
-    Pipe::close(p);
+    subp->shutdown();
+    delete subp;
 }
 
 
 int GitIssue::open(const std::string &gitRepoPath, const std::string &issueId)
 {
     // git log --format=raw --notes issues/<id>"
-    std::string cmd = "git -C \"" + gitRepoPath + "\"";
-    cmd += " log --format=raw --notes";
-    cmd += " " BRANCH_PREFIX_ISSUES + issueId;
-    p = Pipe::open(cmd, "re"); // with FD_CLOEXEC
 
-    if (p) return 0;
-    LOG_ERROR("Cannot open log of issue %s (%s)", issueId.c_str(), gitRepoPath.c_str());
-    return -1;
+    std::string branchIssueId = BRANCH_PREFIX_ISSUES + issueId;
+    Argv argv;
+    argv.set("git", "log", "--format=raw", "--notes", branchIssueId.c_str(), 0);
+
+    subp = Subprocess::launch(argv.getv(), 0, gitRepoPath.c_str());
+    if (!subp) {
+        LOG_ERROR("GitIssue::open: failed to launch: %s", argv.toString().c_str());
+        return -1;
+    }
+
+    subp->closeStdin();
+
+    return 0;
 }
 
 static bool isCommitLine(const std::string &line)
@@ -99,7 +124,7 @@ std::string GitIssue::getNextEntry()
 {
     std::string entry;
     if (previousCommitLine.empty()) {
-        std::string commitLine = p->getline();
+        std::string commitLine = subp->getline();
         if (commitLine.empty()) return ""; // the end
 
         if (!isCommitLine(commitLine)) {
@@ -114,7 +139,7 @@ std::string GitIssue::getNextEntry()
 
     // read until next cmomit line or end of stream
     while (1) {
-        std::string line = p->getline();
+        std::string line = subp->getline();
         if (line.empty()) return entry; // end of stream
         if (isCommitLine(line)) {
             previousCommitLine = line; // store for next iteration
@@ -126,7 +151,8 @@ std::string GitIssue::getNextEntry()
 
 void GitIssue::close()
 {
-    Pipe::close(p);
+    subp->shutdown();
+    delete subp;
 }
 
 /** Store data in the git repo
