@@ -23,6 +23,7 @@
 #include "utils/filesystem.h"
 #include "utils/parseConfig.h"
 #include "utils/gitTools.h"
+#include "local/localClient.h"
 #include "global.h"
 #include "repository/db.h"
 #include "fnmatch.h"
@@ -88,6 +89,11 @@ std::string User::serializeAuth()
 }
 
 std::string User::serializePermissions() const
+{
+    return User::serializePermissions(username, superadmin, permissions);
+}
+
+std::string User::serializePermissions(const std::string username, bool superadmin, const std::map<std::string, enum Role> &permissions)
 {
     std::string result;
 
@@ -335,9 +341,8 @@ std::list<RoleId> getAvailableRoles()
 
 /** Load the 'permissions' file
  */
-int UserBase::loadPermissions(const std::string &path, std::map<std::string, User*> &users)
+int UserBase::loadPermissions(const std::string &filePermissions, std::map<std::string, User*> &users)
 {
-    std::string filePermissions = std::string(path) + "/" PATH_REPO "/" PATH_PERMISSIONS;
     std::string data;
     int n = loadFile(filePermissions.c_str(), data);
     if (n != 0) {
@@ -440,7 +445,8 @@ int UserBase::load(const std::string &path, std::map<std::string, User*> &users)
         }
     }
 
-    int rc = loadPermissions(path, users);
+    std::string filePermissions = path + "/" PATH_REPO "/" PATH_PERMISSIONS;
+    int rc = loadPermissions(filePermissions, users);
     if (rc < 0) return rc;
 
     // init dir for notification configs
@@ -450,6 +456,21 @@ int UserBase::load(const std::string &path, std::map<std::string, User*> &users)
     loadNotifications(path, users);
 
     return rc;
+}
+
+/** Load local user permissions (smit ui)
+ */
+int UserBase::loadLocalUi(const std::string &path)
+{
+    // Initiate the local user in the database
+    // so that tha loadPermission will succeed (whereas the load 'auth' will fail)
+    User u;
+    u.username = localInterfaceUsername;
+    addUserInArray(u);
+
+    std::string filePermissions = path + "/" PATH_LOCAL_PERM;
+    int err = loadPermissions(filePermissions, UserDb.configuredUsers);
+    return err;
 }
 
 std::string UserBase::getPathNotification(const std::string &pathRepo, const std::string &username)
@@ -472,15 +493,15 @@ void UserBase::loadNotifications(const std::string &pathRepo, std::map<std::stri
   */
 int UserBase::init(const char *path)
 {
-
+    int err;
     if (isLocalUserInterface()) {
-        // Initiate the local user in the database
-        // so that tha loadPermission will succeed (whereas the load 'auth' will fail)
-        User u;
-        u.username = localInterfaceUsername;
-        addUserInArray(u);
+        err = loadLocalUi(path);
+
+    } else {
+        err = load(path, UserDb.configuredUsers);
     }
-    return load(path, UserDb.configuredUsers);
+
+    return err;
 }
 
 void UserBase::setLocalInterfaceUser(const std::string &username)

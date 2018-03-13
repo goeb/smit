@@ -168,18 +168,18 @@ static int gitClone(const std::string &remote, const std::string &smitRepo, cons
     return err;
 }
 
+struct Permissions {
+    std::map<std::string, Role> byProject; // mapping project name / role
+    bool superadmin;
+    Permissions(): superadmin(false) {}
+};
 
-static int cloneAll(const HttpClientContext &ctx, const std::string &rooturl, const std::string &smitRepo)
+/** Read the permissions from the remote server and update locally
+ */
+static Permissions updatePermissions(const HttpClientContext &ctx, const std::string &rooturl, const std::string &localRepo,
+                                     const std::string username)
 {
-    int err;
-
-    // clone /public
-    LOG_CLI("Cloning 'public'...");
-    err = gitClone(rooturl+"/public", smitRepo, "public");
-    if (err) {
-        LOG_ERROR("Abort.");
-        exit(1);
-    }
+    Permissions permissions;
 
     // get the list of remote projects
     HttpRequest hr(ctx);
@@ -189,36 +189,68 @@ static int cloneAll(const HttpClientContext &ctx, const std::string &rooturl, co
     // Lines are in the format: <permission> <project name>
     // Except the "superadmin" line, if any.
     std::list<std::string>::iterator line;
-    bool isSuperadmin = false;
 
     FOREACH(line, hr.lines) {
         if ( (*line) == "superadmin") {
-            isSuperadmin = true;
+            permissions.superadmin = true;
 
         } else {
             std::string roleStr = popToken(*line, ' ');
             std::string projectName = *line;
 
             Role role = stringToRole(roleStr);
-            if (role <= ROLE_RO) {
-                // do clone
-                LOG_CLI("Cloning '%s'...", projectName.c_str());
-                LOG_DIAG("role=%s", roleStr.c_str());
-                std::string resource = "/" + Project::urlNameEncode(projectName);
-                std::string projectDir = resource;
-                err = gitClone(rooturl+"/"+resource, smitRepo, projectDir);
-                if (err) {
-                    LOG_ERROR("Abort.");
-                    exit(1);
-                }
+
+            if (role != ROLE_NONE) permissions.byProject[projectName] = role;
+        }
+    }
+
+    // Update the local file that stores the permissions (used by smit ui)
+    std::string data = User::serializePermissions(username, permissions.superadmin, permissions.byProject);
+    std::string filePermissions = localRepo + "/" PATH_LOCAL_PERM;
+    int err = writeToFile(filePermissions, data);
+    if (err) {
+        LOG_ERROR("Cannot store local permissions: %s", filePermissions.c_str());
+    }
+    return permissions;
+}
+
+static int cloneAll(const HttpClientContext &ctx, const std::string &rooturl, const std::string &localdir, const Permissions &perms)
+{
+    int err;
+
+    // clone /public
+    LOG_CLI("Cloning 'public'...");
+    err = gitClone(rooturl+"/public", localdir, "public");
+    if (err) {
+        LOG_ERROR("Abort.");
+        exit(1);
+    }
+
+    // clone the projects if the permissions allow it
+    std::map<std::string, Role>::const_iterator perm;
+    FOREACH(perm, perms.byProject) {
+        std::string projectName = perm->first;
+        Role role = perm->second;
+        if (role <= ROLE_RO) {
+            // do clone
+            LOG_CLI("Cloning '%s'...", projectName.c_str());
+            LOG_DIAG("role=%s", roleToString(role).c_str());
+            std::string resource = "/" + Project::urlNameEncode(projectName);
+            std::string projectDir = resource;
+            err = gitClone(rooturl+"/"+resource, localdir, projectDir);
+            if (err) {
+                LOG_ERROR("Abort.");
+                exit(1);
             }
         }
     }
 
+    //
+
     // clone /.smit if permission granted
-    if (isSuperadmin) {
+    if (perms.superadmin) {
         LOG_CLI("Cloning '.smit'...");
-        err = gitClone(rooturl+"/.smit", smitRepo, ".smit");
+        err = gitClone(rooturl+"/.smit", localdir, ".smit");
         if (err) {
             LOG_ERROR("Abort.");
             exit(1);
@@ -578,8 +610,9 @@ int cmdClone(int argc, char **argv)
     storeGitCredential(localdir, url, BASIC_AUTH_SESSID, sessid);
 
     //
+    Permissions perms = updatePermissions(httpCtx, url, localdir, username);
 
-    r = cloneAll(httpCtx, url, localdir);
+    r = cloneAll(httpCtx, url, localdir, perms);
     if (r < 0) {
         fprintf(stderr, "Clone failed. Abort.\n");
         exit(1);

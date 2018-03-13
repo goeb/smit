@@ -297,9 +297,10 @@ std::string GitIssue::addCommit(const std::string &bareGitRepo, const std::strin
         return "";
     }
 
-    // git show-ref issues/<id>
+    // git show-ref --heads -s issues/<id>
+    // (use "--heads" so that remote refs are not shown)
     std::string branchName = "issues/" + issueId;
-    argv.set("git", "show-ref", "-s", branchName.c_str(), 0);
+    argv.set("git", "show-ref", "--heads", "-s", branchName.c_str(), 0);
     err = Subprocess::launchSync(argv.getv(), 0, bareGitRepo.c_str(), 0, 0, subStdout, subStderr);
     if (err) {
         if (subStderr.empty() && subStdout.empty()) {

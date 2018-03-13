@@ -51,6 +51,7 @@ public:
     std::list<std::pair<std::string, RoleId> >  getProjects() const;
     std::list<std::string>  getProjectsNames() const;
     std::string serializePermissions() const;
+    static std::string serializePermissions(const std::string username, bool superadmin, const std::map<std::string, enum Role> &permissions);
     std::string serializeAuth();
     int loadAuth(std::list<std::string> &tokens);
     void setPasswd(const std::string &passwd);
@@ -74,8 +75,9 @@ private:
 class UserBase {
 public:
     static int init(const char *repository);
-    static int loadPermissions(const std::string &path, std::map<std::string, User*> &users);
+    static int loadPermissions(const std::string &filePermissions, std::map<std::string, User*> &users);
     static int load(const std::string &repository, std::map<std::string, User*> &users);
+    static int loadLocalUi(const std::string &path);
     static void loadNotifications(const std::string &pathRepo, std::map<std::string, User*> &users);
     static void setLocalInterfaceUser(const std::string &username);
     static int store(const std::string &repository, const std::string &author);
