@@ -386,6 +386,75 @@ int cmdUser(int argc, char **argv)
     return 0;
 }
 
+struct ServerOptions {
+    std::string repo; // path
+    std::string urlRewritingRoot; // url rewriting prefix
+    std::string certificatePemFile; // path to certificate
+    std::string listenPort; // eg: "8090","127.0.0.1:8090" or "8090s" (mongoose syntax)
+    bool oneThread;
+};
+
+static int startSmitServer(const ServerOptions options)
+{
+    std::string dotLock = options.repo + "/.lock";
+    int lockFd = lockFile(dotLock);
+    if (lockFd < 0) {
+        LOG_ERROR("Cannot lock repository: %s", dotLock.c_str());
+        return 1;
+    }
+
+    // Load all projects
+    int err = dbLoad(options.repo.c_str());
+
+    if (err < 0) {
+        LOG_ERROR("Cannot serve repository '%s'. Aborting.", options.repo.c_str());
+        return 1;
+    }
+
+    err = UserBase::init(options.repo.c_str());
+    if (err < 0) {
+        LOG_ERROR("Cannot loads users of repository '%s'. Aborting.", options.repo.c_str());
+        return 1;
+    }
+
+    initHttpStats();
+
+    MongooseServerContext *mc = new MongooseServerContext();
+    mc->setRequestHandler(begin_request_handler);
+    mc->setListeningPort(options.listenPort);
+
+    if (!options.urlRewritingRoot.empty()) mc->setUrlRewritingRoot(options.urlRewritingRoot);
+    std::string serverMsg = "Starting http server on port " + options.listenPort;
+    if (!options.urlRewritingRoot.empty()) serverMsg += std::string(" --url-rewrite-root ") + options.urlRewritingRoot;
+    LOG_INFO("%s", serverMsg.c_str());
+
+    mc->addParam("listening_ports");
+    mc->addParam(options.listenPort.c_str());
+    mc->addParam("document_root");
+    mc->addParam(options.repo.c_str());
+    mc->addParam("enable_directory_listing");
+    mc->addParam("no");
+
+    if (!options.certificatePemFile.empty()) {
+        mc->addParam("ssl_certificate");
+        mc->addParam(options.certificatePemFile.c_str());
+    }
+
+    if (options.oneThread) {
+        mc->addParam("num_threads");
+        mc->addParam("1");
+    }
+
+    err = mc->start();
+
+    if (err < 0) {
+        LOG_ERROR("Cannot start http server. Aborting.");
+        return -1;
+    }
+
+    // TODO possible memory leak as reference to 'mc' is lost
+    return 0;
+}
 
 int helpServe()
 {
@@ -411,10 +480,10 @@ int cmdServe(int argc, char **argv)
 {
     LOG_INFO("Starting Smit v" VERSION);
 
-    std::string listenPort = "8090";
-    const char *repo = 0;
-    const char *certificatePemFile = 0;
-    const char *urlRewritingRoot = 0;
+    ServerOptions options;
+    options.listenPort = "8090"; // default value
+    options.repo = "."; // serve current directory by default
+    options.oneThread = false;
 
     int c;
     int optionIndex = 0;
@@ -424,14 +493,13 @@ int cmdServe(int argc, char **argv)
         {"url-rewrite-root", 1, 0, 0},
         {NULL, 0, NULL, 0}
     };
-    optind = 1; // reset this in case cmdUi has already parsed with getopt_long
     int loglevel = LL_INFO;
     while ((c = getopt_long(argc, argv, "d", longOptions, &optionIndex)) != -1) {
         switch (c) {
         case 0: // manage long options
-            if (0 == strcmp(longOptions[optionIndex].name, "listen-port")) listenPort = optarg;
-            else if (0 == strcmp(longOptions[optionIndex].name, "ssl-cert")) certificatePemFile = optarg;
-            else if (0 == strcmp(longOptions[optionIndex].name, "url-rewrite-root")) urlRewritingRoot = optarg;
+            if (0 == strcmp(longOptions[optionIndex].name, "listen-port")) options.listenPort = optarg;
+            else if (0 == strcmp(longOptions[optionIndex].name, "ssl-cert")) options.certificatePemFile = optarg;
+            else if (0 == strcmp(longOptions[optionIndex].name, "url-rewrite-root")) options.urlRewritingRoot = optarg;
             break;
         case 'd':
             loglevel++;
@@ -448,7 +516,7 @@ int cmdServe(int argc, char **argv)
 
     // manage non-option ARGV elements
     if (optind < argc) {
-        repo = argv[optind];
+        options.repo = argv[optind];
         optind++;
     }
     if (optind < argc) {
@@ -456,81 +524,24 @@ int cmdServe(int argc, char **argv)
         return helpServe();
     }
 
-    if (!repo) repo = ".";
+    if (!options.certificatePemFile.empty()) options.listenPort += 's'; // force HTTPS listening
 
-    std::string dotLock = repo;
-    dotLock += "/.lock";
-
-    int lockFd = lockFile(dotLock);
-    if (lockFd < 0) {
-        LOG_ERROR("Cannot lock repository: %s", dotLock.c_str());
-        exit(1);
-    }
-
-    std::string mongooseListeningPort = listenPort;
-    if (certificatePemFile) mongooseListeningPort += 's'; // force HTTPS listening
-
-    // Load all projects
-    int r = dbLoad(repo);
-    if (r < 0) {
-        LOG_ERROR("Cannot serve repository '%s'. Aborting.", repo);
-        exit(1);
-    }
-    r = UserBase::init(repo);
-    if (r < 0) {
-        LOG_ERROR("Cannot loads users of repository '%s'. Aborting.", repo);
-        exit(1);
-    }
-
-    r = setupGitServerConfig(repo);
-    if (r < 0) {
+    int err = setupGitServerConfig(options.repo.c_str());
+    if (err < 0) {
         LOG_ERROR("Cannot setup server side hooks. Aborting.");
-        exit(1);
+        return 1;
     }
 
-    initHttpStats();
-
-    MongooseServerContext *mc = new MongooseServerContext();
-    mc->setRequestHandler(begin_request_handler);
-    mc->setListeningPort(listenPort);
-
-    if (urlRewritingRoot) mc->setUrlRewritingRoot(urlRewritingRoot);
-    std::string serverMsg = "Starting http server on port " + mongooseListeningPort;
-    if (urlRewritingRoot) serverMsg += std::string(" --url-rewrite-root ") + urlRewritingRoot;
-    LOG_INFO("%s", serverMsg.c_str());
-
-    mc->addParam("listening_ports");
-    mc->addParam(mongooseListeningPort.c_str());
-    mc->addParam("document_root");
-    mc->addParam(repo);
-    mc->addParam("enable_directory_listing");
-    mc->addParam("no");
-
-    if (certificatePemFile) {
-        mc->addParam("ssl_certificate");
-        mc->addParam(certificatePemFile);
+    err = startSmitServer(options);
+    if (err) {
+        return 1;
     }
 
-    if (UserBase::isLocalUserInterface()) {
-        mc->addParam("num_threads");
-        mc->addParam("1");
-    }
+    while (1) sleep(1); // block until ctrl-C
 
-    r = mc->start();
-
-    if (r < 0) {
-        LOG_ERROR("Cannot start http server. Aborting.");
-        return -1;
-    }
-
-    if (!UserBase::isLocalUserInterface()) {
-        while (1) sleep(1); // block until ctrl-C
-    }
-    // else, we return, and the cmdUi() will launch the web browser
-
-    // TODO psosible memory leak as reference to 'mc' is lost
     return 0;
 }
+
 #ifndef _WIN32
 void daemonize()
 {
@@ -571,8 +582,10 @@ int helpUi()
 
 int cmdUi(int argc, char **argv)
 {
-    std::string listenPort = "8199";
-    char *repo = 0;
+    ServerOptions options;
+    options.listenPort = "8199"; // port for local UI
+    options.repo = "."; // work in current directory by default
+    options.oneThread = true;
     setLoggingOption(LO_CLI);
 
     int c;
@@ -585,7 +598,7 @@ int cmdUi(int argc, char **argv)
     while ((c = getopt_long(argc, argv, "d", longOptions, &optionIndex)) != -1) {
         switch (c) {
         case 0: // manage long options
-            if (0 == strcmp(longOptions[optionIndex].name, "listen-port")) listenPort = optarg;
+            if (0 == strcmp(longOptions[optionIndex].name, "listen-port")) options.listenPort = optarg;
             break;
         case 'd':
             setLoggingLevel(LL_DEBUG);
@@ -601,7 +614,7 @@ int cmdUi(int argc, char **argv)
 
     // manage non-option ARGV elements
     if (optind < argc) {
-        repo = argv[optind];
+        options.repo = argv[optind];
         optind++;
     }
     if (optind < argc) {
@@ -609,23 +622,14 @@ int cmdUi(int argc, char **argv)
         return helpUi();
     }
 
-    if (!repo) repo = (char*)".";
-
-
-    std::string username = loadUsername(repo);
+    std::string username = loadUsername(options.repo);
     UserBase::setLocalInterfaceUser(username);
 
-    listenPort = "127.0.0.1:" + listenPort;
-
-    // start the local server
-    char *serverArguments[4] = { 0, 0, 0, 0 };
-    serverArguments[0] = (char*)"ui";
-    serverArguments[1] = (char*)"--listen-port";
-    serverArguments[2] = (char*)listenPort.c_str();
-    serverArguments[3] = repo;
+    // bind to local interface
+    options.listenPort = "127.0.0.1:" + options.listenPort;
 
     // start a web browser
-    std::string url = "http://" + listenPort + "/";
+    std::string url = "http://" + options.listenPort + "/";
     std::string cmd;
     int r = 0;
 #ifndef _WIN32 // linux
@@ -658,11 +662,12 @@ int cmdUi(int argc, char **argv)
     if (p) {
         // in parent, start local server
         close(pipefd[0]);
-        int r = cmdServe(4, serverArguments);
-        if (r < 0) {
+        int err = startSmitServer(options);
+        if (err < 0) {
             fprintf(stderr, "Cannot start local server\n");
             exit(1);
         }
+
         // indicate that the serve is ready
         ssize_t n = write(pipefd[1], "R", 1);
         if (n != 1) {
@@ -701,7 +706,7 @@ int cmdUi(int argc, char **argv)
 
 #else // _WIN32
     // start local server
-    r = serveRepository(3, serverArguments);
+    int err = startSmitServer(options);
 
     cmd = "start \"\" \"" + url + "\"";
     LOG_INFO("Running: %s...", cmd.c_str());
