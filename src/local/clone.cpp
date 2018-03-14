@@ -82,7 +82,6 @@ struct PullContext {
     std::string rooturl; // eg: http://example.com:8090/
     std::string localRepo; // path to local repository
     HttpClientContext httpCtx; // session identifier
-    MergeStrategy mergeStrategy; // for pulling only, not cloning
 
     inline std::string getTmpDir() const { return localRepo + "/.tmp"; }
 };
@@ -290,7 +289,6 @@ int getProjects(const std::string &rooturl, const std::string &destdir, const Ht
     cloneCtx.httpCtx = ctx;
     cloneCtx.rooturl = rooturl;
     cloneCtx.localRepo = destdir;
-    cloneCtx.mergeStrategy = MERGE_KEEP_LOCAL; // not used here (brut cloning)
     LOG_ERROR("Cloning All Projects TODO...\n");
 
     return -1;
@@ -759,13 +757,6 @@ Args *setupPullOptions()
     args->setUsage("smit pull [options] [<local-repository>]");
     args->setOpt("verbose", 'v', "be verbose", 0);
     args->setOpt("user", 0, "specify user name", 1);
-    args->setOpt("resolve-conflict", 0,
-                 "Resolve conflictual pulling automatically (no interactive choice).\n"
-                 "Possible values for <policy>:\n"
-                 "  keep-local : local modifications shall be kept as-is\n"
-                 "  drop-local : local modifications shall be deleted"
-                 ,
-                 1);
     args->setOpt("passwd", 0, "specify password", 1);
     args->setOpt("insecure", 0, "do not verify the server certificate", 0);
     args->setOpt("cacert", 0,
@@ -793,13 +784,6 @@ int cmdPull(int argc, char **argv)
     bool pullAll = false;
     if (args->get("all")) pullAll = true;
     const char *resolve = args->get("resolve-conflict");
-    if (!resolve) pullCtx.mergeStrategy = MERGE_INTERACTIVE;
-    else if (0 == strcmp(resolve, "keep-local")) pullCtx.mergeStrategy = MERGE_KEEP_LOCAL;
-    else if (0 == strcmp(resolve, "drop-local")) pullCtx.mergeStrategy = MERGE_DROP_LOCAL;
-    else {
-        LOG_CLI("invalid value for --resolve-conflict\n");
-        return helpPull(args);
-    }
     if (args->get("insecure")) pullCtx.httpCtx.tlsInsecure = true;
     pullCtx.httpCtx.tlsCacert = args->get("cacert");
     if (args->get("verbose")) {
@@ -833,20 +817,6 @@ int cmdPull(int argc, char **argv)
 
     if (r < 0) return 1;
     else return 0;
-}
-
-int getHead(const PullContext &pushCtx, const std::string &url)
-{
-    HttpRequest hr(pushCtx.httpCtx);
-    int r = hr.head(url);
-    if (r !=0 ) {
-        LOG_ERROR("Could not get HEAD for: %s", url.c_str());
-        exit(1);
-    } else if (hr.httpStatusCode >= 200 && hr.httpStatusCode < 300) {
-        return 0;
-    } else {
-        return -1;
-    }
 }
 
 int pushFile(const PullContext &pushCtx, const std::string &localFile, const std::string &url,
