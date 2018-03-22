@@ -194,6 +194,21 @@ static int gitPull(const std::string &dir)
     return err;
 }
 
+static int gitPush(const std::string &dir)
+{
+    Argv argv;
+    std::string subStdout, subStderr;
+
+    // push all branches
+    argv.set("git", "push", "--all", 0);
+    int err = Subprocess::launchSync(argv.getv(), 0, dir.c_str(), 0, 0, subStdout, subStderr);
+    if (err) {
+        LOG_ERROR("gitPush: error: %d: stdout=%s, stderr=%s", err, subStdout.c_str(), subStderr.c_str());
+    }
+    return err;
+}
+
+
 struct Permissions {
     std::map<std::string, Role> byProject; // mapping project name / role
     bool superadmin;
@@ -291,14 +306,46 @@ static int cloneAll(const HttpClientContext &ctx, const std::string &rooturl, co
     return 0;
 }
 
-static int pushAll()
+static int pushAll(const std::string &localRepo, Permissions perms)
 {
-    // push /public, if permission granted
-    // push /.smit if permission granted
-    // get list of projects GET /?format=text
-    // for each project, push (if permission granted)
+    int err;
+    // push the projects if the permission granted
+    std::map<std::string, Role>::const_iterator perm;
+    FOREACH(perm, perms.byProject) {
+        std::string projectName = perm->first;
+        Role role = perm->second;
+        if (role < ROLE_RO) {
+            // do push
+            LOG_CLI("Pushing '%s'...", projectName.c_str());
+            LOG_DIAG("role=%s", roleToString(role).c_str());
+            std::string projectDir = Project::urlNameEncode(projectName);
+            err = gitPush(localRepo + "/" + projectDir);
+            if (err) {
+                LOG_ERROR("Abort.");
+                exit(1);
+            }
+        }
+    }
 
-    return 0;
+    if (perms.superadmin) {
+        // push /public
+        LOG_CLI("Pulling 'public'...");
+        err = gitPush(localRepo + "/public");
+        if (err) {
+            LOG_ERROR("Abort.");
+            exit(1);
+        }
+
+        // push .smit
+        LOG_CLI("Pulling '.smit'...");
+        err = gitPush(localRepo + "/.smit");
+        if (err) {
+            LOG_ERROR("Abort.");
+            exit(1);
+        }
+    }
+
+    return 0; //ok
 }
 
 /** Pull issues of all local projects
@@ -818,6 +865,8 @@ int cmdPull(int argc, char **argv)
 
     Permissions perms = updatePermissions(pullCtx.httpCtx, pullCtx.rooturl, dir, username);
 
+    // TODO if some remote git repo has not been cloned yet, do a clone
+
     // pull new entries and new attached files of all projects
     r = pullAll(dir, perms);
 
@@ -827,31 +876,6 @@ int cmdPull(int argc, char **argv)
     else return 0;
 }
 
-int pushProject(const PullContext &pushCtx, Project &project, bool dryRun)
-{
-    LOG_ERROR("Pushing project TODO\n");
-
-    return -1;
-}
-
-int pushProjects(const PullContext &pushCtx, bool dryRun)
-{
-    // Load all local projects
-    int r = dbLoad(pushCtx.localRepo.c_str());
-    if (r < 0) {
-        fprintf(stderr, "Cannot load repository '%s'. Aborting.", pushCtx.localRepo.c_str());
-        exit(1);
-    }
-
-    // for each local project, push it
-
-    Project *p = Database::Db.getNextProject(0);
-    while (p) {
-        pushProject(pushCtx, *p, dryRun);
-        p = Database::Db.getNextProject(p);
-    }
-    return 0;
-}
 
 Args *setupPushOptions()
 {
@@ -915,9 +939,13 @@ int cmdPush(int argc, char **argv)
     int r = establishSession(dir, username, password, pushCtx);
     if (r != 0) return 1;
 
-    // push new entries and new attached files of all projects
-    pushCtx.localRepo = dir;
-    r = pushProjects(pushCtx, dryRun);
+    if (username.empty()) {
+        username = loadUsername(dir);
+    }
+
+    Permissions perms = updatePermissions(pushCtx.httpCtx, pushCtx.rooturl, dir, username);
+
+    pushAll(dir, perms);
 
     terminateSession();
 
