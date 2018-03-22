@@ -91,25 +91,17 @@ static void terminateSession()
     curl_global_cleanup();
 }
 
-int testSessid(const std::string url, const HttpClientContext &ctx)
+int testSessid(const std::string &url, const HttpClientContext &ctx)
 {
     LOG_DEBUG("testSessid(%s, %s)", url.c_str(), ctx.cookieSessid.c_str());
 
     HttpRequest hr(ctx);
-    hr.setUrl(url + "/");
+    hr.setUrl(url + "/?format=text");
     int status = hr.test();
     LOG_DEBUG("status = %d", status);
 
     if (status == 200) return 0;
     return -1;
-}
-
-static Argv getGitEnv(const std::string &smitRepository)
-{
-    std::string varGitConfig = "GIT_CONFIG=" + smitRepository + "/" PATH_GIT_CONFIG;
-    Argv envp;
-    envp.set(varGitConfig.c_str(), 0);
-    return envp;
 }
 
 static int alignIssueBranches(const std::string &projectPath)
@@ -145,6 +137,19 @@ static int alignIssueBranches(const std::string &projectPath)
     return err;
 }
 
+static void setupGitCloneConfig(const std::string &dir)
+{
+    Argv argv;
+    std::string subStdout, subStderr;
+    std::string credentialHelper = "store --file ../" PATH_GIT_CREDENTIAL;
+
+    argv.set("git", "config", "credential.helper", credentialHelper.c_str(), 0);
+    int err = Subprocess::launchSync(argv.getv(), 0, dir.c_str(), 0, 0, subStdout, subStderr);
+    if (err) {
+        LOG_ERROR("setupGitCloneConfig: error: %d: stdout=%s, stderr=%s", err, subStdout.c_str(), subStderr.c_str());
+    }
+}
+
 static int gitClone(const std::string &remote, const std::string &smitRepo, const std::string &subpath)
 {
     Argv argv;
@@ -163,6 +168,28 @@ static int gitClone(const std::string &remote, const std::string &smitRepo, cons
 
     // create local branches to track remote ones
     err = alignIssueBranches(into);
+
+    setupGitCloneConfig(into);
+
+    return err;
+}
+
+static int gitPull(const std::string &dir)
+{
+    Argv argv;
+    std::string subStdout, subStderr;
+
+    argv.set("git", "pull", "--rebase", 0);
+    int err = Subprocess::launchSync(argv.getv(), 0, dir.c_str(), 0, 0, subStdout, subStderr);
+    if (err) {
+        LOG_ERROR("gitPull: error: %d: stdout=%s, stderr=%s", err, subStdout.c_str(), subStderr.c_str());
+        return err;
+    }
+
+    // TODO resolve conflicts on different issues with same number
+
+    // TODO create local branches to track remote new ones
+    //err = alignIssueBranches(into);
 
     return err;
 }
@@ -184,6 +211,11 @@ static Permissions updatePermissions(const HttpClientContext &ctx, const std::st
     HttpRequest hr(ctx);
     hr.setUrl(rooturl + "/?format=text");
     hr.getRequestLines();
+
+    if (hr.httpStatusCode != 200) {
+        LOG_ERROR("Cannot read permissions from remote");
+        return permissions;
+    }
 
     // Lines are in the format: <permission> <project name>
     // Except the "superadmin" line, if any.
@@ -259,16 +291,6 @@ static int cloneAll(const HttpClientContext &ctx, const std::string &rooturl, co
     return 0;
 }
 
-static int pullAll()
-{
-    // pull --rebase /public
-    // pull --rebase /.smit if permission granted
-    // get list of projects GET /?format=text
-    // for each project, pull --rebase
-
-    return 0;
-}
-
 static int pushAll()
 {
     // push /public, if permission granted
@@ -279,30 +301,6 @@ static int pushAll()
     return 0;
 }
 
-/** Get all the projects that we have read-access to
-  */
-int getProjects(const std::string &rooturl, const std::string &destdir, const HttpClientContext &ctx)
-{
-    LOG_DEBUG("getProjects(%s, %s, %s)", rooturl.c_str(), destdir.c_str(), ctx.cookieSessid.c_str());
-
-    PullContext cloneCtx;
-    cloneCtx.httpCtx = ctx;
-    cloneCtx.rooturl = rooturl;
-    cloneCtx.localRepo = destdir;
-    LOG_ERROR("Cloning All Projects TODO...\n");
-
-    return -1;
-}
-
-
-static int pullPublic(const PullContext &ctx)
-{
-    // TODO
-    LOG_ERROR("pullPublic: not implemented");
-    return -1;
-}
-
-
 /** Pull issues of all local projects
   * - pull entries
   * - pull files
@@ -310,44 +308,46 @@ static int pullPublic(const PullContext &ctx)
   * @param all
   *     Also pull: tags, public, templates
   */
-int pullProjects(const PullContext &pullCtx, bool all)
+static int pullAll(const std::string &localRepo, Permissions perms)
 {
-    // Load all local projects
-    int r = dbLoad(pullCtx.localRepo.c_str());
-    if (r < 0) {
-        fprintf(stderr, "Cannot load repository '%s'. Aborting.", pullCtx.localRepo.c_str());
+    // pull /public
+    LOG_CLI("Pulling 'public'...");
+    int err = gitPull(localRepo + "/public");
+    if (err) {
+        LOG_ERROR("Abort.");
         exit(1);
     }
 
-    // get the list of remote projects
-    HttpRequest hr(pullCtx.httpCtx);
-    hr.setUrl(pullCtx.rooturl + "/?format=text");
-    hr.getRequestLines();
-
-    std::list<std::string>::iterator projectName;
-    FOREACH(projectName, hr.lines) {
-        if ((*projectName) == "public") continue;
-        if ((*projectName) == PATH_REPO) continue;
-        if (projectName->empty()) continue;
-
-        // project name is mangled
-        Project *p = Database::Db.getProject(*projectName);
-        if (!p) {
-            // the remote project was not locally cloned
-            // do cloning now
-            std::string resource = "/" + Project::urlNameEncode(*projectName);
-            std::string destLocal = pullCtx.localRepo + "/" + *projectName;
-            LOG_ERROR("Pulling new project: TODO");
-        } else {
-            LOG_ERROR("Pulling new project: TODO");
+    // pull the projects if the permissions allow it
+    std::map<std::string, Role>::const_iterator perm;
+    FOREACH(perm, perms.byProject) {
+        std::string projectName = perm->first;
+        Role role = perm->second;
+        if (role <= ROLE_RO) {
+            // do clone
+            LOG_CLI("Pulling '%s'...", projectName.c_str());
+            LOG_DIAG("role=%s", roleToString(role).c_str());
+            std::string projectDir = Project::urlNameEncode(projectName);
+            err = gitPull(localRepo + "/" + projectDir);
+            if (err) {
+                LOG_ERROR("Abort.");
+                exit(1);
+            }
         }
     }
-    if (all) {
 
-        LOG_CLI("Pulling 'public'\n");
-        r = pullPublic(pullCtx);
-        if (r < 0) return r;
+    //
+
+    // clone /.smit if permission granted
+    if (perms.superadmin) {
+        LOG_CLI("Pulling '.smit'...");
+        err = gitPull(localRepo + "/.smit");
+        if (err) {
+            LOG_ERROR("Abort.");
+            exit(1);
+        }
     }
+
     return 0; //ok
 }
 
@@ -441,6 +441,28 @@ std::string loadSessid(const std::string &dir)
     return sessid;
 }
 
+static void storeRemoteUrl(const std::string &dir, const std::string &url)
+{
+    LOG_DEBUG("storeRemoteUrl(%s, %s)...", dir.c_str(), url.c_str());
+    std::string path = dir + "/" PATH_REMOTE_URL;
+    int r = writeToFile(path, url + "\n");
+    if (r < 0) {
+        fprintf(stderr, "Abort.\n");
+        exit(1);
+    }
+}
+
+static std::string loadRemoteUrl(const std::string &dir)
+{
+    std::string path = dir + "/" PATH_REMOTE_URL;
+    std::string url;
+    loadFile(path.c_str(), url);
+    trim(url);
+
+    return url;
+}
+
+
 const char* SCHEMES[] = { "https://", "http://", 0 };
 
 /** Store the session id in the git-credential-store format
@@ -475,44 +497,98 @@ static void storeGitCredential(const std::string &dir, const std::string &url, c
     }
 }
 
-/** Load the root url from the git-credential-store
- *
- *  Format in the file is for instance: https://user:pass@example.com
- *
- * @return
- *     https://example.com
- */
-static std::string loadUrl(const std::string &dir)
+/** Sign-in or reuse existing cookie
+  *
+  * Sign-in using the following means (in this order)
+  * - if parameters username not null, use this username
+  * - else use the username or session id stored locally
+  * - else ask interactively
+  *
+  * If the session id is used and fails, then ask for username/password.
+  *
+  * @param dir
+  *     Path to local smit repository (may be null).
+  *     If not null and the sign-in is successful, the session cookie
+  *     is stored.
+  * @param username[in/out]
+  *     Optional. If not given, try to use the cookie.
+  *     Fulfilled only if username is obtained interactively, and sign-in successful.
+  * @param password
+  * @param[in/out] ctx
+  *     This context gives the URL to contact (ctx.rooturl).
+  *     The received session id is stored in ctx.httpCtx.cookieSessid.
+  *
+  */
+static int establishSession(const char *dir, std::string &username, const char *password, PullContext &ctx)
 {
-    std::string path = dir + "/" PATH_GIT_CREDENTIAL;
-    std::string data;
-    std::string url;
+    curl_global_init(CURL_GLOBAL_ALL);
 
-    int err = loadFile(path, data);
-    if (err) {
-        fprintf(stderr, "Abort.\n");
-        exit(1);
-    }
-
-    // take the first line
-    std::string line = popToken(data, '\n');
-
-    const char **ptr = SCHEMES;
-    while (*ptr) {
-        if (0 == strncmp(line.c_str(), *ptr, strlen(*ptr))) {
-            url = *ptr;
-            popToken(line, '@');
-            url += line;
-            break;
+    if (ctx.rooturl.empty()) {
+        if (dir) {
+            // get the remote root url from local configuration file
+            ctx.rooturl = loadRemoteUrl(dir);
         }
-        ptr++;
-    }
-    if (url.empty()) {
-        LOG_ERROR("Cannot load url from '%s': malformed", path.c_str());
-        exit(1);
+        if (ctx.rooturl.empty()) {
+            LOG_CLI("Cannot get remote url.\n");
+            return -1;
+        }
     }
 
-    return url;
+    bool needSignin = true;
+
+    std::string user;
+
+    if (!username.empty()) {
+        // do the signing-in with the given username / password
+        user = username;
+
+    } else if (dir) {
+        // try with the sessid
+        ctx.httpCtx.cookieSessid = loadSessid(dir);
+        int r = testSessid(ctx.rooturl, ctx.httpCtx);
+
+        if (r < 0) {
+            // failed (session may have expired), then prompt for user name/password
+            LOG_CLI("Session not valid or expired. Please sign-in.\n");
+            user = getString("Username: ", false);
+
+        } else {
+            needSignin = false;
+        }
+
+    } else {
+        user = getString("Username: ", false);
+    }
+
+    if (needSignin) {
+
+        std::string pass;
+        if (!password) pass = getString("Password: ", true);
+        else pass = password;
+
+        ctx.httpCtx.cookieSessid = signin(ctx.rooturl, user, pass, ctx.httpCtx);
+        if (!ctx.httpCtx.cookieSessid.empty()) {
+            // signin successful
+            username = user;
+            if (dir) {
+                // store
+                storeSessid(dir, ctx.httpCtx.cookieSessid);
+                storeUsername(dir, username);
+                storeRemoteUrl(dir, ctx.rooturl);
+                std::string sessid = ctx.httpCtx.cookieSessid;
+                popToken(sessid, '='); // remove the <key>= part
+                storeGitCredential(dir, ctx.rooturl, BASIC_AUTH_SESSID, sessid);
+            }
+        }
+    }
+
+    LOG_DEBUG("cookieSessid: %s", ctx.httpCtx.cookieSessid.c_str());
+
+    if (ctx.httpCtx.cookieSessid.empty()) {
+        fprintf(stderr, "Authentication failed\n");
+        return -1; // authentication failed
+    }
+    return 0;
 }
 
 Args *setupCloneOptions()
@@ -548,13 +624,13 @@ int helpClone(const Args *args)
 
 int cmdClone(int argc, char **argv)
 {
-    HttpClientContext httpCtx;
+    PullContext pullCtx;
     Args *args = setupCloneOptions();
     args->parse(argc-1, argv+1);
     const char *pUsername = args->get("user");
     const char *pPasswd = args->get("passwd");
-    if (args->get("insecure")) httpCtx.tlsInsecure = true;
-    httpCtx.tlsCacert = args->get("cacert");
+    if (args->get("insecure")) pullCtx.httpCtx.tlsInsecure = true;
+    pullCtx.httpCtx.tlsCacert = args->get("cacert");
     if (args->get("verbose")) {
         setLoggingLevel(LL_DIAG);
     } else {
@@ -576,22 +652,13 @@ int cmdClone(int argc, char **argv)
         exit(1);
     }
 
+    // Do not create the local clone until the signin succeeds
+
+    pullCtx.rooturl = url;
     std::string username;
-    std::string passwd;
-
-    if (!pUsername) username = getString("Username: ", false);
-    else username = pUsername;
-    if (!pPasswd) passwd = getString("Password: ", true);
-    else passwd = pPasswd;
-
-    curl_global_init(CURL_GLOBAL_ALL);
-
-    httpCtx.cookieSessid = signin(url, username, passwd, httpCtx);
-
-    if (httpCtx.cookieSessid.empty()) {
-        fprintf(stderr, "Authentication failed\n");
-        exit(1);
-    }
+    if (pUsername) username = pUsername;
+    int err = establishSession(0, username, pPasswd, pullCtx);
+    if (err) return 1;
 
     int r = mkdir(localdir);
     if (r != 0) {
@@ -601,16 +668,17 @@ int cmdClone(int argc, char **argv)
 
     // create persistent configuration of the local clone
     createSmitDir(localdir);
-    storeSessid(localdir, httpCtx.cookieSessid);
+    storeSessid(localdir, pullCtx.httpCtx.cookieSessid);
     storeUsername(localdir, username);
-    std::string sessid = httpCtx.cookieSessid;
+    storeRemoteUrl(localdir, url);
+    std::string sessid = pullCtx.httpCtx.cookieSessid;
     popToken(sessid, '='); // remove the <key>= part
     storeGitCredential(localdir, url, BASIC_AUTH_SESSID, sessid);
 
     //
-    Permissions perms = updatePermissions(httpCtx, url, localdir, username);
+    Permissions perms = updatePermissions(pullCtx.httpCtx, url, localdir, username);
 
-    r = cloneAll(httpCtx, url, localdir, perms);
+    r = cloneAll(pullCtx.httpCtx, url, localdir, perms);
     if (r < 0) {
         fprintf(stderr, "Clone failed. Abort.\n");
         exit(1);
@@ -621,78 +689,13 @@ int cmdClone(int argc, char **argv)
     return 0;
 }
 
-/** Sign-in or reuse existing cookie
-  *
-  * @param username
-  *    Optional. If not given, try to use the cookie.
-  *
-  *
-  * @param ctx IN/OUT
-  */
-static int establishSession(const char *dir, const char *username, const char *password, PullContext &ctx, bool store)
-{
-    curl_global_init(CURL_GLOBAL_ALL);
-
-    if (ctx.rooturl.empty()) {
-        // get the remote root url from local configuration file
-        ctx.rooturl = loadUrl(dir);
-        if (ctx.rooturl.empty()) {
-            LOG_CLI("Cannot get remote url.\n");
-            return -1;
-        }
-    }
-
-    bool redoSigin = false;
-
-    std::string user;
-    if (!username) {
-        // check if the sessid is valid
-        ctx.httpCtx.cookieSessid = loadSessid(dir);
-        int r = testSessid(ctx.rooturl, ctx.httpCtx);
-
-        if (r < 0) {
-            // failed (session may have expired), then prompt for user name/password
-            LOG_CLI("Session not valid. You must sign-in again.\n");
-            user = getString("Username: ", false);
-
-            // and redo the signing-in
-            redoSigin = true;
-        }
-
-    } else {
-        // do the signing-in with the given username / password
-        redoSigin = true;
-        user = username;
-    }
-
-    if (redoSigin) {
-
-        std::string pass;
-        if (!password) pass = getString("Password: ", true);
-        else pass = password;
-
-        ctx.httpCtx.cookieSessid = signin(ctx.rooturl, user, pass, ctx.httpCtx);
-        if (!ctx.httpCtx.cookieSessid.empty() && store) {
-            storeSessid(dir, ctx.httpCtx.cookieSessid);
-            storeGitCredential(dir, ctx.rooturl, user, pass);
-        }
-    }
-
-    LOG_DEBUG("cookieSessid: %s", ctx.httpCtx.cookieSessid.c_str());
-
-    if (ctx.httpCtx.cookieSessid.empty()) {
-        fprintf(stderr, "Authentication failed\n");
-        return -1; // authentication failed
-    }
-    return 0;
-}
-
 Args *setupGetOptions()
 {
     Args *args = new Args();
     args->setDescription("Get with format x-smit.\n");
     args->setUsage("smit get [options] <root-url> <resource>");
     args->setOpt("verbose", 'v', "be verbose", 0);
+    args->setOpt("repo", 0, "use session of existing repository", 1);
     args->setOpt("user", 0, "specify user name", 1);
     args->setOpt("passwd", 0, "specify password", 1);
     args->setOpt("insecure", 0, "do not verify the server certificate", 0);
@@ -716,8 +719,9 @@ int cmdGet(int argc, char **argv)
     PullContext pullCtx;
     Args *args = setupGetOptions();
     args->parse(argc-1, argv+1);
-    const char *username = args->get("user");
+    const char *pusername = args->get("user");
     const char *password = args->get("passwd");
+    const char *repo = args->get("repo");
     if (args->get("insecure")) pullCtx.httpCtx.tlsInsecure = true;
     pullCtx.httpCtx.tlsCacert = args->get("cacert");
     if (args->get("verbose")) {
@@ -737,7 +741,9 @@ int cmdGet(int argc, char **argv)
     setLoggingOption(LO_CLI);
 
     pullCtx.rooturl = rooturl;
-    int r = establishSession(".", username, password, pullCtx, false);
+    std::string username;
+    if (pusername) username = pusername;
+    int r = establishSession(repo, username, password, pullCtx);
     if (r != 0) return 1;
 
     // do the GET
@@ -762,7 +768,6 @@ Args *setupPullOptions()
     args->setOpt("cacert", 0,
                  "specify the CA certificate, in PEM format, for authenticating the server\n"
                  "(HTTPS only)", 1);
-    args->setOpt("all", 'a', "also pull 'public' and templates", 0);
     args->setNonOptionLimit(1);
     return args;
 }
@@ -779,11 +784,8 @@ int cmdPull(int argc, char **argv)
     PullContext pullCtx;
     Args *args = setupPullOptions();
     args->parse(argc-1, argv+1);
-    const char *username = args->get("user");
+    const char* pusername = args->get("user");
     const char *password = args->get("passwd");
-    bool pullAll = false;
-    if (args->get("all")) pullAll = true;
-    const char *resolve = args->get("resolve-conflict");
     if (args->get("insecure")) pullCtx.httpCtx.tlsInsecure = true;
     pullCtx.httpCtx.tlsCacert = args->get("cacert");
     if (args->get("verbose")) {
@@ -799,37 +801,31 @@ int cmdPull(int argc, char **argv)
     setLoggingOption(LO_CLI);
 
     // get the remote url from local configuration file
-    std::string url = loadUrl(dir);
-    if (url.empty()) {
+    pullCtx.rooturl = loadRemoteUrl(dir);
+    if (pullCtx.rooturl.empty()) {
         LOG_CLI("Cannot get remote url.\n");
         exit(1);
     }
 
-    int r = establishSession(dir, username, password, pullCtx, true);
+    std::string username;
+    if (pusername) username = pusername;
+    int r = establishSession(dir, username, password, pullCtx);
     if (r != 0) return 1;
 
+    if (username.empty()) {
+        username = loadUsername(dir);
+    }
+
+    Permissions perms = updatePermissions(pullCtx.httpCtx, pullCtx.rooturl, dir, username);
+
     // pull new entries and new attached files of all projects
-    pullCtx.rooturl = url;
-    pullCtx.localRepo = dir;
-    r = pullProjects(pullCtx, pullAll);
+    r = pullAll(dir, perms);
 
     terminateSession();
 
     if (r < 0) return 1;
     else return 0;
 }
-
-int pushFile(const PullContext &pushCtx, const std::string &localFile, const std::string &url,
-             int &httpStatusCode, std::string &response)
-{
-    HttpRequest hr(pushCtx.httpCtx);
-    int r = hr.postFile(localFile, url);
-    if (r == 0 && hr.lines.size()) response = hr.lines.front();
-    httpStatusCode = hr.httpStatusCode;
-    return r;
-}
-
-
 
 int pushProject(const PullContext &pushCtx, Project &project, bool dryRun)
 {
@@ -888,7 +884,7 @@ int cmdPush(int argc, char **argv)
     Args *args = setupPushOptions();
     args->parse(argc-1, argv+1);
 
-    const char *username = args->get("user");
+    const char *pusername = args->get("user");
     const char *password = args->get("passwd");
     if (args->get("insecure")) pushCtx.httpCtx.tlsInsecure = true;
     pushCtx.httpCtx.tlsCacert = args->get("cacert");
@@ -914,7 +910,9 @@ int cmdPush(int argc, char **argv)
     setLoggingOption(LO_CLI);
     // set log level to hide INFO logs
 
-    int r = establishSession(dir, username, password, pushCtx, true);
+    std::string username;
+    if (pusername) username = pusername;
+    int r = establishSession(dir, username, password, pushCtx);
     if (r != 0) return 1;
 
     // push new entries and new attached files of all projects
