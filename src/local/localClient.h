@@ -1,8 +1,10 @@
 #ifndef _localClient_h
 #define _localClient_h
 
-int cmdIssue(int argc, char *const*argv);
-int helpIssue();
+#include "Args.h"
+
+int cmdIssue(int argc, char **argv);
+int helpIssue(const Args *args);
 
 // local .smit database (in a local cloned repository)
 #define SMIT_LOCAL ".smit_local"

@@ -35,7 +35,7 @@
 
 bool Verbose_localClient = false;
 
-#define LOGV(...) do { if (Verbose_localClient) { printf(__VA_ARGS__); fflush(stdout);} } while (0)
+#define LOG_CLI_ERR(...) do { fprintf(stderr, __VA_ARGS__); fprintf(stderr, "\n"); } while(0)
 
 // print mode mask
 #define PRINT_SUMMARY      0x0000
@@ -51,7 +51,7 @@ void storeUsername(const std::string &dir, const std::string &username)
     std::string path = dir + "/" PATH_USERNAME;
     int r = writeToFile(path, username + "\n");
     if (r < 0) {
-        fprintf(stderr, "Abort.\n");
+        LOG_CLI_ERR("Abort.");
         exit(1);
     }
 }
@@ -62,7 +62,7 @@ std::string loadUsername(const std::string &clonedRepo)
     int r = loadFile(path.c_str(), username);
     if (r < 0) {
         username = "Anonymous";
-        fprintf(stderr, "Cannot load username. Set '%s'\n", username.c_str());
+        LOG_CLI_ERR("Cannot load username. Set '%s'", username.c_str());
     }
     trim(username); // remove trailing \n
     return username;
@@ -181,98 +181,79 @@ void printAllIssues(const Project &p)
 }
 
 
-int helpIssue()
+Args *setupIssueOptions()
 {
-    // TODO add -f to attach a file
-    printf("Usage: smit issue [options] <path-to-project> [<id>]\n"
-           "\n"
-           "  Print an issue.\n"
-           "\n"
-           "Options:\n"
-           "  -m, --messages\n"
-           "      Print messages.\n"
-           "\n"
-           "  -p, --properties\n"
-           "      Print properties.\n"
-           "\n"
-           "  -h, --history\n"
-           "      Print all history (including properties changes).\n"
-           "      (implies -m)\n"
-           "\n"
-           "  -a, --add"
-           "      Add an entry.\n"
-           "      Argument <id> is mandatory. If a character '-' is used, then\n"
-           "      a new issue shall be created. Otherwise, the entry shall be added\n"
-           "      to this issue.\n"
-           "\n"
-           "  -v, --verbose"
-           "      Be verbose.\n"
-           "\n"
-           );
+    Args *args = new Args();
+    args->setUsage("smit issue [options] <path-to-project> [<id>]");
+
+    args->setDescription(
+                "Prints an issue.\n"
+                "\n"
+                "Examples:\n"
+                "\n"
+                "    smit issue /path/to/project -a - \"summary=some annoying bug\"\n"
+                "\n"
+                "        creates a new issue and sets its summary.\n"
+                "\n"
+                "\n"
+                "    smit issue /path/to/project -a 138 \"status=open\"\n"
+                "\n"
+                "        sets the status at \"open\" for issue #138.\n"
+                "\n"
+                "\n"
+                "    smit issue /path/to/project\n"
+                "\n"
+                "        prints the list of issues and their summaries\n"
+                );
+    args->setOpt("add", 'a',
+                 "add an entry.\n"
+                 "Argument <id> is mandatory. If a character '-' is used, then\n"
+                 "a new issue shall be created. Otherwise, the entry shall be added\n"
+                 "to this issue."
+                 , 0);
+    args->setOpt("file", 'f', "specify a file to attach. Must be used with '-a'.", 1);
+    args->setOpt("history", 'h',
+                 "print all history (including properties changes).\n"
+                 "(implies -m)"
+                 , 0);
+    args->setOpt("message", 'm', "print messages", 0);
+    args->setOpt("properties", 'p', "print properties", 0);
+    args->setOpt("verbose", 'v', "be verbose", 0);
+    return args;
+}
+
+int helpIssue(const Args *args)
+{
+    if (!args) args = setupIssueOptions();
+    args->usage(true);
     return 1;
 }
 
-int cmdIssue(int argc, char * const *argv)
+
+int cmdIssue(int argc, char **argv)
 {
-    const char *projectPath = 0;
     std::string issueId = "";
     int printMode = PRINT_SUMMARY;
     bool add = false;
 
-    int c;
-    int optionIndex = 0;
-    struct option longOptions[] = {
-        {"add",         no_argument,    0,  'a' },
-        {"history",     no_argument,    0,  'h' },
-        {"properties",  no_argument,    0,  'p' },
-        {"messages",    no_argument,    0,  'm' },
-        {"verbose",    no_argument,    0,   'v' },
-        {NULL, 0, NULL, 0}
-    };
-    while ((c = getopt_long(argc, argv, "ahpmv", longOptions, &optionIndex)) != -1) {
-        switch (c) {
-        case 'v':
-            Verbose_localClient = true;
-            break;
-        case 'p':
-            printMode |= PRINT_PROPERTIES;
-            break;
-        case 'm':
-            printMode |= PRINT_MESSAGES;
-            break;
-        case 'h':
-            printMode |= PRINT_FULL_HISTORY;
-            break;
-        case 'a':
-            add = true;
-            break;
-        case '?': // incorrect syntax, a message is printed by getopt_long
-            return helpIssue();
-            break;
-        default:
-            printf("?? getopt returned character code 0x%x ??\n", c);
-            return helpIssue();
-        }
-    }
+    Args *args = setupIssueOptions();
+    args->parse(argc-1, argv+1);
+    if (args->get("verbose")) Verbose_localClient = true;
+    if (args->get("properties")) printMode |= PRINT_PROPERTIES;
+    if (args->get("messages")) printMode |= PRINT_MESSAGES;
+    if (args->get("history")) printMode |= PRINT_FULL_HISTORY;
+    if (args->get("add")) add = true;
+
     // manage non-option ARGV elements
-    if (optind < argc) {
-        projectPath = argv[optind];
-        optind++;
-    }
-    if (optind < argc) {
-        issueId = argv[optind];
-        optind++;
-    }
-    if (optind < argc && !add) {
-        printf("Too many arguments.\n\n");
-        return helpIssue();
-    }
+    // manage non-option ARGV elements
+    const char *projectPath = args->pop();
 
     if (!projectPath) {
-        printf("You must specify the path of a project.\n\n");
-        return helpIssue();
+        LOG_CLI_ERR("You must specify the path of a project.");
+        exit(1);
     }
 
+    const char *pIssueId = args->pop();
 
     setLoggingOption(LO_CLI);
     if (Verbose_localClient) setLoggingLevel(LL_INFO);
@@ -281,14 +262,19 @@ int cmdIssue(int argc, char * const *argv)
     // load the project
     Project *p = Project::init(projectPath, "");
     if (!p) {
-        fprintf(stderr, "Cannot load project '%s'\n", projectPath);
+        LOG_CLI_ERR("Cannot load project '%s'", projectPath);
         exit(1);
     }
 
-    if (!add && issueId.empty()) {
+    if (!add && !pIssueId) {
         printAllIssues(*p);
 
+    } else if (add && !pIssueId) {
+        LOG_CLI_ERR("Missing issue");
+        exit(1);
+
     } else if (add) {
+        issueId = pIssueId;
         // add a new issue, or an entry to an existing issue
         // parse the remaining argument
         // they must be of the form key=value
@@ -330,7 +316,7 @@ int cmdIssue(int argc, char * const *argv)
         IssueCopy issue;
         int r = p->get(issueId, issue);
         if (r != 0) {
-            fprintf(stderr, "Cannot get issue '%s'\n", issueId.c_str());
+            LOG_CLI_ERR("Cannot get issue '%s'", issueId.c_str());
             exit(1);
         }
 

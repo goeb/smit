@@ -792,7 +792,7 @@ int main(int argc, char **argv)
             if (i < argc) {
                 const char *help = argv[i];
                 if      (0 == strcmp(help, "init")) return helpInit();
-                else if (0 == strcmp(help, "issue")) return helpIssue();
+                else if (0 == strcmp(help, "issue")) return helpIssue(0);
                 else if (0 == strcmp(help, "project")) return helpProject();
                 else if (0 == strcmp(help, "user")) return helpUser();
                 else if (0 == strcmp(help, "serve")) return helpServe();
