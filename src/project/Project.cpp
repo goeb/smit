@@ -609,13 +609,6 @@ int Project::createProjectFiles(const std::string &repositoryPath, const std::st
         return -1;
     }
 
-    // init the database of entries (another git repo)
-    r = gitInit(p.getPathEntries());
-    if (r != 0) {
-        LOG_ERROR("Could not init git '%s'", newProjectPath.c_str());
-        return -1;
-    }
-
     return 0;
 }
 
@@ -711,7 +704,7 @@ int Project::reload()
 
 std::string Project::storeFile(const char *data, size_t len) const
 {
-    return gitdbStoreFile(getPathEntries(), data, len);
+    return gitdbStoreFile(path, data, len);
 }
 
 
