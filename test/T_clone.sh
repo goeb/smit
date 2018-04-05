@@ -32,16 +32,16 @@ init() {
 
     # create some entries
     # create issue 1
+	tmpDir=$(mktemp -d)
+	echo file1_abc > "$tmpDir/file1"
+	echo file2_0123 > "$tmpDir/file2"
     $SMIT issue $REPO/$PROJECT1 -a - "summary=p1: first issue"
-    $SMIT issue $REPO/$PROJECT1 -a 1 status=open
+    $SMIT issue $REPO/$PROJECT1 -a 1 status=open --file "$tmpDir/file1"
     # create issue 2
-    $SMIT issue $REPO/$PROJECT2 -a - "summary=p2: second issue" color=yellow
-    mkdir -p $REPO/$PROJECT1/objects/00
-    echo file1 > $REPO/$PROJECT1/objects/00/file1
-    mkdir -p $REPO/$PROJECT2/objects/00
-    echo file2 > $REPO/$PROJECT2/objects/00/file2
+    $SMIT issue $REPO/$PROJECT2 -a - "summary=p2: second issue" color=yellow --file "$tmpDir/file2"
     # issue 3
     $SMIT issue $REPO/$PROJECT1 -a - "summary=p1: third issue"
+	rm -rf "$tmpDir"
 }
 cleanup() {
     rm -rf $REPO
@@ -64,37 +64,55 @@ fail() {
     exit 1
 }
 
+# $1 : project path
+checkProject() {
+	pname="$1"
+	if [ ! -d "$pname" ]; then
+		echo "$pname: no such directory" >> $TEST_NAME.out
+		return
+	fi
+	# check the attached files
+	echo "$pname/issues:" >> $TEST_NAME.out
+	$SMIT issue $pname >> $TEST_NAME.out
+	echo "$pname/issue #1:" >> $TEST_NAME.out
+	$SMIT issue $pname 1 --history | grep -v "^Date:" >> $TEST_NAME.out
+	file1Id=$($SMIT issue $pname 1 --history | grep file1 | awk '{print $1;}')
+	if [ -n "$file1Id" ]; then
+		echo "$pname/file1:" >> $TEST_NAME.out
+		git -C $pname cat-file -p $file1Id >> $TEST_NAME.out
+	fi
+	file2Id=$($SMIT issue $pname 1 --history | grep file2 | awk '{print $1;}')
+	if [ -n "$file2Id" ]; then
+		echo "$pname/file2:" >> $TEST_NAME.out
+		git -C $pname cat-file -p $file2Id >> $TEST_NAME.out
+	fi
+}
+
 cleanup
 init
 startServer
 
 # do clone1
 $SMIT clone http://127.0.0.1:$PORT --user $USER1 --passwd $PASSWD1 clone1
-echo $?
-# check that clone of p1 has the files
-echo "Clone of p1" >> $TEST_NAME.out
-$SMIT project clone1 -a >> $TEST_NAME.out
-[ -f clone1/$PROJECT1/objects/00/file1 ] || fail "missing file 'clone1/$PROJECT1/files/file1'"
-[ -f clone1/$PROJECT2/objects/00/file2 ] && fail "unexpected file 'clone1/$PROJECT2/files/file2'"
 
-$SMIT issue clone1/$PROJECT1 >> $TEST_NAME.out
-$SMIT issue clone1/$PROJECT1 1 -pm >> $TEST_NAME.out
+echo "clone1" >> $TEST_NAME.out
+$SMIT project clone1 -a >> $TEST_NAME.out
+
+checkProject clone1/$PROJECT1
+checkProject clone1/$PROJECT2
 
 
 # do clone2
 $SMIT clone http://127.0.0.1:$PORT --user $USER2 --passwd $PASSWD2 clone2
 
-# check that clone of p2 has the files
-echo "Clone of p2" >> $TEST_NAME.out
+echo "clone2" >> $TEST_NAME.out
 $SMIT project clone2 -a >> $TEST_NAME.out
-[ -f clone2/$PROJECT1/objects/00/file1 ] && fail "unexpected file 'clone2/$PROJECT1/files/file1'"
-[ -f clone2/$PROJECT2/objects/00/file2 ] || fail "missing file 'clone2/$PROJECT2/files/file2'"
 
-$SMIT issue clone2/$PROJECT2 >> $TEST_NAME.out
-$SMIT issue clone2/$PROJECT2 1 -pm >> $TEST_NAME.out
+checkProject clone2/$PROJECT1
+checkProject clone2/$PROJECT2
 
 # check that user 1 with password of user 2 raises an error
-$SMIT clone http://127.0.0.1:$PORT --user $USER1 --passwd $PASSWD2 clone2 && fail "unexpected clone with wrong password"
+$SMIT clone http://127.0.0.1:$PORT --user $USER1 --passwd $PASSWD2 clone3 && fail "unexpected clone with wrong password"
 
 stopServer
 

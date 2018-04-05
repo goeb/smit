@@ -65,7 +65,7 @@
   * 2. Conflicts on new issues
   * These conflicts occur typically when a user creates a new issue on the server and
   * another user creates a new issue on his/her local clone, and both new issues get
-  * the same issue id.
+  * the same id.
   *
   * These conflicts within a same project are resolved by pulling: the local
   * issue of the clone is renamed. For example issue 123 will be renamed issue 124.

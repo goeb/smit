@@ -1,14 +1,34 @@
-Clone of p1
+clone1
 clone1/p1: 2 issues
 1 project(s)
+clone1/p1/issues:
 Issue 1: p1: first issue
 Issue 2: p1: third issue
+clone1/p1/issue #1:
 Issue 1: p1: first issue
----- Properties ----------------------------------------------------------------
-    status                    : open
-Clone of p2
+--------------------------------------------------------------------------------
+Modified Properties:
+    summary: p1: first issue
+--------------------------------------------------------------------------------
+Modified Properties:
+    status: open
+Attached files:
+    8c83ed4790fc1c72802f68d09c45be4fb4eb2772 file1
+clone1/p1/file1:
+file1_abc
+clone1/p2: no such directory
+clone2
 clone2/p2: 1 issues
 1 project(s)
+clone2/p1: no such directory
+clone2/p2/issues:
 Issue 1: p2: second issue
+clone2/p2/issue #1:
 Issue 1: p2: second issue
----- Properties ----------------------------------------------------------------
+--------------------------------------------------------------------------------
+Modified Properties:
+    summary: p2: second issue
+Attached files:
+    42a545b480d94a57c243375d6b405d8f48043915 file2
+clone2/p2/file2:
+file2_0123

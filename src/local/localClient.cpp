@@ -131,8 +131,6 @@ void printMessages(const IssueCopy &i, int printMode)
                 printf("\n");
             }
 
-            // TODO print names of attached files
-
             bool noModifiedPropertiesSoFar = true;
             if (printMode & PRINT_FULL_HISTORY) {
                 // print the properties changes
@@ -148,6 +146,17 @@ void printMessages(const IssueCopy &i, int printMode)
                     std::string value = toString(p->second);
                     printf(INDENT "%s: %s\n", p->first.c_str(), value.c_str()); // TODO print label instead of logical name
                 }
+
+                // print names of attached files
+                std::list<AttachedFileRef>::const_iterator file;
+                FOREACH(file, e->files) {
+                    if (file == e->files.begin()) {
+                        // print a header
+                        printf("Attached files:\n");
+                    }
+                    printf(INDENT "%s %s\n", file->id.c_str(), file->filename.c_str());
+                }
+
             }
         }
         e = e->getNext();
@@ -212,11 +221,11 @@ Args *setupIssueOptions()
                  "to this issue."
                  , 0);
     args->setOpt("file", 'f', "specify a file to attach. Must be used with '-a'.", 1);
-    args->setOpt("history", 'h',
+    args->setOpt("history", 0,
                  "print all history (including properties changes).\n"
                  "(implies -m)"
                  , 0);
-    args->setOpt("message", 'm', "print messages", 0);
+    args->setOpt("messages", 'm', "print messages", 0);
     args->setOpt("properties", 'p', "print properties", 0);
     args->setOpt("verbose", 'v', "be verbose", 0);
     return args;
@@ -235,6 +244,7 @@ int cmdIssue(int argc, char **argv)
     std::string issueId = "";
     int printMode = PRINT_SUMMARY;
     bool add = false;
+    const char *attachedFile;
 
     Args *args = setupIssueOptions();
     args->parse(argc-1, argv+1);
@@ -243,6 +253,7 @@ int cmdIssue(int argc, char **argv)
     if (args->get("messages")) printMode |= PRINT_MESSAGES;
     if (args->get("history")) printMode |= PRINT_FULL_HISTORY;
     if (args->get("add")) add = true;
+    attachedFile = args->get("file");
 
     // manage non-option ARGV elements
     // manage non-option ARGV elements
@@ -254,6 +265,7 @@ int cmdIssue(int argc, char **argv)
     }
 
     const char *pIssueId = args->pop();
+    if (pIssueId) issueId = pIssueId;
 
     setLoggingOption(LO_CLI);
     if (Verbose_localClient) setLoggingLevel(LL_INFO);
@@ -274,7 +286,6 @@ int cmdIssue(int argc, char **argv)
         exit(1);
 
     } else if (add) {
-        issueId = pIssueId;
         // add a new issue, or an entry to an existing issue
         // parse the remaining argument
         // they must be of the form key=value
@@ -296,7 +307,29 @@ int cmdIssue(int argc, char **argv)
         Entry *entry = 0;
         IssueCopy oldIssue;
         if (issueId == "-") issueId = "";
-        std::list<AttachedFileRef> files; // no file, empty list
+
+        std::list<AttachedFileRef> files;
+
+        if (attachedFile) {
+            std::string data;
+            int err = loadFile(attachedFile, data);
+            if (err) {
+                LOG_CLI_ERR("Cannot load file %s.", attachedFile);
+                exit(1);
+            }
+            std::string fileId = p->storeFile(data.data(), data.size());
+            if (fileId.empty()) {
+                // error
+                LOG_CLI_ERR("Cannot store file %s.", attachedFile);
+                exit(1);
+            } else {
+                AttachedFileRef file;
+                file.size = data.size();
+                file.filename = getBasename(attachedFile);
+                file.id = fileId;
+                files.push_back(file);
+            }
+        }
         int r = p->addEntry(properties, files, issueId, entry, username, oldIssue);
         if (r >= 0) {
             if (entry) {
