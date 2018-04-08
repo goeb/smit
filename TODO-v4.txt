@@ -1,9 +1,11 @@
 
 
 TODO
-	cli clone, pull, push
+	check if projet dirname is urlNameEncode(projectName) !
+	cli pull, push
 	push: server-side reloads pushed entries
 	push: conflict with issue id of another project (server-side renaming)
+	test clone, pull, push over TLS
 	windows
 	heroku
 	remove support for nested projects, but keep projects being in sub-dirs
@@ -61,7 +63,7 @@ repo-v4
 │   └── files
 ├── .smit_local
 │   ├── git_credential
-│   ├── smit_permissions
+│   ├── permissions
 │   └── username
 └── .smit
     ├── .git/

@@ -1,6 +1,7 @@
 #!/bin/sh
 
-# test smit pull
+# Check that entries added server-side are correctly pulled
+
 TEST_NAME=`basename $0`
 # remove suffix .sh
 TEST_NAME=`echo $TEST_NAME | sed -e "s/\.sh//"`
@@ -32,8 +33,7 @@ init() {
     $SMIT issue $REPO/$PROJECT1 -a 1 status=open color=green
     # create issue 2
     $SMIT issue $REPO/$PROJECT1 -a - "summary=second issue" color=yellow
-    mkdir $REPO/$PROJECT1/.smip/objects/00
-    echo "-- file1" > $REPO/$PROJECT1/.smip/objects/00/file1
+
 }
 cleanup() {
     REPO=trepo # just to be sure before the rm -rf
@@ -79,10 +79,14 @@ stopServer
 $SMIT issue $REPO/$PROJECT1 -a 1 color=yellow freeText="hello world"
 # add an issue
 $SMIT issue $REPO/$PROJECT1 -a - summary="t---d issue" freeText="this is xyz"
-$SMIT issue $REPO/$PROJECT1 -a 3 summary="third issue" freeText="this is xyz" "+file=00file2/file2.txt"
 
-echo "-- file2" > $REPO/$PROJECT1/.smip/objects/00/file2
-echo "-- contents of file2" >> $REPO/$PROJECT1/.smip/objects/00/file2
+# add attached files to issues #2 and #3
+tmpDir=$(mktemp -d)
+echo file1_abc > "$tmpDir/file1"
+echo file2_0123 > "$tmpDir/file2"
+$SMIT issue $REPO/$PROJECT1 -a 2 --file "$tmpDir/file1"
+$SMIT issue $REPO/$PROJECT1 -a 3 summary="third issue" freeText="this is xyz" --file "$tmpDir/file2"
+rm -rf "$tmpDir"
 
 startServer
 cd clone1
@@ -91,11 +95,9 @@ cd -
 stopServer
 
 # check that the new entry and the new issue are pulled
-$SMIT issue clone1/$PROJECT1 1 -pm > $TEST_NAME.out
-$SMIT issue clone1/$PROJECT1 2 -pm >> $TEST_NAME.out
-$SMIT issue clone1/$PROJECT1 3 -pm >> $TEST_NAME.out
-cat clone1/$PROJECT1/.smip/objects/00/file1 >> $TEST_NAME.out
-cat clone1/$PROJECT1/.smip/objects/00/file2 >> $TEST_NAME.out
+$SMIT issue clone1/$PROJECT1 1 --history | grep -v "^Date:" > $TEST_NAME.out
+$SMIT issue clone1/$PROJECT1 2 --history | grep -v "^Date:" >> $TEST_NAME.out
+$SMIT issue clone1/$PROJECT1 3 --history | grep -v "^Date:" >> $TEST_NAME.out
 
 diff -u $srcdir/$TEST_NAME.ref $TEST_NAME.out 
 

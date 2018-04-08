@@ -104,6 +104,8 @@ int testSessid(const std::string &url, const HttpClientContext &ctx)
     return -1;
 }
 
+/** Create local branches tracking remotes ones after a clone
+ */
 static int alignIssueBranches(const std::string &projectPath)
 {
     int err;
@@ -190,6 +192,14 @@ static int gitPull(const std::string &dir)
 
     // TODO create local branches to track remote new ones
     //err = alignIssueBranches(into);
+
+    // 1. fetch from remote (all branches)
+    // 2. for branch master, try merging: conflicts must be manually resolved
+    // 3. for remote issues that do not exist locally: simply create a local tracking branch
+    // 4. for remote issues that DO exist locally:
+    //    - try merge --rebase
+    //    - on error, move the local branch to a new issue number, and repull the remote
+
 
     return err;
 }
