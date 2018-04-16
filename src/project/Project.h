@@ -55,8 +55,6 @@ public:
     // methods for handling entries
     int addEntry(PropertiesMap properties, const std::list<AttachedFileRef> &files, std::string &iid,
                  Entry *&entry, std::string username, IssueCopy &oldIssue);
-    int pushEntry(std::string &issueId, const std::string &entryId,
-                  const std::string &user, const std::string &data);
 
     int amendEntry(const std::string &entryId, const std::string &msg,
                    Entry *&entryOut, const std::string &username, IssueCopy &oldIssue);
