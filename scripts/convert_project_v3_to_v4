@@ -157,6 +157,7 @@ convert_v3_to_v4_master() {
 # $3 : branch name where to commit
 # $4 : the original entry of the v3 repo
 # $5 : the file for mapping v3 and v4 entries identifiers
+# stdin: commit message
 # stdout : resulting commit id
 create_commit() {
 
@@ -167,11 +168,8 @@ create_commit() {
 	local branch=$3 # make an orphan branch if not existing
 	local entry=$4
 	local mapping_entries_v3_v4="$5"
-	# stdin: commit message
 
 	git -C "$dst_v4" read-tree --empty
-
-	shift 3
 
 	# attached files
 	# use smparser in order to manage spaces in file names
@@ -192,6 +190,7 @@ create_commit() {
 
 	tree_id=$(git -C "$dst_v4" write-tree)
 
+	# TODO use rather git show-ref --heads -s $branch
 	parent_id=$(cat "$dst_v4/refs/heads/$branch" 2>/dev/null)
 	debug parent_id=$parent_id
 	if [ "$parent_id" = "" ]; then
@@ -210,12 +209,54 @@ create_commit() {
 	echo $commit_id
 }
 
+# Add an issue short name in the issues table
+# $1 : destination v4 smit project (must be a bare git repo)
+# $2 : issue id (decimal)
+# $3 : id of the first entry (hash)
+create_issue_ref() {
+   	dst_v4="$1"
+   	issue_id=$2
+   	first_entry_id=$3
+	branch_name=issues
+	filename=issues.txt
+
+	existing=$(git -C "$dst_v4" show-ref --heads -s $branch_name)
+	tmp=$(mktemp)
+	if [ "$existing" = "" ]; then
+		:
+	else
+		# recall the existing tree
+		treeid=$(git -C "$dst_v4" cat-file -p $existing | awk '$1 == "tree" { print $2; }')
+		object_id=$(git -C "$dst_v4" ls-tree $treeid $filename | awk '{ print $3; }')
+		git -C "$dst_v4" cat-file -p $object_id > "$tmp"
+	fi
+
+	git -C "$dst_v4" read-tree --empty
+	echo "$first_entry_id $issue_id" >> "$tmp"
+
+	id=$(git -C "$dst_v4" hash-object -w "$tmp")
+	git -C "$dst_v4" update-index --add --cacheinfo 100644 $id "$filename"
+	tree_id=$(git -C "$dst_v4" write-tree)
+
+	msg="create_issue_ref $issue_id"
+	if [ "$existing" = "" ]; then
+		commit_id=$(git -C "$dst_v4" commit-tree $tree_id -m "$msg")
+	else
+		commit_id=$(git -C "$dst_v4" commit-tree $tree_id -p $existing -m "$msg")
+	fi
+	# update the branch
+	git -C "$dst_v4" update-ref refs/heads/$branch_name $commit_id
+}
+
 # $1 : source v3 smit project
 # $2 : destination v4 smit entries (must be a bare git repo)
 # $3 : file for the mapping of entries v3 <=> v4
-convert_v3_to_v4_issues() {
+convert_v3_to_v4_entries() {
 	# convert issues
-	# in v4, each issue is a branch named issues/<id>
+	# in v4:
+	# - all entries are in a branch "entries"
+	# - an issue is referenced by the first entry
+	# - a file associates the hash of the first entry with a short name (decimal growing number)
 	local src_v3="$1"
 	local dst_v4="$2"
 	local mapping_entries_v3_v4="$3"
@@ -223,7 +264,7 @@ convert_v3_to_v4_issues() {
 	for i in $(ls "$src_v3"/.smip/refs/issues/* 2>/dev/null); do
 		debug "issues $i..."
 		id=$(cat "$i")
-		branch="issues"
+		branch="entries"
 		issue_id="$(basename $i)"
 
 		history=$(get_v3_history "$src_v3" "$id")
@@ -268,7 +309,8 @@ convert_v3_to_v4_issues() {
 			)
 			if [ -z "$first_entry_id" ]; then
 				first_entry_id=$commit_id
-				echo first_entry_id=$first_entry_id
+				# add the new issue in the association file
+			   	create_issue_ref "$dst_v4" $issue_id $first_entry_id	
 			fi
 		done
 	done
@@ -323,7 +365,7 @@ convert_v3_to_v4_master "$src_v3" "$dst_v4"
 
 MAPPING_ENTRIES_V3_V4=$(mktemp)
 
-convert_v3_to_v4_issues "$src_v3" "$dst_v4/.git" "$MAPPING_ENTRIES_V3_V4"
+convert_v3_to_v4_entries "$src_v3" "$dst_v4/.git" "$MAPPING_ENTRIES_V3_V4"
 convert_v3_to_v4_tags "$src_v3" "$dst_v4/.git" "$MAPPING_ENTRIES_V3_V4"
 
 # restore dst_v4 staging index
