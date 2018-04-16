@@ -98,7 +98,6 @@ public:
     int toggleTag(const std::string &entryId, const std::string &tagname, const std::string &author);
 
     // local usage methods (not mutex-protected)
-    int addNewIssue(Issue &i);
     std::string renameIssue(const std::string &oldId);
     int renameIssue(Issue &i, const std::string &newId);
     int storeEntry(const Entry *e);
