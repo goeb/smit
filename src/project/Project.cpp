@@ -967,21 +967,6 @@ int Project::renameIssue(Issue &i, const std::string &newId)
 }
 
 
-/** Add an issue to the project
-  */
-int Project::addNewIssue(Issue &i)
-{
-    // insert the issue in the table of issues
-    int r = insertIssueInTable(&i);
-    if (r!=0) return r;
-
-    // Store issue ref on disk
-    LOG_ERROR("Project::addNewIssue TODO");
-
-    return r;
-}
-
-
 /**
   * issues may be a list of 1 empty string, meaning that associations have been removed
   */
