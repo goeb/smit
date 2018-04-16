@@ -10,15 +10,15 @@ usage() {
 }
 
 error() {
-	echo "error: $*"
+	echo "error: $*" >&2
 }
 
 info() {
-	echo "$*"
+	echo "$*" >&2
 }
 
 debug() {
-	[ "$DEBUG" = 1 ] && echo "debug: $*"
+	[ "$DEBUG" = 1 ] && echo "debug: $*" >&2
 }
 
 die() {
@@ -157,6 +157,7 @@ convert_v3_to_v4_master() {
 # $3 : branch name where to commit
 # $4 : the original entry of the v3 repo
 # $5 : the file for mapping v3 and v4 entries identifiers
+# stdout : resulting commit id
 create_commit() {
 
 	debug create_commit $*
@@ -206,6 +207,7 @@ create_commit() {
 	git -C "$dst_v4" update-ref refs/heads/$branch $commit_id
 
 	echo "$entry $commit_id" >> "$mapping_entries_v3_v4"
+	echo $commit_id
 }
 
 # $1 : source v3 smit project
@@ -221,10 +223,12 @@ convert_v3_to_v4_issues() {
 	for i in $(ls "$src_v3"/.smip/refs/issues/* 2>/dev/null); do
 		debug "issues $i..."
 		id=$(cat "$i")
-		branch="issues/$(basename $i)"
+		branch="issues"
+		issue_id="$(basename $i)"
 
 		history=$(get_v3_history "$src_v3" "$id")
 
+		first_entry_id=""
 		for entry in $history; do
 			printf "." # progress bar
 			# for each item of history
@@ -242,8 +246,11 @@ convert_v3_to_v4_issues() {
 			export GIT_AUTHOR_EMAIL="<>"
 			export GIT_AUTHOR_DATE="$ctime"
 
+			commit_id=$(
 			cat_file_v3 "$src_v3" "$entry" |
-			awk -v entry=$entry -v amended="$amended" 'BEGIN { boundary=""; multiline_prefix=""; print "convert_v3_to_v4_issues\n"; }
+			awk -v entry=$entry -v first_entry_id=$first_entry_id -v amended="$amended" 'BEGIN { boundary=""; multiline_prefix="";
+				print "issue", first_entry_id;
+			}
 			boundary=="" && $2=="<" { boundary=$3;
 									  if ($1=="+message") {
 										  multiline_prefix="msg";
@@ -258,6 +265,11 @@ convert_v3_to_v4_issues() {
 			boundary!="" { print multiline_prefix, $0; }
 			END { print "\nsmit-v3-id:", entry; }
 			' | create_commit "$src_v3" "$dst_v4" $branch $entry "$mapping_entries_v3_v4"
+			)
+			if [ -z "$first_entry_id" ]; then
+				first_entry_id=$commit_id
+				echo first_entry_id=$first_entry_id
+			fi
 		done
 	done
 	echo # terminate the progress bar
