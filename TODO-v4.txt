@@ -17,28 +17,41 @@ Roadmap:
 - step 3; smit pull & merge
 - step 4: smit push
 
-Example
-git log issues/<id>
+New Architecture of a smit project:
+- 1 git repository with:
+	* branch master for project config and other files (project-specific html, etc.)
+	* branch entries for all entries
+	* branch issues for short names. This branch tracks a single file: issues.txt
+- each issue can be uniquely identified by the id of its first entry
+- a short name of an issue is a decimal number (stored as a string), that the server increments
+  when new issues are created.
+- the short name table of the server is the applicable one, and shall never be pushed.
+- when pulling the branch 'issues', a client can detect that the server renamed some short names
 
-	Author: ...
-	Date: ...
-	Parent: ...
-	Tree: ... (attached files are in the tree)
-	
-	amend ...
-	property summary ...
-	property owner ...
-	property textarea2 <
-	property textarea2 first line ...
-	property textarea2 bla bla
-	property textarea2 last line
-	msg this is the first line of the message	
-	msg (.. second line...)
-	msg etc.
-	msg last line...
+Example:
+git log --format=raw entries
+
+commit bf934b635ee431b879251b055454a53e007c2e57
+tree 4b825dc642cb6eb9a060e54bf8d69288fbee4904
+parent f64aac39e6a4eab9a5f9d068bc8bc182f0afc196
+author fred <> 1433536503 +0200
+committer Frederic Hoerni <fhoerni@free.fr> 1523910200 +0200
+
+    issue 8aa776fb4cb08a3a7bd3cf1442e2322dd8921dd7
+    amend ...
+    property summary ...
+    property owner ...
+    property textarea2 <
+    property textarea2 first line ...
+    property textarea2 bla bla
+    property textarea2 last line
+    msg this is the first line of the message	
+    msg (.. second line...)
+    msg etc.
+    msg last line...
 
 Notes:
-	tag_x,tag_y
+    tag_x,tag_y
 
 Git hooks server-side
 	/public, /.smit, /<p>/
