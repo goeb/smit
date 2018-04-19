@@ -3,6 +3,7 @@
 #include "logging.h"
 #include "filesystem.h"
 #include "subprocess.h"
+#include "stringTools.h"
 
 /** Modify a file
  *
@@ -99,5 +100,83 @@ int gitAddCommitDir(const std::string &gitRepoPath, const std::string &author)
     }
     return 0;
 }
+
+
+/** Load the contents of a file referenced by a git ref and a filename
+ *
+ * @return
+ *     O on success
+ *    -1 if gitRef does not exist
+ *    -2 on error
+ */
+int gitLoadFile(const std::string &gitRepoPath, const std::string &gitRef, const std::string &filepath, std::string &data)
+{
+    Argv argv;
+    int err;
+    std::string subStdout, subStderr;
+
+    // retrieve the commit object of gitRef
+
+    argv.set("git", "cat-file", "-p", gitRef.c_str(), 0);
+    err = Subprocess::launchSync(argv.getv(), 0, gitRepoPath.c_str(), 0, 0, subStdout, subStderr);
+    if (err) {
+        LOG_INFO("gitLoadFile error in cat-file: %s (the ref does not exist?)", subStderr.c_str());
+        return -1;
+    }
+
+    // parse the commit object and look for the "tree" part
+    std::string treeId;
+    while (!subStdout.empty()) {
+        std::string line = popToken(subStdout, '\n', TOK_STRICT);
+        std::string token = popToken(line, ' ', TOK_STRICT);
+        if (token == "tree") {
+            treeId = line;
+            break;
+        }
+    }
+
+    if (treeId.empty()) {
+        LOG_ERROR("gitLoadFile: missing tree in ref: %s", gitRef.c_str());
+        return -2;
+    }
+
+    // git ls-tree <hash> <filepath>
+    argv.set("git", "ls-tree", treeId.c_str(), filepath.c_str(), 0);
+    err = Subprocess::launchSync(argv.getv(), 0, gitRepoPath.c_str(), 0, 0, subStdout, subStderr);
+    if (err) {
+        LOG_ERROR("gitLoadFile error in ls-tree: %s (treeId=%s, filepath=%s)", subStderr.c_str(),
+                  treeId.c_str(), filepath.c_str());
+        return -2;
+    }
+
+    if (subStdout.empty()) {
+        LOG_ERROR("gitLoadFile error: no such file (treeId=%s, filepath=%s)", treeId.c_str(), filepath.c_str());
+        return -2;
+    }
+
+    // parse the ls-tree output
+    // take 3rd field
+    // The format of the line is: <mode> SP <type> SP <object> TAB <file>
+
+    std::string mode = popToken(subStdout, ' ', TOK_STRICT);
+    std::string type = popToken(subStdout, ' ', TOK_STRICT); // should be 'blob'
+    std::string fileId = popToken(subStdout, '\t', TOK_STRICT);
+    if (fileId.empty()) {
+        LOG_ERROR("gitLoadFile error: cannot find fileId in ls-tree output (treeId=%s, filepath=%s)",
+                  treeId.c_str(), filepath.c_str());
+        return -2;
+    }
+
+    // git cat-file
+    argv.set("git", "cat-file", "-p", fileId.c_str(), 0);
+    err = Subprocess::launchSync(argv.getv(), 0, gitRepoPath.c_str(), 0, 0, data, subStderr);
+    if (err) {
+        LOG_ERROR("gitLoadFile error in cat-file (2): %s (fileId=%s)", subStderr.c_str(), fileId.c_str());
+        return -2;
+    }
+
+    return 0;
+}
+
 
 

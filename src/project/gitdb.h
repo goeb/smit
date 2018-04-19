@@ -8,7 +8,9 @@
 
 // SHA1 id of an empty tree
 #define K_EMPTY_TREE "4b825dc642cb6eb9a060e54bf8d69288fbee4904"
-#define BRANCH_PREFIX_ISSUES "issues/"
+#define BRANCH_ENTRIES "entries"
+#define BRANCH_ISSUES "issues" // short names table
+#define TABLE_ISSUES_SHORT_NAMES "issues.txt"
 
 typedef std::string ObjectId;
 
@@ -22,23 +24,11 @@ std::string gitdbStoreFile(const std::string &gitRepoPath, const char *data, siz
 int gitdbLsTree(const std::string &gitRepoPath, const std::string &treeid, std::list<AttachedFileRef> &files);
 int gitdbSetNotes(const std::string &gitRepoPath, const ObjectId &entryId, const std::string &data);
 
-class GitIssueList {
-
-public:
-    int open(const std::string &gitRepoPath, const std::string &remote="");
-    std::string getNext();
-    void close();
-
-private:
-    Subprocess *subp;
-    std::string remoteName;
-};
-
 
 class GitIssue {
 
 public:
-    int open(const std::string &gitRepoPath, const std::string &issueId);
+    int open(const std::string &gitRepoPath, const std::string &branch);
     std::string getNextEntry();
     void close();
     static std::string addCommit(const std::string &bareGitRepo, const std::string &issueId,

@@ -201,41 +201,129 @@ void Project::computeAssociations()
     }
 }
 
-/** Load a single issue
+/** Load the table of issues short names
+ *
+ *  An Issue has a unique short name (decimal number), and is
+ *  also uniquely identified after its first entry.
+ *
  */
-Issue *Project::loadIssue(const std::string &issueId)
+int Project::loadIssuesShortNames(const std::string &gitRepoPath, std::map<EntryId, IssueId> &shortNames)
 {
-    GitIssue elist;
-    std::string pathEntries = getPathEntries();
-    int ret = elist.open(pathEntries, issueId);
-    if (ret) {
-        LOG_ERROR("Cannot load issue %s (%s)", issueId.c_str(), pathEntries.c_str());
+    // file issues.txt from branch issues
+    std::string data;
+    int err = gitLoadFile(gitRepoPath, BRANCH_ISSUES, TABLE_ISSUES_SHORT_NAMES, data);
+    if (-1 == err) {
+        // The branch does not exist.
+        // This is not an error, because the project may have no issue yet.
         return 0;
+
+    } else if (err) {
+        LOG_ERROR("Cannot load table of issues short names");
+        return -1;
     }
 
-    Issue *issue = new Issue();
-    int error = 0;
+    // parse the file
+    while (!data.empty()) {
+        std::string line = popToken(data, '\n', TOK_STRICT);
+        EntryId eid = popToken(line, ' ', TOK_STRICT);
+        IssueId iid = line;
+        shortNames[eid] = iid;
+    }
+    return 0;
+}
+
+/** Load issues in memory
+ *
+ * @return
+ *     0 on success
+ *    -1 on error
+ */
+int Project::loadIssues()
+{
+    LOG_DEBUG("Loading issues (%s)", getPathEntries().c_str());
+    int err;
+
+    std::string pathEntries = getPathEntries();
+
+    std::map<EntryId, IssueId> shortNames;
+    err = loadIssuesShortNames(pathEntries, shortNames);
+    if (err) return -1;
+
+    GitIssue elist;
+    err = elist.open(pathEntries, "entries");
+    if (err) {
+        LOG_ERROR("Cannot load issues: %s", pathEntries.c_str());
+        return -1;
+    }
+
+    int localMaxId = 0;
 
     while (1) {
         std::string entryString = elist.getNextEntry();
         if (entryString.empty()) break; // reached the end
 
+        std::string issueId;
         std::string treeid;
         std::list<std::string> tags;
-        Entry *e = Entry::loadEntry(entryString, treeid, tags);
+        Entry *e = Entry::loadEntry(entryString, issueId, treeid, tags);
         if (!e) {
             LOG_ERROR("Cannot load entry '%s'", entryString.c_str());
-            error = 1;
-            break; // abort the loading of this issue
+            continue; // skip this part
         }
 
         if (!treeid.empty() && treeid != K_EMPTY_TREE) {
             int err = gitdbLsTree(pathEntries, treeid, e->files);
             if (err) {
                 LOG_ERROR("Cannot load attached files: tree %s", treeid.c_str());
-                error = 1;
-                break; // abort the loading of this issue
             }
+        }
+
+        // update lastModified
+        // Is it necessary to check this for all entries? (could the first one be enough?)
+        updateLastModified(e);
+
+        err = insertEntryInTable(e);
+        if (err) {
+            // this should not happen, as 2 different git commits
+            // cannot have the same id
+            LOG_ERROR("Entry already in table %s", e->id.c_str());
+        }
+
+
+        bool doConsolidate = false;
+        if (issueId.empty()) {
+            // this is the origin entry of an issue
+            // the issue id is the entry id
+            issueId = e->id;
+            doConsolidate = true;
+        }
+
+        // convert the original issue id to its short name
+        std::map<EntryId, IssueId>::const_iterator sn = shortNames.find(issueId);
+        if (sn == shortNames.end()) {
+            // not found. This is an error, but we can live with it.
+            LOG_ERROR("Cannot find short name for issue '%s'", issueId.c_str());
+        } else {
+            // do the conversion
+            issueId = sn->second;
+
+            // update the maximum id
+            int intId = atoi(issueId.c_str());
+            if (intId > 0 && intId > localMaxId) localMaxId = intId;
+        }
+
+        Issue *issue = 0;
+        std::map<std::string, Issue*>::iterator existingIssue;
+        existingIssue = issues.find(issueId);
+        if (existingIssue != issues.end()) {
+            // existing
+            issue = existingIssue->second;
+
+        } else {
+            issue = new Issue();
+            issue->id = issueId;
+            issue->project = getName();
+            issues[issueId] = issue;
         }
 
         issue->insertEntry(e); // store the entry in the chain list
@@ -245,72 +333,12 @@ Issue *Project::loadIssue(const std::string &issueId)
         FOREACH(tagname, tags) {
             issue->addTag(e->id, *tagname);
         }
+
+        if (doConsolidate) issue->consolidate();
+
     }
 
     elist.close();
-
-    if (error) {
-        Issue::destroy(issue);
-        issue = 0;
-
-    } else {
-        issue->consolidate();
-    }
-
-    return issue;
-}
-
-int Project::loadIssues()
-{
-    LOG_DEBUG("Loading issues (%s)", getPathEntries().c_str());
-    GitIssueList ilist;
-    int ret = ilist.open(getPathEntries());
-    if (ret) {
-        LOG_ERROR("Cannot load issues of project (%s)", getPathEntries().c_str());
-        return -1;
-    }
-
-    int localMaxId = 0;
-
-    while (1) {
-        std::string issueId = ilist.getNext();
-        if (issueId.empty()) break; // reached the end
-
-        Issue *issue = loadIssue(issueId);
-
-        if (!issue) {
-            LOG_ERROR("Cannot load issue %s", issueId.c_str());
-            continue;
-        }
-
-        issue->project = getName();
-
-        Entry *e = issue->latest; // take the latest entry
-
-        // update lastModified
-        updateLastModified(e);
-
-        // store the entries in the 'entries' table
-        while (e) {
-            int r = insertEntryInTable(e);
-            if (r != 0) {
-                // this should not happen
-                // maybe 2 issues pointing to the same first entry?
-                LOG_ERROR("Cannot load issue %s", issueId.c_str());
-            }
-            e = e->getPrev();
-        }
-
-        // update the maximum id
-        int intId = atoi(issueId.c_str());
-        if (intId > 0 && intId > localMaxId) localMaxId = intId;
-
-        // store the issue in memory
-        issue->id = issueId;
-        insertIssueInTable(issue);
-    }
-
-    ilist.close();
 
     updateMaxIssueId(localMaxId);
 

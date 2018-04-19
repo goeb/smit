@@ -44,23 +44,25 @@ const std::string Entry::EMPTY_MESSAGE("");
 #define K_AMEND_V4 "amend"
 #define K_PROPERTY_V4 "property"
 #define K_TAG_V4 "tag"
+#define K_ISSUE "issue"
 
 /** Load an entry from a string
   *
   * @param data
+  * @param[out] issueid
   * @param[out] treeid
   * @param[out] tags
   *
   * The format of data is the one returned by:
   *      git log --format=raw --notes
+  *
   * Example of data:
   * commit cb64638ed0b606095fd78f50c03b0e28c7827a11
   * tree 6f3b1c4bdbf1a2eef2d752dda971ef51bdd2f631
   * author homer <> 1386451794 +0100
   * committer homer <> 1511301253 +0100
   *
-  *     convert_v3_to_v4_issues
-  *
+  *     issue 58169ed299f05d43b894b308bafb72a36c2f500a
   *     msg <
   *     msg uerbaque, **nec placidam membris** dat cura quietem.
   *     msg Postera Phoebea lustrabat lampade terras,
@@ -74,10 +76,11 @@ const std::string Entry::EMPTY_MESSAGE("");
   *
   *     smit-v3-id: zQp6nXdMe4EbIlG9wFuUqwtSZG4
   */
-Entry *Entry::loadEntry(std::string data, std::string &treeid, std::list<std::string> &tags)
+Entry *Entry::loadEntry(std::string data, std::string &issueId, std::string &treeid, std::list<std::string> &tags)
 {
     Entry *e = new Entry;
     treeid.clear();
+    issueId.clear();
 
     // extract the entry id (ie: commit id)
     std::string commitKey = popToken(data, ' '); // should be "commit", not verified...
@@ -103,7 +106,6 @@ Entry *Entry::loadEntry(std::string data, std::string &treeid, std::list<std::st
         if (line[0] != ' ') {
             key = popToken(line, ' ');
             if (key == "tree") treeid = line;
-            else if (key == "parent") e->parent = line;
             else if (key == "Notes:") inNotesPart = true;
             else if (key == "author") {
                 // take the author name until the first '<'
@@ -130,6 +132,10 @@ Entry *Entry::loadEntry(std::string data, std::string &treeid, std::list<std::st
             if (key == K_AMEND_V4) {
                 trim(line);
                 e->properties[K_AMEND].push_back(line);
+
+            } else if (key == K_ISSUE) {
+                trim(line);
+                issueId = line;
 
             } else if (key == K_MSG_V4) {
                 // concatenate with previous msg lines

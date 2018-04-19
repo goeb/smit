@@ -11,76 +11,13 @@
 
 #define SIZE_COMMIT_ID 40
 
-int GitIssueList::open(const std::string &gitRepoPath, const std::string &remote)
-{
-    remoteName = remote;
 
-    // git branch --list issues/*
-    // OR
-    // git branch --list --remotes <remote>/issues/*
+int GitIssue::open(const std::string &gitRepoPath, const std::string &branch)
+{
+    // git log --format=raw --notes <branch>"
 
     Argv argv;
-    argv.set("git", "branch", "--list", 0);
-
-    // branch name (remote or not)
-    std::string branchName = BRANCH_PREFIX_ISSUES "*";
-    if (!remote.empty()) {
-        // remote requested
-        argv.append("--remotes", 0);
-        branchName = remote + "/" + branchName;
-    }
-
-    argv.append(branchName.c_str(), 0);
-
-    subp = Subprocess::launch(argv.getv(), 0, gitRepoPath.c_str());
-    if (!subp) {
-        LOG_ERROR("GitIssueList::open: failed to launch: %s", argv.toString().c_str());
-        return -1;
-    }
-
-    subp->closeStdin();
-
-    return 0;
-}
-
-/** Read the next line
- *
- *  Expected line read from the pipe: "    issues/<id>\n"
- */
-std::string GitIssueList::getNext()
-{
-    std::string line = subp->getline();
-    if (line.empty()) return line;
-
-    // trim the "  issues/" prefix (or "  <remote>/issues/")
-    int addLength = 0;
-    if (!remoteName.empty()) addLength = remoteName.size() + 1; // +1 for the "/"
-    if (line.size() > strlen(BRANCH_PREFIX_ISSUES)+2+addLength) {
-        line = line.substr(strlen(BRANCH_PREFIX_ISSUES)+2+addLength);
-        trimRight(line, "\n"); // remove possible trailing LF
-
-    } else {
-        // error, should not happen
-        LOG_ERROR("GitIssueList::getNext recv invalid line: %s", line.c_str());
-        line = "";
-    }
-    return line;
-}
-
-void GitIssueList::close()
-{
-    subp->shutdown();
-    delete subp;
-}
-
-
-int GitIssue::open(const std::string &gitRepoPath, const std::string &issueId)
-{
-    // git log --format=raw --notes issues/<id>"
-
-    std::string branchIssueId = BRANCH_PREFIX_ISSUES + issueId;
-    Argv argv;
-    argv.set("git", "log", "--format=raw", "--notes", branchIssueId.c_str(), 0);
+    argv.set("git", "log", "--format=raw", "--notes", branch.c_str(), 0);
 
     subp = Subprocess::launch(argv.getv(), 0, gitRepoPath.c_str());
     if (!subp) {
@@ -177,6 +114,7 @@ std::string gitdbStoreFile(const std::string &gitRepoPath, const char *data, siz
 
     return sha1Id;
 }
+
 
 /** Read the list of files of a tree id
  *
