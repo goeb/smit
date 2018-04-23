@@ -20,7 +20,6 @@ struct AttachedFileRef {
     size_t size;
 };
 
-std::string gitdbStoreFile(const std::string &gitRepoPath, const char *data, size_t len);
 int gitdbLsTree(const std::string &gitRepoPath, const std::string &treeid, std::list<AttachedFileRef> &files);
 int gitdbSetNotes(const std::string &gitRepoPath, const ObjectId &entryId, const std::string &data);
 
@@ -31,8 +30,8 @@ public:
     int open(const std::string &gitRepoPath, const std::string &branch);
     std::string getNextEntry();
     void close();
-    static std::string addCommit(const std::string &bareGitRepo, const std::string &issueId,
-                                 const std::string &author, long ctime, const std::string &body, const std::list<AttachedFileRef> &files);
+    static std::string addCommit(const std::string &bareGitRepo, const std::string &branch, const std::string &author,
+                                 long ctime, const std::string &body, const std::list<AttachedFileRef> &files);
 
 private:
     Subprocess *subp;

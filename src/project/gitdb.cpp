@@ -8,8 +8,7 @@
 #include "utils/stringTools.h"
 #include "utils/subprocess.h"
 #include "utils/filesystem.h"
-
-#define SIZE_COMMIT_ID 40
+#include "utils/gitTools.h"
 
 
 int GitIssue::open(const std::string &gitRepoPath, const std::string &branch)
@@ -92,30 +91,6 @@ void GitIssue::close()
     delete subp;
 }
 
-/** Store data in the git repo
- */
-std::string gitdbStoreFile(const std::string &gitRepoPath, const char *data, size_t len)
-{
-    Argv argv;
-
-    argv.set("git", "hash-object", "-w", "--stdin", 0);
-    std::string sha1Id, subStderr;
-    int err = Subprocess::launchSync(argv.getv(), 0, gitRepoPath.c_str(), data, len, sha1Id, subStderr);
-    if (err) {
-        LOG_ERROR("gitdbStoreFile error %d: %s", err, subStderr.c_str());
-        return "";
-    }
-
-    trim(sha1Id);
-    if (sha1Id.size() != SIZE_COMMIT_ID) {
-        LOG_ERROR("gitdbStoreFile error: sha1Id=%s", sha1Id.c_str());
-        return "";
-    }
-
-    return sha1Id;
-}
-
-
 /** Read the list of files of a tree id
  *
  * @param gitRepoPath
@@ -170,9 +145,9 @@ int gitdbSetNotes(const std::string &gitRepoPath, const ObjectId &entryId, const
 
 
 /**
- * @brief add an entry (ie: a commit) in the branch of the issue
+ * @brief add an entry (ie: a commit) in a branch
  * @param bareGitRepo Must be the path to a bare git repository
- * @param issueId
+ * @param branch Name of the branch where to commit (eg: master, issues, entries,...)
  * @param author
  * @param body
  * @param files
@@ -184,18 +159,18 @@ int gitdbSetNotes(const std::string &gitRepoPath, const ObjectId &entryId, const
  * The atomicity and thread safety is not garanteed at this level.
  * The caller must manage his own mutex.
  */
-std::string GitIssue::addCommit(const std::string &bareGitRepo, const std::string &issueId,
-                                const std::string &author, long ctime, const std::string &body, const std::list<AttachedFileRef> &files)
+std::string GitIssue::addCommit(const std::string &bareGitRepo, const std::string &branch, const std::string &author,
+                                long ctime, const std::string &body, const std::list<AttachedFileRef> &files)
 {
-    // git commit in a branch issues/<id> without checking out the branch
+    // git commit in a branch without checking out the branch
     // The git commands must be run in a bare git repo (the ".git/").
 
     // git read-tree --empty
     // attached files: git update-index --add --cacheinfo 100644 ...
     // git write-tree
-    // git show-ref issues/<id>
+    // git show-ref entries
     // git commit-tree
-    // git update-ref refs/heads/issues/<id>
+    // git update-ref refs/heads/entries
 
     int err;
     std::string subStdout, subStderr;
@@ -235,15 +210,14 @@ std::string GitIssue::addCommit(const std::string &bareGitRepo, const std::strin
         return "";
     }
 
-    // git show-ref --heads -s issues/<id>
+    // git show-ref --heads -s <branch>
     // (use "--heads" so that remote refs are not shown)
-    std::string branchName = "issues/" + issueId;
-    argv.set("git", "show-ref", "--heads", "-s", branchName.c_str(), 0);
+    argv.set("git", "show-ref", "--heads", "-s", branch.c_str(), 0);
     err = Subprocess::launchSync(argv.getv(), 0, bareGitRepo.c_str(), 0, 0, subStdout, subStderr);
     if (err) {
         if (subStderr.empty() && subStdout.empty()) {
-            // This is a new issue. The git branch will be created later.
-            LOG_INFO("addCommit: new issue to be created: %s", issueId.c_str());
+            // This is a new branch. The git branch will be created later.
+            LOG_INFO("addCommit: new branch to be created: %s", branch.c_str());
 
         } else {
             LOG_ERROR("addCommit show-ref error %d: %s (branchRef=%s)",
@@ -262,7 +236,7 @@ std::string GitIssue::addCommit(const std::string &bareGitRepo, const std::strin
 
     // git commit-tree
 
-    argv.set("git", "commit-tree", "-m", "add entry", treeId.c_str(), 0);
+    argv.set("git", "commit-tree", treeId.c_str(), 0);
     if (!branchRef.empty()) {
         argv.append("-p", branchRef.c_str(), 0);
     }
@@ -294,7 +268,7 @@ std::string GitIssue::addCommit(const std::string &bareGitRepo, const std::strin
 
 
     // git update-ref refs/heads/$branch $commit_id
-    std::string branchPath = "refs/heads/" + branchName;
+    std::string branchPath = "refs/heads/" + branch;
     argv.set("git", "update-ref", branchPath.c_str(), commitId.c_str(), 0);
     err = Subprocess::launchSync(argv.getv(), 0, bareGitRepo.c_str(), 0, 0, subStdout, subStderr);
     if (err) {
@@ -354,3 +328,4 @@ void GitObject::close()
     delete subp;
     subp = 0;
 }
+

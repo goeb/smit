@@ -88,7 +88,7 @@ public:
     static Entry *loadEntry(std::string data, std::string &issueId, std::string &treeid, std::list<std::string> &tags);
 
     void updateMessage();
-    std::string serialize() const;
+    std::string serialize(const std::string &issueRef) const;
     static std::string serializeTags(const std::set<std::string> &tags);
     int getCtime() const;
 

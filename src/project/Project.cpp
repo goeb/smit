@@ -207,7 +207,7 @@ void Project::computeAssociations()
  *  also uniquely identified after its first entry.
  *
  */
-int Project::loadIssuesShortNames(const std::string &gitRepoPath, std::map<EntryId, IssueId> &shortNames)
+int Project::loadIssuesShortNames(const std::string &gitRepoPath)
 {
     // file issues.txt from branch issues
     std::string data;
@@ -232,6 +232,46 @@ int Project::loadIssuesShortNames(const std::string &gitRepoPath, std::map<Entry
     return 0;
 }
 
+static std::string serializeShortNamesTable(const std::map<EntryId, IssueId> &shortNamesTable)
+{
+    std::string result;
+    std::map<EntryId, IssueId>::const_iterator mapit;
+    FOREACH(mapit, shortNamesTable) {
+        result += mapit->first;
+        result += ' ';
+        result += mapit->second;
+        result += '\n';
+    }
+    return result;
+}
+
+int Project::storeShortName(const std::string &shortName, const std::string &firstEntry)
+{
+    shortNames[firstEntry] = shortName;
+
+    std::string data = serializeShortNamesTable(shortNames);
+
+    std::string fileId = gitStoreFile(getPathEntries(), data.data(), data.size());
+    if (fileId.empty()) {
+        LOG_ERROR("Cannot store short name %s: %s", shortName.c_str(), firstEntry.c_str());
+        return -1;
+    }
+
+    std::list<AttachedFileRef> files;
+    AttachedFileRef fileRef;
+    fileRef.filename = TABLE_ISSUES_SHORT_NAMES;
+    fileRef.id = fileId;
+    files.push_back(fileRef);
+    std::string msg = "create_issue_ref " + shortName;
+    std::string commitId = GitIssue::addCommit(getPathEntries(), BRANCH_ISSUES, "smit", time(0), msg, files);
+    if (commitId.empty()) {
+        LOG_ERROR("Cannot store short name (2) %s: %s", shortName.c_str(), firstEntry.c_str());
+        return -1;
+    }
+
+    return 0;
+}
+
 /** Load issues in memory
  *
  * @return
@@ -245,8 +285,7 @@ int Project::loadIssues()
 
     std::string pathEntries = getPathEntries();
 
-    std::map<EntryId, IssueId> shortNames;
-    err = loadIssuesShortNames(pathEntries, shortNames);
+    err = loadIssuesShortNames(pathEntries);
     if (err) return -1;
 
     GitIssue elist;
@@ -732,7 +771,7 @@ int Project::reload()
 
 std::string Project::storeFile(const char *data, size_t len) const
 {
-    return gitdbStoreFile(path, data, len);
+    return gitStoreFile(path, data, len);
 }
 
 
@@ -1211,18 +1250,21 @@ int Project::addEntry(PropertiesMap properties, const std::list<AttachedFileRef>
     Entry *e = Entry::createNewEntry(properties, files, username, i->latest);
 
     // add the entry to the project and store to disk
-    int r = addNewEntry(i->id, e);
-    if (r < 0) {
+    int err = addNewEntry(i, e);
+    if (err < 0) {
         delete e;
-        return r; // already exists
+        return err; // already exists
     }
 
     // add the entry to the issue
     i->addEntry(e);
 
     if (newIssueCreated) {
-        r = insertIssueInTable(i);
-        if (r != 0) return r; // already exists
+        err = storeShortName(i->id, e->id);
+        if (err != 0) return err;
+
+        err = insertIssueInTable(i);
+        if (err != 0) return err; // already exists
     }
 
     updateLastModified(e);
@@ -1245,11 +1287,13 @@ int Project::addEntry(PropertiesMap properties, const std::list<AttachedFileRef>
   * 1. Create a commit in the disk database
   * 2. Insert the entry in the table of entries
   */
-int Project::addNewEntry(const std::string &issueId, Entry *e)
+int Project::addNewEntry(const Issue *issue, Entry *e)
 {
-    const std::string data = e->serialize();
+    std::string issueRef;
+    if (issue->first) issueRef = issue->first->id;
+    const std::string data = e->serialize(issueRef);
 
-    std::string entryId = GitIssue::addCommit(getPathEntries(), issueId, e->author, e->ctime, data, e->files);
+    std::string entryId = GitIssue::addCommit(getPathEntries(), BRANCH_ENTRIES, e->author, e->ctime, data, e->files);
 
     e->id = entryId;
 
@@ -1347,7 +1391,7 @@ int Project::amendEntry(const std::string &entryId, const std::string &msg,
     std::list<AttachedFileRef> files; // no file, empty list
     Entry *amendingEntry = Entry::createNewEntry(properties, files, username, e->issue->latest);
 
-    int r = addNewEntry(e->issue->id, amendingEntry);
+    int r = addNewEntry(e->issue, amendingEntry);
     if (r != 0) {
         delete amendingEntry;
         return -2;

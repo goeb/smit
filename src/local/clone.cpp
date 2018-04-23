@@ -107,7 +107,7 @@ int testSessid(const std::string &url, const HttpClientContext &ctx)
 static int alignIssueBranches(const std::string &projectPath)
 {
     int err;
-
+#if 0 // TODO xxxxxxxx
     // create local branches to track remote ones (issues/*)
     GitIssueList ilist;
     int ret = ilist.open(projectPath, "origin");
@@ -123,8 +123,8 @@ static int alignIssueBranches(const std::string &projectPath)
         // create a local branch
         Argv argv;
         std::string subStdout, subStderr;
-        std::string localBranch = BRANCH_PREFIX_ISSUES +  issueId;
-        std::string remoteBranch = "origin/" BRANCH_PREFIX_ISSUES + issueId;
+        std::string localBranch = BRANCH_ENTRIES +  issueId; // TODO xxxxxxxxxxxxxxxx
+        std::string remoteBranch = "origin/" BRANCH_ENTRIES + issueId;
 
         argv.set("git", "branch", localBranch.c_str(), remoteBranch.c_str(), 0);
         err = Subprocess::launchSync(argv.getv(), 0, projectPath.c_str(), 0, 0, subStdout, subStderr);
@@ -134,6 +134,7 @@ static int alignIssueBranches(const std::string &projectPath)
         }
     }
     ilist.close();
+#endif
     return err;
 }
 

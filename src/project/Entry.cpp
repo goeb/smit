@@ -250,9 +250,11 @@ void Entry::append(Entry *e)
     setNext(e);
 }
 
-std::string Entry::serialize() const
+std::string Entry::serialize(const std::string &issueRef) const
 {
     std::ostringstream s;
+
+    s << K_ISSUE << " " << issueRef << "\n";
 
     std::map<std::string, std::list<std::string> >::const_iterator p;
     for (p = properties.begin(); p != properties.end(); p++) {
