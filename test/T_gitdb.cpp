@@ -7,25 +7,8 @@
 
 void usage()
 {
-	printf("usage: 1. T_gitdb issue [<id>]\n");
-	printf("       2. T_gitdb commit\n");
+	printf("usage: T_gitdb commit\n");
 	exit(1);
-}
-
-void listIssues()
-{
-	GitIssueList ilist;
-	int ret = ilist.open(".");
-	if (ret) {
-		fprintf(stderr, "ilist.open error\n");
-		exit(1);
-	}
-	while (1) {
-		std::string id = ilist.getNext();
-		if (id.empty()) break;
-		printf("%s\n", id.c_str());
-	}
-	ilist.close();
 }
 
 void listEntries(const std::string &issueId)
@@ -58,10 +41,7 @@ int main(int argc, char **argv)
 {
 	if (argc < 2) usage();
 
-	if (0 == strcmp("issue", argv[1])) {
-		if (argc == 3) listEntries(argv[2]);
-		else listIssues();
-	} else if (0 == strcmp("commit", argv[1])) {
+	if (0 == strcmp("commit", argv[1])) {
 		if (argc > 2) test_commit(argv[2]);
 		else test_commit(0);
 	}
