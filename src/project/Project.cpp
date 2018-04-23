@@ -1059,28 +1059,6 @@ Issue *Project::createNewIssue()
 
     return i;
 }
-/** store entry on disk
-  */
-int Project::storeEntry(const Entry *e)
-{
-    const std::string data = e->serialize();
-
-    // store the entry
-    std::string id;
-    int r = Object::write(getObjectsDir(), data, id);
-    if (r < 0) {
-        // error.
-        LOG_ERROR("Could not write new entry to disk");
-        return -2;
-    }
-
-    // check for debug TODO
-    if (id != e->id) {
-        LOG_ERROR("sha1 do not match: s=%s <> e->id=%s", id.c_str(), e->id.c_str());
-    }
-
-    return 0;
-}
 
 /** If issueId is empty:
   *     - a new issue is created
