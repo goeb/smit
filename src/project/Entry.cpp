@@ -147,12 +147,9 @@ Entry *Entry::loadEntry(std::string data, std::string &treeid, std::list<std::st
                     // manage a pending multiline property
 
                     if (propertyId == multilineProperty) {
-                        // remove one space -- the space that separates the "msg" keyword
-                        // from the rest iof the line.
-
                         // concatenate with previous
                         if (!multilineValue.empty()) multilineValue += '\n';
-                        if (!line.empty()) multilineValue += line.substr(1);
+                        if (!line.empty()) multilineValue += line;
                         continue;
                     }
 
@@ -163,7 +160,7 @@ Entry *Entry::loadEntry(std::string data, std::string &treeid, std::list<std::st
                     multilineValue = "";
                 }
 
-                if (line == " <") {
+                if (line == "<") {
                     // start a new multiline property
                     multilineProperty = propertyId;
                     continue;
