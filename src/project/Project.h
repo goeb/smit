@@ -100,7 +100,6 @@ public:
     // local usage methods (not mutex-protected)
     std::string renameIssue(const std::string &oldId);
     int renameIssue(Issue &i, const std::string &newId);
-    int storeEntry(const Entry *e);
 
     std::string getTriggerCmdline() const;
 
