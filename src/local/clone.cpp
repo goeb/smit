@@ -104,37 +104,18 @@ int testSessid(const std::string &url, const HttpClientContext &ctx)
     return -1;
 }
 
-static int alignIssueBranches(const std::string &projectPath)
+static int alignBranch(const std::string &gitRepo, const std::string &branch)
 {
-    int err;
-#if 0 // TODO xxxxxxxx
-    // create local branches to track remote ones (issues/*)
-    GitIssueList ilist;
-    int ret = ilist.open(projectPath, "origin");
-    if (ret) {
-        LOG_ERROR("Cannot load issues of project (%s)", projectPath.c_str());
-        return -1;
+    Argv argv;
+    std::string subStdout, subStderr;
+    std::string remoteBranch = "origin/" + branch;
+    argv.set("git", "branch", branch.c_str(), remoteBranch.c_str(), 0);
+    int err = Subprocess::launchSync(argv.getv(), 0, gitRepo.c_str(), 0, 0, subStdout, subStderr);
+    if (err) {
+        // not always an error, if for instance the remote branch does not exist
+        LOG_INFO("alignBranch: error: branch=%s, stdout=%s, stderr=%s", branch.c_str(),
+                 subStdout.c_str(), subStderr.c_str());
     }
-
-    while (1) {
-        std::string issueId = ilist.getNext();
-        if (issueId.empty()) break; // reached the end
-
-        // create a local branch
-        Argv argv;
-        std::string subStdout, subStderr;
-        std::string localBranch = BRANCH_ENTRIES +  issueId; // TODO xxxxxxxxxxxxxxxx
-        std::string remoteBranch = "origin/" BRANCH_ENTRIES + issueId;
-
-        argv.set("git", "branch", localBranch.c_str(), remoteBranch.c_str(), 0);
-        err = Subprocess::launchSync(argv.getv(), 0, projectPath.c_str(), 0, 0, subStdout, subStderr);
-        if (err) {
-            LOG_ERROR("alignIssueBranches: error: %d: stdout=%s, stderr=%s", err, subStdout.c_str(), subStderr.c_str());
-            break;
-        }
-    }
-    ilist.close();
-#endif
     return err;
 }
 
@@ -151,7 +132,7 @@ static void setupGitCloneConfig(const std::string &dir)
     }
 }
 
-static int gitClone(const std::string &remote, const std::string &smitRepo, const std::string &subpath)
+static int gitClone(const std::string &remote, const std::string &smitRepo, const std::string &subpath, bool isProject)
 {
     Argv argv;
     std::string subStdout, subStderr;
@@ -168,7 +149,10 @@ static int gitClone(const std::string &remote, const std::string &smitRepo, cons
     LOG_DIAG("gitClone: stdout=%s, stderr=%s", subStdout.c_str(), subStderr.c_str());
 
     // create local branches to track remote ones
-    err = alignIssueBranches(into);
+    if (isProject) {
+        alignBranch(into, BRANCH_ENTRIES);
+        alignBranch(into, BRANCH_ISSUES);
+    }
 
     setupGitCloneConfig(into);
 
@@ -267,7 +251,7 @@ static int cloneAll(const HttpClientContext &ctx, const std::string &rooturl, co
 
     // clone /public
     LOG_CLI("Cloning 'public'...");
-    err = gitClone(rooturl+"/public", localdir, "public");
+    err = gitClone(rooturl+"/public", localdir, "public", false);
     if (err) {
         LOG_ERROR("Abort.");
         exit(1);
@@ -284,7 +268,7 @@ static int cloneAll(const HttpClientContext &ctx, const std::string &rooturl, co
             LOG_DIAG("role=%s", roleToString(role).c_str());
             std::string resource = "/" + Project::urlNameEncode(projectName);
             std::string projectDir = resource;
-            err = gitClone(rooturl+"/"+resource, localdir, projectDir);
+            err = gitClone(rooturl+"/"+resource, localdir, projectDir, true);
             if (err) {
                 LOG_ERROR("Abort.");
                 exit(1);
@@ -297,7 +281,7 @@ static int cloneAll(const HttpClientContext &ctx, const std::string &rooturl, co
     // clone /.smit if permission granted
     if (perms.superadmin) {
         LOG_CLI("Cloning '.smit'...");
-        err = gitClone(rooturl+"/.smit", localdir, ".smit");
+        err = gitClone(rooturl+"/.smit", localdir, ".smit", false);
         if (err) {
             LOG_ERROR("Abort.");
             exit(1);
