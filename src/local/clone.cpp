@@ -159,24 +159,166 @@ static int gitClone(const std::string &remote, const std::string &smitRepo, cons
     return err;
 }
 
-static int gitPull(const std::string &dir)
+/** Rebase the branch 'entries' onto the remote
+ *
+ * 1. create a specific worktree
+ * 2. do the rebasing in this worktree
+ * 3. clean up the worktree
+ *
+ */
+static int gitAlignEntries(const std::string &gitRepo)
+{
+    Argv argv;
+    std::string subStdout, subStderr;
+    int err;
+
+    // Rebase branch 'entries' on the remote
+
+    // git needs a working dir for that. Use a local directory named '.entries'
+    const char *WORKING_TREE_ENTRIES = ".entries.tmp";
+    std::string pathWorkingTree = gitRepo + "/" + WORKING_TREE_ENTRIES;
+
+    argv.set("git", "worktree", "add", WORKING_TREE_ENTRIES, BRANCH_ENTRIES, 0);
+    err = Subprocess::launchSync(argv.getv(), 0, gitRepo.c_str(), 0, 0, subStdout, subStderr);
+    if (err) {
+        // git worktree failed. Possible reasons:
+        // - no branch 'entries' (empty project)
+        // - already exists
+        LOG_ERROR("Cannot create temporary working tree '%s/%s': %s", gitRepo.c_str(), WORKING_TREE_ENTRIES, subStderr.c_str());
+        return -1;
+    }
+
+    // Do the rebasing in this new working tree
+
+    argv.set("git", "rebase", "--merge", "--strategy", "ours", "origin/" BRANCH_ENTRIES, BRANCH_ENTRIES, 0);
+    err = Subprocess::launchSync(argv.getv(), 0, pathWorkingTree.c_str(), 0, 0, subStdout, subStderr);
+    if (err) {
+        LOG_ERROR("Cannot rebase %s %s in %s: %s", "origin/" BRANCH_ENTRIES, BRANCH_ENTRIES,
+                  gitRepo.c_str(), subStderr.c_str());
+        return -1;
+    }
+
+    // Remove this working tree (recursively, all files)
+    err = removeDir(pathWorkingTree);
+    if (err) LOG_ERROR("Cannot remove dir: %s", pathWorkingTree.c_str());
+
+    argv.set("git", "worktree", "prune", 0);
+    err = Subprocess::launchSync(argv.getv(), 0, gitRepo.c_str(), 0, 0, subStdout, subStderr);
+    if (err) LOG_ERROR("Cannot prune worktree '%s': %s", gitRepo.c_str(), subStderr.c_str());
+
+    return 0;
+}
+
+static int gitAlignIssues(const std::string &gitRepo)
+{
+    std::string data;
+    std::map<EntryId, IssueId> oldTableShortNames;
+    Argv argv;
+    std::string subStdout, subStderr;
+    int err;
+
+    // Load the table of issues short names
+
+    err = gitLoadFile(gitRepo, BRANCH_ISSUES, TABLE_ISSUES_SHORT_NAMES, data);
+    if (err) {
+        LOG_INFO("Cannot load the table of short names. (no issue in the project yet?)");
+
+    } else {
+        Project::parseShortNames(data, oldTableShortNames);
+
+    }
+
+    // Align branch 'issues'
+    // The alignment is done by dropping the local copy and using directly the remote one
+    argv.set("git", "update-ref", BRANCH_ISSUES, "origin/" BRANCH_ISSUES, 0);
+    err = Subprocess::launchSync(argv.getv(), 0, gitRepo.c_str(), 0, 0, subStdout, subStderr);
+    if (err) {
+        LOG_ERROR("git update-ref failed in '%s': %s", gitRepo.c_str(), subStderr.c_str());
+        return -1;
+    }
+
+    // Load the new table of short names
+    std::map<EntryId, IssueId> newTableShortNames;
+    err = gitLoadFile(gitRepo, BRANCH_ISSUES, TABLE_ISSUES_SHORT_NAMES, data);
+    if (err) {
+        LOG_INFO("Cannot load the new table of short names. (no issue in the remote yet?)");
+
+    } else {
+        Project::parseShortNames(data, newTableShortNames);
+
+    }
+
+    // Make a diff between the old and the new table of short names, and show what changed.
+    // And upfate the local table with issues that do not exist remotely.
+    std::map<EntryId, IssueId>::iterator newIssue;
+    std::map<EntryId, IssueId>::iterator oldIssue;
+    FOREACH(newIssue, newTableShortNames) {
+        oldIssue = oldTableShortNames.find(newIssue->first);
+        if (oldIssue != oldTableShortNames.end()) {
+            // issue exists in old and new
+            if (newIssue->second != oldIssue->second) {
+                // print it
+                LOG_CLI("Issue %s renamed %s", oldIssue->second.c_str(), newIssue->second.c_str());
+
+            }
+            oldTableShortNames.erase(oldIssue);
+
+        } else {
+            // not in old issues
+            LOG_CLI("New issue: %s", newIssue->second.c_str());
+        }
+    }
+
+    if (!oldTableShortNames.empty()) {
+        // Issues remaining in oldTableShortNames shall be added and committed locally.
+        FOREACH(oldIssue, oldTableShortNames) {
+            LOG_CLI("Local issue, not pushed: %s", oldIssue->second.c_str());
+            newTableShortNames[oldIssue->first] = oldIssue->second;
+        }
+        // commit local table
+        std::string bareGitRepo = gitRepo + "/.git";
+        err = Project::storeShortNames(bareGitRepo, newTableShortNames);
+        if (err) {
+            LOG_ERROR("Cannot store new table of short names");
+            return -1;
+        }
+    }
+
+    return 0; // success
+}
+
+
+static int gitPull(const std::string &gitRepo, bool isProject)
 {
     Argv argv;
     std::string subStdout, subStderr;
 
+    // The checked-out branch must be 'master'.
+    //
+
+
+    // pull (fetch and rebase 'master')
+
     argv.set("git", "pull", "--rebase", 0);
-    int err = Subprocess::launchSync(argv.getv(), 0, dir.c_str(), 0, 0, subStdout, subStderr);
+    int err = Subprocess::launchSync(argv.getv(), 0, gitRepo.c_str(), 0, 0, subStdout, subStderr);
     if (err) {
         LOG_ERROR("gitPull: error: %d: stdout=%s, stderr=%s", err, subStdout.c_str(), subStderr.c_str());
+        // TODO in case of rebasing conflict, inform the user about ho to resolve it
+        // TODO (using a file-editing tool and typical git add/commit commands)
         return err;
     }
 
-    // TODO resolve conflicts on different issues with same number
 
-    // TODO create local branches to track remote new ones
-    //err = alignIssueBranches(into);
+    if (isProject) {
 
-    return err;
+        err = gitAlignEntries(gitRepo);
+        if (err) return -1;
+
+        err = gitAlignIssues(gitRepo);
+        if (err) return -1;
+    }
+
+    return 0; // success
 }
 
 static int gitPush(const std::string &dir)
@@ -344,7 +486,7 @@ static int pullAll(const std::string &localRepo, Permissions perms)
 {
     // pull /public
     LOG_CLI("Pulling 'public'...");
-    int err = gitPull(localRepo + "/public");
+    int err = gitPull(localRepo + "/public", false);
     if (err) {
         LOG_ERROR("Abort.");
         exit(1);
@@ -360,7 +502,7 @@ static int pullAll(const std::string &localRepo, Permissions perms)
             LOG_CLI("Pulling '%s'...", projectName.c_str());
             LOG_DIAG("role=%s", roleToString(role).c_str());
             std::string projectDir = Project::urlNameEncode(projectName);
-            err = gitPull(localRepo + "/" + projectDir);
+            err = gitPull(localRepo + "/" + projectDir, true);
             if (err) {
                 LOG_ERROR("Abort.");
                 exit(1);
@@ -373,7 +515,7 @@ static int pullAll(const std::string &localRepo, Permissions perms)
     // clone /.smit if permission granted
     if (perms.superadmin) {
         LOG_CLI("Pulling '.smit'...");
-        err = gitPull(localRepo + "/.smit");
+        err = gitPull(localRepo + "/.smit", false);
         if (err) {
             LOG_ERROR("Abort.");
             exit(1);

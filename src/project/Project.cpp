@@ -201,6 +201,24 @@ void Project::computeAssociations()
     }
 }
 
+/** Parse the table of short names and fulfill a map
+ *
+ * @param[in/out] data
+ *     This parameter is "consumed" as it is parsed.
+ *
+ * @param[out] tableShortNames
+ *     The resulting table.
+ */
+void Project::parseShortNames(std::string &data, std::map<EntryId, IssueId> &tableShortNames)
+{
+    while (!data.empty()) {
+        std::string line = popToken(data, '\n', TOK_STRICT);
+        EntryId eid = popToken(line, ' ', TOK_STRICT);
+        IssueId iid = line;
+        tableShortNames[eid] = iid;
+    }
+}
+
 /** Load the table of issues short names
  *
  *  An Issue has a unique short name (decimal number), and is
@@ -223,16 +241,12 @@ int Project::loadIssuesShortNames(const std::string &gitRepoPath)
     }
 
     // parse the file
-    while (!data.empty()) {
-        std::string line = popToken(data, '\n', TOK_STRICT);
-        EntryId eid = popToken(line, ' ', TOK_STRICT);
-        IssueId iid = line;
-        shortNames[eid] = iid;
-    }
+    parseShortNames(data, shortNames);
+
     return 0;
 }
 
-static std::string serializeShortNamesTable(const std::map<EntryId, IssueId> &shortNamesTable)
+std::string Project::serializeShortNamesTable(const std::map<EntryId, IssueId> &shortNamesTable)
 {
     std::string result;
     std::map<EntryId, IssueId>::const_iterator mapit;
@@ -245,29 +259,36 @@ static std::string serializeShortNamesTable(const std::map<EntryId, IssueId> &sh
     return result;
 }
 
-int Project::storeShortName(const std::string &shortName, const std::string &firstEntry)
+int Project::storeNewShortName(const std::string &shortName, const std::string &firstEntry)
 {
     shortNames[firstEntry] = shortName;
 
-    std::string data = serializeShortNamesTable(shortNames);
-
-    std::string fileId = gitStoreFile(getPathEntries(), data.data(), data.size());
-    if (fileId.empty()) {
-        LOG_ERROR("Cannot store short name %s: %s", shortName.c_str(), firstEntry.c_str());
-        return -1;
+    int err = storeShortNames(getPathEntries(), shortNames);
+    if (err) {
+        LOG_ERROR("Cannot store short name %s -> %s", shortName.c_str(), firstEntry.c_str());
     }
+    return err;
+}
+
+/** Store the table of short names
+ *
+ * @param gitRepo must be the path to a bare git repository
+ */
+int Project::storeShortNames(const std::string &bareGitRepo, const std::map<EntryId, IssueId> &shortNamesTable)
+{
+    std::string data = serializeShortNamesTable(shortNamesTable);
+
+    std::string fileId = gitStoreFile(bareGitRepo, data.data(), data.size());
+    if (fileId.empty()) return -1;
 
     std::list<AttachedFileRef> files;
     AttachedFileRef fileRef;
     fileRef.filename = TABLE_ISSUES_SHORT_NAMES;
     fileRef.id = fileId;
     files.push_back(fileRef);
-    std::string msg = "create_issue_ref " + shortName;
-    std::string commitId = GitIssue::addCommit(getPathEntries(), BRANCH_ISSUES, "smit", time(0), msg, files);
-    if (commitId.empty()) {
-        LOG_ERROR("Cannot store short name (2) %s: %s", shortName.c_str(), firstEntry.c_str());
-        return -1;
-    }
+    std::string msg = "create_issue_ref\n";
+    std::string commitId = GitIssue::addCommit(bareGitRepo, BRANCH_ISSUES, "smit", time(0), msg, files);
+    if (commitId.empty()) return -1;
 
     return 0;
 }
@@ -1260,7 +1281,7 @@ int Project::addEntry(PropertiesMap properties, const std::list<AttachedFileRef>
     i->addEntry(e);
 
     if (newIssueCreated) {
-        err = storeShortName(i->id, e->id);
+        err = storeNewShortName(i->id, e->id);
         if (err != 0) return err;
 
         err = insertIssueInTable(i);

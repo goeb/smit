@@ -180,7 +180,7 @@ std::string GitIssue::addCommit(const std::string &bareGitRepo, const std::strin
     err = Subprocess::launchSync(argv.getv(), 0, bareGitRepo.c_str(), 0, 0, subStdout, subStderr);
     if (err) {
         LOG_ERROR("addCommit read-tree error %d: %s", err, subStderr.c_str());
-       return "";
+        return "";
     }
 
     // attached files

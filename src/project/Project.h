@@ -107,6 +107,10 @@ public:
 
     inline Locker &getLocker() { return locker; }
 
+    static void parseShortNames(std::string &data, std::map<EntryId, IssueId> &tableShortNames);
+    static std::string serializeShortNamesTable(const std::map<EntryId, IssueId> &shortNamesTable);
+    static int storeShortNames(const std::string &bareGitRepo, const std::map<EntryId, IssueId> &shortNamesTable);
+
 private:
     // private member variables
     std::string name; //< name of the project, plain text, UTF-8 encoded
@@ -145,7 +149,7 @@ private:
     int loadConfig();
 
     int loadIssuesShortNames(const std::string &gitRepoPath);
-    int storeShortName(const std::string &shortName, const std::string &firstEntry);
+    int storeNewShortName(const std::string &shortName, const std::string &firstEntry);
 
     /** Map of short names
      *
