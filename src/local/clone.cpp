@@ -190,7 +190,7 @@ static int gitAlignEntries(const std::string &gitRepo)
 
     // Do the rebasing in this new working tree
 
-    argv.set("git", "rebase", "--merge", "--strategy", "ours", "origin/" BRANCH_ENTRIES, BRANCH_ENTRIES, 0);
+    argv.set("git", "rebase", "--strategy-option", "theirs", "origin/" BRANCH_ENTRIES, BRANCH_ENTRIES, 0);
     err = Subprocess::launchSync(argv.getv(), 0, pathWorkingTree.c_str(), 0, 0, subStdout, subStderr);
     if (err) {
         LOG_ERROR("Cannot rebase %s %s in %s: %s", "origin/" BRANCH_ENTRIES, BRANCH_ENTRIES,
@@ -219,7 +219,7 @@ static int gitAlignIssues(const std::string &gitRepo)
 
     // Load the table of issues short names
 
-    err = gitLoadFile(gitRepo, BRANCH_ISSUES, TABLE_ISSUES_SHORT_NAMES, data);
+    err = gitLoadFile(gitRepo, "refs/heads/" BRANCH_ISSUES, TABLE_ISSUES_SHORT_NAMES, data);
     if (err) {
         LOG_INFO("Cannot load the table of short names. (no issue in the project yet?)");
 
@@ -230,7 +230,7 @@ static int gitAlignIssues(const std::string &gitRepo)
 
     // Align branch 'issues'
     // The alignment is done by dropping the local copy and using directly the remote one
-    argv.set("git", "update-ref", BRANCH_ISSUES, "origin/" BRANCH_ISSUES, 0);
+    argv.set("git", "update-ref", "refs/heads/" BRANCH_ISSUES, "refs/remotes/origin/" BRANCH_ISSUES, 0);
     err = Subprocess::launchSync(argv.getv(), 0, gitRepo.c_str(), 0, 0, subStdout, subStderr);
     if (err) {
         LOG_ERROR("git update-ref failed in '%s': %s", gitRepo.c_str(), subStderr.c_str());
@@ -239,7 +239,7 @@ static int gitAlignIssues(const std::string &gitRepo)
 
     // Load the new table of short names
     std::map<EntryId, IssueId> newTableShortNames;
-    err = gitLoadFile(gitRepo, BRANCH_ISSUES, TABLE_ISSUES_SHORT_NAMES, data);
+    err = gitLoadFile(gitRepo, "refs/heads/" BRANCH_ISSUES, TABLE_ISSUES_SHORT_NAMES, data);
     if (err) {
         LOG_INFO("Cannot load the new table of short names. (no issue in the remote yet?)");
 
@@ -270,14 +270,16 @@ static int gitAlignIssues(const std::string &gitRepo)
     }
 
     if (!oldTableShortNames.empty()) {
+        std::string shortNameHint = "";
         // Issues remaining in oldTableShortNames shall be added and committed locally.
         FOREACH(oldIssue, oldTableShortNames) {
             LOG_CLI("Local issue, not pushed: %s", oldIssue->second.c_str());
             newTableShortNames[oldIssue->first] = oldIssue->second;
+            shortNameHint += oldIssue->second + " ";
         }
         // commit local table
         std::string bareGitRepo = gitRepo + "/.git";
-        err = Project::storeShortNames(bareGitRepo, newTableShortNames);
+        err = Project::storeShortNames(bareGitRepo, newTableShortNames, shortNameHint);
         if (err) {
             LOG_ERROR("Cannot store new table of short names");
             return -1;

@@ -109,7 +109,8 @@ public:
 
     static void parseShortNames(std::string &data, std::map<EntryId, IssueId> &tableShortNames);
     static std::string serializeShortNamesTable(const std::map<EntryId, IssueId> &shortNamesTable);
-    static int storeShortNames(const std::string &bareGitRepo, const std::map<EntryId, IssueId> &shortNamesTable);
+    static int storeShortNames(const std::string &bareGitRepo, const std::map<EntryId, IssueId> &shortNamesTable,
+                               const std::string shortNameHint);
 
 private:
     // private member variables

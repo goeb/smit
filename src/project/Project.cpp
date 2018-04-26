@@ -229,7 +229,7 @@ int Project::loadIssuesShortNames(const std::string &gitRepoPath)
 {
     // file issues.txt from branch issues
     std::string data;
-    int err = gitLoadFile(gitRepoPath, BRANCH_ISSUES, TABLE_ISSUES_SHORT_NAMES, data);
+    int err = gitLoadFile(gitRepoPath, "refs/heads/" BRANCH_ISSUES, TABLE_ISSUES_SHORT_NAMES, data);
     if (-1 == err) {
         // The branch does not exist.
         // This is not an error, because the project may have no issue yet.
@@ -261,9 +261,11 @@ std::string Project::serializeShortNamesTable(const std::map<EntryId, IssueId> &
 
 int Project::storeNewShortName(const std::string &shortName, const std::string &firstEntry)
 {
+    LOG_DIAG("storeNewShortName: %s -> %s", shortName.c_str(), firstEntry.c_str());
+
     shortNames[firstEntry] = shortName;
 
-    int err = storeShortNames(getPathEntries(), shortNames);
+    int err = storeShortNames(getPathEntries(), shortNames, shortName);
     if (err) {
         LOG_ERROR("Cannot store short name %s -> %s", shortName.c_str(), firstEntry.c_str());
     }
@@ -274,7 +276,8 @@ int Project::storeNewShortName(const std::string &shortName, const std::string &
  *
  * @param gitRepo must be the path to a bare git repository
  */
-int Project::storeShortNames(const std::string &bareGitRepo, const std::map<EntryId, IssueId> &shortNamesTable)
+int Project::storeShortNames(const std::string &bareGitRepo, const std::map<EntryId, IssueId> &shortNamesTable,
+                             const std::string shortNameHint)
 {
     std::string data = serializeShortNamesTable(shortNamesTable);
 
@@ -286,7 +289,7 @@ int Project::storeShortNames(const std::string &bareGitRepo, const std::map<Entr
     fileRef.filename = TABLE_ISSUES_SHORT_NAMES;
     fileRef.id = fileId;
     files.push_back(fileRef);
-    std::string msg = "create_issue_ref\n";
+    std::string msg = "create_issue_ref " + shortNameHint + "\n";
     std::string commitId = GitIssue::addCommit(bareGitRepo, BRANCH_ISSUES, "smit", time(0), msg, files);
     if (commitId.empty()) return -1;
 
