@@ -154,16 +154,18 @@ convert_v3_to_v4_master() {
 
 # $1 : src smit-v3 repository
 # $2 : dest smit-v4 repo (must be a bare repo)
-# $3 : branch name where to commit
+# $3 : id of first commit of the issue (empty for a new issue)
 # $4 : the original entry of the v3 repo
 # $5 : the file for mapping v3 and v4 entries identifiers
-create_commit() {
+# stdin: commit message
+# stdout : id of first commit
+create_commit_issues() {
 
-	debug create_commit $*
+	debug create_commit_issues $*
 
 	local src_v3="$1"
 	local dst_v4="$2"
-	local branch=$3 # make an orphan branch if not existing
+	local first_commit_id=$3
 	local entry=$4
 	local mapping_entries_v3_v4="$5"
 	# stdin: commit message
@@ -191,14 +193,18 @@ create_commit() {
 
 	tree_id=$(git -C "$dst_v4" write-tree)
 
-	parent_id=$(cat "$dst_v4/refs/heads/$branch" 2>/dev/null)
-	debug parent_id=$parent_id
-	if [ "$parent_id" = "" ]; then
+	if [ -z "$first_commit_id" ]; then
 		# this is the first commit in the orphan branch
-		# read from stdin
+		# read message from stdin
 		commit_id=$(git -C "$dst_v4" commit-tree $tree_id)
+		first_commit_id=$commit_id
+		# branch named after the commit
+		branch=issues/$first_commit_id
 	else
-		# read from stdin
+		branch=issues/$first_commit_id
+		parent_id=$(git -C "$dst_v4" show-ref --heads -s "$branch" 2>/dev/null)
+		debug parent_id=$parent_id
+		# read message from stdin
 		commit_id=$(git -C "$dst_v4" commit-tree $tree_id -p $parent_id)
 	fi
 
@@ -206,14 +212,56 @@ create_commit() {
 	git -C "$dst_v4" update-ref refs/heads/$branch $commit_id
 
 	echo "$entry $commit_id" >> "$mapping_entries_v3_v4"
+
+	echo $first_commit_id
 }
+
+# Add an issue short name in the issues table
+# $1 : destination v4 smit project (must be a bare git repo)
+# $2 : issue id (decimal)
+# $3 : id of the first entry (hash)
+create_issue_ref() {
+	dst_v4="$1"
+	issue_id=$2
+	first_entry_id=$3
+	branch_name=issues_short_names
+	filename=issues.txt
+
+	existing=$(git -C "$dst_v4" show-ref --heads -s $branch_name)
+	tmp=$(mktemp)
+	if [ "$existing" = "" ]; then
+		:
+	else
+		# recall the existing tree
+		treeid=$(git -C "$dst_v4" cat-file -p $existing | awk '$1 == "tree" { print $2; }')
+		object_id=$(git -C "$dst_v4" ls-tree $treeid $filename | awk '{ print $3; }')
+		git -C "$dst_v4" cat-file -p $object_id > "$tmp"
+	fi
+
+	git -C "$dst_v4" read-tree --empty
+	echo "$first_entry_id $issue_id" >> "$tmp"
+
+	id=$(git -C "$dst_v4" hash-object -w "$tmp")
+	git -C "$dst_v4" update-index --add --cacheinfo 100644 $id "$filename"
+	tree_id=$(git -C "$dst_v4" write-tree)
+
+	msg="create_issue_ref $issue_id"
+	if [ "$existing" = "" ]; then
+		commit_id=$(git -C "$dst_v4" commit-tree $tree_id -m "$msg")
+	else
+		commit_id=$(git -C "$dst_v4" commit-tree $tree_id -p $existing -m "$msg")
+	fi
+	# update the branch
+	git -C "$dst_v4" update-ref refs/heads/$branch_name $commit_id
+} 
 
 # $1 : source v3 smit project
 # $2 : destination v4 smit entries (must be a bare git repo)
 # $3 : file for the mapping of entries v3 <=> v4
 convert_v3_to_v4_issues() {
 	# convert issues
-	# in v4, each issue is a branch named issues/<id>
+	# in v4, each issue is a branch named issues/<first-entry-hash>
+	# A file associates the hash of the first entry with a short name (decimal growing number)
 	local src_v3="$1"
 	local dst_v4="$2"
 	local mapping_entries_v3_v4="$3"
@@ -221,7 +269,7 @@ convert_v3_to_v4_issues() {
 	for i in $(ls "$src_v3"/.smip/refs/issues/* 2>/dev/null); do
 		debug "issues $i..."
 		id=$(cat "$i")
-		branch="issues/$(basename $i)"
+		first_commit_id=""
 
 		history=$(get_v3_history "$src_v3" "$id")
 
@@ -242,6 +290,7 @@ convert_v3_to_v4_issues() {
 			export GIT_AUTHOR_EMAIL="<>"
 			export GIT_AUTHOR_DATE="$ctime"
 
+			x_first_commit_id=$(
 			cat_file_v3 "$src_v3" "$entry" |
 			awk -v entry=$entry -v amended="$amended" 'BEGIN { boundary=""; multiline_prefix=""; print "convert_v3_to_v4_issues\n"; }
 			boundary=="" && $2=="<" { boundary=$3;
@@ -257,7 +306,13 @@ convert_v3_to_v4_issues() {
 			boundary!="" && $1==boundary { boundary=""; next; }
 			boundary!="" { print multiline_prefix, $0; }
 			END { print "\nsmit-v3-id:", entry; }
-			' | create_commit "$src_v3" "$dst_v4" $branch $entry "$mapping_entries_v3_v4"
+			' | create_commit_issues "$src_v3" "$dst_v4" "$first_commit_id" $entry "$mapping_entries_v3_v4"
+			)
+			if [ -z "$first_commit_id" ]; then
+				first_commit_id=$x_first_commit_id
+				# add the new issue in the association file
+				create_issue_ref "$dst_v4" $issue_id $first_commit_id
+			fi
 		done
 	done
 	echo # terminate the progress bar
