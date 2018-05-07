@@ -203,13 +203,15 @@ void Project::computeAssociations()
 
 /** Load a single issue
  */
-Issue *Project::loadIssue(const std::string &issueId)
+Issue *Project::loadIssue(const std::string &issueRef)
 {
+    LOG_DIAG("Loading issue ref=%s", issueRef.c_str());
+
     GitIssue elist;
     std::string pathEntries = getPathEntries();
-    int ret = elist.open(pathEntries, issueId);
+    int ret = elist.open(pathEntries, issueRef);
     if (ret) {
-        LOG_ERROR("Cannot load issue %s (%s)", issueId.c_str(), pathEntries.c_str());
+        LOG_ERROR("Cannot load issue %s (%s)", issueRef.c_str(), pathEntries.c_str());
         return 0;
     }
 
@@ -291,6 +293,46 @@ int Project::loadIssuesShortNames(const std::string &gitRepoPath, std::map<Entry
     return 0;
 }
 
+static std::string serializeShortNamesTable(const std::map<EntryId, IssueId> &shortNamesTable)
+{
+    std::string result;
+    std::map<EntryId, IssueId>::const_iterator mapit;
+    FOREACH(mapit, shortNamesTable) {
+        result += mapit->first;
+        result += ' ';
+        result += mapit->second;
+        result += '\n';
+    }
+    return result;
+}
+
+int Project::storeShortName(const std::string &shortName, const std::string &firstEntry)
+{
+    shortNames[firstEntry] = shortName;
+
+    std::string data = serializeShortNamesTable(shortNames);
+
+    std::string fileId = gitStoreFile(getPathEntries(), data.data(), data.size());
+    if (fileId.empty()) {
+        LOG_ERROR("Cannot store short name %s: %s", shortName.c_str(), firstEntry.c_str());
+        return -1;
+    }
+
+    std::list<AttachedFileRef> files;
+    AttachedFileRef fileRef;
+    fileRef.filename = TABLE_ISSUES_SHORT_NAMES;
+    fileRef.id = fileId;
+    files.push_back(fileRef);
+    std::string msg = "create_issue_ref " + shortName;
+    std::string commitId = GitIssue::addCommit(getPathEntries(), BRANCH_ISSUES_SHORT_NAMES, "smit", time(0), msg, files);
+    if (commitId.empty()) {
+        LOG_ERROR("Cannot store short name (2) %s: %s", shortName.c_str(), firstEntry.c_str());
+        return -1;
+    }
+
+    return 0;
+}
+
 int Project::loadIssues()
 {
     LOG_DEBUG("Loading issues (%s)", getPathEntries().c_str());
@@ -298,7 +340,6 @@ int Project::loadIssues()
 
     std::string pathEntries = getPathEntries();
 
-    std::map<EntryId, IssueId> shortNames;
     err = loadIssuesShortNames(pathEntries, shortNames);
     if (err) return -1;
 
@@ -313,13 +354,13 @@ int Project::loadIssues()
     int localMaxId = 0;
 
     while (1) {
-        std::string issueId = ilist.getNext();
-        if (issueId.empty()) break; // reached the end
+        std::string issueRef = ilist.getNext();
+        if (issueRef.empty()) break; // reached the end
 
-        Issue *issue = loadIssue(issueId);
+        Issue *issue = loadIssue(issueRef);
 
         if (!issue) {
-            LOG_ERROR("Cannot load issue %s", issueId.c_str());
+            LOG_ERROR("Cannot load issue %s", issueRef.c_str());
             continue;
         }
 
@@ -336,17 +377,25 @@ int Project::loadIssues()
             if (r != 0) {
                 // this should not happen
                 // maybe 2 issues pointing to the same first entry?
-                LOG_ERROR("Cannot load issue %s", issueId.c_str());
+                LOG_ERROR("Cannot load issue %s", issueRef.c_str());
             }
             e = e->getPrev();
         }
 
-        // update the maximum id
-        int intId = atoi(issueId.c_str());
-        if (intId > 0 && intId > localMaxId) localMaxId = intId;
+        // Match the issueRef with issueId (short name)
+        std::map<EntryId, IssueId>::const_iterator itShortName = shortNames.find(issueRef);
+        if (itShortName != shortNames.end()) {
+            issue->id = itShortName->second;
+            // update the maximum id
+            int intId = atoi(issue->id.c_str());
+            if (intId > 0 && intId > localMaxId) localMaxId = intId;
+
+        } else {
+            LOG_ERROR("Cannot find short name for issue %s", issueRef.c_str());
+            issue->id = issueRef;
+        }
 
         // store the issue in memory
-        issue->id = issueId;
         insertIssueInTable(issue);
     }
 
@@ -744,7 +793,7 @@ int Project::reload()
 
 std::string Project::storeFile(const char *data, size_t len) const
 {
-    return gitdbStoreFile(path, data, len);
+    return gitStoreFile(path, data, len);
 }
 
 
@@ -1223,18 +1272,21 @@ int Project::addEntry(PropertiesMap properties, const std::list<AttachedFileRef>
     Entry *e = Entry::createNewEntry(properties, files, username, i->latest);
 
     // add the entry to the project and store to disk
-    int r = addNewEntry(i->id, e);
-    if (r < 0) {
+    int err = addNewEntry(i->id, e);
+    if (err < 0) {
         delete e;
-        return r; // already exists
+        return err; // already exists
     }
 
     // add the entry to the issue
     i->addEntry(e);
 
     if (newIssueCreated) {
-        r = insertIssueInTable(i);
-        if (r != 0) return r; // already exists
+        err = storeShortName(i->id, e->id);
+        if (err != 0) return err;
+
+        err = insertIssueInTable(i);
+        if (err != 0) return err; // already exists
     }
 
     updateLastModified(e);

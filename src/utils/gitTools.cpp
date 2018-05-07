@@ -101,6 +101,29 @@ int gitAddCommitDir(const std::string &gitRepoPath, const std::string &author)
     return 0;
 }
 
+/** Store data in the git repo
+ */
+std::string gitStoreFile(const std::string &gitRepoPath, const char *data, size_t len)
+{
+    Argv argv;
+
+    argv.set("git", "hash-object", "-w", "--stdin", 0);
+    std::string sha1Id, subStderr;
+    int err = Subprocess::launchSync(argv.getv(), 0, gitRepoPath.c_str(), data, len, sha1Id, subStderr);
+    if (err) {
+        LOG_ERROR("gitStoreFile error %d: %s", err, subStderr.c_str());
+        return "";
+    }
+
+    trim(sha1Id);
+    if (sha1Id.size() != SIZE_COMMIT_ID) {
+        LOG_ERROR("gitStoreFile error: sha1Id=%s", sha1Id.c_str());
+        return "";
+    }
+
+    return sha1Id;
+}
+
 /** Load the contents of a file referenced by a git ref and a filename
  *
  * @return

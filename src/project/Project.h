@@ -143,8 +143,18 @@ private:
     int addPushedEntry(Entry *e, const std::string &data);
     int load(); // load a project: config, views, entries, tags
     int loadConfig();
-    Issue *loadIssue(const std::string &issueId);
+    Issue *loadIssue(const std::string &issueRef);
     int loadIssuesShortNames(const std::string &gitRepoPath, std::map<EntryId, IssueId> &shortNames);
+    int storeShortName(const std::string &shortName, const std::string &firstEntry);
+
+    /** Map of short names
+     *
+     *  An issue can be uniquely identified by the id of its first entry.
+     *  The short name is a decimal number, assigned by the server
+     *  (method allocateNewIssueId).
+     */
+    std::map<EntryId, IssueId> shortNames;
+
     int loadIssues();
     void loadPredefinedViews();
     void computeAssociations();

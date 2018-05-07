@@ -246,18 +246,18 @@ int gitdbSetNotes(const std::string &gitRepoPath, const ObjectId &entryId, const
  * The atomicity and thread safety is not garanteed at this level.
  * The caller must manage his own mutex.
  */
-std::string GitIssue::addCommit(const std::string &bareGitRepo, const std::string &issueId,
-                                const std::string &author, long ctime, const std::string &body, const std::list<AttachedFileRef> &files)
+std::string GitIssue::addCommit(const std::string &bareGitRepo, std::string branch, const std::string &author,
+                                long ctime, const std::string &body, const std::list<AttachedFileRef> &files)
 {
-    // git commit in a branch issues/<id> without checking out the branch
+    // git commit in a branch without checking out the branch
     // The git commands must be run in a bare git repo (the ".git/").
 
     // git read-tree --empty
     // attached files: git update-index --add --cacheinfo 100644 ...
     // git write-tree
-    // git show-ref issues/<id>
+    // git show-ref <branch>
     // git commit-tree
-    // git update-ref refs/heads/issues/<id>
+    // git update-ref refs/heads/<branch>
 
     int err;
     std::string subStdout, subStderr;
@@ -297,24 +297,32 @@ std::string GitIssue::addCommit(const std::string &bareGitRepo, const std::strin
         return "";
     }
 
-    // git show-ref --heads -s issues/<id>
-    // (use "--heads" so that remote refs are not shown)
-    std::string branchName = "issues/" + issueId;
-    argv.set("git", "show-ref", "--heads", "-s", branchName.c_str(), 0);
-    err = Subprocess::launchSync(argv.getv(), 0, bareGitRepo.c_str(), 0, 0, subStdout, subStderr);
-    if (err) {
-        if (subStderr.empty() && subStdout.empty()) {
-            // This is a new issue. The git branch will be created later.
-            LOG_INFO("addCommit: new issue to be created: %s", issueId.c_str());
+    std::string branchRef;
+    if (branch.empty()) {
+        // if no branch is set, then the branch will be named
+        // after the commit id.
+
+    } else {
+        // git show-ref --heads -s <branch>
+        // (use "--heads" so that remote refs are not shown)
+        argv.set("git", "show-ref", "--heads", "-s", branch.c_str(), 0);
+        err = Subprocess::launchSync(argv.getv(), 0, bareGitRepo.c_str(), 0, 0, subStdout, subStderr);
+        if (err) {
+            if (subStderr.empty() && subStdout.empty()) {
+                // This is a new branch. The git branch will be created later.
+                LOG_INFO("addCommit: new branch to be created: %s", branch.c_str());
+
+            } else {
+                LOG_ERROR("addCommit show-ref error %d: %s (branchRef=%s)",
+                          err, subStderr.c_str(), subStdout.c_str());
+                return "";
+            }
 
         } else {
-            LOG_ERROR("addCommit show-ref error %d: %s (branchRef=%s)",
-                      err, subStderr.c_str(), subStdout.c_str());
-            return "";
+            branchRef = subStdout;
+            trim(branchRef);
         }
     }
-    std::string branchRef = subStdout;
-    trim(branchRef);
 
     // check that branchRef is either empty or consistent with a commit id
     if (branchRef.size() && branchRef.size() != SIZE_COMMIT_ID) {
@@ -324,8 +332,9 @@ std::string GitIssue::addCommit(const std::string &bareGitRepo, const std::strin
 
     // git commit-tree
 
-    argv.set("git", "commit-tree", "-m", "add entry", treeId.c_str(), 0);
+    argv.set("git", "commit-tree", treeId.c_str(), 0);
     if (!branchRef.empty()) {
+        // add the parent commit
         argv.append("-p", branchRef.c_str(), 0);
     }
     std::string gitAuthorEnv = "GIT_AUTHOR_NAME=" + author;
@@ -354,9 +363,10 @@ std::string GitIssue::addCommit(const std::string &bareGitRepo, const std::strin
     std::string commitId = subStdout;
     trim(commitId);
 
+    if (branch.empty()) branch = commitId;
 
     // git update-ref refs/heads/$branch $commit_id
-    std::string branchPath = "refs/heads/" + branchName;
+    std::string branchPath = "refs/heads/" + branch;
     argv.set("git", "update-ref", branchPath.c_str(), commitId.c_str(), 0);
     err = Subprocess::launchSync(argv.getv(), 0, bareGitRepo.c_str(), 0, 0, subStdout, subStderr);
     if (err) {
