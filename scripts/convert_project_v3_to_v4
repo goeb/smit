@@ -269,6 +269,7 @@ convert_v3_to_v4_issues() {
 	for i in $(ls "$src_v3"/.smip/refs/issues/* 2>/dev/null); do
 		debug "issues $i..."
 		id=$(cat "$i")
+		issue_id=$(basename "$i")
 		first_commit_id=""
 
 		history=$(get_v3_history "$src_v3" "$id")
