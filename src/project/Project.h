@@ -144,6 +144,7 @@ private:
     int load(); // load a project: config, views, entries, tags
     int loadConfig();
     Issue *loadIssue(const std::string &issueId);
+    int loadIssuesShortNames(const std::string &gitRepoPath, std::map<EntryId, IssueId> &shortNames);
     int loadIssues();
     void loadPredefinedViews();
     void computeAssociations();

@@ -260,13 +260,53 @@ Issue *Project::loadIssue(const std::string &issueId)
     return issue;
 }
 
+/** Load the table of issues short names
+ *
+ *  An Issue has a unique short name (decimal number), and is
+ *  also uniquely identified after its first entry.
+ *
+ */
+int Project::loadIssuesShortNames(const std::string &gitRepoPath, std::map<EntryId, IssueId> &shortNames)
+{
+    // file issues.txt from branch issues
+    std::string data;
+    int err = gitLoadFile(gitRepoPath, BRANCH_ISSUES_SHORT_NAMES, TABLE_ISSUES_SHORT_NAMES, data);
+    if (-1 == err) {
+        // The branch does not exist.
+        // This is not an error, because the project may have no issue yet.
+        return 0;
+
+    } else if (err) {
+        LOG_ERROR("Cannot load table of issues short names");
+        return -1;
+    }
+
+    // parse the file
+    while (!data.empty()) {
+        std::string line = popToken(data, '\n', TOK_STRICT);
+        EntryId eid = popToken(line, ' ', TOK_STRICT);
+        IssueId iid = line;
+        shortNames[eid] = iid;
+    }
+    return 0;
+}
+
 int Project::loadIssues()
 {
     LOG_DEBUG("Loading issues (%s)", getPathEntries().c_str());
+    int err;
+
+    std::string pathEntries = getPathEntries();
+
+    std::map<EntryId, IssueId> shortNames;
+    err = loadIssuesShortNames(pathEntries, shortNames);
+    if (err) return -1;
+
+
     GitIssueList ilist;
-    int ret = ilist.open(getPathEntries());
+    int ret = ilist.open(pathEntries);
     if (ret) {
-        LOG_ERROR("Cannot load issues of project (%s)", getPathEntries().c_str());
+        LOG_ERROR("Cannot load issues of project (%s)", pathEntries.c_str());
         return -1;
     }
 

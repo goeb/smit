@@ -9,6 +9,8 @@
 // SHA1 id of an empty tree
 #define K_EMPTY_TREE "4b825dc642cb6eb9a060e54bf8d69288fbee4904"
 #define BRANCH_PREFIX_ISSUES "issues/"
+#define BRANCH_ISSUES_SHORT_NAMES "issues_short_names"
+#define TABLE_ISSUES_SHORT_NAMES "issues.txt"
 
 typedef std::string ObjectId;
 

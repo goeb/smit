@@ -125,7 +125,7 @@ void Subprocess::shutdown()
     closePipes();
     int err = wait();
     if (err) {
-        LOG_ERROR("Subprocess::shutdown: err=%d", err);
+        LOG_INFO("Subprocess::shutdown: err=%d", err);
     }
 }
 
