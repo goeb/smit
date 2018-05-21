@@ -3,6 +3,7 @@
 #include "logging.h"
 #include "filesystem.h"
 #include "subprocess.h"
+#include "stringTools.h"
 
 /** Modify a file
  *
@@ -100,4 +101,39 @@ int gitAddCommitDir(const std::string &gitRepoPath, const std::string &author)
     return 0;
 }
 
+/** Get a branch reference
+ *
+ * @param gitRepo
+ * @param[out] gitRef
+ *     This is the hash of the reference, if found.
+ *     It is not modified (not cleared) on error.
+ * @return
+ *     0 on success
+ *    -1 on error
+ *
+ * If the given branch does not exist, the gitRef is returned empty,
+ * and the return code is 0.
+ */
+int gitGetBranchRef(const std::string &gitRepo, const std::string &branchName, std::string &gitRef)
+{
+    Argv argv;
+    std::string subStdout, subStderr;
+
+    // git show-ref --heads -s issues/<id>
+    // (use "--heads" so that remote refs are not shown)
+    argv.set("git", "show-ref", "--heads", "--hash", branchName.c_str(), 0);
+    int err = Subprocess::launchSync(argv.getv(), 0, gitRepo.c_str(), 0, 0, subStdout, subStderr);
+    if (err) {
+        if (subStderr.empty() && subStdout.empty()) {
+            // ok, no error. The branch simply does not exist.
+        } else {
+            LOG_ERROR("addCommit show-ref error %d: stdout=%s, stderr=%s (gitRepo=%s)",
+                      err, subStderr.c_str(), subStdout.c_str(), gitRepo.c_str());
+            return -1;
+        }
+    }
+    gitRef = subStdout;
+    trim(gitRef);
+    return 0;
+}
 

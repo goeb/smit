@@ -8,6 +8,7 @@
 #include "utils/stringTools.h"
 #include "utils/subprocess.h"
 #include "utils/filesystem.h"
+#include "utils/gitTools.h"
 
 #define SIZE_COMMIT_ID 40
 
@@ -297,30 +298,19 @@ std::string GitIssue::addCommit(const std::string &bareGitRepo, const std::strin
         return "";
     }
 
-    // git show-ref --heads -s issues/<id>
-    // (use "--heads" so that remote refs are not shown)
+    // Get the reference of the branch, if is exists
     std::string branchName = "issues/" + issueId;
-    argv.set("git", "show-ref", "--heads", "-s", branchName.c_str(), 0);
-    err = Subprocess::launchSync(argv.getv(), 0, bareGitRepo.c_str(), 0, 0, subStdout, subStderr);
-    if (err) {
-        if (subStderr.empty() && subStdout.empty()) {
-            // This is a new issue. The git branch will be created later.
-            LOG_INFO("addCommit: new issue to be created: %s", issueId.c_str());
+    std::string branchRef;
+    err = gitGetBranchRef(bareGitRepo, branchName, branchRef);
+    if (err) return "";
 
-        } else {
-            LOG_ERROR("addCommit show-ref error %d: %s (branchRef=%s)",
-                      err, subStderr.c_str(), subStdout.c_str());
-            return "";
-        }
-    }
-    std::string branchRef = subStdout;
-    trim(branchRef);
 
     // check that branchRef is either empty or consistent with a commit id
     if (branchRef.size() && branchRef.size() != SIZE_COMMIT_ID) {
         LOG_ERROR("addCommit show-ref error: branchRef=%s", branchRef.c_str());
         return "";
     }
+    // If the branch ref does not exist, the branch will be created later.
 
     // git commit-tree
 

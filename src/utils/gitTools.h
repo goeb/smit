@@ -9,6 +9,6 @@ int gitInit(const std::string &gitRepoPath);
 int gitAdd(const std::string &gitRepoPath, const std::string &subpath);
 int gitCommit(const std::string &gitRepoPath, const std::string &author);
 int gitAddCommitDir(const std::string &gitRepoPath, const std::string &author);
-
+int gitGetBranchRef(const std::string &gitRepo, const std::string &branchName, std::string &gitRef);
 
 #endif // _gitTools_h
