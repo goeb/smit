@@ -104,6 +104,22 @@ int testSessid(const std::string &url, const HttpClientContext &ctx)
     return -1;
 }
 
+
+static int gitTrackRemoteBranch(const std::string &gitRepo, const std::string &branchName)
+{
+    Argv argv;
+    std::string subStdout, subStderr;
+    std::string remoteBranch = "origin/" + branchName;
+
+    argv.set("git", "branch", branchName.c_str(), remoteBranch.c_str(), 0);
+    int err = Subprocess::launchSync(argv.getv(), 0, gitRepo.c_str(), 0, 0, subStdout, subStderr);
+    if (err) {
+        LOG_ERROR("gitTrackRemoteBranch: error: %d: stdout=%s, stderr=%s", err, subStdout.c_str(), subStderr.c_str());
+    }
+
+    return err;
+}
+
 /** Create local branches tracking remotes ones after a clone
  */
 static int alignIssueBranches(const std::string &projectPath)
@@ -123,17 +139,9 @@ static int alignIssueBranches(const std::string &projectPath)
         if (issueId.empty()) break; // reached the end
 
         // create a local branch
-        Argv argv;
-        std::string subStdout, subStderr;
         std::string localBranch = BRANCH_PREFIX_ISSUES +  issueId;
-        std::string remoteBranch = "origin/" BRANCH_PREFIX_ISSUES + issueId;
-
-        argv.set("git", "branch", localBranch.c_str(), remoteBranch.c_str(), 0);
-        err = Subprocess::launchSync(argv.getv(), 0, projectPath.c_str(), 0, 0, subStdout, subStderr);
-        if (err) {
-            LOG_ERROR("alignIssueBranches: error: %d: stdout=%s, stderr=%s", err, subStdout.c_str(), subStderr.c_str());
-            break;
-        }
+        err = gitTrackRemoteBranch(projectPath, localBranch);
+        if (err) break;
     }
     ilist.close();
     return err;
