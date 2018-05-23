@@ -314,7 +314,7 @@ std::string GitIssue::addCommit(const std::string &bareGitRepo, const std::strin
 
     // git commit-tree
 
-    argv.set("git", "commit-tree", "-m", "add entry", treeId.c_str(), 0);
+    argv.set("git", "commit-tree", treeId.c_str(), 0);
     if (!branchRef.empty()) {
         argv.append("-p", branchRef.c_str(), 0);
     }
