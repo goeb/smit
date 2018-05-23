@@ -301,7 +301,7 @@ std::string GitIssue::addCommit(const std::string &bareGitRepo, const std::strin
     // Get the reference of the branch, if is exists
     std::string branchName = "issues/" + issueId;
     std::string branchRef;
-    err = gitGetBranchRef(bareGitRepo, branchName, branchRef);
+    err = gitGetBranchRef(bareGitRepo, branchName, GIT_REF_LOCAL, branchRef);
     if (err) return "";
 
 

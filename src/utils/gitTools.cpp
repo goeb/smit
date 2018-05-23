@@ -113,22 +113,27 @@ int gitAddCommitDir(const std::string &gitRepoPath, const std::string &author)
  *
  * If the given branch does not exist, the gitRef is returned empty,
  * and the return code is 0.
+ *
  */
-int gitGetBranchRef(const std::string &gitRepo, const std::string &branchName, std::string &gitRef)
+int gitGetBranchRef(const std::string &gitRepo, std::string branchName, GitRefType type, std::string &gitRef)
 {
     Argv argv;
     std::string subStdout, subStderr;
 
-    // git show-ref --heads -s issues/<id>
-    // (use "--heads" so that remote refs are not shown)
-    argv.set("git", "show-ref", "--heads", "--hash", branchName.c_str(), 0);
+    // git show-ref --hash <branchName>
+
+    if (type == GIT_REF_LOCAL) branchName = "refs/heads/" + branchName;
+    else branchName = "refs/remotes/origin/" + branchName;
+
+    argv.set("git", "show-ref", "--hash", branchName.c_str(), 0);
+
     int err = Subprocess::launchSync(argv.getv(), 0, gitRepo.c_str(), 0, 0, subStdout, subStderr);
     if (err) {
         if (subStderr.empty() && subStdout.empty()) {
             // ok, no error. The branch simply does not exist.
         } else {
-            LOG_ERROR("addCommit show-ref error %d: stdout=%s, stderr=%s (gitRepo=%s)",
-                      err, subStderr.c_str(), subStdout.c_str(), gitRepo.c_str());
+            LOG_ERROR("gitGetBranchRef %d: stdout=%s, stderr=%s (gitRepo=%s)",
+                      err, subStdout.c_str(), subStderr.c_str(), gitRepo.c_str());
             return -1;
         }
     }
