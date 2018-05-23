@@ -240,6 +240,23 @@ int mkdir(const std::string &path)
     return mkdir(path.c_str(), 0777);
 }
 
+int mkdirTmp(std::string &result)
+{
+    int err;
+    char pathTemplate[] = "/tmp/smit_XXXXXX";
+    char *pathTmp = mkdtemp(pathTemplate);
+    if (!pathTmp) {
+        LOG_ERROR("Cannot mkdtemp(%s): %s", pathTemplate, STRERROR(errno));
+        result = "";
+        err = -1;
+    } else {
+        result = pathTmp;
+        err = 0;
+    }
+    return 0;
+}
+
+
 /** Create the given directory (create all intermediate directories if needed)
   */
 int mkdirs(const std::string &path)
