@@ -142,3 +142,21 @@ int gitGetBranchRef(const std::string &gitRepo, std::string branchName, GitRefTy
     return 0;
 }
 
+std::string gitGetFirstCommit(const std::string &gitRepo, const std::string &ref)
+{
+    Argv argv;
+    std::string subStdout, subStderr;
+
+    // git rev-list --max-parents=0 <ref>
+    argv.set("git", "rev-list", "--max-parents=0", ref.c_str(), 0);
+    int err = Subprocess::launchSync(argv.getv(), 0, gitRepo.c_str(), 0, 0, subStdout, subStderr);
+    if (err) {
+        LOG_ERROR("gitGetFirstCommit error: ref=%s, stdout=%s, stderr=%s (gitRepo=%s)",
+                 ref.c_str(), subStdout.c_str(), subStderr.c_str(), gitRepo.c_str());
+        return "";
+    }
+    trim(subStdout);
+    return subStdout;
+}
+
+
