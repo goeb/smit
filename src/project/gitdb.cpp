@@ -226,7 +226,7 @@ int gitdbSetNotes(const std::string &gitRepoPath, const ObjectId &entryId, const
     std::string subStdout, subStderr;
     int err = Subprocess::launchSync(argv.getv(), 0, gitRepoPath.c_str(), data.data(), data.size(), subStdout, subStderr);
     if (err) {
-        LOG_ERROR("addCommit read-tree error %d: %s", err, subStderr.c_str());
+        LOG_ERROR("gitdbSetNotes error %d: %s", err, subStderr.c_str());
     }
     return err;
 }

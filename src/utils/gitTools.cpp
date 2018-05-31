@@ -104,6 +104,7 @@ int gitAddCommitDir(const std::string &gitRepoPath, const std::string &author)
 /** Get a branch reference
  *
  * @param gitRepo
+ * @param branchName
  * @param[out] gitRef
  *     This is the hash of the reference, if found.
  *     It is not modified (not cleared) on error.
@@ -115,6 +116,7 @@ int gitAddCommitDir(const std::string &gitRepoPath, const std::string &author)
  * and the return code is 0.
  *
  */
+// TODO unsued ?
 int gitGetBranchRef(const std::string &gitRepo, std::string branchName, GitRefType type, std::string &gitRef)
 {
     Argv argv;
@@ -159,4 +161,45 @@ std::string gitGetFirstCommit(const std::string &gitRepo, const std::string &ref
     return subStdout;
 }
 
+int gitRenameBranch(const std::string &gitRepo, const std::string &oldName, const std::string &newName)
+{
+    Argv argv;
+    std::string subStdout, subStderr;
 
+    // git branch -m <old> <new>
+    argv.set("git", "branch", "-m", oldName.c_str(), newName.c_str(), 0);
+    int err = Subprocess::launchSync(argv.getv(), 0, gitRepo.c_str(), 0, 0, subStdout, subStderr);
+    if (err) {
+        LOG_ERROR("gitRenameBranch error: old=%s, new=%s, stdout=%s, stderr=%s (gitRepo=%s)",
+                 oldName.c_str(), newName.c_str(), subStdout.c_str(), subStderr.c_str(), gitRepo.c_str());
+    }
+    return err;
+}
+
+std::string gitGetLocalBranchThatContains(const std::string &gitRepo, const std::string &gitRef)
+{
+    Argv argv;
+    std::string subStdout, subStderr;
+
+    // git branch -m <old> <new>
+    argv.set("git", "branch", "--contains", gitRef.c_str(), 0);
+    int err = Subprocess::launchSync(argv.getv(), 0, gitRepo.c_str(), 0, 0, subStdout, subStderr);
+    if (err) {
+        LOG_ERROR("gitGetLocalBranchThatContains error: gitRef=%s, stdout=%s, stderr=%s (gitRepo=%s)",
+                 gitRef.c_str(), subStdout.c_str(), subStderr.c_str(), gitRepo.c_str());
+        return "";
+    }
+    // parse the output
+    // eg:
+    // $ git branch --contains 1a3f7f720081fa
+    //   * branch_x
+    //     branch_y
+
+    // keep the first line only
+    std::string line = popToken(subStdout, '\n', TOK_STRICT);
+    // remove the first 2 characters
+    if (line.size() > 2) line = line.substr(2);
+    else line = "";
+    return line;
+
+}

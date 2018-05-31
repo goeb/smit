@@ -22,6 +22,8 @@
 
 #define DELETE_DELAY_S (10*60) // seconds
 
+typedef std::string EntryId;
+
 // Define atomic builtins for gcc < 4.7
 #ifdef __GNUC__
 

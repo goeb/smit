@@ -53,27 +53,36 @@
   *     smit push ....  : upload local changes to a smit server
   *
   * 1. Conflicts on existing issues
-  *
   * These conflicts occur typically when a user modified an issue on the server and
   * another user modified the same issue on his/her local clone.
-  * These conflicts are detected during a pushing, but they can be resolved only
+  * These conflicts are rejected during a pushing. They can be resolved only
   * by a pulling.
-  * These conflicts are resolved either automatically as follows:
+  * These conflicts are resolved bu a git pull --rebase
   *
-  *   TODO
   *
   * 2. Conflicts on new issues
   * These conflicts occur typically when a user creates a new issue on the server and
   * another user creates a new issue on his/her local clone, and both new issues get
   * the same id.
   *
-  * These conflicts within a same project are resolved by pulling: the local
-  * issue of the clone is renamed. For example issue 123 will be renamed issue 124.
+  * These conflicts are resolved as follows:
+  * - the client detects the conflict (say on issues/123), and renames the local "issues/123.local"
+  * - the client pulls the remote issue 123
+  * - the clients pushes issues/123.local, and the procedure below applies (cf. 3.)
   *
-  * Some conflicts are also resolved when pushing. Newly pushed issues may
-  * be renamed by the server if another issue with the same id exists on a
-  * different project (when both projects use global numbering).
   *
+  * 3. Server-side renaming of issues identifiers
+  * As the server is responsible for allocating issues identifiers (which may be shared
+  * among several project if numbering policy is "global"), all local issues may be
+  * renamed by the server after being pushed.
+  *
+  * This is solved by the client as follows:
+  * - the client pushes local issues to the remote under a branch named issues_tmp/...
+  *       git push issues/123:issues_tmp/123
+  * - the server allocates a new identifier for issues_tmp/123 (say issues/127)
+  * - the client pulls
+  * - the client detects that issues/127 and the local 123 are the same (because same first entry),
+  *   prints the information on the terminal, and deletes the old local name (123)
   */
 
 // resolve strategies for pulling conflicts
@@ -184,29 +193,232 @@ static int gitClone(const std::string &remote, const std::string &smitRepo, cons
     return err;
 }
 
-static int gitPull(const std::string &dir)
+/** Rebase a branch onto the remote
+ *
+ * 1. create a specific worktree
+ * 2. do the rebasing in this worktree
+ * 3. clean up the worktree
+ *
+ */
+static int rebaseBranchOntoRemote(const std::string &gitRepo, const std::string &branchName)
+{
+    Argv argv;
+    std::string subStdout, subStderr;
+    int err;
+
+    std::string pathWorkingTree;
+    err = mkdirTmp(pathWorkingTree);
+    if (err) {
+        LOG_ERROR("rebaseBranchOntoRemote: cannot create tmp directory");
+        return -1;
+    }
+
+    LOG_DIAG("rebaseBranchOntoRemote: use worktree %s", pathWorkingTree.c_str());
+
+    // git needs a working dir for rebasing. Use a temporary directory.
+
+    argv.set("git", "worktree", "add", pathWorkingTree.c_str(), branchName.c_str(), 0);
+    err = Subprocess::launchSync(argv.getv(), 0, gitRepo.c_str(), 0, 0, subStdout, subStderr);
+    if (err) {
+        // git worktree failed. Possible reasons:
+        // - no such branch
+        // - already exists
+        LOG_ERROR("Cannot create temporary working tree %s => %s: %s", gitRepo.c_str(), branchName.c_str(), subStderr.c_str());
+
+    } else {
+
+        // Do the rebasing in this new working tree
+
+        std::string remoteBranch = "origin/" + branchName;
+        argv.set("git", "rebase", "--merge", "--strategy", "ours", remoteBranch.c_str(), branchName.c_str(), 0);
+        err = Subprocess::launchSync(argv.getv(), 0, pathWorkingTree.c_str(), 0, 0, subStdout, subStderr);
+        if (err) {
+            LOG_ERROR("Cannot rebase %s %s in %s: %s", remoteBranch.c_str(), branchName.c_str(),
+                      gitRepo.c_str(), subStderr.c_str());
+        }
+    }
+
+    // Remove this working tree (recursively, all files)
+    int secondaryErr = removeDir(pathWorkingTree);
+    if (secondaryErr) LOG_ERROR("Cannot remove dir: %s", pathWorkingTree.c_str());
+
+    argv.set("git", "worktree", "prune", 0);
+    secondaryErr = Subprocess::launchSync(argv.getv(), 0, gitRepo.c_str(), 0, 0, subStdout, subStderr);
+    if (secondaryErr) LOG_ERROR("Cannot prune worktree '%s': %s", gitRepo.c_str(), subStderr.c_str());
+
+    return err;
+}
+
+static int renameBranch(const std::string &dir, const std::string &oldName, const std::string &newName)
 {
     Argv argv;
     std::string subStdout, subStderr;
 
+    argv.set("git", "branch", "-m", oldName.c_str(), newName.c_str(), 0);
+    int err = Subprocess::launchSync(argv.getv(), 0, dir.c_str(), 0, 0, subStdout, subStderr);
+    if (err) {
+        LOG_ERROR("renameBranch: error: %d: stdout=%s, stderr=%s", err, subStdout.c_str(), subStderr.c_str());
+    }
+    return err;
+}
+
+/* Rename a local issue
+ *
+ * If the given local issue does not exist, then return -1
+ */
+static int renameLocalIssue(const std::string &dir, const IssueId &oldId)
+{
+    // TODO if local issue does not exists, return -1
+
+    //TODO if oldId == n.m => increment m until available
+    //     if oldId == n => add .m (starting from zero), and increment m until available
+    int err;
+    std::string newId;
+    std::string gitRef;
+    std::string newBranch;
+    std::string oldBranch = BRANCH_PREFIX_ISSUES + oldId;
+    char buffer[32]; // size should be enough for representing an integer in decimal
+    int i = 0;
+
+    while (1) {
+        snprintf(buffer, sizeof buffer, "%d", i);
+        std::string newIdCandidate = oldId + "." + buffer;
+        newBranch = BRANCH_PREFIX_ISSUES + newIdCandidate;
+        err = gitGetBranchRef(dir, newBranch, GIT_REF_LOCAL, gitRef);
+        if (err) return err;
+
+        if (gitRef.empty()) {
+            // no branch with this name, so it is available for renaming
+            newId = newIdCandidate;
+            break;
+        }
+        i++;
+    }
+    err = renameBranch(dir, oldBranch, newBranch);
+    if (!err) {
+        // success
+        // Indicate now the renaming (in case of a failure anytime further)
+        LOG_CLI("  Local branch %s renamed %s", oldId.c_str(), newId.c_str());
+    }
+
+    return err;
+}
+
+static int renameIssue(const std::string &dir, const IssueId &oldIssue, const IssueId &newIssue)
+{
+    std::string oldBranch = BRANCH_PREFIX_ISSUES + oldIssue;
+    std::string newBranch = BRANCH_PREFIX_ISSUES + newIssue;
+    int err = gitRenameBranch(dir, oldBranch, newBranch);
+    return err;
+}
+
+
+static int gitPullIssue(const std::string &dir, const IssueId &remoteIssueId, const EntryId &firstEntry)
+{
+    int err;
+
+    std::string branchX = gitGetLocalBranchThatContains(dir, firstEntry);
+    // extract the issue id
+    std::string otherIssueIdWithSameFirstEntry;
+    if (branchX.size() > strlen(BRANCH_PREFIX_ISSUES)) {
+        otherIssueIdWithSameFirstEntry = branchX.substr(strlen(BRANCH_PREFIX_ISSUES));
+    }
+
+    if (!otherIssueIdWithSameFirstEntry.empty()) {
+        if (otherIssueIdWithSameFirstEntry != remoteIssueId) {
+
+            renameLocalIssue(dir, remoteIssueId);
+
+            err = renameIssue(dir, otherIssueIdWithSameFirstEntry, remoteIssueId);
+            if (err) {
+                LOG_ERROR("gitPullIssue %s error (dir=%s) (0)", remoteIssueId.c_str(), dir.c_str());
+                return err;
+            }
+        }
+
+        std::string branchName = BRANCH_PREFIX_ISSUES + remoteIssueId;
+        err = rebaseBranchOntoRemote(dir, branchName);
+        if (err) {
+            LOG_ERROR("gitPullIssue %s error (dir=%s) (1)", remoteIssueId.c_str(), dir.c_str());
+        }
+
+    } else {
+
+        renameLocalIssue(dir, remoteIssueId);
+
+        std::string branchName = BRANCH_PREFIX_ISSUES + remoteIssueId;
+        err = gitTrackRemoteBranch(dir, branchName);
+        if (err) {
+            LOG_ERROR("gitPullIssue %s error (dir=%s) (2)", remoteIssueId.c_str(), dir.c_str());
+        }
+
+    }
+    return err;
+}
+
+
+static int gitPullIssues(const std::string &dir)
+{
+    GitIssueList ilist;
+    int err = ilist.open(dir, "origin");
+    if (err) {
+        LOG_ERROR("Cannot load remote issues of project (%s)", dir.c_str());
+        return -1;
+    }
+
+    while (0 == err) {
+        IssueId remoteIssueId = ilist.getNext();
+        if (remoteIssueId.empty()) break; // reached the end
+
+        std::string branchName = "refs/remotes/origin/" BRANCH_PREFIX_ISSUES + remoteIssueId;
+
+        EntryId firstEntry = gitGetFirstCommit(dir, branchName);
+        if (firstEntry.empty()) {
+            break; // unexpected error
+        }
+
+        err = gitPullIssue(dir, remoteIssueId, firstEntry);
+    }
+
+    ilist.close();
+    return err;
+}
+
+
+
+static void printModifiedBranches(std::string gitPullStderr)
+{
+    // Sample git pull output:
+    // From http://localhost:8090//myproject
+    //   98115e6..44bd148  issues/147 -> origin/issues/147
+
+    // print only lines that start by a space.
+    while (!gitPullStderr.empty()) {
+        std::string line = popToken(gitPullStderr, '\n', TOK_STRICT);
+        if (!line.empty() && line[0] == ' ') LOG_CLI("%s", line.c_str());
+    }
+}
+
+static int gitPull(const std::string &dir, bool isProject)
+{
+    Argv argv;
+    std::string subStdout, subStderr;
+
+    // For branch master, conflicts shall be manually resolved
     argv.set("git", "pull", "--rebase", 0);
     int err = Subprocess::launchSync(argv.getv(), 0, dir.c_str(), 0, 0, subStdout, subStderr);
     if (err) {
         LOG_ERROR("gitPull: error: %d: stdout=%s, stderr=%s", err, subStdout.c_str(), subStderr.c_str());
         return err;
+    } else {
+        // show information about modified branches
+        printModifiedBranches(subStderr);
     }
 
-    // TODO resolve conflicts on different issues with same number
-
-    // TODO create local branches to track remote new ones
-    //err = alignIssueBranches(into);
-
-    // 1. fetch from remote (all branches)
-    // 2. for branch master, try merging: conflicts must be manually resolved
-    // 3. for remote issues that do not exist locally: simply create a local tracking branch
-    // 4. for remote issues that DO exist locally:
-    //    - try merge --rebase
-    //    - on error, move the local branch to a new issue number, and repull the remote
+    if (isProject) {
+        // pull branches issues/*
+        gitPullIssues(dir);
+    }
 
 
     return err;
@@ -377,7 +589,7 @@ static int pullAll(const std::string &localRepo, Permissions perms)
 {
     // pull /public
     LOG_CLI("Pulling 'public'...");
-    int err = gitPull(localRepo + "/public");
+    int err = gitPull(localRepo + "/public", false);
     if (err) {
         LOG_ERROR("Abort.");
         exit(1);
@@ -393,7 +605,7 @@ static int pullAll(const std::string &localRepo, Permissions perms)
             LOG_CLI("Pulling '%s'...", projectName.c_str());
             LOG_DIAG("role=%s", roleToString(role).c_str());
             std::string projectDir = Project::urlNameEncode(projectName);
-            err = gitPull(localRepo + "/" + projectDir);
+            err = gitPull(localRepo + "/" + projectDir, true);
             if (err) {
                 LOG_ERROR("Abort.");
                 exit(1);
@@ -406,7 +618,7 @@ static int pullAll(const std::string &localRepo, Permissions perms)
     // clone /.smit if permission granted
     if (perms.superadmin) {
         LOG_CLI("Pulling '.smit'...");
-        err = gitPull(localRepo + "/.smit");
+        err = gitPull(localRepo + "/.smit", false);
         if (err) {
             LOG_ERROR("Abort.");
             exit(1);
