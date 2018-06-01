@@ -231,6 +231,20 @@ int gitdbSetNotes(const std::string &gitRepoPath, const ObjectId &entryId, const
     return err;
 }
 
+// git-reset needed after a read-tree, as the index has been modified
+static void gitReset(const std::string &bareGitRepo)
+{
+    int err;
+    std::string subStdout, subStderr;
+    Argv argv;
+
+    argv.set("git", "reset", 0);
+    err = Subprocess::launchSync(argv.getv(), 0, bareGitRepo.c_str(), 0, 0, subStdout, subStderr);
+    if (err) {
+        LOG_ERROR("gitReset error: %s", subStderr.c_str());
+    }
+}
+
 
 /**
  * @brief add an entry (ie: a commit) in the branch of the issue
@@ -355,6 +369,8 @@ std::string GitIssue::addCommit(const std::string &bareGitRepo, const std::strin
     }
 
     LOG_DIAG("addCommit: %s", commitId.c_str());
+
+    gitReset(bareGitRepo);
 
     return commitId;
 }
