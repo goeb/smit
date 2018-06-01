@@ -116,7 +116,6 @@ int gitAddCommitDir(const std::string &gitRepoPath, const std::string &author)
  * and the return code is 0.
  *
  */
-// TODO unsued ?
 int gitGetBranchRef(const std::string &gitRepo, std::string branchName, GitRefType type, std::string &gitRef)
 {
     Argv argv;

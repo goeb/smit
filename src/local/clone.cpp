@@ -137,20 +137,19 @@ static int alignIssueBranches(const std::string &projectPath)
 
     // create local branches to track remote ones (issues/*)
     GitIssueList ilist;
-    int ret = ilist.open(projectPath, "origin");
-    if (ret) {
+    err = ilist.open(projectPath, "origin");
+    if (err) {
         LOG_ERROR("Cannot load issues of project (%s)", projectPath.c_str());
         return -1;
     }
 
-    while (1) {
+    while (!err) {
         std::string issueId = ilist.getNext();
         if (issueId.empty()) break; // reached the end
 
         // create a local branch
         std::string localBranch = BRANCH_PREFIX_ISSUES +  issueId;
         err = gitTrackRemoteBranch(projectPath, localBranch);
-        if (err) break;
     }
     ilist.close();
     return err;
@@ -187,6 +186,9 @@ static int gitClone(const std::string &remote, const std::string &smitRepo, cons
 
     // create local branches to track remote ones
     err = alignIssueBranches(into);
+    if (err) {
+        LOG_ERROR("gitClone: alignIssueBranches error: %d: stdout=%s, stderr=%s", err, subStdout.c_str(), subStderr.c_str());
+    }
 
     setupGitCloneConfig(into);
 
@@ -249,56 +251,57 @@ static int rebaseBranchOntoRemote(const std::string &gitRepo, const std::string 
     return err;
 }
 
-static int renameBranch(const std::string &dir, const std::string &oldName, const std::string &newName)
-{
-    Argv argv;
-    std::string subStdout, subStderr;
-
-    argv.set("git", "branch", "-m", oldName.c_str(), newName.c_str(), 0);
-    int err = Subprocess::launchSync(argv.getv(), 0, dir.c_str(), 0, 0, subStdout, subStderr);
-    if (err) {
-        LOG_ERROR("renameBranch: error: %d: stdout=%s, stderr=%s", err, subStdout.c_str(), subStderr.c_str());
-    }
-    return err;
-}
-
 /* Rename a local issue
  *
- * If the given local issue does not exist, then return -1
+ * If oldId is of the form N.M, then increment M until an available identifier.
+ * If oldId is of the form N, then start with M=0, and increment M until N.M is an available identifier.
+ *
+ * If the given local issue does not exist, then do nothing and return 0.
  */
-static int renameLocalIssue(const std::string &dir, const IssueId &oldId)
+static int renameIssue(const std::string &dir, const IssueId &oldId)
 {
-    // TODO if local issue does not exists, return -1
-
-    //TODO if oldId == n.m => increment m until available
-    //     if oldId == n => add .m (starting from zero), and increment m until available
     int err;
-    std::string newId;
     std::string gitRef;
-    std::string newBranch;
     std::string oldBranch = BRANCH_PREFIX_ISSUES + oldId;
+
+    err = gitGetBranchRef(dir, oldBranch, GIT_REF_LOCAL, gitRef);
+    if (err) return err;
+    if (gitRef.empty()) return 0; // no such branch. do nothing.
+
+    size_t pos = oldId.find_last_of('.');
+    int counter = 0;
+    std::string root = oldId;
+
+    if (pos == std::string::npos) {
+        counter = 0;
+    } else {
+        counter = atoi(oldId.substr(pos).c_str()) + 1;
+        if (pos > 0) root = oldId.substr(0, pos-1);
+    }
+
+    std::string newId;
+    std::string newBranch;
     char buffer[32]; // size should be enough for representing an integer in decimal
-    int i = 0;
 
     while (1) {
-        snprintf(buffer, sizeof buffer, "%d", i);
-        std::string newIdCandidate = oldId + "." + buffer;
-        newBranch = BRANCH_PREFIX_ISSUES + newIdCandidate;
+        snprintf(buffer, sizeof buffer, "%d", counter);
+        newId = root + "." + buffer;
+        newBranch = BRANCH_PREFIX_ISSUES + newId;
         err = gitGetBranchRef(dir, newBranch, GIT_REF_LOCAL, gitRef);
         if (err) return err;
 
         if (gitRef.empty()) {
             // no branch with this name, so it is available for renaming
-            newId = newIdCandidate;
             break;
         }
-        i++;
+        counter++;
     }
-    err = renameBranch(dir, oldBranch, newBranch);
+
+    err = gitRenameBranch(dir, oldBranch, newBranch);
     if (!err) {
         // success
         // Indicate now the renaming (in case of a failure anytime further)
-        LOG_CLI("  Local branch %s renamed %s", oldId.c_str(), newId.c_str());
+        LOG_CLI("  Local issue %s renamed %s", oldId.c_str(), newId.c_str());
     }
 
     return err;
@@ -309,6 +312,9 @@ static int renameIssue(const std::string &dir, const IssueId &oldIssue, const Is
     std::string oldBranch = BRANCH_PREFIX_ISSUES + oldIssue;
     std::string newBranch = BRANCH_PREFIX_ISSUES + newIssue;
     int err = gitRenameBranch(dir, oldBranch, newBranch);
+    if (!err) {
+        LOG_CLI("  Local issue %s renamed %s", oldIssue.c_str(), newIssue.c_str());
+    }
     return err;
 }
 
@@ -327,7 +333,7 @@ static int gitPullIssue(const std::string &dir, const IssueId &remoteIssueId, co
     if (!otherIssueIdWithSameFirstEntry.empty()) {
         if (otherIssueIdWithSameFirstEntry != remoteIssueId) {
 
-            renameLocalIssue(dir, remoteIssueId);
+            renameIssue(dir, remoteIssueId); // does nothing if no such local issue
 
             err = renameIssue(dir, otherIssueIdWithSameFirstEntry, remoteIssueId);
             if (err) {
@@ -344,7 +350,9 @@ static int gitPullIssue(const std::string &dir, const IssueId &remoteIssueId, co
 
     } else {
 
-        renameLocalIssue(dir, remoteIssueId);
+        // no local issue with same first entry
+
+        renameIssue(dir, remoteIssueId); // does nothing if no such local issue
 
         std::string branchName = BRANCH_PREFIX_ISSUES + remoteIssueId;
         err = gitTrackRemoteBranch(dir, branchName);
