@@ -313,9 +313,9 @@ std::string GitIssue::addCommit(const std::string &bareGitRepo, const std::strin
     }
 
     // Get the reference of the branch, if is exists
-    std::string branchName = "issues/" + issueId;
+    std::string branchPath = "refs/heads/issues/" + issueId;
     std::string branchRef;
-    err = gitGetBranchRef(bareGitRepo, branchName, GIT_REF_LOCAL, branchRef);
+    err = gitShowRef(bareGitRepo, branchPath, branchRef);
     if (err) return "";
 
 
@@ -360,7 +360,6 @@ std::string GitIssue::addCommit(const std::string &bareGitRepo, const std::strin
 
 
     // git update-ref refs/heads/$branch $commit_id
-    std::string branchPath = "refs/heads/" + branchName;
     argv.set("git", "update-ref", branchPath.c_str(), commitId.c_str(), 0);
     err = Subprocess::launchSync(argv.getv(), 0, bareGitRepo.c_str(), 0, 0, subStdout, subStderr);
     if (err) {

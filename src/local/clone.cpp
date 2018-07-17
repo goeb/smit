@@ -263,8 +263,9 @@ static int renameIssue(const std::string &dir, const IssueId &oldId)
     int err;
     std::string gitRef;
     std::string oldBranch = BRANCH_PREFIX_ISSUES + oldId;
+    std::string oldBranchFull = "refs/heads/" + oldBranch;
 
-    err = gitGetBranchRef(dir, oldBranch, GIT_REF_LOCAL, gitRef);
+    err = gitShowRef(dir, oldBranchFull, gitRef);
     if (err) return err;
     if (gitRef.empty()) return 0; // no such branch. do nothing.
 
@@ -287,7 +288,9 @@ static int renameIssue(const std::string &dir, const IssueId &oldId)
         snprintf(buffer, sizeof buffer, "%d", counter);
         newId = root + "." + buffer;
         newBranch = BRANCH_PREFIX_ISSUES + newId;
-        err = gitGetBranchRef(dir, newBranch, GIT_REF_LOCAL, gitRef);
+        std::string newBranchFull = "refs/heads/" + newBranch;
+
+        err = gitShowRef(dir, newBranchFull, gitRef);
         if (err) return err;
 
         if (gitRef.empty()) {

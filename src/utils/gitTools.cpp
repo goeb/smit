@@ -116,15 +116,12 @@ int gitAddCommitDir(const std::string &gitRepoPath, const std::string &author)
  * and the return code is 0.
  *
  */
-int gitGetBranchRef(const std::string &gitRepo, std::string branchName, GitRefType type, std::string &gitRef)
+int gitShowRef(const std::string &gitRepo, std::string branchName, std::string &gitRef)
 {
     Argv argv;
     std::string subStdout, subStderr;
 
     // git show-ref --hash <branchName>
-
-    if (type == GIT_REF_LOCAL) branchName = "refs/heads/" + branchName;
-    else branchName = "refs/remotes/origin/" + branchName;
 
     argv.set("git", "show-ref", "--hash", branchName.c_str(), 0);
 
