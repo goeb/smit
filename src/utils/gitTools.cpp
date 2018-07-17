@@ -199,6 +199,26 @@ std::string gitGetLocalBranchThatContains(const std::string &gitRepo, const std:
     // remove the first 2 characters
     if (line.size() > 2) line = line.substr(2);
     else line = "";
-    return line;
 
+    return line;
 }
+
+std::string gitMergeBase(const std::string &gitRepo, const std::string &branch1, const std::string &branch2)
+{
+    Argv argv;
+    std::string subStdout, subStderr;
+
+    // git merge-base <branch1> <branch2>
+    argv.set("git", "merge-base", branch1.c_str(), branch2.c_str(), 0);
+    int err = Subprocess::launchSync(argv.getv(), 0, gitRepo.c_str(), 0, 0, subStdout, subStderr);
+    if (err) {
+        LOG_ERROR("gitMergeBase error: branch1=%s, branch2=%s, stdout=%s, stderr=%s (gitRepo=%s)",
+                  branch1.c_str(), branch2.c_str(), subStdout.c_str(), subStderr.c_str(), gitRepo.c_str());
+        return "";
+    }
+
+    trim(subStdout);
+
+    return subStdout;
+}
+
