@@ -14,5 +14,6 @@ std::string gitGetFirstCommit(const std::string &gitRepo, const std::string &ref
 int gitRenameBranch(const std::string &gitRepo, const std::string &oldName, const std::string &newName);
 std::string gitGetLocalBranchThatContains(const std::string &gitRepo, const std::string &gitRef);
 std::string gitMergeBase(const std::string &gitRepo, const std::string &branch1, const std::string &branch2);
+int gitUpdateRef(const std::string &gitRepo, const std::string &oldValue, const std::string &newValue);
 
 #endif // _gitTools_h

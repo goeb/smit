@@ -219,3 +219,17 @@ std::string gitMergeBase(const std::string &gitRepo, const std::string &branch1,
     return subStdout;
 }
 
+int gitUpdateRef(const std::string &gitRepo, const std::string &oldValue, const std::string &newValue)
+{
+    Argv argv;
+    std::string subStdout, subStderr;
+
+    argv.set("git", "update-ref", oldValue.c_str(), newValue.c_str(), 0);
+    int err = Subprocess::launchSync(argv.getv(), 0, gitRepo.c_str(), 0, 0, subStdout, subStderr);
+    if (err) {
+        LOG_ERROR("gitUpdateRef error %d: old=%s, new=%s, %s", err, oldValue.c_str(), newValue.c_str(), subStderr.c_str());
+    }
+
+    return err;
+}
+
