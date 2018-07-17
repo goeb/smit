@@ -233,3 +233,20 @@ int gitUpdateRef(const std::string &gitRepo, const std::string &oldValue, const 
     return err;
 }
 
+
+int gitRevList(const std::string &gitRepo, const std::string &base, const std::string &branch)
+{
+    Argv argv;
+    std::string subStdout, subStderr;
+
+    std::string commitRange = base + ".." + branch;
+
+    // git rev-list 2ba568abdcbf91f05d0e3539004505c0ea6a6b0e..refs/heads/issues/2
+    argv.set("git", "rev-list", commitRange.c_str(), 0);
+    int err = Subprocess::launchSync(argv.getv(), 0, gitRepo.c_str(), 0, 0, subStdout, subStderr);
+    if (err) {
+        LOG_ERROR("gitRevList error %d: commitRange=%s, new=%s, %s", err, commitRange.c_str(), subStderr.c_str());
+    }
+
+    return err;
+}
