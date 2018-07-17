@@ -195,18 +195,35 @@ static int gitClone(const std::string &remote, const std::string &smitRepo, cons
     return err;
 }
 
-/** Rebase a branch onto the remote
- *
- * 1. create a specific worktree
- * 2. do the rebasing in this worktree
- * 3. clean up the worktree
+/** Rebase a branch onto the remote by cherry-picking
  *
  */
-static int rebaseBranchOntoRemote(const std::string &gitRepo, const std::string &branchName)
+static int rebaseBranchOntoRemoteFull(const std::string &gitRepo,const std::string &base, const std::string &branch)
 {
+    // git rev-list 2ba568abdcbf91f05d0e3539004505c0ea6a6b0e..refs/heads/issues/2
+    // 2d040344eb57a953bb72f688f996c81a70e9d531
+    // 9e9e7eae6f4db222da46f9838cfdf467fa41661c
+    // git branch tmp origin/issues/2
+    // git worktree add worktree_issue_x tmp
+    // cd worktree_issue_x
+    //     git cherry-pick --allow-empty -X theirs 9e9e7eae6f4db222da46f9838cfdf467fa41661c
+    //     git cherry-pick --allow-empty -X theirs 2d040344eb57a953bb72f688f996c81a70e9d531
+    //     TODO git notes copy
+    // git update-ref refs/heads/issues/2 refs/heads/tmp
+
+
+    int err = gitRevList(gitRepo, base, branch);
+    if (err) return -1;
+
+
+
     Argv argv;
     std::string subStdout, subStderr;
-    int err;
+std::string branchName;
+
+
+
+
 
     std::string pathWorkingTree;
     err = mkdirTmp(pathWorkingTree);
@@ -218,6 +235,7 @@ static int rebaseBranchOntoRemote(const std::string &gitRepo, const std::string 
     LOG_DIAG("rebaseBranchOntoRemote: use worktree %s", pathWorkingTree.c_str());
 
     // git needs a working dir for rebasing. Use a temporary directory.
+    // checkout to a detached HEAD ?
 
     argv.set("git", "worktree", "add", pathWorkingTree.c_str(), branchName.c_str(), 0);
     err = Subprocess::launchSync(argv.getv(), 0, gitRepo.c_str(), 0, 0, subStdout, subStderr);
@@ -231,8 +249,19 @@ static int rebaseBranchOntoRemote(const std::string &gitRepo, const std::string 
 
         // Do the rebasing in this new working tree
 
+
+
+
+        // foreach commit (git merge-base + git rev-list)
+        // {
+        //     git cherry-pick --allow-empty --keep-redundant-commits (?) -X theirs
+        //     git notes copy
+        // }
+
+        //xxx
+
         std::string remoteBranch = "origin/" + branchName;
-        argv.set("git", "rebase", "--merge", "--strategy", "ours", remoteBranch.c_str(), branchName.c_str(), 0);
+        argv.set("git", "rebase", "--keep-empty", "-X", "theirs", remoteBranch.c_str(), branchName.c_str(), 0);
         err = Subprocess::launchSync(argv.getv(), 0, pathWorkingTree.c_str(), 0, 0, subStdout, subStderr);
         if (err) {
             LOG_ERROR("Cannot rebase %s %s in %s: %s", remoteBranch.c_str(), branchName.c_str(),
@@ -247,6 +276,73 @@ static int rebaseBranchOntoRemote(const std::string &gitRepo, const std::string 
     argv.set("git", "worktree", "prune", 0);
     secondaryErr = Subprocess::launchSync(argv.getv(), 0, gitRepo.c_str(), 0, 0, subStdout, subStderr);
     if (secondaryErr) LOG_ERROR("Cannot prune worktree '%s': %s", gitRepo.c_str(), subStderr.c_str());
+
+}
+
+/** Rebase a branch onto the remote
+ *
+ * 1. create a specific worktree
+ * 2. do the rebasing in this worktree
+ * 3. clean up the worktree
+ *
+ */
+static int rebaseBranchOntoRemote(const std::string &gitRepo, const std::string &branchName)
+{
+    Argv argv;
+    std::string subStdout, subStderr;
+    int err;
+
+
+    // git merge-base issues/2 origin/issues/2
+    // 2ba568abdcbf91f05d0e3539004505c0ea6a6b0e
+    // if this == origin/issues/2, then do nothing and return ok -- no rebase needed
+    // if this == issues/2, then just do git update-ref refs/heads/issues/2 refs/remotes/origin/issues/2 (fast-forward)
+    // else:
+    // git rev-list 2ba568abdcbf91f05d0e3539004505c0ea6a6b0e..refs/heads/issues/2
+    // 2d040344eb57a953bb72f688f996c81a70e9d531
+    // 9e9e7eae6f4db222da46f9838cfdf467fa41661c
+    // git branch tmp origin/issues/2
+    // git worktree add worktree_issue_x tmp
+    // cd worktree_issue_x
+    //     git cherry-pick --allow-empty -X theirs 9e9e7eae6f4db222da46f9838cfdf467fa41661c
+    //     git cherry-pick --allow-empty -X theirs 2d040344eb57a953bb72f688f996c81a70e9d531
+    //     TODO git notes copy
+    // git update-ref refs/heads/issues/2 refs/heads/tmp
+    // done!
+
+    // Do the rebasing manually as git-rebase --keep-empty does not keep all empty commits
+    std::string localBranch = "refs/heads/" + branchName;
+    std::string remoteBranch = "refs/remotes/origin/" + branchName;
+    std::string base = gitMergeBase(gitRepo, localBranch, remoteBranch);
+    if (base.empty()) {
+        LOG_ERROR("gitMergeBase(%s, %s, %s) returned void", gitRepo.c_str(), localBranch.c_str(), remoteBranch.c_str());
+        return -1;
+    }
+
+    std::string gitRef;
+    err = gitShowRef(gitRepo, remoteBranch, gitRef);
+    if (err) return -1;
+
+    if (gitRef == base) {
+        // The local branch is ahead of the remote, without diverging.
+        // Do nothing and return ok -- no rebase needed
+        LOG_DIAG("rebaseBranchOntoRemote: no rebase needed (1) for %s", branchName.c_str());
+        return 0;
+    }
+
+    err = gitShowRef(gitRepo, localBranch, gitRef);
+    if (err) return -1;
+    if (gitRef == base) {
+        // The local branch is past the remote, without diverging.
+        // Simply do git update-ref refs/heads/issues/x -> refs/remote/origin/issues/x (fast-forward)
+        LOG_DIAG("rebaseBranchOntoRemote: fast-forward for %s", branchName.c_str());
+
+        err = gitUpdateRef(gitRepo, localBranch, remoteBranch);
+
+        return err;
+    }
+
+    err = rebaseBranchOntoRemoteFull(gitRepo, base, branchName);
 
     return err;
 }
@@ -367,6 +463,13 @@ static int gitPullIssue(const std::string &dir, const IssueId &remoteIssueId, co
     return err;
 }
 
+/** alternative
+ *
+ * list all commits of all issues
+ * => map<branch, list<EntryId> > (local&remote)
+ * => map<EntryId, branch> first entries (local&remote)
+ * then ...
+ */
 
 static int gitPullIssues(const std::string &dir)
 {

@@ -358,14 +358,9 @@ std::string GitIssue::addCommit(const std::string &bareGitRepo, const std::strin
     std::string commitId = subStdout;
     trim(commitId);
 
-
     // git update-ref refs/heads/$branch $commit_id
-    argv.set("git", "update-ref", branchPath.c_str(), commitId.c_str(), 0);
-    err = Subprocess::launchSync(argv.getv(), 0, bareGitRepo.c_str(), 0, 0, subStdout, subStderr);
-    if (err) {
-        LOG_ERROR("addCommit update-ref error %d: %s", err, subStderr.c_str());
-        return "";
-    }
+    err = gitUpdateRef(bareGitRepo, branchPath, commitId);
+    if (err) return "";
 
     LOG_DIAG("addCommit: %s", commitId.c_str());
 
