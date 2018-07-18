@@ -114,21 +114,6 @@ int testSessid(const std::string &url, const HttpClientContext &ctx)
 }
 
 
-static int gitTrackRemoteBranch(const std::string &gitRepo, const std::string &branchName)
-{
-    Argv argv;
-    std::string subStdout, subStderr;
-    std::string remoteBranch = "origin/" + branchName;
-
-    argv.set("git", "branch", branchName.c_str(), remoteBranch.c_str(), 0);
-    int err = Subprocess::launchSync(argv.getv(), 0, gitRepo.c_str(), 0, 0, subStdout, subStderr);
-    if (err) {
-        LOG_ERROR("gitTrackRemoteBranch: error: %d: stdout=%s, stderr=%s", err, subStdout.c_str(), subStderr.c_str());
-    }
-
-    return err;
-}
-
 /** Create local branches tracking remotes ones after a clone
  */
 static int alignIssueBranches(const std::string &projectPath)
@@ -149,7 +134,8 @@ static int alignIssueBranches(const std::string &projectPath)
 
         // create a local branch
         std::string localBranch = BRANCH_PREFIX_ISSUES +  issueId;
-        err = gitTrackRemoteBranch(projectPath, localBranch);
+        std::string origin = "origin/" BRANCH_PREFIX_ISSUES +  issueId;
+        err = gitBranchCreate(projectPath, localBranch, origin);
     }
     ilist.close();
     return err;
@@ -195,7 +181,26 @@ static int gitClone(const std::string &remote, const std::string &smitRepo, cons
     return err;
 }
 
+static int copyNotes(const std::string &gitRepo, const std::string &fromCommit)
+{
+    // read the notes attached to <fromCommit> and copy to the current HEAD commit
+    // git notes copy [-f] <from-object> <to-object> )
+
+    Argv argv;
+    std::string subStdout, subStderr;
+
+    argv.set("git", "notes", "copy", "--force", fromCommit.c_str(), "HEAD", 0);
+    int err = Subprocess::launchSync(argv.getv(), 0, gitRepo.c_str(), 0, 0, subStdout, subStderr);
+    if (err) {
+        LOG_DIAG("git notes add error: gitRepo=%s, fromCommit=%s, stderr=%s",
+                 gitRepo.c_str(), fromCommit.c_str(), subStderr.c_str());
+    }
+    return err;
+}
+
 /** Rebase a branch onto the remote by cherry-picking
+ *
+ *  Notes are also copied.
  *
  */
 static int rebaseBranchOntoRemoteFull(const std::string &gitRepo,const std::string &base, const std::string &branch)
@@ -212,18 +217,15 @@ static int rebaseBranchOntoRemoteFull(const std::string &gitRepo,const std::stri
     // git update-ref refs/heads/issues/2 refs/heads/tmp
 
 
-    int err = gitRevList(gitRepo, base, branch);
+    std::string localBranch = "refs/heads/" + branch;
+    std::string revList;
+    int err = gitRevListReverse(gitRepo, base, localBranch, revList);
     if (err) return -1;
 
-
-
-    Argv argv;
-    std::string subStdout, subStderr;
-std::string branchName;
-
-
-
-
+    const char *TMP_BRANCH = "smit_tmp_for_rebasing";
+    std::string origin = "refs/remotes/origin/" + branch;
+    err = gitBranchCreate(gitRepo, TMP_BRANCH, origin, GIT_OPT_FORCE);
+    if (err) return -1;
 
     std::string pathWorkingTree;
     err = mkdirTmp(pathWorkingTree);
@@ -232,51 +234,48 @@ std::string branchName;
         return -1;
     }
 
-    LOG_DIAG("rebaseBranchOntoRemote: use worktree %s", pathWorkingTree.c_str());
-
-    // git needs a working dir for rebasing. Use a temporary directory.
-    // checkout to a detached HEAD ?
-
-    argv.set("git", "worktree", "add", pathWorkingTree.c_str(), branchName.c_str(), 0);
-    err = Subprocess::launchSync(argv.getv(), 0, gitRepo.c_str(), 0, 0, subStdout, subStderr);
+    err = gitWorktreeAdd(gitRepo, pathWorkingTree, TMP_BRANCH);
     if (err) {
-        // git worktree failed. Possible reasons:
-        // - no such branch
-        // - already exists
-        LOG_ERROR("Cannot create temporary working tree %s => %s: %s", gitRepo.c_str(), branchName.c_str(), subStderr.c_str());
-
-    } else {
-
-        // Do the rebasing in this new working tree
-
-
-
-
-        // foreach commit (git merge-base + git rev-list)
-        // {
-        //     git cherry-pick --allow-empty --keep-redundant-commits (?) -X theirs
-        //     git notes copy
-        // }
-
-        //xxx
-
-        std::string remoteBranch = "origin/" + branchName;
-        argv.set("git", "rebase", "--keep-empty", "-X", "theirs", remoteBranch.c_str(), branchName.c_str(), 0);
-        err = Subprocess::launchSync(argv.getv(), 0, pathWorkingTree.c_str(), 0, 0, subStdout, subStderr);
-        if (err) {
-            LOG_ERROR("Cannot rebase %s %s in %s: %s", remoteBranch.c_str(), branchName.c_str(),
-                      gitRepo.c_str(), subStderr.c_str());
-        }
+        gitBranchRemove(gitRepo, TMP_BRANCH);
+        return -1;
     }
 
-    // Remove this working tree (recursively, all files)
-    int secondaryErr = removeDir(pathWorkingTree);
-    if (secondaryErr) LOG_ERROR("Cannot remove dir: %s", pathWorkingTree.c_str());
+    LOG_DIAG("rebaseBranchOntoRemoteFull: start cherry-picking in worktree %s", pathWorkingTree.c_str());
 
-    argv.set("git", "worktree", "prune", 0);
-    secondaryErr = Subprocess::launchSync(argv.getv(), 0, gitRepo.c_str(), 0, 0, subStdout, subStderr);
-    if (secondaryErr) LOG_ERROR("Cannot prune worktree '%s': %s", gitRepo.c_str(), subStderr.c_str());
+    while (!revList.empty()) {
+        std::string commit = popToken(revList, '\n');
+        if (commit.empty()) continue;
 
+        LOG_DIAG("Cherry-picking commit %s", commit.c_str());
+
+        Argv argv;
+        std::string subStdout, subStderr;
+
+        argv.set("git", "cherry-pick", "--allow-empty", "-X", "theirs", commit.c_str(), 0);
+        err = Subprocess::launchSync(argv.getv(), 0, pathWorkingTree.c_str(), 0, 0, subStdout, subStderr);
+        if (err) {
+            LOG_ERROR("git cherry-pick error: pathWorkingTree=%s, stderr=%s", pathWorkingTree.c_str(), subStderr.c_str());
+            LOG_ERROR("The temporary directory %s has been kept for further investigation, and you may remove it afterwards",
+                      pathWorkingTree.c_str());
+            // keep the branch TMP_BRANCH, as it the working tree is bound to this branch.
+            return -1;
+        }
+
+        // copy notes
+        err = copyNotes(pathWorkingTree, commit);
+        // do not check error code as an error is raised if the commit has no note.
+    }
+
+    // remove the temporary worktree
+    err = gitWorktreeRemove(gitRepo, pathWorkingTree);
+    if (err) return -1;
+
+    err = gitUpdateRef(gitRepo, localBranch, TMP_BRANCH);
+    if (err) return -1;
+
+    gitBranchRemove(gitRepo, TMP_BRANCH, GIT_OPT_FORCE);
+
+    return 0;
 }
 
 /** Rebase a branch onto the remote
@@ -288,10 +287,7 @@ std::string branchName;
  */
 static int rebaseBranchOntoRemote(const std::string &gitRepo, const std::string &branchName)
 {
-    Argv argv;
-    std::string subStdout, subStderr;
     int err;
-
 
     // git merge-base issues/2 origin/issues/2
     // 2ba568abdcbf91f05d0e3539004505c0ea6a6b0e
@@ -453,12 +449,12 @@ static int gitPullIssue(const std::string &dir, const IssueId &remoteIssueId, co
 
         renameIssue(dir, remoteIssueId); // does nothing if no such local issue
 
-        std::string branchName = BRANCH_PREFIX_ISSUES + remoteIssueId;
-        err = gitTrackRemoteBranch(dir, branchName);
+        std::string branchName = BRANCH_PREFIX_ISSUES + remoteIssueId;        
+        std::string origin = "origin/" BRANCH_PREFIX_ISSUES +  remoteIssueId;
+        err = gitBranchCreate(dir, branchName, origin);
         if (err) {
             LOG_ERROR("gitPullIssue %s error (dir=%s) (2)", remoteIssueId.c_str(), dir.c_str());
         }
-
     }
     return err;
 }
@@ -532,6 +528,8 @@ static int gitPull(const std::string &dir, bool isProject)
     if (isProject) {
         // pull branches issues/*
         gitPullIssues(dir);
+
+        // TODO pull notes
     }
 
 

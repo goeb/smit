@@ -219,34 +219,143 @@ std::string gitMergeBase(const std::string &gitRepo, const std::string &branch1,
     return subStdout;
 }
 
-int gitUpdateRef(const std::string &gitRepo, const std::string &oldValue, const std::string &newValue)
+/** Git update-ref
+ *
+ * @param gitRepo
+ * @param gitRef
+ *     This must be the full path.
+ *     Eg:
+ *         refs/heads/<branch-name>
+ *         refs/remotes/origin/<branch-name>
+ * @param newValue
+ *
+ */
+int gitUpdateRef(const std::string &gitRepo, const std::string &gitRef, const std::string &newValue)
 {
     Argv argv;
     std::string subStdout, subStderr;
 
-    argv.set("git", "update-ref", oldValue.c_str(), newValue.c_str(), 0);
+    argv.set("git", "update-ref", gitRef.c_str(), newValue.c_str(), 0);
     int err = Subprocess::launchSync(argv.getv(), 0, gitRepo.c_str(), 0, 0, subStdout, subStderr);
     if (err) {
-        LOG_ERROR("gitUpdateRef error %d: old=%s, new=%s, %s", err, oldValue.c_str(), newValue.c_str(), subStderr.c_str());
+        LOG_ERROR("gitUpdateRef error %d: ref=%s, new=%s, %s", err, gitRef.c_str(), newValue.c_str(), subStderr.c_str());
     }
 
     return err;
 }
 
-
-int gitRevList(const std::string &gitRepo, const std::string &base, const std::string &branch)
+/** git rev-list
+ *
+ * @param[out] out
+ *     List of commit objects as returned by git rev-list --reverse
+ *     (in chronological order)
+ * @return
+ *     0 on sucess
+ *    <0 on error
+ */
+int gitRevListReverse(const std::string &gitRepo, const std::string &base, const std::string &branch, std::string &out)
 {
     Argv argv;
-    std::string subStdout, subStderr;
+    std::string subStderr;
 
     std::string commitRange = base + ".." + branch;
 
     // git rev-list 2ba568abdcbf91f05d0e3539004505c0ea6a6b0e..refs/heads/issues/2
-    argv.set("git", "rev-list", commitRange.c_str(), 0);
-    int err = Subprocess::launchSync(argv.getv(), 0, gitRepo.c_str(), 0, 0, subStdout, subStderr);
+    argv.set("git", "rev-list", "--reverse", commitRange.c_str(), 0);
+    int err = Subprocess::launchSync(argv.getv(), 0, gitRepo.c_str(), 0, 0, out, subStderr);
     if (err) {
-        LOG_ERROR("gitRevList error %d: commitRange=%s, new=%s, %s", err, commitRange.c_str(), subStderr.c_str());
+        LOG_ERROR("gitRevList error %d: commitRange=%s, stderr=%s", err, commitRange.c_str(), subStderr.c_str());
     }
 
     return err;
 }
+
+
+/** Create a branch
+ *
+ * @param options
+ *    bit field
+ *        GIT_OPT_FORCE: Reset <branchname> to <startpoint> if <branchname> exists already
+ */
+int gitBranchCreate(const std::string &gitRepo, const std::string &branch, const std::string &startPoint, int options)
+{
+    Argv argv;
+    std::string subStdout, subStderr;
+
+    argv.set("git", "branch", branch.c_str(), startPoint.c_str(), 0);
+
+    if (options & GIT_OPT_FORCE) argv.append("--force", 0);
+
+    int err = Subprocess::launchSync(argv.getv(), 0, gitRepo.c_str(), 0, 0, subStdout, subStderr);
+    if (err) {
+        LOG_ERROR("gitBranchCreate error: %d: branch=%s, start=%s, stdout=%s, stderr=%s", err,
+                  branch.c_str(), startPoint.c_str(), subStdout.c_str(), subStderr.c_str());
+    }
+
+    return err;
+}
+
+/** Remove a branch
+ *
+ * @param options
+ *    bit field
+ *        GIT_OPT_FORCE: allow deleting the branch irrespective of its merged status
+ */
+int gitBranchRemove(const std::string &gitRepo, const std::string &branch, int options)
+{
+    Argv argv;
+    std::string subStdout, subStderr;
+
+    argv.set("git", "branch", "--delete", branch.c_str(), 0);
+
+    if (options & GIT_OPT_FORCE) argv.append("--force", 0);
+
+    int err = Subprocess::launchSync(argv.getv(), 0, gitRepo.c_str(), 0, 0, subStdout, subStderr);
+    if (err) {
+        LOG_ERROR("gitBranchRemove error: %d: branch=%s, stdout=%s, stderr=%s", err,
+                  branch.c_str(), subStdout.c_str(), subStderr.c_str());
+    }
+
+    return err;
+}
+
+int gitWorktreeAdd(const std::string &gitRepo, const std::string &pathWorkingTree, const std::string &branch)
+{
+    Argv argv;
+    std::string subStdout, subStderr;
+    int err;
+
+    // Do a prune first, to clean possible previous errors
+    // This is typically useful when a previous smit pull has failed and
+    // the user has manually deleted the temporary worktree directory (but not pruned)
+    argv.set("git", "worktree", "prune", 0);
+    Subprocess::launchSync(argv.getv(), 0, gitRepo.c_str(), 0, 0, subStdout, subStderr);
+
+    argv.set("git", "worktree", "add", pathWorkingTree.c_str(), branch.c_str(), 0);
+    err = Subprocess::launchSync(argv.getv(), 0, gitRepo.c_str(), 0, 0, subStdout, subStderr);
+    if (err) {
+        // git worktree failed. Possible reasons:
+        // - no such branch
+        // - already exists
+        LOG_ERROR("gitWorktreeAdd error: gitRepo=%s, pathWorkingTree=%s, branch=%s, stderr=%s", gitRepo.c_str(),
+                  pathWorkingTree.c_str(), branch.c_str(), subStderr.c_str());
+    }
+    return err;
+}
+
+int gitWorktreeRemove(const std::string &gitRepo, const std::string &pathWorkingTree)
+{
+    int err = removeDir(pathWorkingTree);
+    if (err) return -1;
+
+    Argv argv;
+    std::string subStdout, subStderr;
+
+    argv.set("git", "worktree", "prune", 0);
+    err = Subprocess::launchSync(argv.getv(), 0, gitRepo.c_str(), 0, 0, subStdout, subStderr);
+    if (err) {
+        LOG_ERROR("gitWorktreeRemove error: gitRepo=%s, stderr=%s", gitRepo.c_str(), subStderr.c_str());
+    }
+    return err;
+}
+
