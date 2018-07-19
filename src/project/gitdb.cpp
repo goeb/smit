@@ -231,7 +231,6 @@ int gitdbSetNotes(const std::string &gitRepoPath, const ObjectId &entryId, const
     return err;
 }
 
-// git-reset needed after a read-tree, as the index has been modified
 static void gitReset(const std::string &bareGitRepo)
 {
     int err;
@@ -245,35 +244,16 @@ static void gitReset(const std::string &bareGitRepo)
     }
 }
 
-
-/**
- * @brief add an entry (ie: a commit) in the branch of the issue
- * @param bareGitRepo Must be the path to a bare git repository
- * @param issueId
- * @param author
- * @param body
- * @param files
- *    List of files identifiers, in the form: <sha1-id>/<filename>
- *    The file itself must have been previously stored in the git
- *    repository with git hash-object -w (see related function)
- * @return
+/** Create a tree object in a bare git repository
  *
- * The atomicity and thread safety is not garanteed at this level.
- * The caller must manage his own mutex.
+ * @param bareGitRepo
+ * @param files
+ * @return
+ *     Identifier of the tree object, or an empty string on error.
+ *
  */
-std::string GitIssue::addCommit(const std::string &bareGitRepo, const std::string &issueId,
-                                const std::string &author, long ctime, const std::string &body, const std::list<AttachedFileRef> &files)
+static std::string createTree(const std::string &bareGitRepo, const std::list<AttachedFileRef> &files)
 {
-    // git commit in a branch issues/<id> without checking out the branch
-    // The git commands must be run in a bare git repo (the ".git/").
-
-    // git read-tree --empty
-    // attached files: git update-index --add --cacheinfo 100644 ...
-    // git write-tree
-    // git show-ref issues/<id>
-    // git commit-tree
-    // git update-ref refs/heads/issues/<id>
-
     int err;
     std::string subStdout, subStderr;
     Argv argv;
@@ -281,7 +261,7 @@ std::string GitIssue::addCommit(const std::string &bareGitRepo, const std::strin
     argv.set("git", "read-tree", "--empty", 0);
     err = Subprocess::launchSync(argv.getv(), 0, bareGitRepo.c_str(), 0, 0, subStdout, subStderr);
     if (err) {
-        LOG_ERROR("addCommit read-tree error %d: %s", err, subStderr.c_str());
+        LOG_ERROR("createTree: read-tree error %d: %s", err, subStderr.c_str());
        return "";
     }
 
@@ -293,7 +273,7 @@ std::string GitIssue::addCommit(const std::string &bareGitRepo, const std::strin
                  afr->id.c_str(), afr->filename.c_str(), 0);
         err = Subprocess::launchSync(argv.getv(), 0, bareGitRepo.c_str(), 0, 0, subStdout, subStderr);
         if (err) {
-            LOG_ERROR("addCommit update-index error %d: %s", err, subStderr.c_str());
+            LOG_ERROR("createTree: update-index error %d: %s", err, subStderr.c_str());
             return "";
         }
     }
@@ -301,34 +281,49 @@ std::string GitIssue::addCommit(const std::string &bareGitRepo, const std::strin
     argv.set("git", "write-tree", 0);
     err = Subprocess::launchSync(argv.getv(), 0, bareGitRepo.c_str(), 0, 0, subStdout, subStderr);
     if (err) {
-        LOG_ERROR("addCommit write-tree error %d: %s", err, subStderr.c_str());
+        LOG_ERROR("createTree: write-tree error %d: %s", err, subStderr.c_str());
         return "";
     }
 
     std::string treeId = subStdout;
     trim(treeId);
     if (treeId.size() != SIZE_COMMIT_ID) {
-        LOG_ERROR("addCommit write-tree error: treeId=%s", treeId.c_str());
+        LOG_ERROR("createTree: write-tree error: treeId=%s", treeId.c_str());
         return "";
     }
 
-    // Get the reference of the branch, if is exists
-    std::string branchPath = "refs/heads/issues/" + issueId;
+    // git-reset needed as the index has been modified by read-tree
+    gitReset(bareGitRepo);
+
+    return treeId;
+}
+
+/** Create a commit in a branch
+ *
+ */
+static std::string createCommitUpdateBranch(const std::string &bareGitRepo, const std::string &branch, const std::string &tree,
+                                const std::string &author, long ctime, const std::string &body)
+{
+    int err;
+    std::string subStdout, subStderr;
+    Argv argv;
+
+    std::string branchPath = "refs/heads/" + branch; // a commit is always created in a local branch
+
     std::string branchRef;
     err = gitShowRef(bareGitRepo, branchPath, branchRef);
     if (err) return "";
 
-
     // check that branchRef is either empty or consistent with a commit id
     if (branchRef.size() && branchRef.size() != SIZE_COMMIT_ID) {
-        LOG_ERROR("addCommit show-ref error: branchRef=%s", branchRef.c_str());
+        LOG_ERROR("createCommitUpdateBranch show-ref error: branchRef=%s", branchRef.c_str());
         return "";
     }
     // If the branch ref does not exist, the branch will be created later.
 
     // git commit-tree
 
-    argv.set("git", "commit-tree", treeId.c_str(), 0);
+    argv.set("git", "commit-tree", tree.c_str(), 0);
     if (!branchRef.empty()) {
         argv.append("-p", branchRef.c_str(), 0);
     }
@@ -351,7 +346,7 @@ std::string GitIssue::addCommit(const std::string &bareGitRepo, const std::strin
 
     err = Subprocess::launchSync(argv.getv(), envp.getv(), bareGitRepo.c_str(), body.data(), body.size(), subStdout, subStderr);
     if (err) {
-        LOG_ERROR("addCommit commit-tree error %d: %s", err, subStderr.c_str());
+        LOG_ERROR("createCommitUpdateBranch commit-tree error %d: %s", err, subStderr.c_str());
         return "";
     }
 
@@ -362,9 +357,54 @@ std::string GitIssue::addCommit(const std::string &bareGitRepo, const std::strin
     err = gitUpdateRef(bareGitRepo, branchPath, commitId);
     if (err) return "";
 
-    LOG_DIAG("addCommit: %s", commitId.c_str());
+    return commitId;
+}
 
-    gitReset(bareGitRepo);
+/**
+ * @brief add an entry (ie: a commit) in the branch of the issue
+ * @param bareGitRepo Must be the path to a bare git repository
+ * @param issueId
+ * @param author
+ * @param body
+ * @param files
+ *    List of files identifiers, in the form: <sha1-id>/<filename>
+ *    The file itself must have been previously stored in the git
+ *    repository with git hash-object -w (see related function)
+ * @return
+ *    Identifier of the commit object, or an empty string on error.
+ *
+ * The atomicity and thread safety is not garanteed at this level.
+ * The caller must manage his own mutex.
+ */
+std::string GitIssue::addCommit(const std::string &bareGitRepo, const std::string &issueId,
+                                const std::string &author, long ctime, const std::string &body, const std::list<AttachedFileRef> &files)
+{
+    // git commit in a branch issues/<id> without checking out the branch
+    // The git commands must be run in a bare git repo (the ".git/").
+
+    // git read-tree --empty
+    // attached files: git update-index --add --cacheinfo 100644 ...
+    // git write-tree
+    // git show-ref issues/<id>
+    // git commit-tree
+    // git update-ref refs/heads/issues/<id>
+
+    std::string treeId = createTree(bareGitRepo, files);
+    if (treeId.empty()) {
+        LOG_ERROR("addCommit: createTree error");
+        return "";
+    }
+
+    // Get the reference of the branch, if is exists
+    std::string branch = BRANCH_PREFIX_ISSUES + issueId;
+
+   std::string commitId = createCommitUpdateBranch(bareGitRepo, branch, treeId, author, ctime, body);
+   if (commitId.empty()) {
+       LOG_ERROR("addCommit: createCommitUpdateBranch error");
+       return "";
+   }
+
+    LOG_DIAG("addCommit: %s", commitId.c_str());
 
     return commitId;
 }

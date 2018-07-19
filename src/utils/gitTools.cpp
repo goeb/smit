@@ -232,6 +232,12 @@ std::string gitMergeBase(const std::string &gitRepo, const std::string &branch1,
  */
 int gitUpdateRef(const std::string &gitRepo, const std::string &gitRef, const std::string &newValue)
 {
+
+    if (0 != strncmp(gitRef.c_str(), "refs/", 5)) {
+        LOG_ERROR("gitUpdateRef error: wrong gitRef '%s'. Must start by 'refs/'.", gitRef.c_str());
+        return -1;
+    }
+
     Argv argv;
     std::string subStdout, subStderr;
 
