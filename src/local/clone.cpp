@@ -245,11 +245,9 @@ static int rebaseBranchOntoRemoteFull(const std::string &gitRepo,const std::stri
     // 2d040344eb57a953bb72f688f996c81a70e9d531
     // 9e9e7eae6f4db222da46f9838cfdf467fa41661c
     // git branch tmp origin/issues/2
-    // git worktree add worktree_issue_x tmp
-    // cd worktree_issue_x
-    //     git cherry-pick --allow-empty -X theirs 9e9e7eae6f4db222da46f9838cfdf467fa41661c
-    //     git cherry-pick --allow-empty -X theirs 2d040344eb57a953bb72f688f996c81a70e9d531
-    //     TODO git notes copy
+    // foreach commit of the rev-list
+    //     rebase commit onto tmp branch (custom rebasing)
+    //     git notes copy ...
     // git update-ref refs/heads/issues/2 refs/heads/tmp
 
 
@@ -520,14 +518,32 @@ static void printModifiedBranches(std::string gitPullStderr)
     }
 }
 
+static void fetchNotes(const std::string &gitRepo)
+{
+    Argv argv;
+    std::string subStdout, subStderr;
+    int err;
+
+    // git fetch origin refs/notes/commits:refs/notes/commits
+    const std::string refNotes = "refs/notes/commits";
+    std::string paramRefNotes = refNotes + ":" + refNotes;
+    argv.set("git", "fetch", "origin", paramRefNotes.c_str(), 0);
+    err = Subprocess::launchSync(argv.getv(), 0, gitRepo.c_str(), 0, 0, subStdout, subStderr);
+    if (err) {
+        // this case may happen if the origin has no note: this is not an error
+        LOG_DIAG("git fetch notes: stdout=%s, stderr=%s", subStdout.c_str(), subStderr.c_str());
+    }
+}
+
 static int gitPull(const std::string &dir, bool isProject)
 {
     Argv argv;
     std::string subStdout, subStderr;
+    int err;
 
     // For branch master, conflicts shall be manually resolved
     argv.set("git", "pull", "--rebase", 0);
-    int err = Subprocess::launchSync(argv.getv(), 0, dir.c_str(), 0, 0, subStdout, subStderr);
+    err = Subprocess::launchSync(argv.getv(), 0, dir.c_str(), 0, 0, subStdout, subStderr);
     if (err) {
         LOG_ERROR("gitPull: error: %d: stdout=%s, stderr=%s", err, subStdout.c_str(), subStderr.c_str());
         return err;
@@ -538,11 +554,11 @@ static int gitPull(const std::string &dir, bool isProject)
 
     if (isProject) {
         // pull branches issues/*
-        gitPullIssues(dir);
+        err = gitPullIssues(dir);
 
-        // TODO pull notes
+        // Fetch the notes
+        fetchNotes(dir);
     }
-
 
     return err;
 }
@@ -641,6 +657,10 @@ static int cloneAll(const HttpClientContext &ctx, const std::string &rooturl, co
                 LOG_ERROR("Abort.");
                 exit(1);
             }
+
+            // Fetch the git notes (smit tags)
+            std::string gitRepo = localdir + "/" + projectDir;
+            fetchNotes(gitRepo);
         }
     }
 
