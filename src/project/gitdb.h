@@ -41,8 +41,12 @@ public:
     int open(const std::string &gitRepoPath, const std::string &issueId);
     std::string getNextEntry();
     void close();
+    static std::string addCommit(const std::string &bareGitRepo, const std::string &branch,
+                                 const std::string &tree, const std::string &author, long ctime, const std::string &body);
     static std::string addCommit(const std::string &bareGitRepo, const std::string &issueId,
                                  const std::string &author, long ctime, const std::string &body, const std::list<AttachedFileRef> &files);
+    static std::string getCommit(const std::string &gitRepo, const std::string &commit);
+
 
 private:
     Subprocess *subp;

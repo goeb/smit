@@ -74,14 +74,36 @@ void GitIssueList::close()
     delete subp;
 }
 
+static Argv getCmdLog()
+{
+    // Return the command for reading the log
+    Argv argv;
+    argv.set("git", "log", "--format=raw", "--notes", 0);
+    return argv;
+}
+
+std::string GitIssue::getCommit(const std::string &gitRepo, const std::string &commit)
+{
+    Argv argv = getCmdLog();
+    argv.append(commit.c_str(), "-1", 0); // get just this commit
+    std::string subStdout, subStderr;
+
+    int err = Subprocess::launchSync(argv.getv(), 0, gitRepo.c_str(), 0, 0, subStdout, subStderr);
+    if (err) {
+        LOG_DIAG("git log single commit error: gitRepo=%s, commit=%s, stderr=%s",
+                 gitRepo.c_str(), commit.c_str(), subStderr.c_str());
+        return "";
+    }
+    return subStdout;
+}
 
 int GitIssue::open(const std::string &gitRepoPath, const std::string &issueId)
 {
     // git log --format=raw --notes issues/<id>"
 
     std::string branchIssueId = BRANCH_PREFIX_ISSUES + issueId;
-    Argv argv;
-    argv.set("git", "log", "--format=raw", "--notes", branchIssueId.c_str(), 0);
+    Argv argv = getCmdLog();
+    argv.append(branchIssueId.c_str(), 0);
 
     subp = Subprocess::launch(argv.getv(), 0, gitRepoPath.c_str());
     if (!subp) {
@@ -300,8 +322,10 @@ static std::string createTree(const std::string &bareGitRepo, const std::list<At
 
 /** Create a commit in a branch
  *
+ * @return
+ *     The newly created commit identifier, or an empty string on error.
  */
-static std::string createCommitUpdateBranch(const std::string &bareGitRepo, const std::string &branch, const std::string &tree,
+std::string GitIssue::addCommit(const std::string &bareGitRepo, const std::string &branch, const std::string &tree,
                                 const std::string &author, long ctime, const std::string &body)
 {
     int err;
@@ -316,7 +340,7 @@ static std::string createCommitUpdateBranch(const std::string &bareGitRepo, cons
 
     // check that branchRef is either empty or consistent with a commit id
     if (branchRef.size() && branchRef.size() != SIZE_COMMIT_ID) {
-        LOG_ERROR("createCommitUpdateBranch show-ref error: branchRef=%s", branchRef.c_str());
+        LOG_ERROR("addCommit: show-ref error: branchRef=%s", branchRef.c_str());
         return "";
     }
     // If the branch ref does not exist, the branch will be created later.
@@ -346,7 +370,7 @@ static std::string createCommitUpdateBranch(const std::string &bareGitRepo, cons
 
     err = Subprocess::launchSync(argv.getv(), envp.getv(), bareGitRepo.c_str(), body.data(), body.size(), subStdout, subStderr);
     if (err) {
-        LOG_ERROR("createCommitUpdateBranch commit-tree error %d: %s", err, subStderr.c_str());
+        LOG_ERROR("addCommit commit-tree error %d: %s", err, subStderr.c_str());
         return "";
     }
 
@@ -398,11 +422,11 @@ std::string GitIssue::addCommit(const std::string &bareGitRepo, const std::strin
     // Get the reference of the branch, if is exists
     std::string branch = BRANCH_PREFIX_ISSUES + issueId;
 
-   std::string commitId = createCommitUpdateBranch(bareGitRepo, branch, treeId, author, ctime, body);
-   if (commitId.empty()) {
-       LOG_ERROR("addCommit: createCommitUpdateBranch error");
-       return "";
-   }
+    std::string commitId = addCommit(bareGitRepo, branch, treeId, author, ctime, body);
+    if (commitId.empty()) {
+        LOG_ERROR("addCommit: createCommitUpdateBranch error");
+        return "";
+    }
 
     LOG_DIAG("addCommit: %s", commitId.c_str());
 

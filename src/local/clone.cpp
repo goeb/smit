@@ -181,7 +181,7 @@ static int gitClone(const std::string &remote, const std::string &smitRepo, cons
     return err;
 }
 
-static int copyNotes(const std::string &gitRepo, const std::string &fromCommit)
+static int copyNotes(const std::string &gitRepo, const std::string &fromCommit, const std::string &toCommit)
 {
     // read the notes attached to <fromCommit> and copy to the current HEAD commit
     // git notes copy [-f] <from-object> <to-object> )
@@ -189,13 +189,49 @@ static int copyNotes(const std::string &gitRepo, const std::string &fromCommit)
     Argv argv;
     std::string subStdout, subStderr;
 
-    argv.set("git", "notes", "copy", "--force", fromCommit.c_str(), "HEAD", 0);
+    argv.set("git", "notes", "copy", "--force", fromCommit.c_str(), toCommit.c_str(), 0);
     int err = Subprocess::launchSync(argv.getv(), 0, gitRepo.c_str(), 0, 0, subStdout, subStderr);
     if (err) {
         LOG_DIAG("git notes add error: gitRepo=%s, fromCommit=%s, stderr=%s",
                  gitRepo.c_str(), fromCommit.c_str(), subStderr.c_str());
     }
     return err;
+}
+
+static int gitRebaseCommit(const std::string &gitRepo, const std::string &branch, const std::string &commit)
+{
+    LOG_DIAG("gitRebaseCommit %s", commit.c_str());
+
+    // Create a new entry with same message, author, creation time, treeid, etc.
+    // - parse the old commit
+    // - create the new commit
+    // Use:
+    // - Entry::loadEntry()
+    // - gitdb.cpp createCommitUpdateBranch()
+
+    // read the commit message
+    std::string entryString = GitIssue::getCommit(gitRepo, commit);
+
+    // get the entry
+    std::string tree;
+    std::list<std::string> tags;
+    Entry *e = Entry::loadEntry(entryString, tree, tags);
+    if (!e) {
+        LOG_ERROR("gitRebaseCommit: Cannot load entry '%s'", entryString.c_str());
+        return -1;
+    }
+
+    // create a clone of this entry onto the branch
+    std::string bareGitRepo = gitRepo + "/.git";
+    const std::string body = e->serialize();
+
+    std::string newCommit = GitIssue::addCommit(bareGitRepo, branch, tree, e->author, e->ctime, body);
+    if (newCommit.empty()) {
+        LOG_ERROR("gitRebaseCommit: Cannot create rebased commit");
+        return -1;
+    }
+
+    return 0;
 }
 
 /** Rebase a branch onto the remote by cherry-picking
@@ -227,48 +263,23 @@ static int rebaseBranchOntoRemoteFull(const std::string &gitRepo,const std::stri
     err = gitBranchCreate(gitRepo, TMP_BRANCH, origin, GIT_OPT_FORCE);
     if (err) return -1;
 
-    std::string pathWorkingTree;
-    err = mkdirTmp(pathWorkingTree);
-    if (err) {
-        LOG_ERROR("rebaseBranchOntoRemote: cannot create tmp directory");
-        return -1;
-    }
-
-    err = gitWorktreeAdd(gitRepo, pathWorkingTree, TMP_BRANCH);
-    if (err) {
-        gitBranchRemove(gitRepo, TMP_BRANCH);
-        return -1;
-    }
-
-    LOG_DIAG("rebaseBranchOntoRemoteFull: start cherry-picking in worktree %s", pathWorkingTree.c_str());
+    LOG_DIAG("rebaseBranchOntoRemoteFull: start rebasing on branch '%s'", TMP_BRANCH);
 
     while (!revList.empty()) {
         std::string commit = popToken(revList, '\n');
         if (commit.empty()) continue;
 
-        LOG_DIAG("Cherry-picking commit %s", commit.c_str());
-
-        Argv argv;
-        std::string subStdout, subStderr;
-
-        argv.set("git", "cherry-pick", "--allow-empty", "-X", "theirs", commit.c_str(), 0);
-        err = Subprocess::launchSync(argv.getv(), 0, pathWorkingTree.c_str(), 0, 0, subStdout, subStderr);
+        err = gitRebaseCommit(gitRepo, TMP_BRANCH, commit);
         if (err) {
-            LOG_ERROR("git cherry-pick error: pathWorkingTree=%s, stderr=%s", pathWorkingTree.c_str(), subStderr.c_str());
-            LOG_ERROR("The temporary directory %s has been kept for further investigation, and you may remove it afterwards",
-                      pathWorkingTree.c_str());
-            // keep the branch TMP_BRANCH, as it the working tree is bound to this branch.
+            LOG_ERROR("rebaseBranchOntoRemoteFull: abort.");
+            // TMP_BRANCH not deleted, for further investigation.
             return -1;
         }
 
         // copy notes
-        err = copyNotes(pathWorkingTree, commit);
+        err = copyNotes(gitRepo, commit, TMP_BRANCH);
         // do not check error code as an error is raised if the commit has no note.
     }
-
-    // remove the temporary worktree
-    err = gitWorktreeRemove(gitRepo, pathWorkingTree);
-    if (err) return -1;
 
     err = gitUpdateRef(gitRepo, localBranch, TMP_BRANCH);
     if (err) return -1;
