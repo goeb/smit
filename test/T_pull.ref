@@ -3,12 +3,37 @@ Issue 1: first issue
     color                     : yellow
     freeText                  : hello world
     status                    : open
+--------------------------------------------------------------------------------
+Modified Properties:
+    color: blue
+    summary: first issue
+--------------------------------------------------------------------------------
+Modified Properties:
+    color: green
+    status: open
+--------------------------------------------------------------------------------
+Modified Properties:
+    color: yellow
+    freeText: hello world
 Issue 2: second issue
 ---- Properties ----------------------------------------------------------------
     color                     : yellow
+--------------------------------------------------------------------------------
+Modified Properties:
+    color: yellow
+    summary: second issue
+--------------------------------------------------------------------------------
+Attached files:
+    8c83ed4790fc1c72802f68d09c45be4fb4eb2772 file1
 Issue 3: third issue
 ---- Properties ----------------------------------------------------------------
     freeText                  : this is xyz
--- file1
--- file2
--- contents of file2
+--------------------------------------------------------------------------------
+Modified Properties:
+    freeText: this is xyz
+    summary: t---d issue
+--------------------------------------------------------------------------------
+Modified Properties:
+    summary: third issue
+Attached files:
+    42a545b480d94a57c243375d6b405d8f48043915 file2

@@ -95,9 +95,9 @@ cd -
 stopServer
 
 # check that the new entry and the new issue are pulled
-$SMIT issue clone1/$PROJECT1 1 --history | grep -v "^Date:" > $TEST_NAME.out
-$SMIT issue clone1/$PROJECT1 2 --history | grep -v "^Date:" >> $TEST_NAME.out
-$SMIT issue clone1/$PROJECT1 3 --history | grep -v "^Date:" >> $TEST_NAME.out
+$SMIT issue clone1/$PROJECT1 1 --history --properties | grep -v "^Date:" > $TEST_NAME.out
+$SMIT issue clone1/$PROJECT1 2 --history --properties | grep -v "^Date:" >> $TEST_NAME.out
+$SMIT issue clone1/$PROJECT1 3 --history --properties | grep -v "^Date:" >> $TEST_NAME.out
 
 diff -u $srcdir/$TEST_NAME.ref $TEST_NAME.out 
 
