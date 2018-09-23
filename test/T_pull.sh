@@ -2,19 +2,13 @@
 
 # Check that entries added server-side are correctly pulled
 
-TEST_NAME=`basename $0`
-# remove suffix .sh
-TEST_NAME=`echo $TEST_NAME | sed -e "s/\.sh//"`
-exec > $TEST_NAME.log 2>&1
-rm -f $TEST_NAME.out
-
-SMIT=../smit
-
 set -e 
 
+SMIT=../smit
 . $srcdir/functions
 
 initTest
+rm -f $TEST_NAME.out
 
 init() {
 	initEmptyRepo

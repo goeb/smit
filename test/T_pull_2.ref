@@ -1,7 +1,9 @@
+>>> ../smit issue cloneX/p1
 Issue 1: first issue
 Issue 2: second issue
 Issue 3: third issue
-Issue 4: local conflicting issue
+Issue 3.0: local conflicting issue
+>>> ../smit issue cloneX/p1 1 --history --properties
 Issue 1: first issue
 ---- Properties ----------------------------------------------------------------
     freeText                  : newValueLocal
@@ -26,6 +28,7 @@ Modified Properties:
 --------------------------------------------------------------------------------
 Modified Properties:
     freeText: newValueLocal
+>>> ../smit issue cloneX/p1 2 --history --properties
 Issue 2: second issue
 ---- Properties ----------------------------------------------------------------
     freeText                  : creation of issue2
@@ -42,8 +45,9 @@ Modified Properties:
 --------------------------------------------------------------------------------
 Message:
     add a file
-Modified Properties:
-    +file: 0123/a_file.txt
+Attached files:
+    0ad8b5bf83c1a235dc9f3d65dc8f0cbae3faa767 a_file.txt
+>>> ../smit issue cloneX/p1 3 --history --properties
 Issue 3: third issue
 ---- Properties ----------------------------------------------------------------
     freeText                  : x2server
@@ -54,7 +58,8 @@ Modified Properties:
 --------------------------------------------------------------------------------
 Modified Properties:
     freeText: x2server
-Issue 4: local conflicting issue
+>>> ../smit issue cloneX/p1 3.0 --history --properties
+Issue 3.0: local conflicting issue
 ---- Properties ----------------------------------------------------------------
     freeText                  : x3local
 --------------------------------------------------------------------------------
