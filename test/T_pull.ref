@@ -1,3 +1,4 @@
+>>> ../smit issue clone1/p1 1 --history --properties
 Issue 1: first issue
 ---- Properties ----------------------------------------------------------------
     color                     : yellow
@@ -15,6 +16,7 @@ Modified Properties:
 Modified Properties:
     color: yellow
     freeText: hello world
+>>> ../smit issue clone1/p1 2 --history --properties
 Issue 2: second issue
 ---- Properties ----------------------------------------------------------------
     color                     : yellow
@@ -25,6 +27,7 @@ Modified Properties:
 --------------------------------------------------------------------------------
 Attached files:
     8c83ed4790fc1c72802f68d09c45be4fb4eb2772 file1
+>>> ../smit issue clone1/p1 3 --history --properties
 Issue 3: third issue
 ---- Properties ----------------------------------------------------------------
     freeText                  : this is xyz

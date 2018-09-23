@@ -75,7 +75,7 @@ cleanRepo() {
 }
 
 startServer() {
-    $SMIT serve $REPO --listen-port $PORT > server.log 2>&1 &
+    $SMIT serve $REPO --listen-port $PORT > $TEST_NAME.log 2>&1 &
     smitServerPid=$!
     sleep 0.5 # wait for the server to start
 }
@@ -99,3 +99,10 @@ checkFileExists() {
 dostep() {
     echo "step> $*"
 }
+
+t_runcmd() {
+    echo ">>> $*" | tee -a $TEST_NAME.out >> $TEST_NAME.log
+	# TODO make sure stdout and sterr are always printed in the same order
+    "$@" 2>&1 | tee -a $TEST_NAME.out >> $TEST_NAME.log
+}
+
