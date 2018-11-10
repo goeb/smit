@@ -11,6 +11,7 @@
 #include "utils/subprocess.h"
 #include "utils/logging.h"
 #include "utils/base64.h"
+#include "utils/gitTools.h"
 #include "user/session.h"
 #include "repository/db.h"
 
@@ -129,6 +130,36 @@ static std::string extractResource(const std::string &uri, std::string &gitPart)
     }
     return ""; // no match found
 }
+
+void diff(const std::map<std::string, EntryId> &oldTipsOfBRanches, std::map<std::string, EntryId> &newTipsOfBRanches)
+{
+    std::map<std::string, EntryId>::const_iterator oldit;
+    std::map<std::string, EntryId>::iterator newit;
+    FOREACH(oldit, oldTipsOfBRanches) {
+        std::string oldbranch = oldit->first;
+        newit = newTipsOfBRanches.find(oldbranch);
+        if (newit == newTipsOfBRanches.end()) {
+            LOG_ERROR("branch deleted after push: %s", oldbranch.c_str());
+
+        } else if (oldit->second == newit->second) {
+            // same content
+            // remove if from new
+            newTipsOfBRanches.erase(newit);
+
+        } else {
+            // values differ
+            LOG_INFO("branch tip modified: [%s] %s -> %s", oldbranch.c_str(),
+                     oldit->second.c_str(), newit->second.c_str());
+            // remove if from new
+            newTipsOfBRanches.erase(newit);
+        }
+    }
+    // print what is remaining in new
+    FOREACH(newit, newTipsOfBRanches) {
+        LOG_INFO("new branches created: %s", newit->first.c_str());
+    }
+}
+
 
 /* Serve a git fetch or push
  *
@@ -296,11 +327,55 @@ void httpGitServeRequest(const RequestContext *req)
 
         LOCK_SCOPE(pro->getLocker(), lockmode);
 
+        std::map<std::string, EntryId> oldTipsOfBRanches;
+
+        if (service == GIT_SERVICE_PUSH) {
+            int err = gitGetTipsOfBranches(pro->getPath(), oldTipsOfBRanches);
+            if (err) {
+                LOG_ERROR("Cannot retrieve branches of %s. Abort git request", pro->getPath().c_str());
+                sendHttpHeader500(req, "Cannot retrieve branches");
+                return;
+            }
+        }
+
         httpCgiGitBackend(req, uri, usr.username, rolename);
 
         if (service == GIT_SERVICE_PUSH) {
+
+            std::map<std::string, EntryId> newTipsOfBRanches;
+            int err = gitGetTipsOfBranches(pro->getPath(), oldTipsOfBRanches);
+            if (err) {
+                // this is very annoying, as we are not be able to synchonize
+                // our data in RAM with what has been pushed.
+                LOG_ERROR("Cannot retrieve branches of %s. Cannot evaluate what has been pushed.", pro->getPath().c_str());
+
+                // a full reload of the project is necessary
+                // TODO
+            }
+
+            // Look at which branches have changed
+            diff(oldTipsOfBRanches, newTipsOfBRanches);
+
+            // TODO
+
             // update project entries if pushed entries
-            //TODOin update
+
+            // 3 cases :
+            // - pushed entries to existing issue (branch issues/<id>)
+            // - pushed entries to new issue (branch issues/new)
+            // - pushed onto branch master (project config, etc.)
+
+            // if branch issues/new exists, then:
+            //    - allocate an issue id
+            //    - rename the branch
+
+            // update
+            // easy way: reload full project (config and all issues)
+            // problem: if a pusher client pushes 4 issues, then we would reload the full project 4 times.
+            // optimized way: reload only the part that has been pushed. But how to know which branch got updated?
+            //     1. keep track of tips of all branches before the httpCgiGitBackend
+            //     2. run httpCgiGitBackend
+            //     3. check the tips. normally at most 1 has changed. Update the info of this one only.
         }
 
         // unlock

@@ -2,6 +2,7 @@
 #define _gitTools_h
 
 #include <string>
+#include <map>
 
 #define GIT_OPT_FORCE 0x1
 
@@ -20,5 +21,6 @@ int gitUpdateRef(const std::string &gitRepo, const std::string &gitRef, const st
 int gitRevListReverse(const std::string &gitRepo, const std::string &base, const std::string &branch, std::string &out);
 int gitBranchCreate(const std::string &gitRepo, const std::string &branch, const std::string &startPoint, int options=0);
 int gitBranchRemove(const std::string &gitRepo, const std::string &branch, int options=0);
+int gitGetTipsOfBranches(const std::string &gitRepo, std::map<std::string, std::string> &tips);
 
 #endif // _gitTools_h
