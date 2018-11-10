@@ -225,6 +225,8 @@ int Subprocess::launchSync(char *const argv[], char * const envp[], const char *
 
     subp->closeStdin();
 
+    // TODO read stdout and stderr at the same time
+    // so that neither can block (pipe full)
     subStdout = subp->getStdout();
     subStderr = subp->getStderr();
 
@@ -278,6 +280,11 @@ int Subprocess::write(const char *data, size_t len)
 }
 
 /** Read bytes from the stdout of the child process
+ *
+ * @return
+ *      The number of bytes actually read.
+ *      Zero if the child process has closed its stdout.
+ *      -1 on error.
  */
 int Subprocess::read(char *buffer, size_t size, StandardFd fd)
 {
