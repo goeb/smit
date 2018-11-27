@@ -417,6 +417,12 @@ static int startSmitServer(const ServerOptions options)
         return 1;
     }
 
+    err = setupGitServerConfig(options.repo.c_str());
+    if (err < 0) {
+        LOG_ERROR("Cannot setup server side hooks. Aborting.");
+        return 1;
+    }
+
     initHttpStats();
 
     MongooseServerContext *mc = new MongooseServerContext();
@@ -526,13 +532,7 @@ int cmdServe(int argc, char **argv)
 
     if (!options.certificatePemFile.empty()) options.listenPort += 's'; // force HTTPS listening
 
-    int err = setupGitServerConfig(options.repo.c_str());
-    if (err < 0) {
-        LOG_ERROR("Cannot setup server side hooks. Aborting.");
-        return 1;
-    }
-
-    err = startSmitServer(options);
+    int err = startSmitServer(options);
     if (err) {
         return 1;
     }

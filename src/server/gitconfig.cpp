@@ -6,9 +6,12 @@
 #include "project/Project.h"
 #include "utils/logging.h"
 #include "utils/filesystem.h"
+#include "utils/cpio.h"
 
 static int setGitConfig(const char *dir, const char *key, const char *value)
 {
+    LOG_INFO("setGitConfig: dir=%s, key=%s, value=%s", dir, key, value);
+
     std::string subStdout, subStderr;
     Argv argv;
     argv.set("git", "config", key, value, 0);
@@ -20,56 +23,41 @@ static int setGitConfig(const char *dir, const char *key, const char *value)
     return 0;
 }
 
+
+const char *GIT_CONFIG_TABLE[][2] = {
+    { "receive.denyCurrentBranch", "updateInstead" }, // automatically update the checked-out working copy after push
+    { "receive.denyNonFastForwards", "true" },        // prevent push --force
+    { "receive.denyDeletes", "true" },                // prevent removing a branch
+    { NULL, NULL }
+};
+
+
 static int setupGitConfig(const char *dir)
 {
-    int err;
+    LOG_INFO("setupGitConfig on %s", dir);
 
-    // automatically update the checked-out working copy after push
-    err = setGitConfig(dir, "receive.denyCurrentBranch", "updateInstead");
-    if (err) return -1;
+    int i = 0;
+    while (GIT_CONFIG_TABLE[i][0]) {
 
-    // prevent push --force
-    err = setGitConfig(dir, "receive.denyNonFastForwards", "true");
-    if (err) return -1;
+        int err = setGitConfig(dir, GIT_CONFIG_TABLE[i][0], GIT_CONFIG_TABLE[i][1]);
+        if (err) return -1;
 
-    // prevent removing a branch
-    err = setGitConfig(dir, "receive.denyDeletes", "true");
-    if (err) return -1;
+        i++;
+    }
 
     return 0;
 }
 
-
-const char *UPDATE_HOOK_SCRIPT = ""
-                                 "#!/bin/sh\n"
-                                 "refname=\"$1\"\n"
-                                 "case \"$refname\" in\n"
-                                 "    refs/notes/commit|refs/heads/issues/*)\n"
-                                 "        if [ \"$SMIT_ROLE\" != rw -a \"$SMIT_ROLE\" != admin ]; then\n"
-                                 "            echo \"SMIT_ROLE $SMIT_ROLE cannot update $refname\" >&2\n"
-                                 "            exit 1\n"
-                                 "        fi\n"
-                                 "        ;;\n"
-                                 "    refs/heads/master)\n"
-                                 "        if [ \"$SMIT_ROLE\" != admin ]; then\n"
-                                 "            echo \"SMIT_ROLE $SMIT_ROLE cannot update $refname\" >&2\n"
-                                 "            exit 1\n"
-                                 "        fi\n"
-                                 "        ;;\n"
-                                 "    *)\n"
-                                 "        echo \"Invalid ref $refname\" >&2\n"
-                                 "        exit 1\n"
-                                 "        ;;\n"
-                                 "esac\n"
-                                 "exit 0\n";
 
 static int setupGitHookUpdate(const char *repo)
 {
     // setup 'update' hook
     int err;
 
+    LOG_INFO("setupGitHookUpdate on %s", repo);
+
     std::string updateHookPath = std::string(repo) + "/.git/hooks/update";
-    err = writeToFile(updateHookPath, UPDATE_HOOK_SCRIPT);
+    err = cpioExtractFile("githooks/update", updateHookPath.c_str());
     if (err) {
         return -1;
     }

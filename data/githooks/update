@@ -1,0 +1,50 @@
+#!/bin/sh
+REFNAME="$1"
+SHA1_OLD="$2"
+SHA1_NEW="$3"
+
+die() {
+	echo $* >&2
+	exit 1
+}
+
+check_new_branch() {
+	if [ "$SHA1_OLD" != 0000000000000000000000000000000000000000 ]; then
+		die "error: not a new branch '$REFNAME'"
+	fi
+}
+
+forbid_new_branch() {
+	if [ "$SHA1_OLD" = 0000000000000000000000000000000000000000 ]; then
+		die "error: new branch '$REFNAME' rejected (should be 'refs/heads/new_issues/*')"
+	fi
+}
+
+check_role_rw() {
+    if [ "$SMIT_ROLE" != rw -a "$SMIT_ROLE" != admin ]; then
+        die "error: insufficient SMIT_ROLE '$SMIT_ROLE' for updating $REFNAME"
+    fi
+}
+
+check_role_admin() {
+    if [ "$SMIT_ROLE" != admin ]; then
+        die "error: insufficient SMIT_ROLE '$SMIT_ROLE' for updating $REFNAME"
+    fi
+}
+
+case "$REFNAME" in
+	refs/notes/commit) check_role_rw;;
+	refs/heads/new_issues/*)
+	   	check_role_rw
+		check_new_branch
+		;;
+	refs/heads/issues/*)
+		check_role_rw
+		forbid_new_branch
+        ;;
+    refs/heads/master) check_role_admin;;
+    *)
+		die "error: Invalid ref=$REFNAME (SHA1_OLD=$SHA1_OLD, SHA1_NEW=$SHA1_NEW)"
+        ;;
+esac
+exit 0
