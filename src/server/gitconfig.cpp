@@ -49,24 +49,25 @@ static int setupGitConfig(const char *dir)
 }
 
 
-static int setupGitHookUpdate(const char *repo)
+static int setupGitHook(const char *repo, const char *hookName)
 {
     // setup 'update' hook
     int err;
 
-    LOG_INFO("setupGitHookUpdate on %s", repo);
+    LOG_INFO("setupGitHook '%s' on %s", hookName, repo);
 
-    std::string updateHookPath = std::string(repo) + "/.git/hooks/update";
-    err = cpioExtractFile("githooks/update", updateHookPath.c_str());
+    std::string cpioSrc = std::string("githooks/") + hookName;
+    std::string fileDest = std::string(repo) + "/.git/hooks/" + hookName;
+    err = cpioExtractFile(cpioSrc.c_str(), fileDest.c_str());
     if (err) {
         return -1;
     }
 
     // make the script executable
     mode_t mode = S_IRUSR | S_IXUSR;
-    err = chmod(updateHookPath.c_str(), mode);
+    err = chmod(fileDest.c_str(), mode);
     if (err) {
-        LOG_ERROR("Cannot chmod %s: %s", updateHookPath.c_str(), STRERROR(errno));
+        LOG_ERROR("Cannot chmod %s: %s", fileDest.c_str(), STRERROR(errno));
         return -1;
     }
 
@@ -100,7 +101,10 @@ int setupGitServerConfig(const char *repo)
         err = setupGitConfig(p->getPath().c_str());
         if (err) return -1;
 
-        err = setupGitHookUpdate(p->getPath().c_str());
+        err = setupGitHook(p->getPath().c_str(), "update");
+        if (err) return -1;
+
+        err = setupGitHook(p->getPath().c_str(), "post-receive");
         if (err) return -1;
 
         p = Database::Db.getNextProject(p);

@@ -1,0 +1,9 @@
+#!/bin/sh
+
+# This hook keep a track of what has been modified during the push.
+
+# The standard input of the hook will be one line for each successfully updated ref:
+#     sha1-old SP sha1-new SP refname LF
+# All these lines are store in a file in GIT_DIR
+
+cat > $GIT_DIR/smit_pushed
