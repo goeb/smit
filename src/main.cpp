@@ -149,7 +149,7 @@ int initRepository(int argc, char **argv)
     closedir(dirp);
 
     // Extract the files 'public' to the new repository
-    int r = cpioExtractFile("public", directory);
+    int r = cpioExtractTree("public", directory);
     if (r < 0) {
         LOG_ERROR("Error while extracting 'public/*': r=%d", r);
         return 1;

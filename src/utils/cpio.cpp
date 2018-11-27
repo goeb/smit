@@ -48,7 +48,7 @@ struct header_old_cpio {
 enum FileType { FTYPE_REGULAR, FTYPE_DIR, FTYPE_OTHER };
 
 
-int cpioGetNextFileHeader(const char *&offset, const char *end, std::string &filepath, FileType &ftype, uint32_t &filesize)
+static int cpioGetNextFileHeader(const char *&offset, const char *end, std::string &filepath, FileType &ftype, uint32_t &filesize)
 {
     LOG_FUNC();
     struct header_old_cpio header;
@@ -146,6 +146,22 @@ int cpioGetFile(const char *file, const char *&cpioOffset)
 }
 
 
+/** Extract a single file into it destination
+ */
+int cpioExtractFile(const char *src, const char *dst)
+{
+    LOG_DIAG("cpioExtractFile: %s -> %s", src, dst);
+
+    const char *start;
+    int size = cpioGetFile(src, start);
+    if (size < 0) return -1;
+
+    int err = writeToFile(dst, start, size);
+    return err;
+}
+
+
+
 /** Extract a cpio archive starting at the given address
   * @param cpioStart, cpioSize
   *     cpio archive in memory
@@ -156,7 +172,7 @@ int cpioGetFile(const char *file, const char *&cpioOffset)
   * @param dst
   *     The destination directory where the archive shall be extracted.
   */
-int cpioExtractTree(const char *cpioStart, size_t cpioSize, const char *src, const char *dst)
+static int cpioExtractTree(const char *cpioStart, size_t cpioSize, const char *src, const char *dst)
 {
     std::string filepath;
     FileType ftype;
@@ -287,10 +303,10 @@ int cpioExtractTree(const char *cpioStart, size_t cpioSize, const char *src, con
 
 /** Extract a cpio archive located in memory
   */
-int cpioExtractFile(const char *src, const char *dst)
+int cpioExtractTree(const char *src, const char *dst)
 {
     int r = cpioExtractTree(em_binary_data_embedcpio, em_binary_size_embedcpio, src, dst);
-    LOG_DEBUG("cpioExtract: result=%d", r);
+    LOG_DIAG("cpioExtractTree: result=%d", r);
     return r;
 
 }
