@@ -1653,6 +1653,7 @@ void httpGetObject(const RequestContext *req, const Project &p, std::string obje
         if (n == 0) break; // end of file
         req->write(buffer, n);
     }
+    o.close();
 }
 
 
