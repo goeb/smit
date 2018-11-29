@@ -17,7 +17,6 @@
 
 #define PATH_SMIP ".smip"
 #define PATH_ENTRIES_DB ".git" // considered as bare git repository
-#define PATH_OBJECTS     PATH_SMIP "/objects"
 #define PATH_TEMPLATES   P_TEMPLATES
 #define PATH_PROJECT_CONFIG PATH_SMIP "/config"
 #define PATH_VIEWS          PATH_SMIP "/views"
@@ -81,9 +80,6 @@ public:
                                   std::string &resultingPath, const std::string &author);
     int reload(); // reload a project from disk storage
 
-    // methods for database access
-    inline std::string getObjectsDir() const { return path + '/' + PATH_OBJECTS; }
-
     // methods for handling attached files
     std::string storeFile(const char *data, size_t len) const;
 
@@ -140,7 +136,6 @@ private:
     std::string allocateNewIssueId();
     void updateMaxIssueId(uint32_t i);
     int addNewEntry(const std::string &issueId, Entry *e);
-    int addPushedEntry(Entry *e, const std::string &data);
     int load(); // load a project: config, views, entries, tags
     int loadConfig();
     Issue *loadIssue(const std::string &issueId);

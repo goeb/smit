@@ -10,7 +10,6 @@
 
 #include "utils/ustring.h"
 #include "utils/stringTools.h"
-#include "Object.h"
 #include "gitdb.h"
 
 #define K_MESSAGE     "+message" // keyword used for the message
@@ -62,7 +61,7 @@ inline void atomicSet(const void **ptr, const void *val) {
 class Issue;
 
 // Entry
-class Entry : public Object {
+class Entry {
 public:
     std::string parent; // id of the parent entry, empty if top-level
 
@@ -102,8 +101,6 @@ public:
 
 
     bool isAmending() const;
-    inline std::string getSubpath() const { return Object::getSubpath(id); }
-    static inline std::string getSubpath(const std::string identifier) { return Object::getSubpath(identifier); }
     static Entry *createNewEntry(const PropertiesMap &props, const std::list<AttachedFileRef> &files,
                                  const std::string &author, const Entry *eParent);
 

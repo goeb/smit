@@ -25,7 +25,6 @@
 #include "utils/filesystem.h"
 #include "global.h"
 #include "repository/db.h"
-#include "project/Object.h"
 #include "restApi.h"
 
 static int sendZippedFile(const ContextParameters &ctx, struct archive *a, const std::string &filename, const std::string &data)
@@ -67,36 +66,46 @@ static int attachFiles(const ContextParameters &ctx, struct archive *a, const st
     Entry *e = issue.first;
     std::set<std::string> sentFiles; // used to detect duplicated files (same name)
     while (e) {
-        PropertiesIt files = e->properties.find(K_FILE);
-        if (files != e->properties.end()) {
-            std::list<std::string>::const_iterator f;
-            FOREACH(f, files->second) {
-                std::string fname = *f;
-                std::string objectId = popToken(fname, '/');
 
-                std::string objectsDir = projectPath + '/' + PATH_OBJECTS;
-                std::string data;
-                int n = Object::load(objectsDir, objectId, data);
+        std::list<AttachedFileRef>::const_iterator f;
+        FOREACH(f, e->files) {
+
+            std::string data;
+//load the file
+            GitObject object(projectPath, f->id);
+            int err = object.open();
+            // TODO handle err
+
+            const int BUF_SIZ = 4096;
+            char buffer[BUF_SIZ];
+
+            while (1) {
+                int n = object.read(buffer, BUF_SIZ);
                 if (n < 0) {
-                    LOG_ERROR("Cannot load attached file: %s", fname.c_str());
-                    return -1;
+                    // error
+                    LOG_ERROR("xxxxxxxxxxxx Error while sending object %s (%s)", f->id.c_str(), projectPath.c_str());
+                    // TODO how to deal with this server side error ?
+                    break;
                 }
-
-                // prefix with the issue id
-                std::string fpath = issue.id + "/" RESOURCE_FILES  "/" + (*f);
-
-                // check if same file was already added to the archive
-                if (sentFiles.count(fpath) > 0) {
-                    // already added, do not add twice
-                    LOG_DIAG("attachFiles: filename=%s, already sent", fpath.c_str());
-
-                    continue;
-                }
-
-                int ret = sendZippedFile(ctx, a, fpath, data);
-                if (ret < 0) return -1;
-                sentFiles.insert(fpath);
+                if (n == 0) break; // end of file
+                data.append(buffer, n);
             }
+            object.close();
+
+            // prefix with the issue id
+            std::string fpath = issue.id + "/" RESOURCE_FILES  "/" + f->id + "/" + f->filename;
+
+            // check if same file was already added to the archive
+            if (sentFiles.count(fpath) > 0) {
+                // already added, do not add twice
+                LOG_DIAG("attachFiles: filename=%s, already sent", fpath.c_str());
+
+                continue;
+            }
+
+            int ret = sendZippedFile(ctx, a, fpath, data);
+            if (ret < 0) return -1;
+            sentFiles.insert(fpath);
         }
 
         e = e->getNext();

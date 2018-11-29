@@ -35,9 +35,7 @@ smit_SOURCES = \
 			   src/project/Issue.cpp  \
 			   src/project/Project.cpp  \
 			   src/project/View.cpp  \
-			   src/project/Tag.cpp  \
 			   src/project/ProjectConfig.cpp \
-			   src/project/Object.cpp \
 			   src/project/gitdb.cpp \
 			   src/utils/parseConfig.cpp \
 			   src/utils/identifiers.cpp \

@@ -1234,23 +1234,6 @@ int Project::addNewEntry(const std::string &issueId, Entry *e)
     return 0; // success
 }
 
-int Project::addPushedEntry(Entry *e, const std::string &data)
-{
-    // store the data (unchanged)
-    int ret = Object::writeToId(getObjectsDir(), data.data(), data.size(), e->id);
-    if (ret < 0) {
-        // error.
-        LOG_ERROR("Could not write pushed entry to disk");
-        return -1;
-    }
-
-    // add this entry in internal in-memory tables
-    ret = insertEntryInTable(e);
-    if (ret != 0) return ret; // already exists
-
-    return ret;
-}
-
 
 Entry *Project::getEntry(const std::string &id) const
 {

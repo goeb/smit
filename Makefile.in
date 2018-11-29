@@ -130,8 +130,7 @@ am__installdirs = "$(DESTDIR)$(bindir)" "$(DESTDIR)$(pkgdatadir)"
 PROGRAMS = $(bin_PROGRAMS)
 am__smit_SOURCES_DIST = src/repository/db.cpp src/project/Entry.cpp \
 	src/project/Issue.cpp src/project/Project.cpp \
-	src/project/View.cpp src/project/Tag.cpp \
-	src/project/ProjectConfig.cpp src/project/Object.cpp \
+	src/project/View.cpp src/project/ProjectConfig.cpp \
 	src/project/gitdb.cpp src/utils/parseConfig.cpp \
 	src/utils/identifiers.cpp src/utils/cpio.cpp \
 	src/utils/stringTools.cpp src/utils/jTools.cpp \
@@ -165,9 +164,8 @@ am_smit_OBJECTS = src/repository/smit-db.$(OBJEXT) \
 	src/project/smit-Entry.$(OBJEXT) \
 	src/project/smit-Issue.$(OBJEXT) \
 	src/project/smit-Project.$(OBJEXT) \
-	src/project/smit-View.$(OBJEXT) src/project/smit-Tag.$(OBJEXT) \
+	src/project/smit-View.$(OBJEXT) \
 	src/project/smit-ProjectConfig.$(OBJEXT) \
-	src/project/smit-Object.$(OBJEXT) \
 	src/project/smit-gitdb.$(OBJEXT) \
 	src/utils/smit-parseConfig.$(OBJEXT) \
 	src/utils/smit-identifiers.$(OBJEXT) \
@@ -506,8 +504,7 @@ AM_CXXFLAGS = -Wall $(am__append_2) $(am__append_5) $(am__append_8)
 AM_LDFLAGS = $(am__append_3) $(am__append_6) -pthread
 smit_SOURCES = src/repository/db.cpp src/project/Entry.cpp \
 	src/project/Issue.cpp src/project/Project.cpp \
-	src/project/View.cpp src/project/Tag.cpp \
-	src/project/ProjectConfig.cpp src/project/Object.cpp \
+	src/project/View.cpp src/project/ProjectConfig.cpp \
 	src/project/gitdb.cpp src/utils/parseConfig.cpp \
 	src/utils/identifiers.cpp src/utils/cpio.cpp \
 	src/utils/stringTools.cpp src/utils/jTools.cpp \
@@ -672,11 +669,7 @@ src/project/smit-Project.$(OBJEXT): src/project/$(am__dirstamp) \
 	src/project/$(DEPDIR)/$(am__dirstamp)
 src/project/smit-View.$(OBJEXT): src/project/$(am__dirstamp) \
 	src/project/$(DEPDIR)/$(am__dirstamp)
-src/project/smit-Tag.$(OBJEXT): src/project/$(am__dirstamp) \
-	src/project/$(DEPDIR)/$(am__dirstamp)
 src/project/smit-ProjectConfig.$(OBJEXT): src/project/$(am__dirstamp) \
-	src/project/$(DEPDIR)/$(am__dirstamp)
-src/project/smit-Object.$(OBJEXT): src/project/$(am__dirstamp) \
 	src/project/$(DEPDIR)/$(am__dirstamp)
 src/project/smit-gitdb.$(OBJEXT): src/project/$(am__dirstamp) \
 	src/project/$(DEPDIR)/$(am__dirstamp)
@@ -856,10 +849,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/local/$(DEPDIR)/smit-localClient.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/project/$(DEPDIR)/smit-Entry.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/project/$(DEPDIR)/smit-Issue.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@src/project/$(DEPDIR)/smit-Object.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/project/$(DEPDIR)/smit-Project.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/project/$(DEPDIR)/smit-ProjectConfig.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@src/project/$(DEPDIR)/smit-Tag.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/project/$(DEPDIR)/smit-View.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/project/$(DEPDIR)/smit-gitdb.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/rendering/$(DEPDIR)/smit-ContextParameters.Po@am__quote@
@@ -1046,20 +1037,6 @@ src/project/smit-View.obj: src/project/View.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/project/smit-View.obj `if test -f 'src/project/View.cpp'; then $(CYGPATH_W) 'src/project/View.cpp'; else $(CYGPATH_W) '$(srcdir)/src/project/View.cpp'; fi`
 
-src/project/smit-Tag.o: src/project/Tag.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/project/smit-Tag.o -MD -MP -MF src/project/$(DEPDIR)/smit-Tag.Tpo -c -o src/project/smit-Tag.o `test -f 'src/project/Tag.cpp' || echo '$(srcdir)/'`src/project/Tag.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/project/$(DEPDIR)/smit-Tag.Tpo src/project/$(DEPDIR)/smit-Tag.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/project/Tag.cpp' object='src/project/smit-Tag.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/project/smit-Tag.o `test -f 'src/project/Tag.cpp' || echo '$(srcdir)/'`src/project/Tag.cpp
-
-src/project/smit-Tag.obj: src/project/Tag.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/project/smit-Tag.obj -MD -MP -MF src/project/$(DEPDIR)/smit-Tag.Tpo -c -o src/project/smit-Tag.obj `if test -f 'src/project/Tag.cpp'; then $(CYGPATH_W) 'src/project/Tag.cpp'; else $(CYGPATH_W) '$(srcdir)/src/project/Tag.cpp'; fi`
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/project/$(DEPDIR)/smit-Tag.Tpo src/project/$(DEPDIR)/smit-Tag.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/project/Tag.cpp' object='src/project/smit-Tag.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/project/smit-Tag.obj `if test -f 'src/project/Tag.cpp'; then $(CYGPATH_W) 'src/project/Tag.cpp'; else $(CYGPATH_W) '$(srcdir)/src/project/Tag.cpp'; fi`
-
 src/project/smit-ProjectConfig.o: src/project/ProjectConfig.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/project/smit-ProjectConfig.o -MD -MP -MF src/project/$(DEPDIR)/smit-ProjectConfig.Tpo -c -o src/project/smit-ProjectConfig.o `test -f 'src/project/ProjectConfig.cpp' || echo '$(srcdir)/'`src/project/ProjectConfig.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/project/$(DEPDIR)/smit-ProjectConfig.Tpo src/project/$(DEPDIR)/smit-ProjectConfig.Po
@@ -1073,20 +1050,6 @@ src/project/smit-ProjectConfig.obj: src/project/ProjectConfig.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/project/ProjectConfig.cpp' object='src/project/smit-ProjectConfig.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/project/smit-ProjectConfig.obj `if test -f 'src/project/ProjectConfig.cpp'; then $(CYGPATH_W) 'src/project/ProjectConfig.cpp'; else $(CYGPATH_W) '$(srcdir)/src/project/ProjectConfig.cpp'; fi`
-
-src/project/smit-Object.o: src/project/Object.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/project/smit-Object.o -MD -MP -MF src/project/$(DEPDIR)/smit-Object.Tpo -c -o src/project/smit-Object.o `test -f 'src/project/Object.cpp' || echo '$(srcdir)/'`src/project/Object.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/project/$(DEPDIR)/smit-Object.Tpo src/project/$(DEPDIR)/smit-Object.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/project/Object.cpp' object='src/project/smit-Object.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/project/smit-Object.o `test -f 'src/project/Object.cpp' || echo '$(srcdir)/'`src/project/Object.cpp
-
-src/project/smit-Object.obj: src/project/Object.cpp
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/project/smit-Object.obj -MD -MP -MF src/project/$(DEPDIR)/smit-Object.Tpo -c -o src/project/smit-Object.obj `if test -f 'src/project/Object.cpp'; then $(CYGPATH_W) 'src/project/Object.cpp'; else $(CYGPATH_W) '$(srcdir)/src/project/Object.cpp'; fi`
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/project/$(DEPDIR)/smit-Object.Tpo src/project/$(DEPDIR)/smit-Object.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/project/Object.cpp' object='src/project/smit-Object.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -c -o src/project/smit-Object.obj `if test -f 'src/project/Object.cpp'; then $(CYGPATH_W) 'src/project/Object.cpp'; else $(CYGPATH_W) '$(srcdir)/src/project/Object.cpp'; fi`
 
 src/project/smit-gitdb.o: src/project/gitdb.cpp
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(smit_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -MT src/project/smit-gitdb.o -MD -MP -MF src/project/$(DEPDIR)/smit-gitdb.Tpo -c -o src/project/smit-gitdb.o `test -f 'src/project/gitdb.cpp' || echo '$(srcdir)/'`src/project/gitdb.cpp
