@@ -40,7 +40,6 @@ int mkdir(const std::string &path);
 #if defined(_WIN32)
 int mkdir(const char *path, int mode);
 #endif
-int mkdirTmp(std::string &result);
 
 std::string getAbsolutePath(const std::string &path);
 int lockFile(const std::string &path);
