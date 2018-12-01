@@ -388,18 +388,6 @@ IssueCopy Project::copyIssue(const Issue &issue) const
     return copy;
 }
 
-/** Return a non-thread-safe list of pointers to the issues
-  *
-  * Must be called from a mutex-protected scope or from a single threaded program.
-  */
-void Project::getAllIssues(std::vector<Issue*> &issuesList)
-{
-    std::map<std::string, Issue*>::iterator i;
-    FOREACH(i, issues) {
-        issuesList.push_back(i->second);
-    }
-}
-
 // @return 0 if OK, -1 on error
 int Project::loadConfig()
 {
@@ -913,59 +901,6 @@ void Project::updateLastModified(Entry *e)
     if (!e) return;
     if (lastModified < e->ctime) lastModified = e->ctime;
 }
-
-/** Rename an issue (take the next available id)
-  *
-  * No mutex protection here.
-  *
-  * @return
-  *     the newly assigned
-  *     or and empty string in case of failure
-  */
-std::string Project::renameIssue(const std::string &oldId)
-{
-    std::map<std::string, Issue*>::iterator i;
-    i = issues.find(oldId);
-    if (i == issues.end()) {
-        LOG_ERROR("Cannot rename issue %s: not in database", oldId.c_str());
-        return "";
-    }
-    if (!i->second) {
-        LOG_ERROR("Cannot rename issue %s: null issue", oldId.c_str());
-        return "";
-    }
-
-    // get a new id
-    std::string newId = allocateNewIssueId();
-
-    int r = renameIssue(*(i->second), newId);
-    if (r!=0) return "";
-
-    return newId;
-}
-
-/** Rename an issue
-  *
-  * No mutex protection here.
-  */
-int Project::renameIssue(Issue &i, const std::string &newId)
-{
-    std::string oldId = i.id;
-
-    // add the issue in the table
-    issues[newId] = &i;
-
-    // delete the old slot
-    issues.erase(oldId);
-
-    // set the new id
-    i.id = newId;
-
-    LOG_ERROR("Project::renameIssue TODO git storage");
-
-    return 0;
-}
-
 
 /**
   * issues may be a list of 1 empty string, meaning that associations have been removed

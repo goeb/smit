@@ -48,8 +48,6 @@ public:
     void searchEntries(const char *sortingSpec, std::vector<Entry> &entries, int limit) const;
 
     int get(const std::string &issueId, IssueCopy &issue) const;
-    void getAllIssues(std::vector<Issue*> &issuesList);
-    void consolidateAssociations(IssueCopy &issue, bool forward) const;
 
     // methods for handling entries
     int addEntry(PropertiesMap properties, const std::list<AttachedFileRef> &files, std::string &iid,
@@ -92,10 +90,6 @@ public:
 
     // methods for handling tags
     int toggleTag(const std::string &entryId, const std::string &tagname, const std::string &author);
-
-    // local usage methods (not mutex-protected)
-    std::string renameIssue(const std::string &oldId);
-    int renameIssue(Issue &i, const std::string &newId);
 
     std::string getTriggerCmdline() const;
 
@@ -154,6 +148,9 @@ private:
     void updateLastModified(Entry *e);
     IssueCopy copyIssue(const Issue &issue) const;
     Entry *getEntry(const std::string &id) const;
+
+    void consolidateAssociations(IssueCopy &issue, bool forward) const;
+
 
 
 };
