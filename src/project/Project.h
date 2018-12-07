@@ -36,8 +36,6 @@ public:
     Project(const std::string &pathToDir);
     static Project *init(const std::string &path, const std::string &repo);
     static bool isProject(const std::string &path);
-    static bool containsReservedName(std::string name);
-    static bool isReservedName(const std::string &name);
 
     // methods for handling issues
     void search(const char *fulltextSearch,
@@ -151,6 +149,8 @@ private:
     void consolidateAssociations(IssueCopy &issue, bool forward) const;
 
     int setPredefinedView(std::map<std::string, PredefinedView> views, const std::string &author);
+    static bool containsReservedName(std::string name);
+    static bool isReservedName(const std::string &name);
 };
 
 #endif
