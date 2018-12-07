@@ -84,7 +84,6 @@ public:
     // methods for handling views
     PredefinedView getPredefinedView(const std::string &name);
     int setPredefinedView(const std::string &name, const PredefinedView &pv, const std::string &author);
-    int setPredefinedView(std::map<std::string, PredefinedView> views, const std::string &author);
     int deletePredefinedView(const std::string &name, const std::string &author);
     PredefinedView getDefaultView() const;
 
@@ -151,8 +150,7 @@ private:
 
     void consolidateAssociations(IssueCopy &issue, bool forward) const;
 
-
-
+    int setPredefinedView(std::map<std::string, PredefinedView> views, const std::string &author);
 };
 
 #endif
