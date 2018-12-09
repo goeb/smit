@@ -2,6 +2,7 @@
 #define _HttpContext_h
 
 #include <string>
+#include "utils/RequestContext.h"
 #include "third-party/mongoose.h"
 
 // functions not officially exposed by mongoose
@@ -12,7 +13,7 @@ extern "C" {
 #define PARAMS_SIZE 30
 
 class MongooseRequestContext; // forward declaration
-typedef MongooseRequestContext RequestContext;
+
 
 /** class that handles the web server context
   *
@@ -45,37 +46,30 @@ private:
     std::string listeningPort;
 };
 
-class ResponseContext {
-public:
-    virtual int printf(const char *fmt, ...) const = 0;
-    virtual int write(const void *buf, size_t len) const = 0;
-    inline virtual const char *getQueryString() const { return "";}
-    inline virtual std::string getUrlRewritingRoot() const { return ""; }
-};
-
 /** class that handles the context of a request
   *
   * It can be later replaced by a class dedicated to fast cgi, for instance.
   */
-class MongooseRequestContext : public ResponseContext {
+class MongooseRequestContext : public RequestContext {
 public:
     MongooseRequestContext(struct mg_connection *conn);
 
     virtual int printf(const char *fmt, ...) const;
     virtual int write(const void *buf, size_t len) const;
 
-    const char *getQueryString() const;
-    inline std::string getUrlRewritingRoot() const { return serverContext->getUrlRewritingRoot(); }
+    virtual const char *getQueryString() const;
+    virtual inline std::string getUrlRewritingRoot() const { return serverContext->getUrlRewritingRoot(); }
 
     // Methods for the base request handler (ie: not the rendering parts)
-    int read(void *buf, size_t len) const;
-    void sendObject(const std::string &basemane, const std::string &realpath) const;
-    inline const char *getMethod() const { return mg_get_request_info(conn)->request_method; }
-    inline const char *getUri() const { return mg_get_request_info(conn)->uri; }
-    inline const char *getHeader(const char *h) const { return mg_get_header(conn, h); }
-    bool getHeader(int i, std::string &key, std::string &value) const ;
-    inline int isSSL() const { return mg_get_request_info(conn)->is_ssl; }
-    inline std::string getListeningPort() const { return serverContext->getListeningPort(); }
+    virtual int read(void *buf, size_t len) const;
+    virtual void sendObject(const std::string &basemane, const std::string &realpath) const;
+    virtual inline const char *getMethod() const { return mg_get_request_info(conn)->request_method; }
+    virtual inline const char *getUri() const { return mg_get_request_info(conn)->uri; }
+    virtual inline const char *getHeader(const char *h) const { return mg_get_header(conn, h); }
+    virtual bool getHeader(int i, std::string &key, std::string &value) const ;
+
+    virtual inline int isSSL() const { return mg_get_request_info(conn)->is_ssl; }
+    virtual inline std::string getListeningPort() const { return serverContext->getListeningPort(); }
     inline void setServerContext(MongooseServerContext *sc) { serverContext = sc; }
 private:
     mutable struct mg_connection *conn;

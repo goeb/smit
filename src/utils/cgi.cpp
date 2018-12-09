@@ -3,7 +3,6 @@
 
 #include "cgi.h"
 #include "global.h"
-#include "httpdUtils.h"
 #include "utils/subprocess.h"
 #include "utils/logging.h"
 #include "utils/stringTools.h"
@@ -40,7 +39,7 @@ void launchCgi(const RequestContext *req, const std::string &exePath, Argv envp)
     Subprocess *subp = Subprocess::launch(argv.getv(), envp.getv(), dir.c_str());
     if (!subp) {
         LOG_ERROR("Cannot launch CGI: %s", exePath.c_str());
-        sendHttpHeader500(req, "cannot launch git backend");
+        req->printf("Status: 500 Internal Error Cannot launch CGI\r\n\r\n");
         return;
     }
 

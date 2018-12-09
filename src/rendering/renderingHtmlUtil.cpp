@@ -232,7 +232,7 @@ std::string getPropertyForGrouping(const ProjectConfig &pconfig, const std::stri
 
 /** concatenate a param to the query string (add ? or &)
   */
-std::string queryStringAdd(const ResponseContext *req, const char *param)
+std::string queryStringAdd(const RequestContext *req, const char *param)
 {
     std::string qs = req->getQueryString();
 
@@ -403,7 +403,7 @@ bool isImage(const std::string &filename)
     return false;
 }
 
-static void printFilterLogicalExpr(const ResponseContext *req,
+static void printFilterLogicalExpr(const RequestContext *req,
                             const std::map<std::string, std::list<std::string> > &filter, FilterMode mode)
 {
     std::map<std::string, std::list<std::string> >::const_iterator f;

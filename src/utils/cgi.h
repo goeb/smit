@@ -3,8 +3,8 @@
 
 #include <string>
 
-#include "HttpContext.h"
-#include "utils/argv.h"
+#include "RequestContext.h"
+#include "argv.h"
 
 void launchCgi(const RequestContext *req, const std::string &exePath, Argv envp);
 

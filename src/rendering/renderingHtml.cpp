@@ -82,7 +82,7 @@
   *
   * The caller is responsible for calling 'free' on the returned pointer (if not null).
   */
-int loadProjectPage(const ResponseContext *req, const std::string &projectPath, const std::string &page, const char **data)
+int loadProjectPage(const RequestContext *req, const std::string &projectPath, const std::string &page, const char **data)
 {
     std::string path;
     if (!projectPath.empty()) {
@@ -221,7 +221,7 @@ public:
         return filename;
     }
 
-    void dumpPrevious(const ResponseContext *req) {
+    void dumpPrevious(const RequestContext *req) {
         if (dumpEnd == dumpStart) {
             LOG_ERROR("dumpPrevious: dumpEnd == dumpStart");
             return;
@@ -652,7 +652,7 @@ public:
         return html;
     }
 
-    void print(const ResponseContext *req) {
+    void print(const RequestContext *req) {
 
         req->printf("%s", getHtml().c_str());
 
@@ -924,7 +924,7 @@ void RHtml::printProjects(const ContextParameters &ctx,
     ctx.req->printf("</table>");
 }
 
-void RHtml::printUsers(const ResponseContext *req, const std::list<User> &usersList)
+void RHtml::printUsers(const RequestContext *req, const std::list<User> &usersList)
 {
     std::list<User>::const_iterator u;
 
@@ -968,7 +968,7 @@ void RHtml::printUsers(const ResponseContext *req, const std::list<User> &usersL
     req->printf("</table><br>\n");
 }
 
-void RHtml::printUserPermissions(const ResponseContext *req, const User &u)
+void RHtml::printUserPermissions(const RequestContext *req, const User &u)
 {
     req->printf("<table class=\"sm_users\">\n");
     req->printf("<tr><th>%s</th><th>%s</th></tr>\n", _("Project"), _("Role"));

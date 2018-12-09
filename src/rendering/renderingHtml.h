@@ -54,8 +54,8 @@ public:
     static void printProjects(const ContextParameters &ctx,
                               const std::list<ProjectSummary> &pList,
                               const std::map<std::string, std::map<Role, std::set<std::string> > > &userRolesByProject);
-    static void printUsers(const ResponseContext *req, const std::list<User> &usersList);
-    static void printUserPermissions(const ResponseContext *req, const User &u);
+    static void printUsers(const RequestContext *req, const std::list<User> &usersList);
+    static void printUserPermissions(const RequestContext *req, const User &u);
     static std::string getScriptProjectConfig(const ContextParameters &ctx, const ProjectConfig *alternateConfig = 0);
 
     static void printPageEntries(const ContextParameters &ctx, const std::vector<Entry> &entries);

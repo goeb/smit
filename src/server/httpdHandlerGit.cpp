@@ -12,10 +12,11 @@
 #include "utils/logging.h"
 #include "utils/base64.h"
 #include "utils/gitTools.h"
+#include "utils/filesystem.h"
+#include "utils/cgi.h"
 #include "user/session.h"
 #include "repository/db.h"
 
-#include "cgi.h"
 
 #define GIT_SERVICE_PUSH "git-receive-pack"
 #define GIT_SERVICE_FETCH "git-upload-pack"

@@ -50,13 +50,13 @@ smit_SOURCES = \
 			   src/utils/argv.cpp \
 			   src/utils/base64.cpp \
 			   src/utils/gitTools.cpp \
+			   src/utils/cgi.cpp \
 			   src/main.cpp \
 			   src/server/httpdHandlers.cpp \
 			   src/server/httpdUtils.cpp \
 			   src/server/httpdHandlerGit.cpp \
 			   src/server/Trigger.cpp \
 			   src/server/HttpContext.cpp \
-			   src/server/cgi.cpp \
 			   src/server/gitconfig.cpp \
 			   src/rendering/renderingText.cpp \
 			   src/rendering/renderingJson.cpp \
