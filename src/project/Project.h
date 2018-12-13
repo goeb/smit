@@ -11,6 +11,7 @@
 #include "utils/ustring.h"
 #include "utils/mutexTools.h"
 #include "utils/stringTools.h"
+#include "utils/RequestContext.h"
 #include "View.h"
 #include "Issue.h"
 #include "ProjectConfig.h"
@@ -62,8 +63,9 @@ public:
     inline std::string getUrlName() const { return urlNameEncode(name); }
     inline static std::string urlNameEncode(const std::string &name) { return urlEncode(name, '%', "/"); }
     inline static std::string urlNameDecode(const std::string &name) { return urlDecode(name, false, '%'); }
-    inline std::string getPath() const { return path; }
-    inline std::string getPathEntries() const { return path + "/" PATH_ENTRIES_DB; }
+
+    inline std::string getPath() const { return path; } // TODO remove when all correctly encapsulated
+    inline std::string getPathEntries() const { return path + "/" PATH_ENTRIES_DB; } // TODO remove when all correctly encapsulated
 
     // project config
     ProjectConfig getConfig() const;
@@ -92,7 +94,13 @@ public:
 
     Project() : maxIssueId(0) {}
 
-    inline Locker &getLocker() { return locker; }
+    int runGitHttpBackend(const RequestContext *req, const std::string username, const std::string role);
+    // TODO
+    // readObject(sha1id)
+    // git cgi backend
+    // setupGitConfig
+    // setupGitHook
+
 
 private:
     // private member variables

@@ -158,3 +158,16 @@ bool MongooseRequestContext::getHeader(int i, std::string &key, std::string &val
 
     return true;
 }
+
+
+void MongooseRequestContext::sendHttpHeader(int httpCode, const char *fmt, ...) const
+{
+    mg_printf(conn, "HTTP/1.1 %d", httpCode);
+
+    va_list ap;
+    va_start(ap, fmt);
+    mg_vprintf(conn, fmt, ap);
+    va_end(ap);
+
+    mg_printf(conn, "\r\n");
+}

@@ -1270,6 +1270,116 @@ std::string Project::getTriggerCmdline() const
 }
 
 
+#define FILE_PUSHED_BRANCHES "smit_pushed"
+#define NEW_ISSUES "new_issues"
+
+
+/** Update a project after a git push
+ *
+ *  The file $GIT_DIR/smit_pushed contains the branches
+ * that have been pushed.
+ *
+ * update project entries if pushed entries
+ *
+ * 3 cases :
+ * - pushed entries to existing issue (branches issues/<id>)
+ * - pushed entries to new issue (branches new_issues/...)
+ * - pushed onto branch master (project config, etc.)
+ *
+ * if some branches new_issues/... exist, then for each of them:
+ *    - allocate an issue <id>
+ *    - rename the branch to issues/<id>
+ *
+ * if some branches issues/... have been updated, then reload these issues
+ *
+ * if branch master has been updated, then reload config
+ */
+static void handleUpdateAfterGitPush(Project *pro, const std::string &pushedBranches)
+{
+    LOG_ERROR("handleUpdateAfterGitPush NOT IMPLEMENTED");
+
+    // load file
+    std::string lines;
+    int err = loadFile(pushedBranches, lines);
+    if (err) {
+        // no such file ?
+    }
+
+    // parse the lines
+
+    while (!lines.empty()) {
+        std::string line = popToken(lines, '\n');
+        std::string oldSha1 = popToken(line, ' ');
+        std::string newSha1 = popToken(line, ' ');
+        std::string &ref = line;
+
+        if (ref.empty()) continue;
+
+        // extract the part 'refs/heads/'
+        popToken(ref, '/'); // remove 'refs'
+        popToken(ref, '/'); // remove 'heads'
+        std::string &branch = ref;
+        if (branch == "master") {
+            int err;// = pro->loadConfig();
+            if (err == -1) {
+                // question: how to deal with a broken config that has just been pushed ?
+               // ???
+                //LOG_DEBUG("Project '%s' not loaded because of errors while reading the config.", path.c_str());
+                return;
+            }
+
+            //pro->loadPredefinedViews();
+
+        } else {
+            std::string group = popToken(branch, '/');
+            if (group == NEW_ISSUES) {
+                // allocate new id
+                // rename branch
+                // load this new issue in memory
+                //xxx;
+            } else if (group == "issues") {
+                // reload this issue in memory
+                //xxx;
+            } else {
+                LOG_ERROR("Invalid branch %s", branch.c_str());
+            }
+
+        }
+
+    }
+}
+/** Run the git HTTP backend CGI for serving git pull or push
+ *
+ *
+ */
+int Project::runGitHttpBackend(const RequestContext *req, const std::string username, const std::string role)
+{
+    bool isPushRequest = gitIsPushRequest(req);
+
+    LOCK_SCOPE(locker, LOCK_READ_WRITE); // lock read-only when possible
+
+    // remove file FILE_PUSHED_BRANCHES of the project
+    std::string pushedBranches = getPath() + "/.git/" FILE_PUSHED_BRANCHES;
+    if (fileExists(pushedBranches)) {
+        int err = unlink(pushedBranches.c_str());
+        if (err) {
+            LOG_ERROR("httpGitServeRequest: cannot unlink '%s': %s", pushedBranches.c_str(), STRERROR(errno));
+            req->sendHttpHeader(500, "cannot unlink '%s'", pushedBranches.c_str());
+            req->printf("\r\n"); // end header
+            return -1;
+        }
+    }
+
+    gitCgiBackend(req, req->getUri(), Database::getRootDirAbsolute(), username, role);
+
+    if (fileExists(pushedBranches)) {
+
+        handleUpdateAfterGitPush(this, pushedBranches);
+
+    }
+    return 0; // success
+}
+
 
 
 

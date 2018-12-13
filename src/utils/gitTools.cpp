@@ -4,6 +4,7 @@
 #include "filesystem.h"
 #include "subprocess.h"
 #include "stringTools.h"
+#include "cgi.h"
 
 /** Modify a file
  *
@@ -177,7 +178,6 @@ std::string gitGetLocalBranchThatContains(const std::string &gitRepo, const std:
     Argv argv;
     std::string subStdout, subStderr;
 
-    // git branch -m <old> <new>
     argv.set("git", "branch", "--contains", gitRef.c_str(), 0);
     int err = Subprocess::launchSync(argv.getv(), 0, gitRepo.c_str(), 0, 0, subStdout, subStderr);
     if (err) {
@@ -325,3 +325,93 @@ int gitBranchRemove(const std::string &gitRepo, const std::string &branch, int o
     return err;
 }
 
+
+/*
+    git-push
+    GET /public/info/refs?service=git-receive-pack HTTP/1.1
+    Host: localhost:8090
+    User-Agent: git/2.11.0
+
+    git-fetch
+    GET /public/info/refs?service=git-upload-pack HTTP/1.1
+    Host: localhost:8090
+    User-Agent: git/2.11.0
+*/
+
+#define GIT_SERVICE_PUSH "git-receive-pack"
+#define GIT_SERVICE_FETCH "git-upload-pack"
+#define GIT_HTTP_BACKEND "/usr/lib/git-core/git-http-backend"
+
+/** Tell if the request is a push request
+ *
+ * A request is a push request if (excerpt from Documentation/git-http-backend.txt):
+ *     %{QUERY_STRING} service=git-receive-pack
+ * OR  %{REQUEST_URI} /git-receive-pack$
+ *
+ */
+bool gitIsPushRequest(const RequestContext *req)
+{
+    const std::string qs = req->getQueryString();
+    std::string uri = req->getUri();
+    const std::string service = getFirstParamFromQueryString(qs, "service");
+
+    // take the last part of the uri
+    std::string lastPart;
+    while (!uri.empty()) lastPart = popToken(uri, '/');
+
+    if (lastPart == "/" GIT_SERVICE_PUSH || service == GIT_SERVICE_PUSH) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+/* Serve a git fetch or push request
+ *
+ * Access restriction must have been done before calling this function.
+ * (this function does not verify access rights)
+ *
+ * @param resourcePath
+ *     Eg: /project/info/refs
+ *         /project/HEAD
+ *
+ */
+void gitCgiBackend(const RequestContext *req, const std::string &resourcePath, const std::string &gitRoot,
+                   const std::string &username, const std::string &role)
+{
+    // run a CGI git-http-backend
+    LOG_DIAG("gitCgiBackend: resource=%s, gitRoot=%s, username=%s, role=%s", resourcePath.c_str(),
+             gitRoot.c_str(), username.c_str(), role.c_str());
+
+    std::string varRemoteUser;
+    std::string varGitRoot = "GIT_PROJECT_ROOT=" + gitRoot;
+    std::string varPathInfo = "PATH_INFO=" + resourcePath;
+    std::string varQueryString = "QUERY_STRING=";
+    std::string varMethod = "REQUEST_METHOD=" + std::string(req->getMethod());
+    std::string varGitHttpExport = "GIT_HTTP_EXPORT_ALL=";
+    std::string varRole = "SMIT_ROLE=" + role;
+
+    const char *contentType = req->getHeader("Content-Type");
+    if (!contentType) contentType = "";
+    std::string varContentType = "CONTENT_TYPE=" + std::string(contentType);
+
+    varQueryString += req->getQueryString();
+
+    Argv envp;
+    envp.set(varGitRoot.c_str(),
+             varPathInfo.c_str(),
+             varQueryString.c_str(),
+             varMethod.c_str(),
+             varGitHttpExport.c_str(),
+             varContentType.c_str(),
+             varRole.c_str(), // the pre-receive hook shall take this into account
+             0);
+
+    if (username.size()) {
+        varRemoteUser = "REMOTE_USER=" + username;
+        envp.append(varRemoteUser.c_str(), 0);
+    }
+
+    launchCgi(req, GIT_HTTP_BACKEND, envp);
+    return;
+}

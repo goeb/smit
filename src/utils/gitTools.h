@@ -3,6 +3,7 @@
 
 #include <string>
 #include <map>
+#include "RequestContext.h"
 
 #define GIT_OPT_FORCE 0x1
 
@@ -21,5 +22,9 @@ int gitUpdateRef(const std::string &gitRepo, const std::string &gitRef, const st
 int gitRevListReverse(const std::string &gitRepo, const std::string &base, const std::string &branch, std::string &out);
 int gitBranchCreate(const std::string &gitRepo, const std::string &branch, const std::string &startPoint, int options=0);
 int gitBranchRemove(const std::string &gitRepo, const std::string &branch, int options=0);
+
+bool gitIsPushRequest(const RequestContext *req);
+void gitCgiBackend(const RequestContext *req, const std::string &resourcePath, const std::string &gitRoot,
+                   const std::string &username, const std::string &role);
 
 #endif // _gitTools_h

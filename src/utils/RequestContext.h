@@ -17,6 +17,7 @@ public:
     virtual bool getHeader(int i, std::string &key, std::string &value) const = 0;
     virtual int isSSL() const = 0;
     virtual std::string getListeningPort() const = 0;
+    virtual void sendHttpHeader(int code, const char *fmt, ...) const = 0;
 };
 
 #endif

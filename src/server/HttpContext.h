@@ -70,6 +70,8 @@ public:
 
     virtual inline int isSSL() const { return mg_get_request_info(conn)->is_ssl; }
     virtual inline std::string getListeningPort() const { return serverContext->getListeningPort(); }
+    virtual void sendHttpHeader(int code, const char *fmt, ...) const;
+
     inline void setServerContext(MongooseServerContext *sc) { serverContext = sc; }
 private:
     mutable struct mg_connection *conn;

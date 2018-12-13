@@ -39,7 +39,8 @@ void launchCgi(const RequestContext *req, const std::string &exePath, Argv envp)
     Subprocess *subp = Subprocess::launch(argv.getv(), envp.getv(), dir.c_str());
     if (!subp) {
         LOG_ERROR("Cannot launch CGI: %s", exePath.c_str());
-        req->printf("Status: 500 Internal Error Cannot launch CGI\r\n\r\n");
+        req->sendHttpHeader(500, "Internal Error Cannot launch CGI");
+        req->printf("\r\n");
         return;
     }
 
@@ -49,6 +50,9 @@ void launchCgi(const RequestContext *req, const std::string &exePath, Argv envp)
     const int SIZ = 4096;
     char datachunk[SIZ];
     int n; // number of bytes read
+
+    // TODO take care of the child's stderr (either close or log
+    // to avoid possible deadlock if the pipe becomes full)
 
     if (std::string("POST") == req->getMethod()) {
         while ( (n = req->read(datachunk, SIZ)) > 0) {

@@ -90,6 +90,21 @@ std::string popToken(std::string &text, char separator, TokenExtractionType type
     return firstToken;
 }
 
+/** Extract a token at index i (starting at zero)
+ *
+ */
+std::string popTokenConst(const std::string &str, char separator, TokenExtractionType type, int index)
+{
+    std::string copy = str;
+    std::string result;
+    while (index >= 0) {
+        result = popToken(copy, separator, type);
+        index--;
+    }
+    return result;
+}
+
+
 /** Remove characters at the end of string
   */
 void trimRight(std::string &s, const char *c)

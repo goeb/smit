@@ -22,6 +22,7 @@ enum TokenExtractionType {
 };
 
 std::string popToken(std::string & uri, char separator, TokenExtractionType type=TOK_TRIM_BOTH);
+std::string popTokenConst(const std::string &str, char separator, TokenExtractionType type=TOK_TRIM_BOTH, int index=0);
 void trimLeft(std::string & s, const char *c);
 void trimLeft(std::string & s, const char c);
 void trimRight(std::string &s, const char *c);
