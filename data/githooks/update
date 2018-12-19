@@ -8,9 +8,18 @@ die() {
 	exit 1
 }
 
-check_new_branch() {
+check_is_new_branch() {
 	if [ "$SHA1_OLD" != 0000000000000000000000000000000000000000 ]; then
 		die "error: not a new branch '$REFNAME'"
+	fi
+}
+
+check_first_entry_does_not_exist() {
+	first_commit=$(git rev-list --max-parents=0 "$SHA1_NEW")
+	other_branch=$(git branch --contains "$first_commit")
+	err=$?
+	if [ $err -eq 0 ]; then
+		die "error: new branch '$REFNAME' but not new first commit '$first_commit' (in $other_branch)"
 	fi
 }
 
@@ -36,7 +45,8 @@ case "$REFNAME" in
 	refs/notes/commit) check_role_rw;;
 	refs/heads/new_issues/*)
 	   	check_role_rw
-		check_new_branch
+		check_is_new_branch
+		check_first_entry_does_not_exist
 		;;
 	refs/heads/issues/*)
 		check_role_rw
