@@ -151,8 +151,8 @@ void RCsv::printIssue(const RequestContext *req, const IssueCopy &issue, const P
 
     // print entries
     PropertiesIt pit;
-    Entry *e = issue.first;
-    while (e) {
+    std::vector<Entry>::const_iterator e;
+    FOREACH(e, issue.entries) {
         // author
         req->printf("%s", doubleQuoteCsv(e->author).c_str());
         // ctime
@@ -182,7 +182,6 @@ void RCsv::printIssue(const RequestContext *req, const IssueCopy &issue, const P
         }
 
         req->printf("\r\n"); // new line
-        e = e->getNext();
     }
 }
 

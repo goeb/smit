@@ -486,6 +486,10 @@ int cmdServe(int argc, char **argv)
 {
     LOG_INFO("Starting Smit v" VERSION);
 
+    printf("sizeof Issue: %d bytes\n", sizeof(Issue));
+    printf("sizeof IssueCopy: %d bytes\n", sizeof(IssueCopy));
+    printf("sizeof Entry: %d bytes\n", sizeof(Entry));
+
     ServerOptions options;
     options.listenPort = "8090"; // default value
     options.repo = "."; // serve current directory by default

@@ -71,10 +71,10 @@ void RText::printIssue(const RequestContext *req, const IssueCopy &issue)
 {
     LOG_DEBUG("RText::printIssue...");
     req->printf("Content-Type: text/plain\r\n\r\n");
-    Entry *e = issue.first;
-    while (e) {
+
+    std::vector<Entry>::const_iterator e;
+    FOREACH(e, issue.entries) {
         req->printf("%s\n", e->id.c_str());
-        e = e->getNext();
     }
 }
 

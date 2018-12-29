@@ -187,13 +187,7 @@ void RJson::printIssue(const RequestContext *req, const IssueCopy &issue)
 
     req->printf(",\"entries\":");
 
-    std::vector<Entry> entries;
-    Entry *e = issue.first;
-    while (e) {
-        entries.push_back(*e);
-        e = e->getNext();
-    }
-    printEntries(req, entries);
+    printEntries(req, issue.entries);
     req->printf("}");
 }
 

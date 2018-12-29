@@ -232,15 +232,6 @@ Entry *Entry::createNewEntry(const PropertiesMap &props, const std::list<Attache
     return e;
 }
 
-/** Append an entry after this
-  *
-  */
-void Entry::append(Entry *e)
-{
-    e->setPrev(this);
-    setNext(e);
-}
-
 std::string Entry::serialize() const
 {
     std::ostringstream s;

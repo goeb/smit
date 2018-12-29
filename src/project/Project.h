@@ -107,7 +107,6 @@ private:
     std::string name; //< name of the project, plain text, UTF-8 encoded
     std::string path; //< path to the project, in which the basename is the urlencoded name
     uint32_t maxIssueId;
-    std::map<std::string, Entry*> entries;
     std::map<std::string, Issue*> issues;
     ProjectConfig config;
 
@@ -150,7 +149,7 @@ private:
     void updateAssociations(const Issue *i, const std::string &associationName,
                             const std::list<std::string> &issues);
 
-    void updateLastModified(Entry *e);
+    void updateLastModified(int issueMtime);
     IssueCopy copyIssue(const Issue &issue) const;
     Entry *getEntry(const std::string &id) const;
 

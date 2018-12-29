@@ -99,8 +99,8 @@ void printProperties(const IssueCopy &i)
 
 void printMessages(const IssueCopy &i, int printMode)
 {
-    const Entry *e = i.first;
-    while (e) {
+    std::vector<Entry>::const_iterator e;
+    FOREACH(e, i.entries) {
         bool doPrint = false; // used to know ifn the header must be printed
         std::string msg = e->getMessage();
 
@@ -159,7 +159,6 @@ void printMessages(const IssueCopy &i, int printMode)
 
             }
         }
-        e = e->getNext();
     }
 }
 

@@ -250,7 +250,7 @@ Issue *Project::loadIssue(const std::string &issueId)
     elist.close();
 
     if (error) {
-        Issue::destroy(issue);
+        delete issue;
         issue = 0;
 
     } else {
@@ -285,21 +285,8 @@ int Project::loadIssues()
 
         issue->project = getName();
 
-        Entry *e = issue->latest; // take the latest entry
-
         // update lastModified
-        updateLastModified(e);
-
-        // store the entries in the 'entries' table
-        while (e) {
-            int r = insertEntryInTable(e);
-            if (r != 0) {
-                // this should not happen
-                // maybe 2 issues pointing to the same first entry?
-                LOG_ERROR("Cannot load issue %s", issueId.c_str());
-            }
-            e = e->getPrev();
-        }
+        updateLastModified(issue->mtime);
 
         // update the maximum id
         int intId = atoi(issueId.c_str());
@@ -674,13 +661,6 @@ int Project::reload()
     }
     issues.clear();
 
-    // delete all entries
-    std::map<std::string, Entry*>::iterator entry;
-    FOREACH(entry, entries) {
-        delete entry->second;
-    }
-    entries.clear();
-
     // delete all associations
     associations.clear();
     reverseAssociations.clear();
@@ -759,13 +739,11 @@ std::list<std::pair<bool, std::string> > parseSortingSpec(const char *sortingSpe
 void Project::searchEntries(const char *sortingSpec, std::vector<Entry> &entries, int limit) const
 {
     ScopeLocker scopeLocker(locker, LOCK_READ_ONLY);
+
+    // concatenate all the entries of all the issues
     std::map<std::string, Issue*>::const_iterator i;
     FOREACH(i, issues) {
-        Entry *e = i->second->first;
-        while (e) {
-            entries.push_back(*e);
-            e = e->getNext();
-        }
+        entries.insert(entries.end(), i->second->entries.begin(), i->second->entries.end());
     }
 
     if (sortingSpec) {
@@ -870,36 +848,10 @@ int Project::insertIssueInTable(Issue *i)
     return 0;
 }
 
-int Project::insertEntryInTable(Entry *e)
+
+void Project::updateLastModified(int issueMtime)
 {
-    LOG_FUNC();
-    if (!e) {
-        LOG_ERROR("Cannot insert null entry in project");
-        return -1;
-    }
-    if (e->id.empty()) {
-        LOG_ERROR("Cannot insert entry with empty id in project");
-        return -2;
-    }
-
-    LOG_DEBUG("insertEntryInTable %s", e->id.c_str());
-
-    std::map<std::string, Entry*>::const_iterator existingEntry;
-    existingEntry = entries.find(e->id);
-    if (existingEntry != entries.end()) {
-        LOG_ERROR("Cannot insert entry %s: already in database", e->id.c_str());
-        return -3;
-    }
-
-    // add the issue in the table
-    entries[e->id] = e;
-    return 0;
-}
-
-void Project::updateLastModified(Entry *e)
-{
-    if (!e) return;
-    if (lastModified < e->ctime) lastModified = e->ctime;
+    if (lastModified < issueMtime) lastModified = issueMtime;
 }
 
 /**
@@ -1132,7 +1084,7 @@ int Project::addEntry(PropertiesMap properties, const std::list<AttachedFileRef>
         if (r != 0) return r; // already exists
     }
 
-    updateLastModified(e);
+    updateLastModified(e->ctime);
 
     // if some association has been updated, then update the associations tables
     FOREACH(p, properties) {
@@ -1165,16 +1117,17 @@ int Project::addNewEntry(const std::string &issueId, Entry *e)
         return -1;
     }
 
-    insertEntryInTable(e);
     return 0; // success
 }
 
 
 Entry *Project::getEntry(const std::string &id) const
 {
-    std::map<std::string, Entry*>::const_iterator e = entries.find(id);
-    if (e == entries.end()) return 0;
-    return e->second;
+    //TODO
+    //std::map<std::string, Entry*>::const_iterator e = entries.find(id);
+    //if (e == entries.end()) return 0;
+    //return e->second;
+    return 0;
 }
 
 
@@ -1245,7 +1198,7 @@ int Project::amendEntry(const std::string &entryId, const std::string &msg,
 
     e->issue->amendEntry(amendingEntry);
 
-    updateLastModified(amendingEntry);
+    updateLastModified(amendingEntry->ctime);
 
     entryOut = amendingEntry;
     return 0;

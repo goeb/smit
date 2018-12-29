@@ -63,9 +63,9 @@ static int sendZippedFile(const ContextParameters &ctx, struct archive *a, const
 
 static int attachFiles(const ContextParameters &ctx, struct archive *a, const std::string &projectPath, const IssueCopy &issue)
 {
-    Entry *e = issue.first;
     std::set<std::string> sentFiles; // used to detect duplicated files (same name)
-    while (e) {
+    std::vector<Entry>::const_iterator e;
+    FOREACH(e, issue.entries) {
 
         std::list<AttachedFileRef>::const_iterator f;
         FOREACH(f, e->files) {
@@ -107,8 +107,6 @@ static int attachFiles(const ContextParameters &ctx, struct archive *a, const st
             if (ret < 0) return -1;
             sentFiles.insert(fpath);
         }
-
-        e = e->getNext();
     }
     return 0; // success
 }
@@ -137,11 +135,10 @@ static std::string buildHtml(const ContextParameters &ctx, const IssueCopy &issu
     oss << tags;
 
     // entries
-    Entry *e = issue.first;
-    while (e) {
+    std::vector<Entry>::const_iterator e;
+    FOREACH(e, issue.entries) {
         std::string entry = RHtmlIssue::renderEntry(ctx, issue, *e, FLAG_ENTRY_OFFLINE);
         oss << entry;
-        e = e->getNext();
     } // end of entries
 
     oss << "</div>\n";

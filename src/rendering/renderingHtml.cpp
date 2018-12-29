@@ -1239,7 +1239,7 @@ void RHtml::printEntries(const ContextParameters &ctx, const std::vector<Entry> 
 
         ctx.req->printf("<td class=\"sm_entries\"><a href=\"%s\">%s", href.c_str(), htmlEscape(e->issue->id).c_str());
         // print if the issue is newly created by this entry
-        if (e->issue->first && e->issue->first->id == e->id) ctx.req->printf("*"); // '*' to denote new issue
+        if (e->issue->entries.front().id == e->id) ctx.req->printf("*"); // '*' to denote new issue
 
         ctx.req->printf("</a></td>\n"); // end of issue id
 

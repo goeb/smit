@@ -595,8 +595,8 @@ void RHtmlIssue::printIssue(const ContextParameters &ctx, const IssueCopy &issue
 
     // entries
     // -------------------------------------------------
-    Entry *e = issue.first;
-    while (e) {
+    std::vector<Entry>::const_iterator e;
+    FOREACH(e, issue.entries) {
         Entry ee = *e;
 
         int flag = FLAG_ENTRY_NOMINAL;
@@ -604,7 +604,6 @@ void RHtmlIssue::printIssue(const ContextParameters &ctx, const IssueCopy &issue
         std::string entry = renderEntry(ctx, issue, ee, flag);
         ctx.req->printf("%s", entry.c_str());
 
-        e = e->getNext();
     } // end of entries
 
     ctx.req->printf("</div>\n");

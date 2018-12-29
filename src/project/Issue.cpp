@@ -58,15 +58,10 @@ void Issue::addEntryInTable(Entry *e)
     mtime = e->ctime;
 
     // if the issue had no entries then set the creation time
-    if (!latest) ctime = e->ctime;
+    if (entries.empty()) ctime = e->ctime;
 
-    // update the chain list of entries
-    if (!first) first = e;
-
-    if (latest) latest->append(e);
-    latest = e;
-
-    e->issue = this;
+    entries.push_back(*e);
+    entries.back().issue = this;
 }
 
 /** Add an entry
@@ -80,7 +75,7 @@ void Issue::addEntry(Entry *e)
     addEntryInTable(e);
 
     // consolidate the issue
-    consolidateWithSingleEntry(e);
+    consolidateWithSingleEntry(*e);
 }
 
 /** Insert entry before the latest entry
@@ -94,25 +89,11 @@ void Issue::insertEntry(Entry* e)
         LOG_ERROR("Issue::insertEntry: e=null");
         return;
     }
-    if (!latest) latest = e;
 
-    if (first) e->append(first); // insert before the first
-
-    first = e;
-    e->issue = this;
+    entries.insert(entries.begin(), *e);
+    entries.front().issue = this;
 }
 
-void Issue::destroy(Issue *i)
-{
-    // delete all entries and the issue
-    Entry *e = i->first;
-    while (e) {
-        Entry *tobeDeleted = e;
-        e = e->getNext();
-        delete tobeDeleted;
-    }
-    delete i;
-}
 
 /** Amend the given Entry with a new message
   *
@@ -123,21 +104,21 @@ void Issue::amendEntry(Entry *amendingEntry)
 {
     addEntry(amendingEntry);
 
-    consolidateAmendment(amendingEntry);
+    consolidateAmendment(*amendingEntry);
 }
 
 
 
 /** Copy properties of an entry to an issue.
   */
-void Issue::consolidateWithSingleEntry(Entry *e) {
-    std::map<std::string, std::list<std::string> >::iterator p;
-    FOREACH(p, e->properties) {
+void Issue::consolidateWithSingleEntry(const Entry &e) {
+    PropertiesIt p;
+    FOREACH(p, e.properties) {
         if (p->first.size() && p->first[0] == '+') continue; // do not consolidate these (+file, +message, etc.)
         properties[p->first] = p->second;
     }
     // update also mtime of the issue
-    mtime = e->ctime;
+    mtime = e.ctime;
 }
 
 /** Consolidate a possible amended entry
@@ -145,19 +126,19 @@ void Issue::consolidateWithSingleEntry(Entry *e) {
   * @param e
   *    The amending entry
   */
-void Issue::consolidateAmendment(Entry *e)
+void Issue::consolidateAmendment(const Entry &amending)
 {
-    PropertiesIt p = e->properties.find(K_AMEND);
-    if (p == e->properties.end()) return; // no amendment
+    PropertiesIt p = amending.properties.find(K_AMEND);
+    if (p == amending.properties.end()) return; // no amendment
     if (p->second.empty()) {
         LOG_ERROR("cannot consolidateAmendment with no entry to consolidate");
         return;
     }
     std::string amendedEntryId = p->second.front();
 
-    p = e->properties.find(K_MESSAGE);
+    p = amending.properties.find(K_MESSAGE);
     const std::string *newMsg = 0;
-    if (p == e->properties.end()) return; // no amending message
+    if (p == amending.properties.end()) return; // no amending message
     if (p->second.empty()) {
         LOG_ERROR("cannot consolidateAmendment with no message");
         // consider the message as empty
@@ -165,18 +146,16 @@ void Issue::consolidateAmendment(Entry *e)
     } else newMsg = &(p->second.front());
 
     // find this entry and modify its message
-    Entry *amendedEntry = e;
-    while ((amendedEntry = amendedEntry->getPrev())) {
-        if (amendedEntry->id == amendedEntryId) break;
+    std::vector<Entry>::iterator e;
+    FOREACH(e, entries) {
+        if (e->id == amendedEntryId) {
+            // this is the entry that is being amended
+            // overwrite previous message
+            e->setMessage(newMsg);
+            amendments[amendedEntryId].push_back(amending.id);
+            break;
+        }
     }
-    if (!amendedEntry) {
-        LOG_ERROR("cannot consolidateAmendment for unfound entry '%s'", amendedEntryId.c_str());
-        return;
-    }
-
-    amendments[amendedEntry->id].push_back(e->id);
-    // overwrite previous message
-    amendedEntry->setMessage(newMsg);
 }
 
 /** Consolidate an issue by accumulating all its entries
@@ -186,15 +165,13 @@ void Issue::consolidate()
 {
     properties.clear();
 
-    Entry *e = first;
-
     // ctime of the issue is ctime of its first entry
-    if (e) ctime = e->ctime;
+    if (!entries.empty()) ctime = entries.front().ctime;
 
-    while (e) {
-        consolidateWithSingleEntry(e);
-        consolidateAmendment(e);
-        e = e->getNext();
+    std::vector<Entry>::const_iterator e;
+    FOREACH(e, entries) {
+        consolidateWithSingleEntry(*e);
+        consolidateAmendment(*e);
     }
 }
 
@@ -218,20 +195,18 @@ int Issue::makeSnapshot(time_t datetime)
 
     int n = 0; // number of remaining entries after snapshot
 
-    Entry *e = first;
-
     // ctime of the issue is ctime of its first entry
-    if (e) ctime = e->ctime;
+    if (!entries.empty()) ctime = entries.front().ctime;
 
-    while (e) {
+    std::vector<Entry>::const_iterator e;
+    FOREACH(e, entries) {
         if (e->ctime > datetime) {
             // This entry newer than the given datetime, stop here.
             break;
         } else {
             n++;
-            consolidateWithSingleEntry(e);
-            consolidateAmendment(e);
-            e = e->getNext();
+            consolidateWithSingleEntry(*e);
+            consolidateAmendment(*e);
         }
     }
     return n;
@@ -360,8 +335,8 @@ bool Issue::searchFullText(const char *text) const
     }
 
     // look through the entries
-    Entry *e = first;
-    while (e) {
+    std::vector<Entry>::const_iterator e;
+    FOREACH(e, entries) {
         // do not search through amending entries
         if (!e->isAmending()) {
             // look through the message
@@ -379,7 +354,6 @@ bool Issue::searchFullText(const char *text) const
             // look at the author of the entry
             if (mg_strcasestr(e->author.c_str(), text)) return true; // found
         }
-        e = e->getNext();
     }
 
     return false; // text not found

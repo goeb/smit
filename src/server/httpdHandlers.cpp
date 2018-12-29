@@ -1882,16 +1882,17 @@ int httpGetIssue(const RequestContext *req, Project &p, const std::string &issue
 
         std::string q = req->getQueryString();
         std::string amend = getFirstParamFromQueryString(q, "amend");
-        Entry *entryToBeAmended = 0;
+        const Entry *entryToBeAmended = 0;
 
         if (!amend.empty()) {
             // look for the entry in the entries of the issue
-            Entry *e = issue.first;
-            while (e) {
-                if (e->id == amend) break;
-                e = e->getNext();
+            std::vector<Entry>::const_iterator e;
+            FOREACH(e, issue.entries) {
+                if (e->id == amend) {
+                    entryToBeAmended = &(*e);
+                    break;
+                }
             }
-            entryToBeAmended = e;
         }
 
         ContextParameters ctx = ContextParameters(req, u, p.getProjectParameters());

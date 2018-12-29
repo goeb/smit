@@ -39,7 +39,7 @@ typedef std::string AssociationId;
 // An issue is consolidated over all its entries
 struct Issue {
     std::string id; // same as the first entry
-    Entry *first; // the first entry
+    std::vector<Entry> entries;
     std::string project; // name of the project
     int ctime; // creation time (the one of the first entry)
 
@@ -50,7 +50,7 @@ struct Issue {
     std::map<std::string, std::list<std::string> > amendments; // key: amended entry-id, value: amending entries
     std::map<std::string, std::set<std::string> > tags; // key: entry-id, value: tags
 
-    Issue() : first(0), ctime(0), mtime(0), latest(0) {}
+    Issue() : ctime(0), mtime(0) {}
 
     // the properties of the issue is the consolidation of all the properties
     // of its entries. For a given key, the most recent value has priority.
@@ -58,8 +58,8 @@ struct Issue {
     bool isInFilter(const std::map<std::string, std::list<std::string> > &filter, FilterMode mode) const;
 
     void consolidate();
-    void consolidateWithSingleEntry(Entry *e);
-    void consolidateAmendment(Entry *e);
+    void consolidateWithSingleEntry(const Entry &e);
+    void consolidateAmendment(const Entry &amending);
     bool searchFullText(const char *text) const;
     int getNumberOfTaggedIEntries(const std::string &tagname) const;
     void addTag(const std::string &entryId, const std::string &tagname);
@@ -70,7 +70,6 @@ struct Issue {
 
     void addEntryInTable(Entry *e);
     void addEntry(Entry *e);
-    static void destroy(Issue *i);
     void insertEntry(Entry *e);
     void amendEntry(Entry *amendingEntry);
 

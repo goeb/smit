@@ -21,7 +21,7 @@
 
 #define DELETE_DELAY_S (10*60) // seconds
 
-typedef std::string EntryId; // this is a git commit id (in hexa)
+typedef std::string EntryId; // this is a git commit id (40 characters in hexa)
 
 // Define atomic builtins for gcc < 4.7
 #ifdef __GNUC__
@@ -82,7 +82,7 @@ public:
 
 
     // methods
-    Entry() : ctime(0), issue(0), next(0), prev(0), message(&EMPTY_MESSAGE) {}
+    Entry() : ctime(0), issue(0), message(&EMPTY_MESSAGE) {}
     static Entry *loadEntry(std::string data, std::string &treeid, std::list<std::string> &tags);
 
     void updateMessage();
@@ -93,29 +93,17 @@ public:
     inline const std::string &getMessage() const { return *((const std::string*)atomicGet(message)); }
     inline void setMessage(const std::string *msg) { atomicSet((const void**)&message, msg); }
 
-    inline Entry *getNext() const { return (Entry *)atomicGet(next); }
-    inline void setNext(Entry *nextEntry) { atomicSet((const void**)&next, nextEntry); }
-
-    inline Entry *getPrev() const { return (Entry *)atomicGet(prev); }
-    inline void setPrev(Entry *prevEntry) { atomicSet((const void**)&prev, prevEntry); }
-
 
     bool isAmending() const;
     static Entry *createNewEntry(const PropertiesMap &props, const std::list<AttachedFileRef> &files,
                                  const std::string &author, const Entry *eParent);
 
 
-    // methods managing the linked list
-    void append(Entry *e);
-
     static void sort(std::vector<Entry> &inout, const std::list<std::pair<bool, std::string> > &sortingSpec);
     bool lessThan(const Entry &other, const std::list<std::pair<bool, std::string> > &sortingSpec) const;
     bool lessThan(const Entry *other, const std::list<std::pair<bool, std::string> > &sortingSpec) const;
 
 private:
-    // chainlist pointers
-    struct Entry *next; // child
-    struct Entry *prev; // parent
 
     /** The member "message" points to :
       * - either null if no message
