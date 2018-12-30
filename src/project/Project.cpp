@@ -590,7 +590,7 @@ int Project::createProjectFiles(const std::string &repositoryPath, const std::st
 /** Tag or untag an entry
   *
   */
-int Project::toggleTag(const std::string &entryId, const std::string &tagname, const std::string &author)
+int Project::toggleTag(const std::string &entryId, const std::string &tagname)
 {
     LOCK_SCOPE(locker, LOCK_READ_WRITE);
 
@@ -1067,10 +1067,10 @@ int Project::addEntry(PropertiesMap properties, const std::list<AttachedFileRef>
     }
 
     // create the new entry object
-    Entry *e = Entry::createNewEntry(properties, files, username, i->latest);
+    Entry *e = Entry::createNewEntry(properties, files, username);
 
     // add the entry to the project and store to disk
-    int r = addNewEntry(i->id, e);
+    int r = storeNewEntry(i->id, e);
     if (r < 0) {
         delete e;
         return r; // already exists
@@ -1101,10 +1101,9 @@ int Project::addEntry(PropertiesMap properties, const std::list<AttachedFileRef>
 
 /** Add a new entry to the project
   *
-  * 1. Create a commit in the disk database
-  * 2. Insert the entry in the table of entries
+  * Create a commit in the disk database
   */
-int Project::addNewEntry(const std::string &issueId, Entry *e)
+int Project::storeNewEntry(const std::string &issueId, Entry *e)
 {
     const std::string data = e->serialize();
 
@@ -1163,7 +1162,7 @@ ProjectParameters Project::getProjectParameters() const
   *    >0 no entry was created due to no change
   *    <0 error
   */
-int Project::amendEntry(const std::string &entryId, const std::string &msg,
+int Project::amendEntry(const EntryId &entryId, const std::string &msg,
                         Entry *&entryOut, const std::string &username, IssueCopy &oldIssue)
 {
     LOCK_SCOPE(locker, LOCK_READ_WRITE);
@@ -1188,9 +1187,9 @@ int Project::amendEntry(const std::string &entryId, const std::string &msg,
     properties[K_AMEND].push_back(entryId);
 
     std::list<AttachedFileRef> files; // no file, empty list
-    Entry *amendingEntry = Entry::createNewEntry(properties, files, username, e->issue->latest);
+    Entry *amendingEntry = Entry::createNewEntry(properties, files, username);
 
-    int r = addNewEntry(e->issue->id, amendingEntry);
+    int r = storeNewEntry(e->issue->id, amendingEntry);
     if (r != 0) {
         delete amendingEntry;
         return -2;

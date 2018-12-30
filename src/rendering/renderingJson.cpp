@@ -109,9 +109,6 @@ static void printEntries(const RequestContext *req, const std::vector<Entry> &en
         entryJson += ":{" + toJsonString("id") + ":" + toJsonString(e->id);
         entryJson += "," + toJsonString("author") + ":" + toJsonString(e->author);
         entryJson += "," + toJsonString("ctime") + ":" + toString(e->ctime);
-        entryJson += "," + toJsonString("parent") + ":";
-        if (e->parent == K_PARENT_NULL) entryJson += J_NULL;
-        else entryJson += toJsonString(e->parent);
         entryJson += "}";
 
         entryJson += ",";

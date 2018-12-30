@@ -103,7 +103,6 @@ Entry *Entry::loadEntry(std::string data, std::string &treeid, std::list<std::st
         if (line[0] != ' ') {
             key = popToken(line, ' ');
             if (key == "tree") treeid = line;
-            else if (key == "parent") e->parent = line;
             else if (key == "Notes:") inNotesPart = true;
             else if (key == "author") {
                 // take the author name until the first '<'
@@ -216,7 +215,7 @@ void Entry::updateMessage()
 }
 
 Entry *Entry::createNewEntry(const PropertiesMap &props, const std::list<AttachedFileRef> &files,
-                             const std::string &author, const Entry *eParent)
+                             const std::string &author)
 {
     Entry *e = new Entry();
     e->properties = props;
@@ -225,9 +224,6 @@ Entry *Entry::createNewEntry(const PropertiesMap &props, const std::list<Attache
     e->files = files;
 
     e->updateMessage();
-
-    if (eParent) e->parent = eParent->id;
-    else e->parent = K_PARENT_NULL;
 
     return e;
 }

@@ -96,7 +96,7 @@ public:
 
     bool isAmending() const;
     static Entry *createNewEntry(const PropertiesMap &props, const std::list<AttachedFileRef> &files,
-                                 const std::string &author, const Entry *eParent);
+                                 const std::string &author);
 
 
     static void sort(std::vector<Entry> &inout, const std::list<std::pair<bool, std::string> > &sortingSpec);

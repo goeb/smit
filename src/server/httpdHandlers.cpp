@@ -1814,7 +1814,7 @@ void httpPostTag(const RequestContext *req, Project &p, std::string &ref, const 
     std::string entryId = popToken(ref, '/');
     std::string tagname = ref;
 
-    int r = p.toggleTag(entryId, tagname, u.username);
+    int r = p.toggleTag(entryId, tagname);
     if (r == 0) {
         sendHttpHeader200(req);
         req->printf("\r\n");

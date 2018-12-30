@@ -52,7 +52,7 @@ public:
     int addEntry(PropertiesMap properties, const std::list<AttachedFileRef> &files, std::string &iid,
                  Entry *&entry, std::string username, IssueCopy &oldIssue);
 
-    int amendEntry(const std::string &entryId, const std::string &msg,
+    int amendEntry(const EntryId &entryId, const std::string &msg,
                    Entry *&entryOut, const std::string &username, IssueCopy &oldIssue);
 
     size_t getNumIssues() const;
@@ -88,7 +88,7 @@ public:
     PredefinedView getDefaultView() const;
 
     // methods for handling tags
-    int toggleTag(const std::string &entryId, const std::string &tagname, const std::string &author);
+    int toggleTag(const std::string &entryId, const std::string &tagname);
 
     std::string getTriggerCmdline() const;
 
@@ -133,7 +133,7 @@ private:
     Issue *createNewIssue();
     std::string allocateNewIssueId();
     void updateMaxIssueId(uint32_t i);
-    int addNewEntry(const std::string &issueId, Entry *e);
+    int storeNewEntry(const std::string &issueId, Entry *e);
     int load(); // load a project: config, views, entries, tags
     int loadConfig();
     Issue *loadIssue(const std::string &issueId);
