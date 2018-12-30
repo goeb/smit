@@ -221,6 +221,13 @@ static int gitRebaseCommit(const std::string &gitRepo, const std::string &branch
         return -1;
     }
 
+    if (e->isAmending()) {
+        // TODO
+        // if the amended entry has also been rebased,
+        // an update of its reference is needed
+        LOG_ERROR("update of reference to rebased amended entry not implemented");
+    }
+
     // create a clone of this entry onto the branch
     std::string bareGitRepo = gitRepo + "/.git";
     const std::string body = e->serialize();
@@ -237,6 +244,7 @@ static int gitRebaseCommit(const std::string &gitRepo, const std::string &branch
 /** Rebase a branch onto the remote by cherry-picking
  *
  *  Notes are also copied.
+ *  Amendments to rebased entries must be updated (TODO)
  *
  */
 static int rebaseBranchOntoRemoteFull(const std::string &gitRepo,const std::string &base, const std::string &branch)

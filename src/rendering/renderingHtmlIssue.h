@@ -25,13 +25,13 @@ public:
                                      const char *divStyle);
     static void printFormMessage(const ContextParameters &ctx, const std::string &contents);
     static void printEditMessage(const ContextParameters &ctx, const IssueCopy *issue,
-                                 const Entry &eToBeAmended);
+                                 uint32_t eIndexToBeAmended);
     static void printIssueForm(const ContextParameters &ctx, const IssueCopy *issue, bool autofocus);
     static std::string convertToRichText(const std::string &raw);
     static std::string renderPropertiesTable(const ContextParameters &ctx, const IssueCopy &issue, bool offline);
     static std::string renderTags(const ContextParameters &ctx, const IssueCopy &issue);
-    static std::string renderEntry(const ContextParameters &ctx, const IssueCopy &issue, const Entry &ee, int flags);
-    static void printIssue(const ContextParameters &ctx, const IssueCopy &issue, const std::string &entryToBeAmended);
+    static std::string renderEntry(const ContextParameters &ctx, const IssueCopy &issue, uint32_t entryIndex, int flags);
+    static void printIssue(const ContextParameters &ctx, const IssueCopy &issue, const uint32_t *entryIdxToBeAmended);
     static void printIssueListFullContents(const ContextParameters &ctx, const std::vector<IssueCopy> &issueList);
     static void printIssueList(const ContextParameters &ctx, const std::vector<IssueCopy> &issueList,
                                const std::list<std::string> &colspec, bool showOtherFormats);
@@ -39,7 +39,7 @@ public:
                                            const std::vector<IssueCopy> &issues,
                                            const std::list<std::string> &colspec);
     static std::string getEntryExtraStyles(const ProjectConfig &pconfig, const IssueCopy &issue,
-                                           const Entry &ee, bool beingAmended);
+                                           uint32_t entryIndex, bool beingAmended);
 
 };
 

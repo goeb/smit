@@ -46,8 +46,8 @@ struct Issue {
     // mutable members, that may be modified when a user posts an entry
     int mtime; // modification time (the one of the last entry)
     PropertiesMap properties;
-    std::map<std::string, std::list<std::string> > amendments; // key: amended entry-id, value: amending entries
-    std::map<std::string, std::set<std::string> > tags; // key: entry-id, value: tags
+    std::map<uint32_t, std::list<uint32_t> > amendments; // key: amended entry-id, value: amending entries
+    std::map<uint32_t, std::set<std::string> > tags; // key: entry-index, value: tags
 
     Issue() : ctime(0), mtime(0) {}
 
@@ -58,17 +58,17 @@ struct Issue {
 
     void consolidate();
     void consolidateWithSingleEntry(const Entry &e);
-    void consolidateAmendment(const Entry &amending);
+    void consolidateAmendment(const Entry &amending, uint32_t idxAmending);
     bool searchFullText(const char *text) const;
     int getNumberOfTaggedIEntries(const std::string &tagname) const;
-    void addTag(const std::string &entryId, const std::string &tagname);
-    void setTags(const std::string &entryId, std::set<std::string> &tagsOfEntry);
-    std::set<std::string> getTags(const std::string &entryId);
+    void addTag(uint32_t &entryIndex, const std::string &tagname);
+    void setTags(uint32_t entryIndex, std::set<std::string> &tagsOfEntry);
+    std::set<std::string> getTags(uint32_t entryIndex);
 
-    bool hasTag(const std::string &entryId, const std::string &tagname) const;
+    bool hasTag(uint32_t entryIndex, const std::string &tagname) const;
 
-    void addEntryInTable(Entry *e);
-    void addEntry(Entry *e);
+    uint32_t addEntryInTable(Entry *e);
+    uint32_t addEntry(Entry *e);
     void insertEntry(Entry *e);
     void amendEntry(Entry *amendingEntry);
 

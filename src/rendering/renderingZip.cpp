@@ -135,9 +135,10 @@ static std::string buildHtml(const ContextParameters &ctx, const IssueCopy &issu
     oss << tags;
 
     // entries
-    std::vector<Entry>::const_iterator e;
-    FOREACH(e, issue.entries) {
-        std::string entry = RHtmlIssue::renderEntry(ctx, issue, *e, FLAG_ENTRY_OFFLINE);
+    uint32_t entryIndex;
+    size_t nEntries = issue.entries.size();
+    for(entryIndex=0; entryIndex<nEntries; entryIndex++) {
+        std::string entry = RHtmlIssue::renderEntry(ctx, issue, entryIndex, FLAG_ENTRY_OFFLINE);
         oss << entry;
     } // end of entries
 

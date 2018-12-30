@@ -52,7 +52,7 @@ std::string Issue::getSummary() const
   *
   * This updates the latest entry.
   */
-void Issue::addEntryInTable(Entry *e)
+uint32_t Issue::addEntryInTable(Entry *e)
 {
     // modification time of the issue it the creation time of the latest entry
     mtime = e->ctime;
@@ -62,6 +62,8 @@ void Issue::addEntryInTable(Entry *e)
 
     entries.push_back(*e);
     entries.back().issue = this;
+
+    return entries.size()-1; // index of the one just add to the list
 }
 
 /** Add an entry
@@ -69,13 +71,15 @@ void Issue::addEntryInTable(Entry *e)
   * This does:
   * - update the issue in memory
   */
-void Issue::addEntry(Entry *e)
+uint32_t Issue::addEntry(Entry *e)
 {
     LOG_FUNC();
-    addEntryInTable(e);
+    uint32_t index = addEntryInTable(e);
 
     // consolidate the issue
     consolidateWithSingleEntry(*e);
+
+    return index;
 }
 
 /** Insert entry before the latest entry
@@ -102,9 +106,9 @@ void Issue::insertEntry(Entry* e)
   */
 void Issue::amendEntry(Entry *amendingEntry)
 {
-    addEntry(amendingEntry);
+    uint32_t index = addEntry(amendingEntry);
 
-    consolidateAmendment(*amendingEntry);
+    consolidateAmendment(*amendingEntry, index);
 }
 
 
@@ -126,7 +130,7 @@ void Issue::consolidateWithSingleEntry(const Entry &e) {
   * @param e
   *    The amending entry
   */
-void Issue::consolidateAmendment(const Entry &amending)
+void Issue::consolidateAmendment(const Entry &amending, uint32_t idxAmending)
 {
     PropertiesIt p = amending.properties.find(K_AMEND);
     if (p == amending.properties.end()) return; // no amendment
@@ -146,13 +150,15 @@ void Issue::consolidateAmendment(const Entry &amending)
     } else newMsg = &(p->second.front());
 
     // find this entry and modify its message
-    std::vector<Entry>::iterator e;
-    FOREACH(e, entries) {
-        if (e->id == amendedEntryId) {
+    uint32_t entryIndex;
+    size_t nEntries = entries.size();
+    for(entryIndex=0; entryIndex<nEntries; entryIndex++) {
+        uint32_t idxAmended = atoi(amendedEntryId.c_str());
+        if (entryIndex == idxAmended) {
             // this is the entry that is being amended
             // overwrite previous message
-            e->setMessage(newMsg);
-            amendments[amendedEntryId].push_back(amending.id);
+            entries[idxAmended].setMessage(newMsg);
+            amendments[idxAmended].push_back(idxAmending);
             break;
         }
     }
@@ -168,10 +174,11 @@ void Issue::consolidate()
     // ctime of the issue is ctime of its first entry
     if (!entries.empty()) ctime = entries.front().ctime;
 
-    std::vector<Entry>::const_iterator e;
-    FOREACH(e, entries) {
-        consolidateWithSingleEntry(*e);
-        consolidateAmendment(*e);
+    uint32_t entryIndex;
+    size_t nEntries = entries.size();
+    for(entryIndex=0; entryIndex<nEntries; entryIndex++) {
+        consolidateWithSingleEntry(entries[entryIndex]);
+        consolidateAmendment(entries[entryIndex], entryIndex);
     }
 }
 
@@ -198,15 +205,17 @@ int Issue::makeSnapshot(time_t datetime)
     // ctime of the issue is ctime of its first entry
     if (!entries.empty()) ctime = entries.front().ctime;
 
-    std::vector<Entry>::const_iterator e;
-    FOREACH(e, entries) {
-        if (e->ctime > datetime) {
+    uint32_t entryIndex;
+    size_t nEntries = entries.size();
+    for(entryIndex=0; entryIndex<nEntries; entryIndex++) {
+        const Entry &e = entries[entryIndex];
+        if (e.ctime > datetime) {
             // This entry newer than the given datetime, stop here.
             break;
         } else {
             n++;
-            consolidateWithSingleEntry(*e);
-            consolidateAmendment(*e);
+            consolidateWithSingleEntry(e);
+            consolidateAmendment(e, entryIndex);
         }
     }
     return n;
@@ -363,37 +372,37 @@ bool Issue::searchFullText(const char *text) const
 int Issue::getNumberOfTaggedIEntries(const std::string &tagname) const
 {
     int n = 0;
-    std::map<std::string, std::set<std::string> >::const_iterator tit;
+    std::map<uint32_t, std::set<std::string> >::const_iterator tit;
     FOREACH(tit, tags) {
         n += tit->second.count(tagname);
     }
     return n;
 }
 
-void Issue::addTag(const std::string &entryId, const std::string &tagname)
+void Issue::addTag(uint32_t &entryIndex, const std::string &tagname)
 {
-    tags[entryId].insert(tagname);
+    tags[entryIndex].insert(tagname);
 }
 
-std::set<std::string> Issue::getTags(const std::string &entryId)
+std::set<std::string> Issue::getTags(uint32_t entryIndex)
 {
     std::set<std::string> result;
-    std::map<std::string, std::set<std::string> >::iterator tit = tags.find(entryId);
+    std::map<uint32_t, std::set<std::string> >::iterator tit = tags.find(entryIndex);
     if (tit != tags.end()) {
         result = tit->second;
     }
     return result;
 }
 
-void Issue::setTags(const std::string &entryId, std::set<std::string> &tagsOfEntry)
+void Issue::setTags(uint32_t entryIndex, std::set<std::string> &tagsOfEntry)
 {
-    if (tagsOfEntry.empty()) tags.erase(entryId);
-    else tags[entryId] = tagsOfEntry;
+    if (tagsOfEntry.empty()) tags.erase(entryIndex);
+    else tags[entryIndex] = tagsOfEntry;
 }
 
-bool Issue::hasTag(const std::string &entryId, const std::string &tagname) const
+bool Issue::hasTag(uint32_t entryIndex, const std::string &tagname) const
 {
-    std::map<std::string, std::set<std::string> >::const_iterator tit = tags.find(entryId);
+    std::map<uint32_t, std::set<std::string> >::const_iterator tit = tags.find(entryIndex);
     if (tit == tags.end()) return false;
 
     std::set<std::string>::const_iterator tagit = tit->second.find(tagname);

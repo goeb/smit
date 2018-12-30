@@ -52,7 +52,7 @@ public:
     int addEntry(PropertiesMap properties, const std::list<AttachedFileRef> &files, std::string &iid,
                  Entry *&entry, std::string username, IssueCopy &oldIssue);
 
-    int amendEntry(const EntryId &entryId, const std::string &msg,
+    int amendEntry(const IssueId &issueId, uint32_t entryIndex, const std::string &msg,
                    Entry *&entryOut, const std::string &username, IssueCopy &oldIssue);
 
     size_t getNumIssues() const;
@@ -88,7 +88,7 @@ public:
     PredefinedView getDefaultView() const;
 
     // methods for handling tags
-    int toggleTag(const std::string &entryId, const std::string &tagname);
+    int toggleTag(const std::string &issueId, uint32_t entryIndex, const std::string &tagname);
 
     std::string getTriggerCmdline() const;
 

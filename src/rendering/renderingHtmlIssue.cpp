@@ -62,7 +62,7 @@ void RHtmlIssue::printIssueListFullContents(const ContextParameters &ctx, const 
         const IssueCopy &issue = *i;
         std::string summary = renderIssueSummary(ctx, issue);
         ctx.req->printf("%s", summary.c_str());
-        printIssue(ctx, issue, "");
+        printIssue(ctx, issue, 0);
     }
     ctx.req->printf("</div>\n");
 
@@ -418,7 +418,7 @@ std::string RHtmlIssue::renderTags(const ContextParameters &ctx, const IssueCopy
  *
  */
 std::string RHtmlIssue::getEntryExtraStyles(const ProjectConfig &pconfig, const IssueCopy &issue,
-                                            const Entry &ee, bool beingAmended)
+                                            uint32_t entryIndex, bool beingAmended)
 {
     std::string extraStyles = "";
     if (beingAmended) {
@@ -426,6 +426,8 @@ std::string RHtmlIssue::getEntryExtraStyles(const ProjectConfig &pconfig, const 
         // we want here a special display to help the user understand the link
         extraStyles += " sm_entry_being_amended";
     }
+
+    const Entry &ee = issue.entries[entryIndex];
 
     // look if class sm_no_contents is applicable
     // an entry has no contents if no message and no file
@@ -437,7 +439,7 @@ std::string RHtmlIssue::getEntryExtraStyles(const ProjectConfig &pconfig, const 
 
     // add tag-related styles, for the tags of the entry
     std::string classTagged = "sm_entry_notag";
-    std::map<std::string, std::set<std::string> >::const_iterator tit = issue.tags.find(ee.id);
+    std::map<uint32_t, std::set<std::string> >::const_iterator tit = issue.tags.find(entryIndex);
     if (tit != issue.tags.end()) {
 
         classTagged = "sm_entry_tagged";
@@ -454,17 +456,22 @@ std::string RHtmlIssue::getEntryExtraStyles(const ProjectConfig &pconfig, const 
     return extraStyles;
 }
 
-std::string RHtmlIssue::renderEntry(const ContextParameters &ctx, const IssueCopy &issue, const Entry &ee, int flags)
+std::string RHtmlIssue::renderEntry(const ContextParameters &ctx, const IssueCopy &issue, uint32_t entryIndex, int flags)
 {
     const ProjectConfig &pconfig = ctx.projectConfig;
     StringStream ss;
+    const Entry &ee = issue.entries[entryIndex];
+    std::ostringstream entryIdStream; // for HTML styles and ids
+    entryIdStream << issue.id << "_" << entryIndex; // concatenate the issue id and the index of the entry
+    const std::string entryId = entryIdStream.str();
+
 
     bool beingAmended = flags & FLAG_ENTRY_BEING_AMENDED;
     bool offline = flags & FLAG_ENTRY_OFFLINE;
 
-    std::string extraStyles = getEntryExtraStyles(pconfig, issue, ee, beingAmended);
+    std::string extraStyles = getEntryExtraStyles(pconfig, issue, entryIndex, beingAmended);
     ss.printf("<div class=\"sm_entry %s\" id=\"%s\">\n", extraStyles.c_str(),
-                    urlEncode(ee.id).c_str());
+                    urlEncode(entryId).c_str());
 
     ss.printf("<div class=\"sm_entry_header\">\n");
     ss.printf("<span class=\"sm_entry_author\">%s</span>", htmlEscape(ee.author).c_str());
@@ -477,9 +484,9 @@ std::string RHtmlIssue::renderEntry(const ContextParameters &ctx, const IssueCop
          !ee.isAmending() &&
          !offline) {
         // entry was created less than 10 minutes ago, and by same user, and is latest in the issue
-        ss.printf("<a href=\"?amend=%s\" class=\"sm_entry_edit\" "
+        ss.printf("<a href=\"?amend=%u\" class=\"sm_entry_edit\" "
                         "title=\"Edit this message (at most %d minutes after posting)\">",
-                        enquoteJs(ee.id).c_str(), (Database::getEditDelay()/60));
+                        entryIndex, (Database::getEditDelay()/60));
         ss.printf("&#9998; %s", _("edit"));
         ss.printf("</a>\n");
     }
@@ -490,12 +497,14 @@ std::string RHtmlIssue::renderEntry(const ContextParameters &ctx, const IssueCop
                   urlEncode(ee.id).c_str(), _("raw"));
         // link to possible amendments
         int i = 1;
-        std::map<std::string, std::list<std::string> >::const_iterator as = issue.amendments.find(ee.id);
+        std::map<uint32_t, std::list<uint32_t> >::const_iterator as = issue.amendments.find(entryIndex);
         if (as != issue.amendments.end()) {
-            std::list<std::string>::const_iterator a;
+            std::list<uint32_t>::const_iterator a;
             FOREACH(a, as->second) {
+                const Entry &entry = issue.entries[*a]; // TODO nee to check out of range ?
+                // href link to the entry that amends the current
                 ss.printf(", <a href=\"../" RESOURCE_FILES "/%s\" class=\"sm_entry_raw\">%s%d</a>",
-                          urlEncode(*a).c_str(), _("amend"), i);
+                          urlEncode(entry.id).c_str(), _("amend"), i);
                 i++;
             }
         }
@@ -509,20 +518,22 @@ std::string RHtmlIssue::renderEntry(const ContextParameters &ctx, const IssueCop
             TagSpec tag = tagIt->second;
             LOG_DEBUG("tag: id=%s, label=%s", tag.id.c_str(), tag.label.c_str());
             std::string tagStyle = "sm_entry_notag";
-            bool tagged = issue.hasTag(ee.id, tag.id);
+            bool tagged = issue.hasTag(entryIndex, tag.id);
             if (tagged) tagStyle = "sm_entry_tagged " + urlEncode("sm_entry_tag_" + tag.id);
 
             if (!offline && ( ctx.userRole == ROLE_ADMIN || ctx.userRole == ROLE_RW) ) {
                 const char *tagTitle = _("Click to tag/untag");
 
                 ss.printf("<a href=\"#\" onclick=\"tagEntry('/%s/tags', '%s', '%s');return false;\""
-                                " title=\"%s\" class=\"sm_entry_tag\">",
-                                ctx.getProjectUrlName().c_str(), enquoteJs(ee.id).c_str(),
-                                enquoteJs(tag.id).c_str(), tagTitle);
+                          " title=\"%s\" class=\"sm_entry_tag\">",
+                          ctx.getProjectUrlName().c_str(),
+                          enquoteJs(entryId).c_str(),
+                          enquoteJs(tag.id).c_str(),
+                          tagTitle);
 
                 // the tag itself
                 ss.printf("<span class=\"%s\" id=\"sm_tag_%s_%s\">",
-                                tagStyle.c_str(), urlEncode(ee.id).c_str(), urlEncode(tag.id).c_str());
+                                tagStyle.c_str(), urlEncode(entryId).c_str(), urlEncode(tag.id).c_str());
                 ss.printf("[%s]", htmlEscape(tag.label).c_str());
                 ss.printf("</span>\n");
 
@@ -583,7 +594,7 @@ std::string RHtmlIssue::renderEntry(const ContextParameters &ctx, const IssueCop
     return ss.str();
 }
 
-void RHtmlIssue::printIssue(const ContextParameters &ctx, const IssueCopy &issue, const std::string &entryToBeAmended)
+void RHtmlIssue::printIssue(const ContextParameters &ctx, const IssueCopy &issue, const uint32_t *entryIdxToBeAmended)
 {
     ctx.req->printf("<div class=\"sm_issue\">");
 
@@ -595,13 +606,15 @@ void RHtmlIssue::printIssue(const ContextParameters &ctx, const IssueCopy &issue
 
     // entries
     // -------------------------------------------------
-    std::vector<Entry>::const_iterator e;
-    FOREACH(e, issue.entries) {
-        Entry ee = *e;
+    uint32_t entryIndex;
+    size_t nEntries = issue.entries.size();
+
+    for(entryIndex=0; entryIndex<nEntries; entryIndex++) {
+        const Entry &ee = issue.entries[entryIndex];
 
         int flag = FLAG_ENTRY_NOMINAL;
-        if (ee.id == entryToBeAmended) flag = FLAG_ENTRY_BEING_AMENDED;
-        std::string entry = renderEntry(ctx, issue, ee, flag);
+        if (entryIdxToBeAmended && entryIndex == *entryIdxToBeAmended) flag = FLAG_ENTRY_BEING_AMENDED;
+        std::string entry = renderEntry(ctx, issue, entryIndex, flag);
         ctx.req->printf("%s", entry.c_str());
 
     } // end of entries
@@ -686,7 +699,7 @@ void RHtmlIssue::printFormMessage(const ContextParameters &ctx, const std::strin
 }
 
 void RHtmlIssue::printEditMessage(const ContextParameters &ctx, const IssueCopy *issue,
-                             const Entry &eToBeAmended)
+                             uint32_t eIndexToBeAmended)
 {
     if (!issue) {
         LOG_ERROR("printEditMessage: Invalid null issue");
@@ -695,12 +708,12 @@ void RHtmlIssue::printEditMessage(const ContextParameters &ctx, const IssueCopy 
     if (ctx.userRole != ROLE_ADMIN && ctx.userRole != ROLE_RW) {
         return;
     }
-    ctx.req->printf("<div class=\"sm_amend\">%s: %s</div>", _("Amend Messsage"), urlEncode(eToBeAmended.id).c_str());
+    ctx.req->printf("<div class=\"sm_amend\">%s: %u</div>", _("Amend Messsage"), eIndexToBeAmended);
     ctx.req->printf("<form id=\"sm_issue_form\" enctype=\"multipart/form-data\" method=\"post\" class=\"sm_issue_form\">");
-    ctx.req->printf("<input type=\"hidden\" value=\"%s\" name=\"%s\">", urlEncode(eToBeAmended.id).c_str(), K_AMEND);
+    ctx.req->printf("<input type=\"hidden\" value=\"%u\" name=\"%s\">", eIndexToBeAmended, K_AMEND);
     ctx.req->printf("<table class=\"sm_issue_properties\">");
 
-    printFormMessage(ctx, eToBeAmended.getMessage());
+    printFormMessage(ctx, issue->entries[eIndexToBeAmended].getMessage());
 
     ctx.req->printf("<tr><td></td>\n");
     ctx.req->printf("<td colspan=\"3\">\n");

@@ -1800,7 +1800,7 @@ void httpPostView(const RequestContext *req, Project &p, const std::string &name
   * If the ref is not tagged, then this will put a tag on the entry.
   * If the ref is already tagged, then this will remove the tag of the entry.
   * @param ref
-  *     The reference of the message: <issue>/<entry>/<tagid>
+  *     The reference of the message: <issue-id>_<entry-index>/<tagid>
   *
   */
 void httpPostTag(const RequestContext *req, Project &p, std::string &ref, const User &u)
@@ -1811,10 +1811,13 @@ void httpPostTag(const RequestContext *req, Project &p, std::string &ref, const 
         return;
     }
 
-    std::string entryId = popToken(ref, '/');
+    std::string issueId = popToken(ref, '_');
+    std::string entryIndexStr = popToken(ref, '/');
     std::string tagname = ref;
 
-    int r = p.toggleTag(entryId, tagname);
+    uint32_t entryIndex = atoi(entryIndexStr.c_str());
+
+    int r = p.toggleTag(issueId, entryIndex, tagname);
     if (r == 0) {
         sendHttpHeader200(req);
         req->printf("\r\n");
@@ -1882,16 +1885,18 @@ int httpGetIssue(const RequestContext *req, Project &p, const std::string &issue
 
         std::string q = req->getQueryString();
         std::string amend = getFirstParamFromQueryString(q, "amend");
-        const Entry *entryToBeAmended = 0;
+        uint32_t *entryToBeAmended = 0;
+        uint32_t entryIndex;
 
         if (!amend.empty()) {
-            // look for the entry in the entries of the issue
-            std::vector<Entry>::const_iterator e;
-            FOREACH(e, issue.entries) {
-                if (e->id == amend) {
-                    entryToBeAmended = &(*e);
-                    break;
-                }
+            // the 'amend' parameter indicates the index of the entry to amend
+            entryIndex = atoi(amend.c_str());
+            if (entryIndex >= issue.entries.size()) {
+                // out of range
+                LOG_ERROR("Attempt to get page for amending out-of-range entry (%s/%u)", issue.id.c_str(), entryIndex);
+                // ignore the attempt
+            } else {
+                entryToBeAmended = &entryIndex;
             }
         }
 
@@ -2039,7 +2044,8 @@ void httpPostEntry(const RequestContext *req, Project &pro, const std::string & 
     if (!amendedEntry.empty()) {
         // this post is an amendment to an existing entry
         std::string newMessage = getProperty(vars, K_MESSAGE);
-        r = pro.amendEntry(amendedEntry, newMessage, entry, u.username, oldIssue);
+        uint32_t entryIndex = atoi(amendedEntry.c_str());
+        r = pro.amendEntry(issueId, entryIndex, newMessage, entry, u.username, oldIssue);
         if (r < 0) {
             // failure
             LOG_ERROR("amendEntry returned %d", r);

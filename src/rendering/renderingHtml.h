@@ -37,7 +37,7 @@ public:
                                              const std::vector<IssueCopy> &issues,
                                              const std::list<std::string> &colspec);
     static void printPageIssue(const ContextParameters &ctx, const IssueCopy &issue,
-                               const Entry *eTobeAmended);
+                               const uint32_t *eTobeAmended);
 
     static void printPageNewIssue(const ContextParameters &ctx);
 

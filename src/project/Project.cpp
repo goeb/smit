@@ -215,6 +215,7 @@ Issue *Project::loadIssue(const std::string &issueId)
 
     Issue *issue = new Issue();
     int error = 0;
+    uint32_t entryIndex = 0;
 
     while (1) {
         std::string entryString = elist.getNextEntry();
@@ -243,8 +244,9 @@ Issue *Project::loadIssue(const std::string &issueId)
         // set the tags
         std::list<std::string>::const_iterator tagname;
         FOREACH(tagname, tags) {
-            issue->addTag(e->id, *tagname);
+            issue->addTag(entryIndex, *tagname);
         }
+        entryIndex++;
     }
 
     elist.close();
@@ -590,18 +592,24 @@ int Project::createProjectFiles(const std::string &repositoryPath, const std::st
 /** Tag or untag an entry
   *
   */
-int Project::toggleTag(const std::string &entryId, const std::string &tagname)
+int Project::toggleTag(const std::string &issueId, uint32_t entryIndex, const std::string &tagname)
 {
     LOCK_SCOPE(locker, LOCK_READ_WRITE);
 
-    Entry *e = getEntry(entryId);
-    if (!e) {
-        // entry not found
-        LOG_DEBUG("Entry not found: %s", entryId.c_str());
+    Issue *i = getIssue(issueId);
+    if (!i) {
+        // issue not found
+        LOG_ERROR("toggleTag: Issue not found: %s", issueId.c_str());
         return -1;
     }
 
-    std::set<std::string> tags = e->issue->getTags(e->id);
+    if (entryIndex >= i->entries.size()) {
+        // idx out of range
+        LOG_ERROR("toggleTag: Entry index (%u) out of range (%u) (issue %s)", entryIndex, i->entries.size(), issueId.c_str());
+        return -1;
+    }
+
+    std::set<std::string> tags = i->getTags(entryIndex);
     std::set<std::string>::iterator itt = tags.find(tagname);
 
     if (itt != tags.end()) {
@@ -614,12 +622,13 @@ int Project::toggleTag(const std::string &entryId, const std::string &tagname)
     }
 
     std::string tagData = Entry::serializeTags(tags);
+    std::string entryId = i->entries[entryIndex].id;
     int err = gitdbSetNotes(getPathEntries(), entryId, tagData);
     if (err) {
         return -1;
     }
 
-    e->issue->setTags(e->id, tags);
+    i->setTags(entryIndex, tags);
 
     return 0;
 }
@@ -1151,7 +1160,8 @@ ProjectParameters Project::getProjectParameters() const
   *
   * This creates a new entry that contains the amendment.
   *
-  * @param      entryId
+  * @param      issueId
+  * @param      entryIndex
   * @param      msg
   * @param[out] entryOut
   * @param      username
@@ -1162,40 +1172,47 @@ ProjectParameters Project::getProjectParameters() const
   *    >0 no entry was created due to no change
   *    <0 error
   */
-int Project::amendEntry(const EntryId &entryId, const std::string &msg,
+int Project::amendEntry(const IssueId &issueId, uint32_t entryIndex, const std::string &msg,
                         Entry *&entryOut, const std::string &username, IssueCopy &oldIssue)
 {
     LOCK_SCOPE(locker, LOCK_READ_WRITE);
 
-    Entry *e = getEntry(entryId);
-    if (!e) return -1;
+    Issue *issue = getIssue(issueId);
+    if (!issue) return -1;
 
-    if (time(0) - e->ctime > Database::getEditDelay()) return -1; // too late!
+    if (entryIndex >= issue->entries.size()) {
+        LOG_ERROR("amendEntry: entry out-of-range (issue %s, entry index %u)", issueId.c_str(), entryIndex);
+        return -1;
+    }
 
-    if (e->author != username) return -1; // one cannot amend the message of somebody else
+    const Entry &e = issue->entries[entryIndex];
 
-    if (e->isAmending()) return -1; // one cannot amend an amending message
+    if (time(0) - e.ctime > Database::getEditDelay()) return -1; // too late!
 
-    if (msg == e->getMessage()) return 0; // no change (the message is the same)
+    if (e.author != username) return -1; // one cannot amend the message of somebody else
+
+    if (e.isAmending()) return -1; // one cannot amend an amending message
+
+    if (msg == e.getMessage()) return 0; // no change (the message is the same)
 
     // ok, we can proceed
 
-    oldIssue = copyIssue(*(e->issue));
+    oldIssue = copyIssue(*issue);
 
     PropertiesMap properties;
     properties[K_MESSAGE].push_back(msg);
-    properties[K_AMEND].push_back(entryId);
+    properties[K_AMEND].push_back(std::to_string(entryIndex));
 
     std::list<AttachedFileRef> files; // no file, empty list
     Entry *amendingEntry = Entry::createNewEntry(properties, files, username);
 
-    int r = storeNewEntry(e->issue->id, amendingEntry);
+    int r = storeNewEntry(issueId, amendingEntry);
     if (r != 0) {
         delete amendingEntry;
         return -2;
     }
 
-    e->issue->amendEntry(amendingEntry);
+    issue->amendEntry(amendingEntry);
 
     updateLastModified(amendingEntry->ctime);
 

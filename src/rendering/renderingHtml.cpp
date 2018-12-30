@@ -120,7 +120,7 @@ public:
     const std::list<User> *usersList;
     const IssueCopy *currentIssue;
     const User *concernedUser;
-    const Entry *entryToBeAmended;
+    const uint32_t *entryIdxToBeAmended; // index of the entry being amended (null pointer if not relevant)
     const std::map<std::string, std::map<Role, std::set<std::string> > > *userRolesByProject;
     std::string script; // javascript to be inserted in SM_SCRIPT
     const std::vector<Entry> *entries;
@@ -136,7 +136,7 @@ public:
         currentIssue = 0;
         userRolesByProject = 0;
         concernedUser = 0;
-        entryToBeAmended = 0;
+        entryIdxToBeAmended = 0;
         entries = 0;
         searchFromHere = 0;
         dumpStart = 0;
@@ -314,15 +314,13 @@ public:
                 RHtmlIssue::printIssueListFullContents(ctx, *issueListFullContents);
 
             } else if (varname == K_SM_DIV_ISSUE && currentIssue) {
-                std::string eAmended;
-                if (entryToBeAmended) eAmended = entryToBeAmended->id;
-                RHtmlIssue::printIssue(ctx, *currentIssue, eAmended);
+                RHtmlIssue::printIssue(ctx, *currentIssue, entryIdxToBeAmended);
 
             } else if (varname == K_SM_DIV_ISSUE_FORM) {
                 IssueCopy issue;
                 if (!currentIssue) currentIssue = &issue; // set an empty issue
 
-                if (entryToBeAmended) RHtmlIssue::printEditMessage(ctx, currentIssue, *entryToBeAmended);
+                if (entryIdxToBeAmended) RHtmlIssue::printEditMessage(ctx, currentIssue, *entryIdxToBeAmended);
                 else RHtmlIssue::printIssueForm(ctx, currentIssue, false);
 
             } else if (varname == K_SM_DIV_PREDEFINED_VIEWS) {
@@ -1123,11 +1121,11 @@ void RHtml::printPageIssueAccrossProjects(const ContextParameters &ctx,
 }
 
 
-void RHtml::printPageIssue(const ContextParameters &ctx, const IssueCopy &issue, const Entry *eToBeAmended)
+void RHtml::printPageIssue(const ContextParameters &ctx, const IssueCopy &issue, const uint32_t *eToBeAmended)
 {
     VariableNavigator vn("issue.html", ctx);
     vn.currentIssue = &issue;
-    vn.entryToBeAmended = eToBeAmended;
+    vn.entryIdxToBeAmended = eToBeAmended;
     vn.script = jsSetUserCapAndRole(ctx);
     vn.printPage();
 
