@@ -19,9 +19,13 @@ init() {
 }
 start() {
     $SMIT serve $REPO --listen-port $PORT &
-    pid=$!
+    smit_pid=$!
     sleep 2 # wait for the server to start
     $SMITC signin http://127.0.0.1:$PORT $USER $PASSWD
+}
+stop() {
+	echo killing smit_pid=$smit_pid
+	kill $smit_pid
 }
 
 doreads() {
@@ -68,21 +72,27 @@ dowritesUpdateAllSummaries() {
 
 init
 start
-doreads 100 &
-doreads 100 &
-doreads 100 &
-doreads 100 &
-doreads 100 &
-dowritesnew 100 10 &
-dowritesnew 100 10 &
-dowritesnew 100 10 &
-dowritesnew 100 10 &
-dowritesnew 120 8 
-sleep 2
+N_100=5
+pids=""
+for reads in 1 2 3 4 5; do
+	doreads $N_100 &
+	pids="$pids $!"
+done
+
+for writes in 1 2 3 4 5; do
+	dowritesnew $N_100 10 &
+	pids="$pids $!"
+done
+
+# wait until all are completed
+for pid in $pids; do
+	wait $pid
+	echo "wait: got pid $pid"
+done
+
 dowritesUpdateAllSummaries
 
-echo killing pid=$pid
-kill $pid
+stop
 
 sleep 2
 
@@ -90,12 +100,11 @@ sleep 2
 
 start
 
-$SMITC get "http://127.0.0.1:$PORT/$PROJECT/issues?colspec=id+summary\&sort=id" > functest.log
+$SMITC get "http://127.0.0.1:$PORT/$PROJECT/issues?colspec=id+summary&sort=id" > endurancetest.log
 
-echo killing pid=$pid
-kill $pid
+stop
 
-cmp functest.ref functest.log
+cmp endurancetest.ref endurancetest.log
 
 echo -n "$0 ... "
 if [ $? -eq 0 ]; then echo OK
