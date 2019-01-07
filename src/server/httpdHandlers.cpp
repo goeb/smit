@@ -2041,7 +2041,7 @@ void httpPostEntry(const RequestContext *req, Project &pro, const std::string & 
     if (entry) {
         std::list<Recipient> recipients; // TODO populate this
         recipients = UserBase::getRecipients(projectName, entry, oldIssue);
-        if (! UserBase::isLocalUserInterface()) Trigger::notifyEntry(pro, entry, oldIssue, recipients);
+        if (! UserBase::isLocalUserInterface()) Trigger::notifyEntry(pro, id, entry, oldIssue, recipients);
     }
 #endif
 
@@ -2055,7 +2055,7 @@ void httpPostEntry(const RequestContext *req, Project &pro, const std::string & 
         } else {
             sendHttpHeader200(req);
             req->printf("\r\n");
-            if (entry) req->printf("%s/%s\r\n", entry->issue->id.c_str(), entry->id.c_str());
+            if (entry) req->printf("%s/%s\r\n", id.c_str(), entry->id.c_str());
             else req->printf("%s/(no change)\r\n", id.c_str());
         }
     }

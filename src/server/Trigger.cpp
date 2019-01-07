@@ -91,7 +91,7 @@ std::string toJson(const PropertiesMap &properties)
   * Finally, the message, if any
   *
   */
-std::string Trigger::formatEntry(const Project &project, const IssueCopy &oldIssue, const Entry &entry,
+std::string Trigger::formatEntry(const Project &project, const std::string &issueId, const IssueCopy &oldIssue, const Entry &entry,
                                  const std::list<Recipient> &recipients)
 {
     //
@@ -123,7 +123,7 @@ std::string Trigger::formatEntry(const Project &project, const IssueCopy &oldIss
     s << "{";
 
     s << toJson("project") << ":" << toJson(project.getName()) << ",\n";
-    s << toJson("issue_id") << ":" << toJson(entry.issue->id) << ",\n";
+    s << toJson("issue_id") << ":" << toJson(issueId) << ",\n";
 
     s << toJson("old_issue") << ":";
     if (oldIssue.id.empty()) s << "null"; // no old issue
@@ -175,12 +175,11 @@ std::string Trigger::formatEntry(const Project &project, const IssueCopy &oldIss
 
 /** Run an external program for notifying a new entry
   */
-void Trigger::notifyEntry(const Project &project, const Entry *entry,
+void Trigger::notifyEntry(const Project &project, const std::string &issueId, const Entry *entry,
                           const IssueCopy &oldIssue, const std::list<Recipient> &recipients)
 {
     LOG_FUNC();
     if (!entry) return;
-    if (!entry->issue) return;
 
     // load the 'trigger' file, in order to get the path of the external program
     std::string cmdline = project.getTriggerCmdline();
@@ -191,7 +190,7 @@ void Trigger::notifyEntry(const Project &project, const Entry *entry,
 
     // format the data that will be given to the external program on its stdin
     std::map<std::string, Role> users = UserBase::getUsersRolesOfProject(project.getName());
-    std::string text = formatEntry(project, oldIssue, *entry, recipients);
+    std::string text = formatEntry(project, issueId, oldIssue, *entry, recipients);
 
     run(cmdline, text);
 }

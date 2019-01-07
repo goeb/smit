@@ -78,11 +78,9 @@ public:
     std::string author;
     PropertiesMap properties;
     std::list<AttachedFileRef> files;
-    Issue *issue;
-
 
     // methods
-    Entry() : ctime(0), issue(0), message(&EMPTY_MESSAGE) {}
+    Entry() : ctime(0), message(&EMPTY_MESSAGE) {}
     static Entry *loadEntry(std::string data, std::string &treeid, std::list<std::string> &tags);
 
     void updateMessage();

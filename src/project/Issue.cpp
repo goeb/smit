@@ -61,7 +61,6 @@ uint32_t Issue::addEntryInTable(Entry *e)
     if (entries.empty()) ctime = e->ctime;
 
     entries.push_back(*e);
-    entries.back().issue = this;
 
     return entries.size()-1; // index of the one just add to the list
 }
@@ -95,7 +94,6 @@ void Issue::insertEntry(Entry* e)
     }
 
     entries.insert(entries.begin(), *e);
-    entries.front().issue = this;
 }
 
 

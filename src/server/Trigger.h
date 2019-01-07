@@ -8,11 +8,11 @@
 
 class Trigger {
 public:
-    static void notifyEntry(const Project &project, const Entry *entry,
+    static void notifyEntry(const Project &project, const std::string &issueId, const Entry *entry,
                             const IssueCopy &oldIssue, const std::list<Recipient> &recipients);
 
 private:
-    static std::string formatEntry(const Project &project, const IssueCopy &oldIssue, const Entry &entry,
+    static std::string formatEntry(const Project &project, const std::string &issueId, const IssueCopy &oldIssue, const Entry &entry,
                                    const std::list<Recipient> &recipients);
     static void run(const std::string &program, const std::string &toStdin);
 

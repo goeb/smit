@@ -332,7 +332,7 @@ int cmdIssue(int argc, char **argv)
         int r = p->addEntry(properties, files, issueId, entry, username, oldIssue);
         if (r >= 0) {
             if (entry) {
-                printf("%s/%s\n", entry->issue->id.c_str(), entry->id.c_str());
+                printf("%s/%s\n", issueId.c_str(), entry->id.c_str());
             } else {
                 // no entry created, because no change
                 printf("(no change)\n");

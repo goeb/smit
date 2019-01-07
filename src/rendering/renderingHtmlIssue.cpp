@@ -610,8 +610,6 @@ void RHtmlIssue::printIssue(const ContextParameters &ctx, const IssueCopy &issue
     size_t nEntries = issue.entries.size();
 
     for(entryIndex=0; entryIndex<nEntries; entryIndex++) {
-        const Entry &ee = issue.entries[entryIndex];
-
         int flag = FLAG_ENTRY_NOMINAL;
         if (entryIdxToBeAmended && entryIndex == *entryIdxToBeAmended) flag = FLAG_ENTRY_BEING_AMENDED;
         std::string entry = renderEntry(ctx, issue, entryIndex, flag);
