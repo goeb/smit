@@ -188,10 +188,3 @@ void RJson::printIssue(const RequestContext *req, const IssueCopy &issue)
     req->printf("}");
 }
 
-void RJson::printEntryList(const RequestContext *req, const std::vector<Entry> &entries)
-{
-    req->printf("Content-Type: " CONTENT_TYPE_JSON "\r\n\r\n");
-    // list of entries
-    printEntries(req, entries);
-}
-

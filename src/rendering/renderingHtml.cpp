@@ -61,7 +61,6 @@
 #define K_SM_DIV_ISSUE             "SM_DIV_ISSUE"
 #define K_SM_DIV_ISSUE_FORM        "SM_DIV_ISSUE_FORM"
 #define K_SM_DIV_ISSUE_MSG_PREVIEW "SM_DIV_ISSUE_MSG_PREVIEW"
-#define K_SM_DIV_ENTRIES           "SM_DIV_ENTRIES"
 // ---- not related to any specific project
 #define K_SM_DIV_USERS              "SM_DIV_USERS"
 #define K_SM_TABLE_USER_PERMISSIONS "SM_TABLE_USER_PERMISSIONS"
@@ -123,7 +122,6 @@ public:
     const uint32_t *entryIdxToBeAmended; // index of the entry being amended (null pointer if not relevant)
     const std::map<std::string, std::map<Role, std::set<std::string> > > *userRolesByProject;
     std::string script; // javascript to be inserted in SM_SCRIPT
-    const std::vector<Entry> *entries;
 
     VariableNavigator(const std::string &basename, const ContextParameters &context) : ctx(context) {
         buffer = 0;
@@ -137,7 +135,6 @@ public:
         userRolesByProject = 0;
         concernedUser = 0;
         entryIdxToBeAmended = 0;
-        entries = 0;
         searchFromHere = 0;
         dumpStart = 0;
         dumpEnd = 0;
@@ -339,8 +336,6 @@ public:
                 if (!script.empty()) {
                     ctx.req->printf("<script type=\"text/javascript\">%s</script>\n", script.c_str());
                 }
-            } else if (varname == K_SM_DIV_ENTRIES && entries) {
-                RHtml::printEntries(ctx, *entries);
 
             } else if (varname == K_SM_INCLUDE) {
                 // Expected syntax: SM_INCLUDE(filename.html)
@@ -1170,95 +1165,3 @@ void RHtml::printPageNewIssue(const ContextParameters &ctx)
     vn.printPage();
 }
 
-void RHtml::printPageEntries(const ContextParameters &ctx,
-                             const std::vector<Entry> &entries)
-{
-    VariableNavigator vn("entries.html", ctx);
-    vn.entries = &entries;
-    vn.script = jsSetUserCapAndRole(ctx);
-    vn.script += "showPropertiesChanges();"; // because by default they are hidden
-    vn.printPage();
-}
-
-void RHtml::printEntries(const ContextParameters &ctx, const std::vector<Entry> &entries)
-{
-    ctx.req->printf("<div class=\"sm_entries\">\n");
-
-    printFilters(ctx);
-
-    // number of entries
-    ctx.req->printf("<div class=\"sm_entries_count\">%s: <span class=\"sm_entries_count\">%lu</span></div>\n",
-                    _("Entries found"), L(entries.size()));
-
-    ctx.req->printf("<table class=\"sm_entries\">\n");
-
-    // print header of the table
-    // Columns: issue-id | ctime | author | fields modified by entry
-    ctx.req->printf("<tr class=\"sm_entries\">\n");
-
-    // id
-    std::string label = ctx.projectConfig.getLabelOfProperty("id");
-    ctx.req->printf("<th class=\"sm_entries\">%s\n", htmlEscape(label).c_str());
-
-    // ctime
-    label = _("Date");
-    ctx.req->printf("<th class=\"sm_entries\">%s\n", htmlEscape(label).c_str());
-
-    // author
-    label = _("Author");
-    ctx.req->printf("<th class=\"sm_entries\">%s\n", htmlEscape(label).c_str());
-
-    // summary
-    label = ctx.projectConfig.getLabelOfProperty(K_SUMMARY);
-    ctx.req->printf("<th class=\"sm_entries\">%s\n", htmlEscape(label).c_str());
-
-    // fields modified by entry
-    label = _("Modification");
-    ctx.req->printf("<th class=\"sm_entries\">%s\n", htmlEscape(label).c_str());
-
-    ctx.req->printf("</tr>\n");
-
-    // print the rows (one for each entry)
-    std::vector<Entry>::const_iterator e;
-    FOREACH(e, entries) {
-
-        if (!e->issue) {
-            LOG_ERROR("null issue for entry %s", e->id.c_str());
-            continue;
-        }
-
-        ctx.req->printf("<tr class=\"sm_entries\">\n");
-
-        // id of the issue (not id of the entry)
-        std::string href =ctx.req->getUrlRewritingRoot() + "/";
-        href += Project::urlNameEncode(e->issue->project) + "/issues/";
-        href += urlEncode(e->issue->id);
-        href += "?display=properties_changes#" + urlEncode(e->id);
-
-        ctx.req->printf("<td class=\"sm_entries\"><a href=\"%s\">%s", href.c_str(), htmlEscape(e->issue->id).c_str());
-        // print if the issue is newly created by this entry
-        if (e->issue->entries.front().id == e->id) ctx.req->printf("*"); // '*' to denote new issue
-
-        ctx.req->printf("</a></td>\n"); // end of issue id
-
-        // ctime
-        ctx.req->printf("<td class=\"sm_entries\">%s</td>\n", htmlEscape(epochToStringDelta(e->ctime)).c_str());
-
-        // author
-        ctx.req->printf("<td class=\"sm_entries\">%s</td>\n", htmlEscape(e->author).c_str());
-
-        // summary
-        ctx.req->printf("<td class=\"sm_entries\"><a href=\"%s\">%s</a></td>\n",
-                        href.c_str(), htmlEscape(e->issue->getSummary()).c_str());
-
-        // changed properties
-        ctx.req->printf("<td class=\"sm_entries\">");
-        std::string otherProps = RHtmlIssue::printOtherProperties(ctx, *e, true, 0);
-        ctx.req->printf("%s", otherProps.c_str());
-        ctx.req->printf("</td>");
-
-        ctx.req->printf("</tr>\n");
-    }
-    ctx.req->printf("</table>\n");
-    ctx.req->printf("</div>\n");
-}

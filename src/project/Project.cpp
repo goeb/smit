@@ -745,25 +745,6 @@ std::list<std::pair<bool, std::string> > parseSortingSpec(const char *sortingSpe
     return result;
 }
 
-void Project::searchEntries(const char *sortingSpec, std::vector<Entry> &entries, int limit) const
-{
-    ScopeLocker scopeLocker(locker, LOCK_READ_ONLY);
-
-    // concatenate all the entries of all the issues
-    std::map<std::string, Issue*>::const_iterator i;
-    FOREACH(i, issues) {
-        entries.insert(entries.end(), i->second->entries.begin(), i->second->entries.end());
-    }
-
-    if (sortingSpec) {
-        std::list<std::pair<bool, std::string> > sSpec = parseSortingSpec(sortingSpec);
-        Entry::sort(entries, sSpec);
-    }
-
-    // limit the number of items
-    if (limit >= 0 && (size_t)limit < entries.size()) entries.erase(entries.begin()+limit, entries.end());
-}
-
 /** search
   *   fulltext: text that is searched (optional: 0 for no fulltext search)
   *             The case is ignored.
@@ -1126,16 +1107,6 @@ int Project::storeNewEntry(const std::string &issueId, Entry *e)
     }
 
     return 0; // success
-}
-
-
-Entry *Project::getEntry(const std::string &id) const
-{
-    //TODO
-    //std::map<std::string, Entry*>::const_iterator e = entries.find(id);
-    //if (e == entries.end()) return 0;
-    //return e->second;
-    return 0;
 }
 
 

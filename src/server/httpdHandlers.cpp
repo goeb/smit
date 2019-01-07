@@ -1419,35 +1419,6 @@ void httpSendIssueList(const RequestContext *req, const Project &p,
         }
     }
 }
-/** Get a list of entries
-  *
-  * Query-String: ?sort=-ctime&limit=20
-  */
-void httpGetListOfEntries(const RequestContext *req, const Project &p, const User &u)
-{
-    std::string q = req->getQueryString();
-    PredefinedView v = PredefinedView::loadFromQueryString(q); // unamed view, used as handler on the viewing parameters
-
-    std::vector<Entry> entries;
-    p.searchEntries(v.sort.c_str(), entries, v.limit);
-
-    enum RenderingFormat format = getFormat(req);
-
-    sendHttpHeader200(req);
-
-    if (format == RENDERING_JSON) {
-        RJson::printEntryList(req, entries);
-
-    } else {
-        ContextParameters ctx = ContextParameters(req, u, p.getProjectParameters());
-        //ctx.filterin = v.filterin; not available for entries
-        //ctx.filterout = v.filterout; not available for entries
-        //ctx.search = v.search; not available for entries
-        ctx.sort = v.sort;
-
-        RHtml::printPageEntries(ctx, entries);
-    }
-}
 
 /** Get the list of issues at the moment indicated by the snapshot
   *
@@ -2232,7 +2203,6 @@ int begin_request_handler(const RequestContext *req)
 
         } else if ( (resource == "issues") && (uri == "new") && (method == "GET") ) httpGetNewIssueForm(req, *p, user);
         else if ( (resource == "issues") && (method == "GET") ) return httpGetIssue(req, *p, uri, user);
-        else if ( (resource == "entries") && (method == "GET") ) httpGetListOfEntries(req, *p, user);
         else if ( (resource == "config") && (method == "GET") ) httpGetProjectConfig(req, *p, user);
         else if ( (resource == "config") && (method == "POST") ) httpPostProjectConfig(req, *p, user);
         else if ( (resource == "views") && (method == "GET")) httpGetView(req, *p, uri, user);
