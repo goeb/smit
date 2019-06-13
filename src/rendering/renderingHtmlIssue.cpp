@@ -710,7 +710,9 @@ void RHtmlIssue::printEditMessage(const ContextParameters &ctx, const IssueCopy 
 
     ctx.req->printf("<tr><td></td>\n");
     ctx.req->printf("<td colspan=\"3\">\n");
-    ctx.req->printf("<button onclick=\"previewMessage(); return false;\">%s</button>\n", htmlEscape(_("Preview")).c_str());
+    ctx.req->printf("<button onclick=\"previewMessage('%s'); return false;\">%s</button>\n",
+                    urlEncode(ctx.req->getUrlRewritingRoot(), '%', "/._-$,;~()").c_str(), // keep / unchanged. It will be passed to form.action
+                    htmlEscape(_("Preview")).c_str());
     ctx.req->printf("<input type=\"submit\" value=\"%s\">\n", htmlEscape(_("Post")).c_str());
     ctx.req->printf("</td></tr>\n");
 
@@ -934,7 +936,9 @@ void RHtmlIssue::printIssueForm(const ContextParameters &ctx, const IssueCopy *i
 
     ctx.req->printf("<tr><td></td>\n");
     ctx.req->printf("<td colspan=\"3\">\n");
-    ctx.req->printf("<button onclick=\"previewMessage(); return false;\">%s</button>\n", htmlEscape(_("Preview")).c_str());
+    ctx.req->printf("<button onclick=\"previewMessage('%s'); return false;\">%s</button>\n",
+                    urlEncode(ctx.req->getUrlRewritingRoot(), '%', "/._-$,;~()").c_str(), // keep / unchanged. It will be passed to form.action
+                    htmlEscape(_("Preview")).c_str());
     ctx.req->printf("<input type=\"submit\" value=\"%s\">\n", htmlEscape(_("Post")).c_str());
     ctx.req->printf("</td></tr>\n");
 

@@ -19,7 +19,7 @@ function ajaxSend(url, method) {
     if (status == 200) return ['ok', request.responseText];
     else return ['error', request.responseText];
 }
-function previewMessage() {
+function previewMessage(url_root) {
     displayPreview('...'); // preview in progress...
 
     // create a hidden iframe that will receive the submitted form
@@ -35,8 +35,6 @@ function previewMessage() {
             var contents = iframe.contentWindow.document.body.innerHTML;
             displayPreview(contents);
 
-            console.log("before restore: form.action=", form.action);
-            console.log("before restore: form.target=", form.target);
             // restore the original settings
             if (form.origin_action === undefined || form.origin_action == '') {
                 form.removeAttribute('action');
@@ -48,8 +46,6 @@ function previewMessage() {
             for (var i=0; i<elements.length; i++) {
                 elements[i].disabled = false;
             }
-            console.log("restore: form.action=", form.action);
-            console.log("restore: form.target=", form.target);
         });
     }
 
@@ -60,7 +56,7 @@ function previewMessage() {
     form.origin_method = form.method;
     form.origin_target = form.target;
     // modify some parts
-    form.action = '/sm/preview';
+    form.action = url_root + '/sm/preview';
     form.method = 'POST';
     form.target = iframe.name;
     // disable file upload, and other fields
