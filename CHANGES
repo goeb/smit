@@ -1,3 +1,6 @@
+v3.4.4, 16 Jul 2019
+    - page issue: fix missing reverse associations
+
 v3.4.3, 14 Jun 2019
     - fix message preview when behind a reverse proxy
     - get issue in JSON format
