@@ -373,7 +373,7 @@ std::string RHtmlIssue::renderPropertiesTable(const ContextParameters &ctx, cons
 
             int flags = FLAG_ASSOCIATION_REVERSE;
             if (offline) flags |= FLAG_ASSOCIATION_OFFLINE;
-            renderAssociations(ctx, ra->first, issue, flags);
+            ss << renderAssociations(ctx, ra->first, issue, flags);
             ss.printf("</tr>");
         }
     }
