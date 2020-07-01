@@ -59,7 +59,6 @@ smit_SOURCES = \
 			   src/rendering/ContextParameters.cpp \
 			   src/rendering/renderingHtmlIssue.cpp \
 			   src/rendering/renderingHtmlUtil.cpp \
-			   src/rendering/renderingZip.cpp \
 			   src/user/session.cpp \
 			   src/user/AuthSha1.cpp \
 			   src/user/notification.cpp \
@@ -73,6 +72,10 @@ if CURL_ENABLED
 smit_SOURCES += \
 			   src/local/clone.cpp \
 			   src/local/httpClient.cpp
+endif
+
+if ZIP_ENABLED
+smit_SOURCES += src/rendering/renderingZip.cpp
 endif
 
 if KERBEROS_ENABLED
@@ -130,6 +133,11 @@ endif
 if KERBEROS_ENABLED
 smit_LDADD += @KRB5_LIBS@
 smit_CPPFLAGS += @KRB5_CFLAGS@ -DKERBEROS_ENABLED
+endif
+
+if ZIP_ENABLED
+smit_LDADD += @LIBARCHIVE_LIBS@
+smit_CPPFLAGS += @LIBARCHIVE_CFLAGS@ -DZIP_ENABLED
 endif
 
 if WINDOWS

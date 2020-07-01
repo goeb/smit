@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.63])
-AC_INIT([Smit], [3.4.4], [], [smit], [http://goeb.github.io/smit])
+AC_INIT([Smit], [3.4.5], [], [smit], [http://goeb.github.io/smit])
 AC_CONFIG_HEADERS([src/config.h])
 AC_CANONICAL_TARGET
 AM_INIT_AUTOMAKE([-Wall -Werror subdir-objects])
@@ -80,7 +80,20 @@ if test x$WINDOWS = xyes; then
     PKG_CONFIG="$PKG_CONFIG --static"
 fi
 PKG_CHECK_MODULES(OPENSSL, openssl)
-PKG_CHECK_MODULES(LIBARCHIVE, libarchive)
+
+# zip
+AC_ARG_ENABLE([zip],
+  [AS_HELP_STRING([--disable-zip],
+                  [Disable ZIP download (ZIP requires libarchive)])
+  ],
+  [],
+  [enable_zip=yes]
+  )
+AM_CONDITIONAL([ZIP_ENABLED],[test x$enable_zip = xyes])
+
+if test x$enable_zip = xyes; then
+    PKG_CHECK_MODULES(LIBARCHIVE, libarchive)
+fi
 
 
 AC_ARG_ENABLE([gcov],

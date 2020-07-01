@@ -1,3 +1,6 @@
+v3.4.5, 1 Jul 2020
+    - build: can be compiled without zip support (libarchive)
+
 v3.4.4, 16 Jul 2019
     - page issue: fix missing reverse associations
 

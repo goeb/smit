@@ -38,7 +38,9 @@
 #include "utils/filesystem.h"
 #include "rendering/renderingText.h"
 #include "rendering/renderingHtml.h"
-#include "rendering/renderingZip.h"
+#ifdef ZIP_ENABLED
+  #include "rendering/renderingZip.h"
+#endif
 #include "rendering/renderingHtmlIssue.h"
 #include "rendering/ContextParameters.h"
 #include "rendering/renderingCsv.h"
@@ -2055,8 +2057,13 @@ int httpGetIssue(const RequestContext *req, Project &p, const std::string &issue
         if (format == RENDERING_TEXT) RText::printIssue(req, issue);
 
         else if (format == RENDERING_ZIP) {
+#ifdef ZIP_ENABLED
             ContextParameters ctx = ContextParameters(req, u, p.getProjectParameters());
             RZip::printIssue(ctx, issue);
+#else
+			req->printf("\r\n\r\n");
+			req->printf("ZIP download capability not compiled-in\r\n");
+#endif
 
         } else if (format == RENDERING_CSV) {
             ProjectConfig pconfig = p.getConfig();
