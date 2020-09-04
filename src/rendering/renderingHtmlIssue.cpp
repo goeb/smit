@@ -516,9 +516,12 @@ std::string RHtmlIssue::renderEntry(const ContextParameters &ctx, const IssueCop
             if (!offline && ( ctx.userRole == ROLE_ADMIN || ctx.userRole == ROLE_RW) ) {
                 const char *tagTitle = _("Click to tag/untag");
 
-                ss.printf("<a href=\"#\" onclick=\"tagEntry('/%s/tags', '%s', '%s');return false;\""
+                std::string pathProject = ctx.req->getUrlRewritingRoot() + "/";
+                pathProject += ctx.getProjectUrlName();
+
+                ss.printf("<a href=\"#\" onclick=\"tagEntry('%s/tags', '%s', '%s');return false;\""
                                 " title=\"%s\" class=\"sm_entry_tag\">",
-                                ctx.getProjectUrlName().c_str(), enquoteJs(ee.id).c_str(),
+                                pathProject.c_str(), enquoteJs(ee.id).c_str(),
                                 enquoteJs(tag.id).c_str(), tagTitle);
 
                 // the tag itself
