@@ -32,7 +32,7 @@
 <li><a href='cloning.html'>Cloning</a></li>
 <li><a href='html.html'>Customize HTML</a></li>
 <li><a href='api.html'>Smit API</a></li>
-<li><a href='developers.html'>Developers' Guide</a></li>
+<li><a href='developers.html'>Developers&#8217; Guide</a></li>
 </ul>
 </aside>
 <div class='contents'>
@@ -107,7 +107,7 @@ notifyNewEntry.py</code></pre>
   },
   &quot;message&quot;:&quot;...&quot;
 }</code></pre>
-<p>An example of trigger program is given in the &quot;triggers&quot; directory.</p>
+<p>An example of trigger program is given in the &#8220;triggers&#8221; directory.</p>
 <h2 id="make-a-backup">Make a Backup</h2>
 <p>Do a zip or tar of the repository, as follows:</p>
 <pre><code>tar cvfz $REPO.tar.gz $REPO</code></pre>
@@ -115,24 +115,32 @@ notifyNewEntry.py</code></pre>
 <p>Use the <code>--url-rewrite-root</code> option. Eg:</p>
 <pre><code>linux/smit serve demo --url-rewrite-root /bugtracker</code></pre>
 <p>Example of reverse proxy configuration with lighttpd: (tested with lighttpd-1.4.35)</p>
-<pre><code>server.document-root = &quot;/tmp&quot;
-server.port = 3000
+<pre><code>
+# Example Lighttpd configuration file.
+#
+# This can be used for testing with:
+#   /usr/sbin/lighttpd -D -f test_url_rewrite_lighttpd.conf
+
+server.document-root = &quot;.&quot;
+server.port = 8092
 server.modules += ( &quot;mod_proxy&quot; , &quot;mod_rewrite&quot;)
 
-$SERVER[&quot;socket&quot;] == &quot;:8092&quot; {
-    url.rewrite-once = ( &quot;^/bugtracker/(.*)$&quot; =&gt; &quot;/$1&quot; )
-    proxy.server = ( &quot;&quot; =&gt; ( (
-        &quot;host&quot; =&gt; &quot;127.0.0.1&quot;,
-        &quot;port&quot; =&gt; 8090
-    ) )
-    )
+$HTTP[&quot;url&quot;] =~ &quot;^/bugtracker/&quot; {
+    proxy.server = ( &quot;&quot; =&gt; ( &quot;&quot; =&gt; ( &quot;host&quot; =&gt; &quot;127.0.0.1&quot;, &quot;port&quot; =&gt; 8093 )))
 }
-</code></pre>
+
+# Use a secondary server. this is a workaround given by the lighttpd developers.
+# (in Lighttpd 1.4)
+
+$SERVER[&quot;socket&quot;] == &quot;:8093&quot; {   
+    url.rewrite-once = (&quot;^/bugtracker/(.*)&quot; =&gt; &quot;/$1&quot;)
+    proxy.server  = ( &quot;&quot; =&gt; ( &quot;&quot; =&gt; ( &quot;host&quot; =&gt; &quot;127.0.0.1&quot;, &quot;port&quot; =&gt; 8090 )))
+}</code></pre>
 <p>In this example, Smit is available at address: <code>http://127.0.0.1:8092/bugtracker/</code></p>
 </div>
         </div> <!-- div class page -->
         <div class="footer">
-            Page updated on 24 Apr 2016
+            Page updated on  4 Sep 2020
         </div>
     </body>
 </html>

@@ -133,19 +133,27 @@ Example of reverse proxy configuration with lighttpd:
 (tested with lighttpd-1.4.35)
 
 ```
-server.document-root = "/tmp"
-server.port = 3000
+
+# Example Lighttpd configuration file.
+#
+# This can be used for testing with:
+#   /usr/sbin/lighttpd -D -f test_url_rewrite_lighttpd.conf
+
+server.document-root = "."
+server.port = 8092
 server.modules += ( "mod_proxy" , "mod_rewrite")
 
-$SERVER["socket"] == ":8092" {
-    url.rewrite-once = ( "^/bugtracker/(.*)$" => "/$1" )
-    proxy.server = ( "" => ( (
-        "host" => "127.0.0.1",
-        "port" => 8090
-    ) )
-    )
+$HTTP["url"] =~ "^/bugtracker/" {
+    proxy.server = ( "" => ( "" => ( "host" => "127.0.0.1", "port" => 8093 )))
 }
 
+# Use a secondary server. this is a workaround given by the lighttpd developers.
+# (in Lighttpd 1.4)
+
+$SERVER["socket"] == ":8093" {   
+	url.rewrite-once = ("^/bugtracker/(.*)" => "/$1")
+	proxy.server  = ( "" => ( "" => ( "host" => "127.0.0.1", "port" => 8090 )))
+}
 ```
 
 In this example, Smit is available at address: `http://127.0.0.1:8092/bugtracker/`
