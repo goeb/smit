@@ -1,3 +1,7 @@
+v3.4.6, 2 Apr 2021
+	- fix "500 Internal Server Error" on creating project (smit serve with absolute path)
+	- fix tagging with --url-rewrite-root
+
 v3.4.5, 1 Jul 2020
     - build: can be compiled without zip support (libarchive)
 
