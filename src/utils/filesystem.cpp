@@ -250,6 +250,7 @@ int mkdirs(const std::string &path)
         pos = path.find_first_of("/", offset);
         std::string subpath;
         if (pos == std::string::npos) {
+            // No slash found. The loop will exit after this iteration.
             subpath = path;
 
         } else {
@@ -257,7 +258,12 @@ int mkdirs(const std::string &path)
             offset = pos+1;
         }
 
-        if (!isDir(subpath)) {
+        if (subpath.empty()) {
+            // Case of leading slash (in case of an absolute path)
+            // Do nothing.
+
+        } else if (!isDir(subpath)) {
+            // Missing directory. Create it.
             int r = mkdir(subpath.c_str(), 0777);
             if (r != 0) return -1;
         }
