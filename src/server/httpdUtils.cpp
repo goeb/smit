@@ -39,7 +39,7 @@ HttpStatistics HttpStats;
 
 void initHttpStats()
 {
-    memset(&HttpStats, 0, sizeof(HttpStatistics));
+    memset(HttpStats.httpCodes, 0, sizeof(HttpStats.httpCodes));
     HttpStats.startupTime = time(0);
 }
 
